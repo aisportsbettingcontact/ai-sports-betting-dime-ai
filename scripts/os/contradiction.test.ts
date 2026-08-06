@@ -21,6 +21,51 @@ import { join, resolve } from "node:path";
 const REPO = resolve(__dirname, "..", "..");
 const SCRIPT = join(REPO, "scripts/os/contradiction.mts");
 
+
+/**
+ * A minimal, VALID goal record with the given activity paths.
+ *
+ * The fixture previously copied the live os/goals/GR-0001. That coupled the
+ * script's test to a governance document: editing GR-0001's activity paths — the
+ * documented way to steer the goal — turned this suite red with a message about
+ * the script. A test of the script must depend on the script, not on today's
+ * priorities.
+ */
+function goalDoc(id: string, paths: string[]): string {
+  return [
+    `# ${id} — fixture`,
+    "",
+    "**Status:** ACTIVE · **DRI:** Prez · **Kind:** goal · **observe_by:** 2027-01-01",
+    "",
+    ...["Desired outcome", "The need behind it", "Evidence that justified pursuing it"].map(
+      (h) => `## ${h}\nx\n`,
+    ),
+    "## Acceptance criteria",
+    "- [ ] x",
+    "",
+    "## Constraints",
+    "x",
+    "",
+    "## Time horizon",
+    "2027-01-01",
+    "",
+    "## Responsible individual",
+    "Prez",
+    "",
+    "## Current status",
+    "x",
+    "",
+    "## Evaluation measures",
+    "| Measure | Threshold | Current |",
+    "|---|---|---|",
+    "| a | 1 of 1 | 0 |",
+    "",
+    "## Activity paths",
+    ...paths.map((p) => `- \`${p}\``),
+    "",
+  ].join("\n");
+}
+
 let sandbox: string;
 let onGoalSha: string;
 
@@ -79,10 +124,7 @@ beforeAll(() => {
   cpSync(SCRIPT, join(sandbox, "scripts/os/contradiction.mts"));
   cpSync(join(REPO, "shared/os/goal.ts"), join(sandbox, "shared/os/goal.ts"));
   cpSync(join(REPO, "shared/os/cycle.ts"), join(sandbox, "shared/os/cycle.ts"));
-  writeFileSync(
-    join(sandbox, "os/goals/GR-0001-test.md"),
-    readFileSync(join(REPO, "os/goals/GR-0001-ai-native-certification.md"), "utf8"),
-  );
+  writeFileSync(join(sandbox, "os/goals/GR-0001-test.md"), goalDoc("GR-0001", ["os/**"]));
   // node_modules is needed for `tsx`; symlink rather than install.
   execFileSync("ln", ["-sfn", join(REPO, "node_modules"), join(sandbox, "node_modules")]);
 
@@ -133,13 +175,18 @@ describe("contradiction.mts, executed end to end", () => {
   });
 
   it("measures EVERY goal record, not just the first on disk", () => {
+    // The second record declares DIFFERENT paths, and they are paths the fixture
+    // history actually touches. Asserting only that its filename is printed would
+    // pass even if the loop reused the first record's globs for both.
     const second = join(sandbox, "os/goals/GR-0002-second.md");
-    cpSync(join(sandbox, "os/goals/GR-0001-test.md"), second);
-    writeFileSync(second, readFileSync(second, "utf8").replace("# GR-0001", "# GR-0002"));
+    writeFileSync(second, goalDoc("GR-0002", ["server/**"]));
     try {
       const out = run(sandbox);
       expect(out).toMatch(/GR-0001-test/);
       expect(out, "a second goal record was silently ignored").toMatch(/GR-0002-second/);
+      // Each goal must be measured against ITS OWN declaration.
+      expect(out, "GR-0002's own globs were not used").toMatch(/declared\s+server\/\*\*/);
+      expect(out).toMatch(/declared\s+os\/\*\*/);
     } finally {
       rmSync(second, { force: true });
     }
@@ -214,6 +261,164 @@ describe("contradiction.mts, executed end to end", () => {
       expect(out).not.toMatch(/contradiction/);
     } finally {
       rmSync(bare, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the verdict the mechanism exists to produce", () => {
+  // The #400 audit: "no test ever produces a `contradiction YES` verdict; the
+  // mechanism's only actionable output can be hard-coded off with the suite
+  // green." GR-0001's own Readings record a real flagged contradiction, so this
+  // is an exercised path, not a hypothetical one.
+  it("prints contradiction YES when most cycles are off-goal", () => {
+    const goal = join(sandbox, "os/goals/GR-0001-test.md");
+    const original = readFileSync(goal, "utf8");
+    writeFileSync(goal, goalDoc("GR-0001", ["nowhere/**"]));
+    try {
+      const out = run(sandbox);
+      expect(out).toMatch(/contradiction YES/);
+      expect(out).toMatch(/on-goal\s+0 \(0%\)/);
+    } finally {
+      writeFileSync(goal, original);
+    }
+  });
+
+  it("prints contradiction no when the declared priority is where the work went", () => {
+    const goal = join(sandbox, "os/goals/GR-0001-test.md");
+    const original = readFileSync(goal, "utf8");
+    // Both fixture commits touch paths under these globs.
+    writeFileSync(goal, goalDoc("GR-0001", ["os/**", "server/**"]));
+    try {
+      const out = run(sandbox);
+      expect(out).toMatch(/on-goal\s+2 \(100%\)/);
+      expect(out).toMatch(/contradiction no/);
+      expect(out).not.toMatch(/contradiction YES/);
+    } finally {
+      writeFileSync(goal, original);
+    }
+  });
+});
+
+describe("it fails loudly, and the failure is not a clean result", () => {
+  const runRaw = (cwd: string): { out: string; err: string; code: number } => {
+    try {
+      const out = execFileSync("npx", ["tsx", join(cwd, "scripts/os/contradiction.mts")], {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      return { out, err: "", code: 0 };
+    } catch (e) {
+      const x = e as { stdout?: string; stderr?: string; status?: number };
+      return { out: x.stdout ?? "", err: x.stderr ?? "", code: x.status ?? 1 };
+    }
+  };
+
+  it("exits non-zero on a corrupt ledger line instead of reporting a share", () => {
+    // A corrupt ledger must never read as a clean result. Both die() paths were
+    // untested, so this could have been relaxed into a silent skip.
+    const good = git(sandbox, "show", "origin/os-ledger:cycles.jsonl");
+    writeLedgerRef(sandbox, good.trim() + "\nthis is not json\n");
+    try {
+      const { out, err, code } = runRaw(sandbox);
+      expect(code, "a corrupt ledger must fail the run").not.toBe(0);
+      expect(out).not.toMatch(/contradiction/);
+      expect(out).not.toMatch(/on-goal/);
+      // Assert the DIAGNOSIS, not merely a non-zero exit. Mutation testing caught
+      // this: replacing die() with a silent skip still exited non-zero — via an
+      // uncaught TypeError downstream — so an exit-code-only assertion passed
+      // while the deliberate failure path had been removed. A test that cannot
+      // tell a diagnosis from a crash is not testing the diagnosis.
+      expect(err, "the run must say WHY it failed").toMatch(/not valid JSON|corrupt/i);
+      expect(err).not.toMatch(/TypeError|Cannot read propert/);
+    } finally {
+      writeLedgerRef(sandbox, good.endsWith("\n") ? good : good + "\n");
+    }
+  });
+
+  it("exits non-zero when there is no goal record at all", () => {
+    const goal = join(sandbox, "os/goals/GR-0001-test.md");
+    const original = readFileSync(goal, "utf8");
+    rmSync(goal, { force: true });
+    try {
+      const { out, code } = runRaw(sandbox);
+      expect(code).not.toBe(0);
+      expect(out).not.toMatch(/contradiction/);
+    } finally {
+      writeFileSync(goal, original);
+    }
+  });
+
+  it("exits non-zero on a goal record that violates its own contract", () => {
+    const goal = join(sandbox, "os/goals/GR-0001-test.md");
+    const original = readFileSync(goal, "utf8");
+    writeFileSync(goal, original.replace("## Constraints", "## Notes"));
+    try {
+      const { code, out } = runRaw(sandbox);
+      expect(code).not.toBe(0);
+      expect(out).not.toMatch(/contradiction/);
+    } finally {
+      writeFileSync(goal, original);
+    }
+  });
+});
+
+describe("merge commits — the shape every real ledger entry has", () => {
+  // The fixture held only ordinary commits, so the first-parent semantics the
+  // script is built around was never exercised. `git show` on a merge emits no
+  // diff by default; a refactor that looked right for linear history would make
+  // every real cycle resolve to zero files.
+  it("resolves a merge commit's contribution via its first parent", () => {
+    const base = git(sandbox, "rev-parse", "HEAD").trim();
+    git(sandbox, "checkout", "-q", "-b", "feature");
+    mkdirSync(join(sandbox, "os/merged"), { recursive: true });
+    writeFileSync(join(sandbox, "os/merged/from-merge.md"), "merged content\n");
+    git(sandbox, "add", "-A");
+    git(sandbox, "commit", "-qm", "feature work");
+    git(sandbox, "checkout", "-q", "main");
+    git(sandbox, "merge", "-q", "--no-ff", "-m", "Merge pull request #7 from feature", "feature");
+    const mergeSha = git(sandbox, "rev-parse", "HEAD").trim();
+
+    const good = git(sandbox, "show", "origin/os-ledger:cycles.jsonl");
+    writeLedgerRef(sandbox, JSON.stringify({ commitSha: mergeSha, prNumber: 7 }) + "\n");
+    try {
+      const out = run(sandbox);
+      // The merge brought os/merged/from-merge.md, which is under os/**.
+      expect(out).toMatch(/cycles\s+1/);
+      expect(out, "a merge commit resolved to no files").toMatch(/on-goal\s+1 \(100%\)/);
+      expect(out).not.toMatch(/UNRESOLVED/);
+    } finally {
+      writeLedgerRef(sandbox, good.endsWith("\n") ? good : good + "\n");
+      git(sandbox, "reset", "-q", "--hard", base);
+      git(sandbox, "branch", "-qD", "feature");
+    }
+  });
+});
+
+describe("unresolved cycles must not re-enter the denominator", () => {
+  // The exact defect finding #5 of the #400 audit exists to close: a regression
+  // that collapses excluded cycles back into the denominator scores them off-goal
+  // and can invert the verdict. CI checks out shallow by default, so this is the
+  // realistic production shape, not an exotic one.
+  it("one unresolvable cycle does not drag a fully on-goal result into a contradiction", () => {
+    const onlyOnGoal = git(sandbox, "show", "origin/os-ledger:cycles.jsonl")
+      .trim()
+      .split("\n")[0];
+    const good = git(sandbox, "show", "origin/os-ledger:cycles.jsonl");
+    writeLedgerRef(
+      sandbox,
+      [onlyOnGoal, JSON.stringify({ commitSha: "0".repeat(40), prNumber: 98 })].join("\n") + "\n",
+    );
+    try {
+      const out = run(sandbox);
+      expect(out).toMatch(/UNRESOLVED\s+1 of 2/);
+      // 1 resolvable cycle, and it is on-goal. Counting the unresolvable one as
+      // off-goal would give 1/2 = 50% and, one more unresolvable, a false YES.
+      expect(out).toMatch(/cycles\s+1/);
+      expect(out).toMatch(/on-goal\s+1 \(100%\)/);
+      expect(out).not.toMatch(/contradiction YES/);
+    } finally {
+      writeLedgerRef(sandbox, good.endsWith("\n") ? good : good + "\n");
     }
   });
 });

@@ -231,3 +231,58 @@ describe("a goal record must declare where its work lands", () => {
     }
   });
 });
+
+describe("the section scan is block-aware", () => {
+  // Confirmed by the #400 adversarial audit. Terminating at any heading fixed the
+  // H3 leak, but the scan is still line-based: a fenced code block inside a
+  // section is read as if it were content. Documenting retired or example paths
+  // in a fence therefore DECLARES them.
+  it("does not parse bullets inside a fenced code block as activity paths", () => {
+    const fenced = GOOD.replace(
+      "- `os/**`\n",
+      "- `os/**`\n\n```\n- retired/path/**\n- another/retired/**\n```\n",
+    );
+    expect(parseGoal(fenced).activityPaths).toEqual(["os/**"]);
+  });
+
+  it("does not count table rows inside a fenced code block as evaluation measures", () => {
+    const emptied = GOOD.replace("| criteria VERIFIED | 12 of 12 | 0 |", "").replace(
+      "## Activity paths",
+      "```\n| fake | measure | row |\n| second | fake | row |\n```\n\n## Activity paths",
+    );
+    expect(() => parseGoal(emptied)).toThrow(/threshold/i);
+  });
+
+  it("ignores a horizontal rule rather than reading it as a path", () => {
+    // `---` is ordinary markdown. It was reaching the validator as the "path"
+    // `--`, which then threw "declares an activity path matching everything" —
+    // an error that names neither the real cause nor the real line.
+    const ruled = GOOD.replace("- `os/**`\n", "- `os/**`\n\n---\n");
+    expect(parseGoal(ruled).activityPaths).toEqual(["os/**"]);
+    for (const rule of ["***", "___", "- - -"]) {
+      expect(parseGoal(GOOD.replace("- `os/**`\n", `- \`os/**\`\n\n${rule}\n`)).activityPaths).toEqual(["os/**"]);
+    }
+  });
+});
+
+describe("a cycle carrying no evidence must not weigh against the goal", () => {
+  // The #400 fix was non-monotonic: it only excused the case where EVERY cycle
+  // was evidence-free. One evidence-free cycle still inflated the denominator and
+  // counted, in effect, as off-goal — the same denominator bias that unresolved
+  // commits had, which #400 fixed for that path and not this one.
+  it("excludes evidence-free cycles from the denominator", () => {
+    const r = findPriorityContradiction(["os/**"], [[], [], ["os/a.md"]]);
+    // The only cycle that carries evidence is on-goal. Reporting a contradiction
+    // here is an accusation built from two cycles that said nothing at all.
+    expect(r.contradiction).toBe(false);
+    expect(r.onGoalCycles).toBe(1);
+    expect(r.totalCycles).toBe(1);
+  });
+
+  it("still flags a real contradiction among cycles that DO carry evidence", () => {
+    const r = findPriorityContradiction(["os/**"], [[], ["server/a.ts"], ["server/b.ts"], ["os/a.md"]]);
+    expect(r.contradiction).toBe(true);
+    expect(r.onGoalCycles).toBe(1);
+    expect(r.totalCycles).toBe(3);
+  });
+});

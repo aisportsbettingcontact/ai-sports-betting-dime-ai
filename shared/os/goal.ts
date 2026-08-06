@@ -63,8 +63,34 @@ function field(md: string, name: string): string | null {
  */
 function sectionBody(md: string, heading: string): string {
   const after = md.split(new RegExp(`^##\\s+${heading}\\s*$`, "im"))[1] ?? "";
-  return after.split(/^#{1,6}\s/m)[0];
+  return stripFences(after.split(/^#{1,6}\s/m)[0]);
 }
+
+/**
+ * Blank out fenced code blocks, keeping line count so any future line-numbered
+ * error stays accurate.
+ *
+ * The scan is line-based, so a fence's contents were read as ordinary content:
+ * documenting retired or example paths in a ``` block DECLARED them. Verified on
+ * the merged tree — a fence holding two retired globs produced three activity
+ * paths, not one.
+ */
+function stripFences(body: string): string {
+  let inFence = false;
+  return body
+    .split("\n")
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) {
+        inFence = !inFence;
+        return "";
+      }
+      return inFence ? "" : line;
+    })
+    .join("\n");
+}
+
+/** `---`, `***`, `___`, `- - -` — markdown rules, not content. */
+const HORIZONTAL_RULE = /^\s*(?:-\s*-\s*-[-\s]*|\*\s*\*\s*\*[*\s]*|_\s*_\s*_[_\s]*)$/;
 
 /**
  * An activity path is a path glob, never prose. Enforced because an unmatchable
@@ -98,7 +124,7 @@ export function parseGoal(md: string): Goal {
   const activityPaths = sectionBody(md, "Activity paths")
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.startsWith("-"))
+    .filter((l) => l.startsWith("-") && !HORIZONTAL_RULE.test(l))
     .map((l) => l.replace(/^-\s*/, "").replace(/`/g, "").trim())
     .filter(Boolean);
 
@@ -191,22 +217,31 @@ export function findPriorityContradiction(
   if (activityPaths.length === 0) {
     return unmeasurable("the goal declares no activity paths — there is no priority to contradict");
   }
-  if (cycleFilePaths.every((f) => f.length === 0)) {
+  // A cycle that resolved to no files carries no evidence either way. Leaving it
+  // in the denominator counts silence AS off-goal, which is the same bias that
+  // unresolved commits had. The previous fix only excused the case where EVERY
+  // cycle was evidence-free, so one empty cycle among two could still manufacture
+  // a contradiction while the only cycle carrying evidence was on-goal.
+  const withEvidence = cycleFilePaths.filter((f) => f.length > 0);
+  if (withEvidence.length === 0) {
     return unmeasurable("no cycle resolved to any files — the ledger or the clone is incomplete");
   }
-  const onGoal = cycleFilePaths.filter((files) =>
+  const measured = withEvidence.length;
+  const onGoal = withEvidence.filter((files) =>
     files.some((f) => activityPaths.some((g) => matches(f, g))),
   ).length;
-  const share = onGoal / total;
+  const share = onGoal / measured;
   return {
     state: "ok",
     contradiction: share < CONTRADICTION_THRESHOLD,
     onGoalCycles: onGoal,
-    totalCycles: total,
+    // The count actually measured — cycles carrying no evidence are excluded, so
+    // reporting `total` here would describe a denominator the share never used.
+    totalCycles: measured,
     onGoalShare: share,
     reason:
       share < CONTRADICTION_THRESHOLD
-        ? `only ${onGoal}/${total} cycles touched the declared priority paths`
+        ? `only ${onGoal}/${measured} cycles touched the declared priority paths`
         : null,
   };
 }
