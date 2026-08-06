@@ -662,6 +662,17 @@ describe("ProjectionCard — unplayable cards carry no mint (owner directive 202
     expect(section).toContain("LIVE > upcoming > settled");
     expect(section).toContain("Zero mint on an unplayable card");
     expect(section).toContain("Record<GameStatus, number>");
+    // Owner authorization, 2026-08-06 — this section is live law, not a
+    // proposal. The scope fence matters as much as the approval: it must stay
+    // explicit that the deferred contrast remedy is NOT covered, so nobody
+    // later reads "owner-approved" as blanket permission to change the token.
+    expect(section).toContain(
+      "APPROVED AND AUTHORIZED by the owner, 2026-08-06"
+    );
+    expect(section).toContain(
+      "Neither may be shipped on the strength of this approval"
+    );
+    expect(section).toMatch(/4\.4969:1/);
     // The superseded 2026-07-18 tier clause carries a forward pointer.
     expect(lawDoc).toMatch(
       /LIVE > upcoming > FINAL tiers\)\.\s*\n\s*\*\(AMENDED 2026-08-06/

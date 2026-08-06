@@ -13,6 +13,6 @@ $ npx vitest run client/src
 
  Test Files  55 passed (55)
       Tests  791 passed (791)
-   Start at  23:16:13
-   Duration  2.41s (transform 2.41s, setup 0ms, import 5.51s, tests 1.07s, environment 4ms)
+   Start at  23:26:57
+   Duration  1.65s (transform 1.54s, setup 0ms, import 3.34s, tests 800ms, environment 3ms)
 

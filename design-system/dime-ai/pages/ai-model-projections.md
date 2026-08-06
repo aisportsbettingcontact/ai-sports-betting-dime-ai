@@ -277,12 +277,29 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   or one scorable no-edge candidate keeps the plain single summary with no
   arrow; a game with no scorable candidate shows the unavailable-data copy.
 
-### Owner Directives — 2026-08-06 (unplayable games: slate tier + mint rationing)
+### Owner Directives — 2026-08-06 (unplayable games: slate tier + mint rationing) — owner-approved
 
+> **APPROVED AND AUTHORIZED by the owner, 2026-08-06.** This section is
+> therefore live law, not a proposal.
+>
 > Closes two findings from the post-deploy audit of PR #409, both of which that
 > PR reported and deliberately did not fix because they were out of its scope.
-> Decision note: PR `fix/feed-unplayable-slate-rank`, evidence bundle
+> Decision note: PR #413 (`fix/feed-unplayable-slate-rank`), evidence bundle
 > `docs/audits/2026-08-06-feed-unplayable-evidence/`.
+>
+> **Scope of the authorization — read this before citing it.** It covers exactly
+> the four bullets below: the settled-tier change, the zero-mint rule for
+> unplayable cards, the edge-content-stays clause, and the never-unplayable
+> ruling for LIVE. It does **not** authorize either open item that the same
+> audit surfaced and this directive leaves alone:
+>
+> 1. the light-theme LIVE status label measuring **4.4969:1** against a 4.5:1
+>    floor, whose recorded remedy (deepening the `color-mix` from 60% to 50%,
+>    ≈4.96:1) is a brand-token change still awaiting its own owner decision; and
+> 2. the `.projection-card--compact` salience inversion, which would require
+>    revisiting the lifecycle-compaction `opacity: 0.72`.
+>
+> Neither may be shipped on the strength of this approval.
 
 **"Unplayable" is a new, named card state: `postponed` or `suspended`.** It is
 NOT the same thing as PASS. PASS means the model found nothing worth acting on

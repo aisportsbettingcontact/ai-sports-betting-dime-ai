@@ -20,6 +20,23 @@ surface.
 
 **Checklist: 11/11 pass.**
 
+## Delivery gate
+
+`references/evidence-bundle.md`: *"owner visual sign-off remains the merge gate
+for brand-surface changes (merge to main IS a production deploy)."*
+
+**Satisfied for the brand-law amendment.** The owner approved and authorized the
+2026-08-06 directive on 2026-08-06. Recorded in three places so it cannot be
+lost: the directive heading (`— owner-approved`) and its blockquote in
+`design-system/dime-ai/pages/ai-model-projections.md`, the banner in
+[`summary.md`](./summary.md), and PR #413. A regression test pins the
+authorization text and its scope fence
+(`ProjectionCard.test.ts` → "records the directive in the page law"), so
+deleting the approval or quietly widening it fails the suite.
+
+Scope: the directive's four bullets only. The two items in "Known issues NOT
+addressed here" below are explicitly outside it.
+
 ## Detector
 
 3 warnings, all `side-tab`, all pre-existing: `EdgeIndicator.css:18`,

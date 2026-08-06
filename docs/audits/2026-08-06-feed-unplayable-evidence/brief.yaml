@@ -49,6 +49,15 @@ law_conflict:
   resolution: "Amended by PR with a dated decision note — new section 'Owner
     Directives — 2026-08-06 (unplayable games: slate tier + mint rationing)',
     plus a forward pointer on the superseded 2026-07-18 tier clause."
+  owner_authorization:
+    status: APPROVED
+    date: 2026-08-06
+    covers: >-
+      The directive's four bullets: settled-tier change, zero mint on unplayable
+      cards, edge-content-stays, and LIVE is never unplayable.
+    excludes: >-
+      The light-theme LIVE contrast remedy (color-mix 60% -> 50%) and the
+      --compact salience inversion. Both stay open; each needs its own decision.
   untouched: [MASTER.md, THREE-COLOR-LAW.md, TYPOGRAPHY.md]
 
 direction:
@@ -75,3 +84,4 @@ acceptance:
   no_horizontal_overflow: true
   motion_gate: auto
   delivery_gate: MASTER.md Pre-Delivery Checklist + evidence bundle
+  owner_signoff: APPROVED 2026-08-06 (scoped — see law_conflict.owner_authorization)

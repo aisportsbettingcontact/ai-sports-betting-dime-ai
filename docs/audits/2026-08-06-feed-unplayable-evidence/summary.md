@@ -1,7 +1,22 @@
 # Feed — unplayable games: slate tier + mint rationing
 
-**Branch:** `fix/feed-unplayable-slate-rank` · **Date:** 2026-08-06 · **Surface:** `/feed`
+**Branch:** `fix/feed-unplayable-slate-rank` · **PR:** #413 · **Date:** 2026-08-06 · **Surface:** `/feed`
 **Lead:** `impeccable` v4.0.4 (pin `ae5e951`) · **Brief:** [`brief.yaml`](./brief.yaml)
+
+> **OWNER AUTHORIZATION — 2026-08-06.** The owner approved and authorized the
+> 2026-08-06 directive ("unplayable games: slate tier + mint rationing"). The
+> brand-law amendment in `design-system/dime-ai/pages/ai-model-projections.md`
+> is therefore live law rather than a proposal, and the delivery gate for that
+> amendment is satisfied.
+>
+> **The authorization is scoped to that directive's four bullets** — the
+> settled-tier change, the zero-mint rule for unplayable cards, the
+> edge-content-stays clause, and the never-unplayable ruling for LIVE. It does
+> **not** extend to the two items this PR documents but deliberately does not
+> ship: the light-theme LIVE contrast remedy (`color-mix` 60% → 50%) and the
+> `--compact` salience inversion. Both remain open and each needs its own owner
+> decision. The scope fence is written into the directive itself so it travels
+> with the law, not only with this bundle.
 
 Closes the two findings the post-deploy audit of PR #409 reported and
 deliberately left open, because both were explicit non-goals of that change.
