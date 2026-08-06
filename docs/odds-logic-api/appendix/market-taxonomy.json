@@ -1,0 +1,44 @@
+{
+  "meta": {"generated": "2026-07-26", "rule": "Canonical CONSUMER taxonomy. 'oddslogic_evidence' says whether OddsLogic officially names the market type; everything else is recommended normalization, not vendor behavior."},
+  "market_types": [
+    {"key": "moneyline", "outcomes": ["home", "away"], "oddslogic_evidence": "VERIFIED_OFFICIAL"},
+    {"key": "moneyline_3way", "outcomes": ["home", "draw", "away"], "oddslogic_evidence": "VERIFIED_OFFICIAL ('3-Way')"},
+    {"key": "spread", "outcomes": ["home", "away"], "line": "signed, home-relative in canonical form", "push_capable": "integer lines", "oddslogic_evidence": "VERIFIED_OFFICIAL"},
+    {"key": "total", "outcomes": ["over", "under"], "line": "absolute points", "push_capable": "integer lines", "oddslogic_evidence": "VERIFIED_OFFICIAL"},
+    {"key": "team_total", "outcomes": ["over", "under"], "line": "absolute, team-scoped", "oddslogic_evidence": "VERIFIED_OFFICIAL"},
+    {"key": "run_line", "normalizes_to": "spread (sport=baseball)", "oddslogic_evidence": "INFERRED (baseball coverage official, term not used)"},
+    {"key": "puck_line", "normalizes_to": "spread (sport=hockey)", "oddslogic_evidence": "INFERRED"},
+    {"key": "player_prop", "outcomes": ["over", "under"] , "line": "stat threshold", "subject": "player + stat_category", "oddslogic_evidence": "PARTIALLY_VERIFIED (API page; FAQ contradiction X02)"},
+    {"key": "team_prop", "oddslogic_evidence": "PARTIALLY_VERIFIED (FAQ future feature)"},
+    {"key": "game_prop", "oddslogic_evidence": "UNKNOWN"},
+    {"key": "alternate_line", "oddslogic_evidence": "CONTRADICTED — competitor claims standard lines only; no official claim either way"},
+    {"key": "draw_no_bet", "oddslogic_evidence": "UNKNOWN"},
+    {"key": "asian_handicap_quarter_line", "oddslogic_evidence": "UNKNOWN", "note": "quarter lines settle as split half-stakes; include in consumer model for soccer books"},
+    {"key": "futures_outright", "oddslogic_evidence": "UNKNOWN"},
+    {"key": "yes_no", "oddslogic_evidence": "UNKNOWN"},
+    {"key": "exact_result_multi_outcome", "oddslogic_evidence": "UNKNOWN"},
+    {"key": "same_game_correlated", "oddslogic_evidence": "UNKNOWN — no evidence; excluded per evidence rule"}
+  ],
+  "segments": [
+    {"key": "full_game", "oddslogic_evidence": "VERIFIED_OFFICIAL"},
+    {"key": "h1"}, {"key": "h2"}, {"key": "q1"}, {"key": "q2"}, {"key": "q3"}, {"key": "q4"},
+    {"key": "p1"}, {"key": "p2"}, {"key": "p3"},
+    {"key": "i1_i9_and_f5", "note": "innings; F5 (first-5) is the standard baseball derivative", "oddslogic_evidence": "VERIFIED_OFFICIAL ('Innings') — specific segment codes are consumer-assigned"},
+    {"key": "regulation_only_vs_incl_ot", "oddslogic_evidence": "UNKNOWN — OddsLogic does not disclose OT-inclusion semantics; MUST be confirmed per sport per book during onboarding"}
+  ],
+  "normalization_key": {
+    "event_key": "sha1(sport | league | local_start_date@venue_tz_rule | home_team_canonical | away_team_canonical | game_number)",
+    "market_key": "event_key | segment | market_type | line_value(normalized sign) | subject(player_id or team or null) | book_id for quotes",
+    "quote_key": "market_key | book_id | source_timestamp | ingest_sequence",
+    "collision_guards": [
+      "MLB doubleheaders: same teams+date → game_number from schedule feed; if unknown, disambiguate by start_time bucket and flag for review",
+      "postponed/rescheduled: event identity survives date change ONLY if a stable vendor event ID exists — OddsLogic's is UNKNOWN, so consumer must tombstone+relink on reschedule",
+      "team rebrands/name collisions: canonical team table with alias crosswalk (cf. repo's fbs-team-crosswalk pattern)",
+      "spread sign: store home-relative; away-quoted feeds get negated on ingest",
+      "alternate vs primary line: line_value in key prevents overwrite; primary flag is metadata, never identity",
+      "listed-pitcher (MLB): pitcher pair is part of quote metadata; a pitcher change is a new pricing context, never an in-place update",
+      "cross-book start-time disagreement: event identity from schedule authority, not from book payloads; book times stored as observations",
+      "DST boundaries: all keys derive dates via venue-timezone rule pinned per league (cf. repo kickoff-datetime-convention memory)"
+    ]
+  }
+}

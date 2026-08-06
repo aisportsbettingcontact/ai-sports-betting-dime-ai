@@ -1,0 +1,66 @@
+WS-B Step 1 — CRAN PACKAGES index cross-check
+Generated: 2026-07-27T06:14:22Z  (audit date 2026-07-27)
+Raw source log: raw-logs/mirror-index-crosscheck.out
+
+== Sources fetched ==
+  primary  : https://cloud.r-project.org/src/contrib/PACKAGES
+             http 200, 7015149 bytes, sha256 182704d93f83fa009af65bfc94c0be133f8ca003e1854c6f8ae9c1d7f075ade7
+             served via CloudFront (via: ...cloudfront.net, x-amz-cf-pop LAX54-P1)
+  mirror2  : https://cran.wu.ac.at/src/contrib/PACKAGES
+             http 301 -> https://cran.r-project.org/src/contrib/PACKAGES then 200, 7015149 bytes
+             sha256 182704d93f83fa009af65bfc94c0be133f8ca003e1854c6f8ae9c1d7f075ade7
+  fallback : https://ftp.osuosl.org/pub/cran/src/contrib/PACKAGES
+             http 200 (redirected to ftp2.osuosl.org), 7014573 bytes
+             sha256 e647bbfaf2ec4c494d625566e1acc0a1a3e5e6183cdd9c985be1b82cb4a7c10e
+
+== IMPORTANT caveat on mirror independence ==
+  cran.wu.ac.at does NOT serve its own copy: it issues a 301 redirect to
+  cran.r-project.org (the CRAN master). cloud.r-project.org is a CloudFront
+  CDN in front of the same master. The primary and mirror2 indices are
+  therefore byte-identical BY CONSTRUCTION (same sha256 above), and their
+  agreement is NOT independent corroboration -- it only proves the CDN and
+  the redirect both serve the master faithfully.
+  To obtain genuine host independence this workstream additionally used the
+  designated fallback, ftp.osuosl.org, which is a real rsync mirror on
+  separate infrastructure. All independence claims below rest on osuosl.
+
+== Full-index comparison (all ~24.4k CRAN packages) ==
+mainline records: primary=24409 mirror2=24409 osuosl=24408
+FULL-INDEX primary-vs-mirror2: ver_diff=0 md5_diff=0
+FULL-INDEX primary-vs-osuosl : ver_diff=8 md5_diff=8 only_primary=1 only_osuosl=0
+  only-in-primary: jamba 
+  primary-vs-osuosl version-differing packages (mirror lag):
+    cld3                     primary=1.6.2          osuosl=1.6.1
+    dsROCrate                primary=0.2.0          osuosl=0.1.0
+    multcompView             primary=0.1-12         osuosl=0.1-11
+    polykde                  primary=1.2.1          osuosl=1.2.0
+    RGenData                 primary=1.0.1          osuosl=1.0
+    rSCA                     primary=3.2            osuosl=3.1
+    RWeka                    primary=0.4-50         osuosl=0.4-49
+    thinr                    primary=0.3.0          osuosl=0.2.0
+  SAME-VERSION-but-DIFFERENT-MD5 (primary vs osuosl), full index: 0
+
+  (list above is complete: ver_diff=8 and 8 packages are listed; osuosl is
+   BEHIND primary in every case and ahead in none, i.e. ordinary mirror lag)
+
+== Our 90 audited packages ==
+---- our 90 ----
+tarball sha256 recomputed == acquisition-log sha256: 90/90 match
+installed version == primary index version: 90/90
+installed version == mirror2 index version: 90/90
+installed version == osuosl  index version: 90/90
+primary md5 == mirror2 md5 (our 90): 90/90
+primary md5 == osuosl  md5 (our 90): 90/90
+md5_actual  == primary md5 (our 90): 90/90
+
+== Tarball payload cross-check (not just index metadata) ==
+  All 90 source tarballs were re-downloaded in full from BOTH secondary
+  sources and hashed (see hash-verification.csv sha256_mirror2):
+    - cran.wu.ac.at  -> 90/90 http 200 (effective host cran.r-project.org)
+    - ftp.osuosl.org -> 90/90 http 200 (effective host ftp2.osuosl.org)
+  sha256 agreement:
+    task0(primary) == mirror2 : 90/90
+    task0(primary) == osuosl  : 90/90
+  Zero disagreements. Because osuosl is independent infrastructure, this is
+  a real corroboration that the bytes held locally match what an unrelated
+  host publishes for the same package+version.

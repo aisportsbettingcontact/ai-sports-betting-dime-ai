@@ -1,0 +1,252 @@
+
+################  nflverse  ################
+[help/paths.rds]
+  n_entries live/new      : 5 / 5 
+  basenames identical     : TRUE 
+  attributes identical    : FALSE 
+  n distinct dirs live/new: 1 / 1 
+  dir live                : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/RtmpBegYp8/R.INSTALL8eb74f58817/nflverse/man 
+  dir new                 : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmp0Zdc7y/R.INSTALL17c0ea587568/nflverse/man 
+  -> differs ONLY in the ephemeral R.INSTALL staging dir: FALSE 
+[R/nflverse.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 16 / 16 
+  blob LENGTHS identical  : TRUE 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[help/nflverse.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 5 / 5 
+  blob LENGTHS identical  : FALSE 
+    blobs differing in compressed length: 4 of 5 
+    e.g.: nflverse-package, nflverse_packages, nflverse_update, pipe 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[R/nflverse.rdb - deserialized objects]
+  n objects live/new      : 16 / 16 
+  object NAMES identical  : TRUE 
+  all.equal(check.environment=FALSE) mismatches: 1 
+    -> .__NAMESPACE__. 
+  deparse(control='all') mismatches           : 0 
+  serialize() mismatches (env normalized)     : 1 
+    -> .__NAMESPACE__. 
+[help/nflverse.rdb - deserialized Rd objects]
+  n topics live/new       : 5 / 5 
+  topic NAMES identical   : TRUE 
+  identical() mismatches  : 5 
+    -> nflverse_packages, nflverse_sitrep, nflverse_update, nflverse-package, pipe 
+  rendered-text mismatches: 0 
+
+################  nflreadr  ################
+[help/paths.rds]
+  n_entries live/new      : 77 / 77 
+  basenames identical     : TRUE 
+  attributes identical    : FALSE 
+  n distinct dirs live/new: 1 / 1 
+  dir live                : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/RtmpCBan5r/R.INSTALL73677a77dea0/nflreadr/man 
+  dir new                 : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/RtmpHv509A/R.INSTALL16ed025f79c68/nflreadr/man 
+  -> differs ONLY in the ephemeral R.INSTALL staging dir: FALSE 
+[R/nflreadr.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 84 / 84 
+  blob LENGTHS identical  : TRUE 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[help/nflreadr.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 77 / 77 
+  blob LENGTHS identical  : FALSE 
+    blobs differing in compressed length: 77 of 77 
+    e.g.: clean_homeaway, clean_player_names, clean_team_abbrs, clear_cache, csv_from_url 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[R/nflreadr.rdb - deserialized objects]
+  n objects live/new      : 84 / 84 
+  object NAMES identical  : TRUE 
+  all.equal(check.environment=FALSE) mismatches: 1 
+    -> .__NAMESPACE__. 
+  deparse(control='all') mismatches           : 0 
+  serialize() mismatches (env normalized)     : 1 
+    -> .__NAMESPACE__. 
+[help/nflreadr.rdb - deserialized Rd objects]
+  n topics live/new       : 77 / 77 
+  topic NAMES identical   : TRUE 
+  identical() mismatches  : 77 
+    -> clean_homeaway, clean_player_names, clean_team_abbrs, clear_cache, csv_from_url, dictionary_combine, dictionary_contracts, dictionary_depth_charts, dictionary_draft_picks, dictionary_espn_qbr, dictionary_ff_opportunity, dictionary_ff_playerids, dictionary_ff_rankings, dictionary_ftn_charting, dictionary_injuries, dictionary_nextgen_stats, dictionary_participation, dictionary_pbp, dictionary_pfr_passing, dictionary_player_stats 
+  rendered-text mismatches: 0 
+
+################  nflfastR  ################
+[help/paths.rds]
+  n_entries live/new      : 27 / 27 
+  basenames identical     : TRUE 
+  attributes identical    : TRUE 
+  n distinct dirs live/new: 1 / 1 
+  dir live                : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmpd2LIRh/R.INSTALL82631373ece7/nflfastR/man 
+  dir new                 : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmp0ziFsm/R.INSTALL1721b1dc4237/nflfastR/man 
+  -> differs ONLY in the ephemeral R.INSTALL staging dir: TRUE 
+[R/nflfastR.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 120 / 120 
+  blob LENGTHS identical  : TRUE 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[help/nflfastR.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 27 / 27 
+  blob LENGTHS identical  : FALSE 
+    blobs differing in compressed length: 12 of 27 
+    e.g.: add_xpass, build_nflfastR_pbp, calculate_expected_points, calculate_player_stats, calculate_player_stats_kicking 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[R/nflfastR.rdb - deserialized objects]
+  n objects live/new      : 120 / 120 
+  object NAMES identical  : TRUE 
+  all.equal(check.environment=FALSE) mismatches: 1 
+    -> .__NAMESPACE__. 
+  deparse(control='all') mismatches           : 0 
+  serialize() mismatches (env normalized)     : 1 
+    -> .__NAMESPACE__. 
+[help/nflfastR.rdb - deserialized Rd objects]
+  n topics live/new       : 27 / 27 
+  topic NAMES identical   : TRUE 
+  identical() mismatches  : 27 
+    -> add_qb_epa, add_xpass, add_xyac, build_nflfastR_pbp, calculate_expected_points, calculate_player_stats, calculate_player_stats_def, calculate_player_stats_kicking, calculate_series_conversion_rates, calculate_standings, calculate_stats, calculate_win_probability, clean_pbp, decode_player_ids, fast_scraper, fast_scraper_roster, fast_scraper_schedules, field_descriptions, missing_raw_pbp, nfl_stats_variables 
+  rendered-text mismatches: 0 
+
+################  nflseedR  ################
+[help/paths.rds]
+  n_entries live/new      : 22 / 22 
+  basenames identical     : TRUE 
+  attributes identical    : FALSE 
+  n distinct dirs live/new: 1 / 1 
+  dir live                : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/RtmpnZGcBY/R.INSTALL819e614568d1/nflseedR/man 
+  dir new                 : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmpptgz0v/R.INSTALL176c72d76b304/nflseedR/man 
+  -> differs ONLY in the ephemeral R.INSTALL staging dir: FALSE 
+[R/nflseedR.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 87 / 87 
+  blob LENGTHS identical  : TRUE 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[help/nflseedR.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 22 / 22 
+  blob LENGTHS identical  : FALSE 
+    blobs differing in compressed length: 13 of 22 
+    e.g.: compute_draft_order, dictionary_game_summary, dictionary_games, dictionary_overall, dictionary_standings 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[R/nflseedR.rdb - deserialized objects]
+  n objects live/new      : 87 / 87 
+  object NAMES identical  : TRUE 
+  all.equal(check.environment=FALSE) mismatches: 1 
+    -> .__NAMESPACE__. 
+  deparse(control='all') mismatches           : 0 
+  serialize() mismatches (env normalized)     : 1 
+    -> .__NAMESPACE__. 
+[help/nflseedR.rdb - deserialized Rd objects]
+  n topics live/new       : 22 / 22 
+  topic NAMES identical   : TRUE 
+  identical() mismatches  : 22 
+    -> compute_conference_seeds, compute_division_ranks, compute_draft_order, dictionary_game_summary, dictionary_games, dictionary_overall, dictionary_standings, dictionary_team_wins, divisions, fmt_pct_special, load_sharpe_games, nfl_simulations, nfl_standings, nfl_standings_prettify, nflseedR_compute_results, nflseedR-package, reexports, sims_games_example, sims_teams_example, simulate_nfl 
+  rendered-text mismatches: 0 
+
+################  nfl4th  ################
+[help/paths.rds]
+  n_entries live/new      : 8 / 8 
+  basenames identical     : TRUE 
+  attributes identical    : FALSE 
+  n distinct dirs live/new: 1 / 1 
+  dir live                : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/RtmpoZCMus/R.INSTALL82a43b2cd472/nfl4th/man 
+  dir new                 : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/RtmpoMScQd/R.INSTALL1799d4aa20bea/nfl4th/man 
+  -> differs ONLY in the ephemeral R.INSTALL staging dir: FALSE 
+[R/nfl4th.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 42 / 42 
+  blob LENGTHS identical  : TRUE 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[help/nfl4th.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 8 / 8 
+  blob LENGTHS identical  : FALSE 
+    blobs differing in compressed length: 5 of 8 
+    e.g.: add_2pt_probs, get_4th_plays, load_4th_pbp, make_2pt_table_data, nfl4th-package 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[R/nfl4th.rdb - deserialized objects]
+  n objects live/new      : 42 / 42 
+  object NAMES identical  : TRUE 
+  all.equal(check.environment=FALSE) mismatches: 1 
+    -> .__NAMESPACE__. 
+  deparse(control='all') mismatches           : 0 
+  serialize() mismatches (env normalized)     : 1 
+    -> .__NAMESPACE__. 
+[help/nfl4th.rdb - deserialized Rd objects]
+  n topics live/new       : 8 / 8 
+  topic NAMES identical   : TRUE 
+  identical() mismatches  : 8 
+    -> add_2pt_probs, add_4th_probs, get_4th_plays, load_4th_pbp, make_2pt_table_data, make_table_data, nfl4th_clear_cache, nfl4th-package 
+  rendered-text mismatches: 0 
+
+################  nflplotR  ################
+[help/paths.rds]
+  n_entries live/new      : 20 / 20 
+  basenames identical     : TRUE 
+  attributes identical    : FALSE 
+  n distinct dirs live/new: 1 / 1 
+  dir live                : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmprm0ieE/R.INSTALL8e765ebbd936/nflplotR/man 
+  dir new                 : /private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmp9axEXv/R.INSTALL17b0030ecc9cf/nflplotR/man 
+  -> differs ONLY in the ephemeral R.INSTALL staging dir: FALSE 
+[R/nflplotR.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 50 / 50 
+  blob LENGTHS identical  : TRUE 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[help/nflplotR.rdx]
+  top-level names         : variables,references,compressed 
+  variable NAMES identical: TRUE 
+  n variables live/new    : 20 / 20 
+  blob LENGTHS identical  : FALSE 
+    blobs differing in compressed length: 19 of 20 
+    e.g.: dot-nflplotR_clear_cache, geom_from_path, geom_lines, geom_nfl_headshots, geom_nfl_logos 
+  offsets identical       : FALSE 
+  compressed flag live/new: TRUE / TRUE 
+  references identical    : FALSE 
+[R/nflplotR.rdb - deserialized objects]
+  n objects live/new      : 50 / 50 
+  object NAMES identical  : TRUE 
+  all.equal(check.environment=FALSE) mismatches: 1 
+    -> .__NAMESPACE__. 
+  deparse(control='all') mismatches           : 0 
+  serialize() mismatches (env normalized)     : 1 
+    -> .__NAMESPACE__. 
+[help/nflplotR.rdb - deserialized Rd objects]
+  n topics live/new       : 20 / 20 
+  topic NAMES identical   : TRUE 
+  identical() mismatches  : 20 
+    -> dot-nflplotR_clear_cache, element, geom_from_path, geom_lines, geom_nfl_headshots, geom_nfl_logos, geom_nfl_wordmarks, ggpreview, gt_nfl_cols_label, gt_nfl_headshots, gt_nfl_logos, gt_pct_bar, gt_render_image, nfl_team_factor, nfl_team_tiers, nflplotR-package, nflverse_sitrep, reexports, scale_nfl, valid_team_names 
+  rendered-text mismatches: 0 

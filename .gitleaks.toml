@@ -19,6 +19,20 @@ paths = [
   '''^pnpm-lock\.yaml$''',            # dependency integrity hashes (high entropy)
   '''^drizzle/meta/.*\.json$''',      # migration snapshot ids (high entropy)
   '''^client/public/.*\.(svg|png|ico|woff2?)$''',  # binary/vector assets
+
+  # Machine-generated audit ledgers from the 2026-07-27 NFL database forensic
+  # audit: one JSON record per row-level comparison of public NFL data against
+  # ESPN / NFL.com / Pro-Football-Reference. Every record carries a field named
+  # `row_key` holding a game or player identifier (e.g. "2020_01_ARI_SF"), and
+  # the generic-api-key rule fires on the token `key` beside a high-entropy
+  # value -- 515 times. Same category as drizzle/meta above: generated files of
+  # high-entropy public identifiers that structurally cannot hold a credential.
+  #
+  # Scoped to this one directory, not to docs/ or to the audit tree at large.
+  # PII is handled in the generator, not here: audit/f09.py redacts birth dates
+  # before they are ever written (CodeQL caught 278 of them heading for a public
+  # repo). Suppressing an entropy rule is not a licence to publish personal data.
+  '''^docs/audits/2026-07-27-nfl-db-forensic/ledger/.*\.jsonl$''',
 ]
 
 # Secret-value patterns that are unambiguously fixtures. regexTarget=secret

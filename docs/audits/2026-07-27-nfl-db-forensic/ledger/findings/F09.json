@@ -1,0 +1,34 @@
+{
+  "agent": "F09",
+  "byTable": {
+    "data_correction": {
+      "MATCH": 457,
+      "MISMATCH": 36,
+      "NOT_COMPARABLE": 132
+    },
+    "game": {
+      "MATCH": 521,
+      "MISMATCH": 36,
+      "NOT_COMPARABLE": 50
+    },
+    "player": {
+      "MATCH": 21254,
+      "MISMATCH": 827,
+      "NOT_COMPARABLE": 42144,
+      "REF_ONLY": 888,
+      "UNRESOLVED": 4
+    },
+    "team": {
+      "MATCH": 64
+    },
+    "team_alias": {
+      "MATCH": 43,
+      "NOT_COMPARABLE": 1
+    }
+  },
+  "findings": 1791,
+  "gzipBytes": 1028953,
+  "ledgerLines": 66457,
+  "rawBytes": 24513520,
+  "unparseable": 0
+}
