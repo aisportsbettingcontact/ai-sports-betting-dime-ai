@@ -584,3 +584,67 @@ describe("sendRateLimitResponse", () => {
     expect(res.body).toEqual({ error: "Too many attempts." });
   });
 });
+
+describe("parseTrpcProcedureList — path-segment evasion (2026-08-06 audit)", () => {
+  // tRPC's express adapter resolves the procedure from everything after the
+  // LAST slash: path.slice(path.lastIndexOf("/") + 1). Any classifier that
+  // reads the whole mount-relative path can be desynchronised from it by
+  // prefixing a segment, which previously yielded class=null (no limiter)
+  // while tRPC still executed the procedure.
+  it("classifies a single-segment-prefixed login as auth", () => {
+    expect(classifyTrpcProcedures(parseTrpcProcedureList("/x/appUsers.login")))
+      .toBe("auth");
+  });
+
+  it("classifies a multi-segment-prefixed batched login as auth", () => {
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/a/b/appUsers.login,appUsers.me")
+      )
+    ).toBe("auth");
+  });
+
+  it("classifies a prefixed checkout as stripe_checkout", () => {
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/x/stripe.publicCreateCheckoutSession")
+      )
+    ).toBe("stripe_checkout");
+  });
+
+  it("classifies a prefixed waitlist submit as waitlist", () => {
+    expect(classifyTrpcProcedures(parseTrpcProcedureList("/x/waitlist.submit")))
+      .toBe("waitlist");
+  });
+
+  it("classifies a prefixed feed read as public_feed", () => {
+    expect(classifyTrpcProcedures(parseTrpcProcedureList("/x/games.list")))
+      .toBe("public_feed");
+  });
+
+  it("still classifies the ordinary unprefixed path", () => {
+    expect(classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.login")))
+      .toBe("auth");
+  });
+
+  it("preserves the URL-encoding defence (AUTH-004)", () => {
+    expect(classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.logi%6E")))
+      .toBe("auth");
+  });
+
+  it("preserves the comma-batch defence (AUTH-004)", () => {
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/appUsers.login,appUsers.me")
+      )
+    ).toBe("auth");
+  });
+
+  it("slices on the RAW path so an encoded slash cannot desynchronise us", () => {
+    // %2F is NOT a path separator to Express or to tRPC's lastIndexOf("/").
+    // Decoding before slicing would find a different last slash than tRPC does.
+    expect(parseTrpcProcedureList("/appUsers.login%2Fx")).toEqual([
+      "appUsers.login/x",
+    ]);
+  });
+});

@@ -1,6 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import { ipKeyGenerator } from "express-rate-limit";
 import { cfConnectingIp, edgeMode, edgeProofPasses } from "./edgeProxy";
+import { logSafe } from "./logSafe";
 
 /**
  * Procedure-aware tRPC rate-limit classification (AUTH-004 generalized).
@@ -97,9 +98,22 @@ export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
 /**
  * `/a.b,c.d` (path relative to the /api/trpc mount) → `["a.b", "c.d"]`.
  *
- * Percent-DECODES the whole path before splitting on comma, mirroring tRPC's
- * own `decodeURIComponent(path).split(",")` order. Without this, an attacker
- * could encode a single character of a rate-limited procedure name
+ * Mirrors tRPC's express adapter EXACTLY. It resolves the procedure list from
+ * everything after the LAST slash of the RAW path:
+ *   path = req.path.slice(req.path.lastIndexOf("/") + 1)
+ * (@trpc/server/dist/adapters/express.mjs). Stripping only a LEADING slash
+ * desynchronised the classifier from the router: `/x/appUsers.login` parsed
+ * as the single unknown procedure "x/appUsers.login" -> class null -> NO
+ * limiter, while tRPC sliced to "appUsers.login" and EXECUTED it. That is
+ * the AUTH-004 evasion class via path-segment prefixing (2026-08-06 audit).
+ *
+ * Slice BEFORE decoding: Express does not percent-decode req.path, and tRPC
+ * slices raw then decodes. Decoding first would let an encoded %2F move the
+ * "last slash" for us but not for tRPC, reopening the desync.
+ *
+ * Percent-DECODES the sliced remainder before splitting on comma, mirroring
+ * tRPC's own `decodeURIComponent(path).split(",")` order. Without this, an
+ * attacker could encode a single character of a rate-limited procedure name
  * (`appUsers.logi%6E`, or an encoded comma `login%2Cx`) so the classifier sees
  * no match and applies NO limiter, while tRPC decodes and EXECUTES
  * `appUsers.login` — the AUTH-004 evasion class via URL-encoding. A malformed
@@ -107,7 +121,7 @@ export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
  * no procedure executes and passing it through unclassified is safe.
  */
 export function parseTrpcProcedureList(path: string): string[] {
-  let raw = path.replace(/^\//, "");
+  let raw = path.slice(path.lastIndexOf("/") + 1);
   try {
     raw = decodeURIComponent(raw);
   } catch {
@@ -277,6 +291,19 @@ export function createTrpcRateLimitDispatch(
   limiters: Record<TrpcLimiterClass, RequestHandler>
 ): RequestHandler {
   return (req, res, next) => {
+    // No legitimate tRPC client sends a mount-relative path containing "/".
+    // The classifier now mirrors tRPC's own slicing, so this is no longer an
+    // evasion — but its appearance means someone is probing the shape that
+    // used to work. Observe-only; never blocks.
+    try {
+      if (req.path.replace(/^\//, "").includes("/")) {
+        console.warn(
+          `[RateLimit][TRPC_PATH_SEGMENT] anomalous mount-relative path=${logSafe(req.path)}`
+        );
+      }
+    } catch {
+      /* observability must never affect routing */
+    }
     const cls = classifyTrpcProcedures(parseTrpcProcedureList(req.path));
     if (!cls) return next();
     if (!FAIL_OPEN_CLASSES.has(cls)) {
