@@ -136,6 +136,30 @@ describe("stripHrPropModelFields", () => {
     expect(out.evOver).toBeNull();
     expect(out.verdict).toBeNull();
   });
+
+  it("nulls backtestResult/backtestRunAt (model-OVER-pick WIN/LOSS IP) but keeps actualHr (commodity box-score)", () => {
+    // Live leak, confirmed 2026-08-06: backtestResult is WIN/LOSS only when the
+    // model verdict was OVER, so it re-identifies the model's actionable picks.
+    const out = stripHrPropModelFields({
+      gameId: 2251604,
+      playerName: "Aaron Judge", // commodity — keep
+      teamAbbrev: "NYY", // commodity — keep
+      bookLine: "0.5", // commodity — keep
+      actualHr: 1, // commodity box-score fact — keep
+      verdict: "OVER", // IP
+      backtestResult: "WIN", // IP (model-verdict-relative)
+      backtestRunAt: 1_700_000_000, // model-pipeline timing — IP
+      modelCorrect: 1, // IP (caught by the "model" rule)
+    });
+    expect(out.playerName).toBe("Aaron Judge");
+    expect(out.teamAbbrev).toBe("NYY");
+    expect(out.bookLine).toBe("0.5");
+    expect(out.actualHr).toBe(1);
+    expect(out.verdict).toBeNull();
+    expect(out.backtestResult).toBeNull();
+    expect(out.backtestRunAt).toBeNull();
+    expect(out.modelCorrect).toBeNull();
+  });
 });
 
 describe("stripWcMatchupModelFields", () => {
