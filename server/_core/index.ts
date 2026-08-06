@@ -892,10 +892,13 @@ async function startServer() {
   });
 
   // ─── Public feed read limiter ─────────────────────────────────────────────
-  // The scraper hot path: games.list / getCurrentDate / getAvailableDates /
-  // lastRefresh + wc2026.matchesByDate. A real logged-in user sends one batched
-  // feed poll per 60s (~1-3 req/min incl. navigation), so 60/min/IP is ~20x
-  // headroom while capping a scraper at 1 req/s. FAIL OPEN (feed is the
+  // The scraper hot path: every model-bearing feed read in the "public_feed"
+  // class of TRPC_PROCEDURE_CLASSES (games.list + feed meta, wc2026 match/odds
+  // feeds, MLB strikeout/HR prop feeds) — see trpcRateLimitPolicy.ts for the
+  // authoritative list. httpBatchLink coalesces a whole feed page into ONE
+  // request (one token), so a real logged-in user sends ~1-3 req/min incl.
+  // navigation; 60/min/IP is ~20x headroom while capping a scraper at 1 req/s.
+  // FAIL OPEN (feed is the
   // product — a limiter fault must not become an outage; enforced in the
   // dispatch's public_feed branch). Env knobs: FEED_RATE_LIMIT_MAX (default 60),
   // FEED_RATE_LIMIT_DISABLED=1 kill-switch (feed class only; never auth/checkout).
