@@ -70,9 +70,59 @@ describe("feedSpecToProjectionGame", () => {
       color: "#111111",
       score: 14,
     });
-    expect(g.matchupContext).toBe("PNC Park");
-    expect(g.venue).toBe("PNC Park");
-    expect(g.startTime).toBeUndefined(); // finals carry "FINAL", not a first-pitch time
+    // Owner directive 2026-08-05: ballpark + first pitch are pregame-only, so
+    // a FINAL card carries none of the three.
+    expect(g.matchupContext).toBeUndefined();
+    expect(g.venue).toBeUndefined();
+    expect(g.startTime).toBeUndefined();
+  });
+
+  /** The parallel adapter carries the SAME pregame-only contract as
+   *  presentation.ts (owner directive 2026-08-05). */
+  describe("pregame-only venue + first pitch (owner directive 2026-08-05)", () => {
+    const scheduled = feedSpecToProjectionGame(
+      {
+        ...SPEC,
+        timeLabel: "7:05 PM ET",
+        away: { ...SPEC.away, score: null },
+        home: { ...SPEC.home, score: null },
+      },
+      "MLB"
+    );
+
+    it("keeps ballpark and first pitch on a scheduled card", () => {
+      expect(scheduled.status).toBe("scheduled");
+      expect(scheduled.matchupContext).toBe("PNC Park");
+      expect(scheduled.venue).toBe("PNC Park");
+      expect(scheduled.startTime).toBe("7:05 PM ET");
+      expect(scheduled.statusLabel).toBe("7:05 PM ET");
+    });
+
+    it("drops both on live cards (the shipped live-card time leak)", () => {
+      const live = feedSpecToProjectionGame(
+        { ...SPEC, liveLabel: "LIVE · BOT 8TH", timeLabel: "9:40 PM ET" },
+        "MLB"
+      );
+      expect(live.status).toBe("live");
+      expect(live.statusLabel).toBe("LIVE · BOT 8TH");
+      expect(live.matchupContext).toBeUndefined();
+      expect(live.venue).toBeUndefined();
+      expect(live.startTime).toBeUndefined();
+    });
+
+    it("honors an explicit postponed/suspended status over score inference", () => {
+      for (const status of ["postponed", "suspended"] as const) {
+        const g2 = feedSpecToProjectionGame(
+          { ...SPEC, status, timeLabel: status.toUpperCase() },
+          "MLB"
+        );
+        expect(g2.status).toBe(status);
+        expect(g2.statusLabel).toBe(status.toUpperCase());
+        expect(g2.matchupContext).toBeUndefined();
+        expect(g2.venue).toBeUndefined();
+        expect(g2.startTime).toBeUndefined();
+      }
+    });
   });
 
   it("parses prices to numbers and pairs opposite sides for no-vig", () => {

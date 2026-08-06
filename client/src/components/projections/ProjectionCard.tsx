@@ -10,14 +10,17 @@ import "./ProjectionCard.css";
 /**
  * ProjectionCard — one game, structured for a 3-second decision (Law v3).
  *
- * Order: status (live/final only) → matchup block (matchup line · ballpark ·
- * first pitch, owner directive 2026-07-17) → scheduled-MLB probable pitchers →
- * the dominant model insight (summary) → the full market tables in an anchored,
- * paginated popover. There is
- * no corner league label: the feed's sport chip already names the competition
- * (owner directive 2026-07-18), so a scheduled card renders no header at all —
- * its start time is owned by the matchup block's third line (single rendering
- * ownership, directive §3).
+ * Order: status (centered, EVERY state) → matchup block (matchup line ·
+ * ballpark, scheduled only) → scheduled-MLB probable pitchers → the dominant
+ * model insight (summary) → the full market tables in an anchored, paginated
+ * popover. There is no corner league label: the feed's sport chip already names
+ * the competition (owner directive 2026-07-18).
+ *
+ * Owner directive 2026-08-05 (supersedes the 2026-07-17 §3 split): ONE status
+ * slot, horizontally centered, directly above the away/home row, identical in
+ * placement and register for scheduled / live / final / postponed / suspended.
+ * The scheduled card's first-pitch time is that slot's content, so it is no
+ * longer printed by the matchup block — each fact renders exactly once.
  *
  * The market popover is closed by default behind "View full AI model
  * projections". It renders one market per page, preserving source order
@@ -94,26 +97,35 @@ export function ProjectionCard({
   const showPregame =
     game.status === "scheduled" && game.pregameLineups != null;
 
+  // The lifecycle state is the card's primary fact as of 2026-08-05, so it
+  // belongs in the accessible name: browsing article-by-article otherwise
+  // yields five identical "X at Y" with no way to tell live from final without
+  // entering each card. Deliberately NOT an aria-live region — a 15-game slate
+  // polling every 60s would interrupt a screen-reader user continuously; the
+  // status is simply first in the card's reading order.
+  const cardLabel = `${game.away.name} at ${game.home.name}, ${game.statusLabel}`;
+
   return (
     <article
       className={`projection-card ds-cq projection-card--${game.status}${isCompact ? " projection-card--compact" : ""}${showPregame ? " projection-card--with-pregame" : ""}${isPass ? " projection-card--pass" : ""}`}
-      aria-label={`${game.away.name} at ${game.home.name}`}
+      aria-label={cardLabel}
     >
-      {game.status !== "scheduled" && (
-        <header className="projection-card__head">
-          <span
-            className={`projection-card__status projection-card__status--${game.status}`}
-          >
-            {/* Live indicator (owner directive / page law "Live state"): pulsing
-                7px mint dot ahead of the mono-styled status text. Desktop/tablet
-                only (Round 4 Wave 1 scoping, item 8) — see ProjectionCard.css. */}
-            {game.status === "live" && (
-              <span className="projection-card__live-dot" aria-hidden="true" />
-            )}
-            {game.statusLabel}
-          </span>
-        </header>
-      )}
+      {/* One centered status slot for every lifecycle state (owner directive
+          2026-08-05). Scheduled renders the first-pitch time here; the matchup
+          block below no longer carries it. */}
+      <header className="projection-card__head">
+        <span
+          className={`projection-card__status projection-card__status--${game.status}`}
+        >
+          {/* Live indicator (owner directive / page law "Live state"): pulsing
+              7px mint dot ahead of the mono-styled status text, at every
+              breakpoint (2026-08-05) — see ProjectionCard.css. */}
+          {game.status === "live" && (
+            <span className="projection-card__live-dot" aria-hidden="true" />
+          )}
+          {game.statusLabel}
+        </span>
+      </header>
 
       <MatchupPanel game={game} />
 

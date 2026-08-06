@@ -25,7 +25,11 @@ import { countryIdentity, isRawCountryCode } from "./countries";
 
 export type Sport =
   "MLB" | "NFL" | "NBA" | "NHL" | "NCAAF" | "NCAAM" | "SOCCER";
-export type EventStatus = "scheduled" | "live" | "final" | "postponed";
+/** Lifecycle states. `suspended` became a first-class member on 2026-08-05
+ *  (owner directive, pages/ai-model-projections.md) — it previously borrowed
+ *  postponed's label and could not be told apart on a card. */
+export type EventStatus =
+  "scheduled" | "live" | "final" | "postponed" | "suspended";
 export type EventRole = "home" | "away";
 export type ParticipantKind = "team" | "country";
 
@@ -206,21 +210,29 @@ function statusOf(raw: FeedEventLike): EventStatus {
   return "scheduled";
 }
 
-/** Venue line, dropped when it merely repeats the context line (avoids a dupe). */
-function venueOf(raw: FeedEventLike): string | undefined {
+/**
+ * Venue line — PREGAME-ONLY (owner directive 2026-08-05, superseding the
+ * 2026-07-17 matchup-block anatomy). Once a game is live, final, postponed, or
+ * suspended, the ballpark is stale scan noise: the header carries the lifecycle
+ * status and the card compacts. Still dropped on scheduled cards when it merely
+ * repeats the context line (each fact renders once).
+ */
+function venueOf(raw: FeedEventLike, status: EventStatus): string | undefined {
+  if (status !== "scheduled") return undefined;
   const v = raw.venueLine ?? undefined;
   return v && v !== raw.meta ? v : undefined;
 }
 
-/** First pitch / kickoff in ET. Final and postponed cards carry a status label,
- *  not a start time, so the matchup block's last line stays off. */
+/** First pitch / kickoff in ET — PREGAME-ONLY (owner directive 2026-08-05).
+ *  Every non-scheduled state carries its lifecycle status in the centered card
+ *  header instead, and a scheduled card's time moved there too, so this line
+ *  now exists only as the matchup block's optional companion to the ballpark.
+ *  The pre-2026-08-05 rule leaked a first-pitch time onto LIVE cards. */
 function startTimeOf(
   raw: FeedEventLike,
   status: EventStatus
 ): string | undefined {
-  return status === "final" || status === "postponed"
-    ? undefined
-    : raw.timeLabel || undefined;
+  return status === "scheduled" ? raw.timeLabel || undefined : undefined;
 }
 
 /** Spelled-out market titles (owner directive 2026-07-18): no abbreviated
@@ -388,8 +400,12 @@ function createTeamPresentation(
       statusLabel: raw.liveLabel || raw.timeLabel,
       awayParticipant,
       homeParticipant,
-      venue: venueOf(raw),
-      contextLine: raw.meta || undefined,
+      venue: venueOf(raw, status),
+      // On team-sport rows the context line IS the ballpark (the MLB feed sets
+      // `meta = g.venue`), so the pregame-only venue rule has to gate it here
+      // too — owner directive 2026-08-05. Soccer's context line is the ROUND,
+      // not a venue, and keeps its own ungated rule in the adapter below.
+      contextLine: status === "scheduled" ? raw.meta || undefined : undefined,
       startTime: startTimeOf(raw, status),
       markets,
       projection: projectionOf(markets),
@@ -590,7 +606,11 @@ export const createSoccerPresentation: SportAdapter = (raw, ctx) => {
     statusLabel: raw.liveLabel || raw.timeLabel,
     awayParticipant,
     homeParticipant,
-    venue: venueOf(raw),
+    venue: venueOf(raw, status),
+    // Stage identity, not a venue (wcMatchToCard splits them: meta = round
+    // label, venueLine = stadium · city). "World Cup Final" is the only thing
+    // naming the match on a settled card, so it survives every lifecycle state
+    // — the pregame-only rule takes the stadium and the kickoff time, not this.
     contextLine: raw.meta || undefined,
     startTime: startTimeOf(raw, status),
     markets,

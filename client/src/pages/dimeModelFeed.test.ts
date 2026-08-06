@@ -137,9 +137,13 @@ describe("DimeModelFeed — MLB bindings", () => {
   });
 
   it("carries explicit status so postponed/suspended games cannot look scheduled", () => {
-    expect(src).toMatch(/g\.gameStatus === "postponed" \|\| g\.gameStatus === "suspended"/);
+    // 2026-08-05: suspended is its own lifecycle member, no longer folded into
+    // postponed — the page law names it as a first-class state.
+    expect(src).toMatch(/g\.gameStatus === "suspended"\s*\?\s*"suspended"/);
+    expect(src).toMatch(/g\.gameStatus === "postponed"\s*\?\s*"postponed"/);
     expect(src).toMatch(/status === "scheduled"\s*\?\s*mlbLineupToProjectionPregame/);
     expect(src).toMatch(/status === "postponed"\s*\?\s*"POSTPONED"/);
+    expect(src).toMatch(/status === "suspended"\s*\?\s*"SUSPENDED"/);
   });
 
   it("slate sorts earliest → latest first pitch (owner directive 2026-07-17)", () => {

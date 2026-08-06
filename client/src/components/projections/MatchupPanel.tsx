@@ -2,26 +2,35 @@ import { TeamLogoMark } from "./TeamLogoMark";
 import type { ProjectionGame } from "./types";
 
 /**
- * MatchupPanel — the gamecard's identity block (owner directive 2026-07-17).
- * Logos flank a centered three-line stack:
+ * MatchupPanel — the gamecard's identity block (owner directive 2026-07-17,
+ * amended 2026-08-05). Logos flank a centered stack:
  *
  *   {AWAY TEAM NAME} @ {HOME TEAM NAME}   ← "Giants @ Mariners"
- *   {BALLPARK / STAGE CONTEXT}            ← "T-Mobile Park"
- *   {TIME OF FIRST PITCH ET}              ← "10:10 PM ET"
+ *   {BALLPARK / STAGE CONTEXT}            ← "T-Mobile Park" — pregame only
  *
  * Team names only — no abbreviations, no pitcher names, no raw country codes.
  * The venue is suppressed when the context line already carries it — each fact
  * renders once. Scores stay beside the logos for live/final games.
  *
- * Single rendering ownership (directive §3): for scheduled games the start time
- * is owned by THIS panel's third line; ProjectionCard's header renders the
- * status only for live/final ("LIVE", "FINAL"). See ProjectionCard.test.ts.
+ * Single rendering ownership (owner directive 2026-08-05, superseding the
+ * 2026-07-17 §3 split): ProjectionCard's centered header owns the status for
+ * EVERY state, first-pitch time included, so this panel no longer renders a
+ * time line at all. Ballpark and start time are gated to scheduled games here
+ * as a backstop — the adapters (lib/sport/presentation.ts, fromFeedSpec.ts)
+ * gate them at the source, and this makes the law hold for any future adapter
+ * that forgets to. See ProjectionCard.test.ts.
  */
 export function MatchupPanel({ game }: { game: ProjectionGame }) {
-  const { away, home, matchupContext, venue, startTime } = game;
+  const { away, home, matchupContext, venue } = game;
   const showScore = away.score != null && home.score != null;
+  const isPregame = game.status === "scheduled";
   // No duplicate ballpark: drop the venue line when the context already has it.
-  const showVenue = !!venue && !(matchupContext ?? "").includes(venue);
+  const showVenue =
+    isPregame && !!venue && !(matchupContext ?? "").includes(venue);
+  // The context line is NOT gated here: on MLB rows it is the ballpark (the
+  // adapters already drop it off-pregame), but on soccer rows it is the round
+  // label, which survives every state. Only the adapters know which sport they
+  // are shaping, so that call stays theirs.
 
   return (
     <div className="matchup">
@@ -50,10 +59,11 @@ export function MatchupPanel({ game }: { game: ProjectionGame }) {
           <TeamLogoMark team={home} />
         </div>
 
-        {/* Context/venue/time span the FULL card width beneath the flag row —
+        {/* Context/venue span the FULL card width beneath the flag row —
             2.5x flags (owner directive 2026-07-18) squeeze the center column,
-            and the venue must never truncate. */}
-        {(matchupContext || showVenue || startTime) && (
+            and the venue must never truncate. The first-pitch line that used to
+            close this stack moved to the centered card header (2026-08-05). */}
+        {(matchupContext || showVenue) && (
           <div className="matchup__below">
             {matchupContext && (
               <span
@@ -68,7 +78,6 @@ export function MatchupPanel({ game }: { game: ProjectionGame }) {
                 {venue}
               </span>
             )}
-            {startTime && <span className="matchup__time">{startTime}</span>}
           </div>
         )}
       </div>

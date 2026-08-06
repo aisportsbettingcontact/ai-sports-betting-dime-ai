@@ -332,24 +332,36 @@ const renderMarket = (game: ProjectionGame, marketIndex = 0): string => {
 const countOccurrences = (haystack: string, needle: string): number =>
   haystack.split(needle).length - 1;
 
+/** Markup with attribute values stripped, so "rendered exactly once" counts
+ *  only VISIBLE text. `title` tooltips never counted; as of 2026-08-05 the card's
+ *  `aria-label` also carries the status string (accessible name), which is a
+ *  deliberate second copy for AT, not a second render. */
+const visibleOnly = (html: string): string =>
+  html.replace(/ (?:title|aria-label)="[^"]*"/g, "");
+
 describe("ProjectionCard — single rendering ownership (directive §3)", () => {
   it("renders the event time exactly once per card (matchup block owns it)", () => {
-    const html = render(wcFixture());
+    const html = visibleOnly(render(wcFixture()));
     expect(countOccurrences(html, "3:00 PM ET")).toBe(1);
   });
 
-  it("header owns LIVE/FINAL status; a final card carries no start time", () => {
-    // A FINAL card: the header owns the status; the center owns stage/venue only.
+  it("header owns the status; a final card carries no start time (2026-08-05: even if one is supplied)", () => {
+    // A FINAL card: the header owns the status; the center owns stage context only.
     const game: ProjectionGame = {
       ...wcFixture(),
       status: "final",
       statusLabel: "FINAL",
-      startTime: undefined,
+      // Deliberately still populated: the MatchupPanel backstop must suppress
+      // both regardless of what the adapter hands it (owner directive 2026-08-05).
+      venue: "SoFi Stadium (LA), Inglewood",
+      startTime: "3:00 PM ET",
     };
-    const html = render(game);
+    const html = visibleOnly(render(game));
     expect(countOccurrences(html, "FINAL")).toBe(1);
-    expect(html).toContain("Semifinal"); // context still renders
+    expect(html).toContain("Semifinal"); // soccer ROUND context still renders
     expect(html).not.toContain("3:00 PM ET");
+    expect(html).not.toContain("matchup__time");
+    expect(html).not.toContain("matchup__venue");
   });
 
   it("spells out both participants and the paged market labels (§5/§6)", () => {
@@ -366,10 +378,12 @@ describe("ProjectionCard — single rendering ownership (directive §3)", () => 
 });
 
 describe("ProjectionCard — no corner league label (owner directive 2026-07-18)", () => {
-  it("renders no league label on any card; scheduled cards render no header", () => {
+  it("renders no league label on any card; scheduled cards DO render the status header (2026-08-05)", () => {
     const scheduled = render(wcFixture());
     expect(scheduled).not.toContain("projection-card__league");
-    expect(scheduled).not.toContain("projection-card__head");
+    // Superseded 2026-08-05: the header is no longer live/final-only — every
+    // state renders one centered status line, scheduled included.
+    expect(scheduled).toContain("projection-card__head");
     expect(render(mlbFixture())).not.toContain("projection-card__league");
   });
 
@@ -383,6 +397,153 @@ describe("ProjectionCard — no corner league label (owner directive 2026-07-18)
     expect(html).toContain("projection-card__head");
     expect(html).toContain("FINAL");
     expect(html).not.toContain("projection-card__league");
+  });
+});
+
+/** Owner directive 2026-08-05 ("card status header + pregame-only venue/time",
+ *  design-system/dime-ai/pages/ai-model-projections.md): ONE centered status
+ *  slot for every lifecycle state, and ballpark + first pitch confined to
+ *  scheduled cards. Supersedes the 2026-07-17 clause that gave the matchup
+ *  block the time and the header only LIVE/FINAL. */
+describe("ProjectionCard — centered lifecycle status header (owner directive 2026-08-05)", () => {
+  const STATES: ReadonlyArray<[ProjectionGame["status"], string]> = [
+    ["scheduled", "10:10 PM ET"],
+    ["live", "LIVE · BOT 8TH"],
+    ["final", "FINAL"],
+    ["postponed", "POSTPONED"],
+    ["suspended", "SUSPENDED"],
+  ];
+
+  it("renders exactly one status line, in the header slot, for every lifecycle state", () => {
+    for (const [status, label] of STATES) {
+      const html = render({
+        ...mlbFixture(),
+        status,
+        statusLabel: label,
+        pregameLineups: undefined,
+      });
+      expect(html).toContain("projection-card__head");
+      expect(countOccurrences(html, "projection-card__head")).toBe(1);
+      expect(countOccurrences(html, "projection-card__status ")).toBe(1);
+      expect(html).toContain(`projection-card__status--${status}`);
+      expect(html).toContain(label);
+      // The header precedes the matchup row in source order (it IS the slot
+      // directly above the away/home row).
+      expect(html.indexOf("projection-card__head")).toBeLessThan(
+        html.indexOf("matchup__grid")
+      );
+    }
+  });
+
+  it("centers the header slot — the old top-right flex-end placement is retired", () => {
+    expect(cardCss).toMatch(
+      /\.projection-card__head \{[^}]*justify-content: center;/
+    );
+    expect(cardCss).not.toMatch(
+      /\.projection-card__head \{[^}]*justify-content: flex-end;/
+    );
+  });
+
+  it("keeps the shipped micro-label register and adds tabular figures for clock states", () => {
+    expect(cardCss).toMatch(
+      /\.projection-card__status \{[^}]*font-size: var\(--proj-meta\)/
+    );
+    expect(cardCss).toMatch(
+      /\.projection-card__status \{[^}]*letter-spacing: 0\.06em/
+    );
+    expect(cardCss).toMatch(
+      /\.projection-card__status \{[^}]*text-transform: uppercase/
+    );
+    // Inherited from the retired .matchup__time rule: scheduled first-pitch
+    // figures stay tabular now that the time lives in the header.
+    expect(cardCss).toMatch(
+      /\.projection-card__status \{[^}]*font-variant-numeric: tabular-nums/
+    );
+  });
+
+  it("gives every state a head row in the grid, scheduled included", () => {
+    // The base rule now governs every state: there is no longer a
+    // `--scheduled` override dropping "head" (nor one restating the base).
+    expect(cardCss).toMatch(
+      /\.projection-card \{[\s\S]*?grid-template-areas: "head" "matchup" "summary" "markets";/
+    );
+    expect(cardCss).not.toMatch(
+      /\.projection-card--scheduled \{\s*grid-template-(areas|rows)/
+    );
+    expect(cardCss).toMatch(
+      /\.projection-card--scheduled\.projection-card--with-pregame \{\s*grid-template-areas: "head" "matchup" "pregame" "summary" "markets";/
+    );
+  });
+
+  it("puts the lifecycle status in the card's accessible name", () => {
+    for (const [status, label] of STATES) {
+      const html = render({
+        ...mlbFixture(),
+        status,
+        statusLabel: label,
+        pregameLineups: undefined,
+      });
+      expect(html).toContain(`aria-label="Giants at Mariners, ${label}"`);
+    }
+  });
+
+  it("prints the ballpark and the first pitch on SCHEDULED cards only, and the time exactly once", () => {
+    const scheduled = visibleOnly(render(mlbFixture()));
+    // Ballpark stays (it arrives as the matchup context on MLB rows).
+    expect(scheduled).toContain("T-Mobile Park");
+    // The time now lives in the header — never printed twice.
+    expect(countOccurrences(scheduled, "10:10 PM ET")).toBe(1);
+    expect(scheduled).not.toContain("matchup__time");
+
+    for (const status of ["live", "final", "postponed", "suspended"] as const) {
+      const html = render({
+        ...mlbFixture(),
+        status,
+        statusLabel: status.toUpperCase(),
+        // The adapters gate these; the panel backstops them.
+        matchupContext: undefined,
+        venue: "T-Mobile Park",
+        startTime: "10:10 PM ET",
+        pregameLineups: undefined,
+      });
+      expect(html).not.toContain("T-Mobile Park");
+      expect(html).not.toContain("10:10 PM ET");
+      expect(html).not.toContain("matchup__venue");
+      expect(html).not.toContain("matchup__time");
+    }
+  });
+
+  it("treats suspended as its own lifecycle state, compacted like postponed", () => {
+    const html = render({
+      ...mlbFixture(),
+      status: "suspended",
+      statusLabel: "SUSPENDED",
+      pregameLineups: undefined,
+    });
+    expect(html).toContain("projection-card--suspended");
+    expect(html).toContain("projection-card--compact");
+    expect(html).toContain("SUSPENDED");
+    expect(html).not.toContain("POSTPONED");
+  });
+
+  it("records the superseding directive in the page law", () => {
+    const section = lawDoc.slice(
+      lawDoc.indexOf(
+        "Owner Directives — 2026-08-05 (card status header + pregame-only venue/time)"
+      ),
+      lawDoc.indexOf("Owner Directives — 2026-08-02 (responsive rebuild")
+    );
+    expect(section).toContain("horizontally centered");
+    expect(section).toContain("SUSPENDED");
+    expect(section).toContain("PREGAME-ONLY");
+    // The 2026-07-17 clause it retires is named, not silently dropped.
+    expect(section).toContain(
+      "Scheduled games own the time in this block; the card header shows LIVE/FINAL"
+    );
+    // …and the lifecycle-compaction directive absorbs the venue/time rule.
+    expect(lawDoc).toMatch(
+      /\*\*Lifecycle compaction\.\*\*[\s\S]*?remove the ballpark and the\s*\n\s*first-pitch time\*\*/
+    );
   });
 });
 
@@ -533,12 +694,12 @@ describe("ProjectionCard — matchup block format (owner directive 2026-07-17)",
   it("renders the ballpark exactly once (no duplicate venue line)", () => {
     // venue is contained in the context line, so the venue line is suppressed.
     // Strip title="" tooltip attributes — only VISIBLE text counts as a render.
-    const visible = render(wcFixture()).replace(/ title="[^"]*"/g, "");
+    const visible = visibleOnly(render(wcFixture()));
     expect(countOccurrences(visible, "SoFi Stadium (LA), Inglewood")).toBe(1);
   });
 
   it("MLB card reads NAME @ NAME / ballpark / first pitch — no abbrs, no pitchers", () => {
-    const visible = render(mlbFixture()).replace(/ title="[^"]*"/g, "");
+    const visible = visibleOnly(render(mlbFixture()));
     expect(visible).toContain("Giants");
     expect(visible).toContain("Mariners");
     expect(visible).not.toContain("SF Giants"); // names only in the matchup line
@@ -925,9 +1086,11 @@ describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
     expect(html).toContain("projection-card__live-dot");
     expect(html).toContain("projection-card__status--live");
     expect(html).toContain("LIVE · TOP 5TH");
-    // The dot precedes the label text inside the same status span.
+    // The dot precedes the label text inside the same status span. Match the
+    // LAST occurrence: since 2026-08-05 the status string also appears earlier,
+    // in the card's aria-label (accessible name), which is not the visible one.
     expect(html.indexOf("projection-card__live-dot")).toBeLessThan(
-      html.indexOf("LIVE · TOP 5TH")
+      html.lastIndexOf("LIVE · TOP 5TH")
     );
   });
 
@@ -1029,8 +1192,8 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     );
   });
 
-  it("never renders stale pregame data after a game becomes live, final, or postponed", () => {
-    for (const status of ["live", "final", "postponed"] as const) {
+  it("never renders stale pregame data after a game becomes live, final, postponed, or suspended", () => {
+    for (const status of ["live", "final", "postponed", "suspended"] as const) {
       const html = render({
         ...mlbPregameFixture(),
         status,
@@ -1054,7 +1217,7 @@ describe("ProjectionCard — Rotowire pregame context", () => {
       /\.projection-card--compact\s*\{[\s\S]*?opacity:\s*0\.72;/
     );
     expect(cardCss).toMatch(
-      /\.projection-card--scheduled\.projection-card--with-pregame\s*\{[\s\S]*?grid-template-areas:\s*"matchup"\s*"pregame"\s*"summary"\s*"markets";/
+      /\.projection-card--scheduled\.projection-card--with-pregame\s*\{[\s\S]*?grid-template-areas:\s*"head"\s*"matchup"\s*"pregame"\s*"summary"\s*"markets";/
     );
   });
 });
@@ -1111,13 +1274,16 @@ describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 
     // stretches row-mates at every multi-column width; in a 1-up row the 1fr
     // resolves to natural height, so mobile is unchanged.
     expect(item1).not.toContain("@media (min-width: 1024px)");
-    // grid-template-areas order is head/matchup/summary/markets (scheduled drops head) —
-    // the row-track list must line up 1:1: fixed, fixed, 1fr (surplus absorber), fixed (pinned last).
+    // grid-template-areas order is head/matchup/summary/markets at EVERY state
+    // (2026-08-05: scheduled no longer drops head) — the row-track list must
+    // line up 1:1: fixed, fixed, 1fr (surplus absorber), fixed (pinned last).
     expect(item1).toMatch(
       /\.projection-card\s*\{\s*grid-template-rows:\s*auto auto 1fr auto;\s*\}/
     );
-    expect(item1).toMatch(
-      /\.projection-card--scheduled\s*\{\s*grid-template-rows:\s*auto 1fr auto;\s*\}/
+    // 2026-08-05: no `--scheduled` track override survives — the base list
+    // covers it now that the head row is unconditional.
+    expect(item1).not.toMatch(
+      /\.projection-card--scheduled\s*\{\s*grid-template-rows/
     );
     // The carousel variant of the summary area also centers in its surplus row.
     expect(item1).toMatch(

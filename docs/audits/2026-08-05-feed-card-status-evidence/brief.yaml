@@ -1,0 +1,88 @@
+# Federated UI brief — .claude/skills/design-federation/references/brief-template.yaml
+# Filled before code. One brief per surface per change. `lead` is the single
+# aesthetic owner; every other design skill advised read-only.
+
+id: feed-gamecard-status-header-2026-08-05
+
+surface:
+  name: "feed / AI Model Projections gamecard"
+  kind: feed
+  mode: operate
+  change: refine
+
+lead: impeccable # v4.0.4, vendored (.claude/skills/impeccable, pin ae5e951).
+  # Routing table: "Product UI: feed, chat, auth, settings, dashboards" and
+  # "In-place refinement of an existing surface" both route to impeccable.
+advisors:
+  - ui-ux-pro-max # research only, terminal-only, NEVER --persist (governed surface)
+  - "impeccable critique Assessment A (design review sub-agent)"
+  - "impeccable critique Assessment B (detector + browser evidence sub-agent)"
+not_engaged:
+  - taste-skill / soft-skill / minimalist-skill / brutalist-skill # v2 §13 refuses product UI
+  - gpt-tasteskill # MASTER.md bans GSAP/scroll/parallax on this product
+  - frontend-design # in-place refinement, not art direction
+  - emil-design-eng # motion advisor; not needed, the diff adds no motion
+  - review-animations # motion gate did not fire — see motion-review.md
+
+product:
+  audience: "Subscribers scanning a slate of MLB games for model edges, ~3s per card"
+  single_job: "Tell me, at a glance, what state this game is in and whether there is an edge"
+  business_goal: "Protect the 3-second scan; never assert something false about a game"
+  evidence:
+    - "Owner directive 2026-08-05 (this change), recorded in design-system/dime-ai/pages/ai-model-projections.md"
+    - "Shipped defect: a LIVE card printed 'Chase Field / 9:40 PM ET' while the game was in the bottom of the 8th"
+    - "Shipped defect: scheduled cards rendered no status element at all"
+    - "Owner answer 2026-08-05: thread a real SUSPENDED state; focus on MLB (the World Cup is over)"
+
+content:
+  source:
+    - client/src/pages/DimeModelFeed.tsx # mlbRowToCard — the real feed row shape
+    - client/src/lib/sport/presentation.ts # the normalization layer
+  responsible_gaming: true # not a marketing surface; no RG copy added or removed
+  invented_claims: false # no new copy; "SUSPENDED" is an existing DB status string
+
+law: # read in full, in this order — not summarized
+  - design-system/dime-ai/pages/ai-model-projections.md
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md
+  - design-system/dime-ai/TYPOGRAPHY.md
+law_conflict:
+  clause: 'pages/ai-model-projections.md:70 (2026-07-17) — "Scheduled games own the
+    time in this block; the card header shows LIVE/FINAL only."'
+  resolution: "Owner direction outranks brand law (authority chain #1 > #2), but
+    design-system/dime-ai/** is owner territory — amended by PR with a dated
+    decision note, never as a build side effect. New section: 'Owner Directives
+    — 2026-08-05 (card status header + pregame-only venue/time)'."
+  untouched: [MASTER.md, THREE-COLOR-LAW.md, TYPOGRAPHY.md]
+
+direction:
+  adjectives: [predictable, quiet, honest, scannable]
+  anti_references:
+    - "ESPN/CBS scoreboard chrome — the centered status is the category default;
+       it earns its place here only because the top-right slot read as a HOME-team
+       annotation and did not exist at all on scheduled cards"
+    - "A second accent or a state-colored pill to differentiate lifecycle"
+  signature_element: "One slot, five states, zero exceptions — the same 17px header
+    row at the same offset in every card, so the eye learns one place to look and
+    the card never changes shape as a game moves through its lifecycle. Spent
+    entirely in structure; no new color, font, or gradient."
+
+dials: # n/a — lead is not a taste skill
+  DESIGN_VARIANCE: null
+  MOTION_INTENSITY: null
+  VISUAL_DENSITY: null
+
+engineering:
+  stack: React + Vite (client/src), Express server, pnpm only
+  component_reuse_first: true # reuses .projection-card__head and the existing
+    # micro-label register; adds no new component and no new token
+  viewports: [375x812, 768x1024, 1024x768, 1440x900]
+  reduced_motion: required
+  dark_and_light: required
+
+acceptance:
+  required_states: [scheduled, live, final, postponed, suspended]
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto
+  delivery_gate: MASTER.md Pre-Delivery Checklist + evidence bundle

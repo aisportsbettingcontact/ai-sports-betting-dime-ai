@@ -60,14 +60,16 @@
   whose artwork disappears into System/Dark receive the same alpha-following
   `0.2px` white keyline on mobile, tablet, and desktop. Light preserves the
   original mark with no generated outline.
-- **Gamecard matchup block** (team names only; each fact once):
+- **Gamecard matchup block** (team names only; each fact once)
+  *(AMENDED 2026-08-05 — see "card status header" below: the centered header owns
+  the status for every state, and {BALLPARK} is scheduled-only. The {TIME OF FIRST
+  PITCH ET} line is retired from this block entirely — the header owns it.)*:
   ```
+  {STATUS}                              ← centered header, EVERY state (2026-08-05)
   {AWAY TEAM NAME} @ {HOME TEAM NAME}   ← "Giants @ Mariners" (names only, no abbrs)
-  {BALLPARK}                            ← "T-Mobile Park" (never duplicated)
-  {TIME OF FIRST PITCH ET}              ← "10:10 PM ET"
+  {BALLPARK}                            ← "T-Mobile Park" — SCHEDULED ONLY (2026-08-05)
   ```
   Countries render names only (no FIFA codes); WC context line stays "Round · Venue".
-  Scheduled games own the time in this block; the card header shows LIVE/FINAL only.
   Scheduled MLB probable pitchers render in their dedicated middle panel below
   this matchup block, never inside the matchup line itself.
 - **Markets popover** *(amended 2026-07-23)*: closed by default; the card-level
@@ -220,8 +222,10 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   trigger and close control are at least 44px; Escape/outside click close the
   dialog and Radix restores focus to the trigger.
 - **Lifecycle compaction.** As soon as a game becomes live, final, postponed, or
-  suspended, remove all pregame pitcher/lineup UI, apply the compact card
-  anatomy, set `align-self: start`, and diminish the card to `opacity: 0.72`.
+  suspended, remove all pregame pitcher/lineup UI, **remove the ballpark and the
+  first-pitch time** (2026-08-05 extension — the same rule, one more pair of
+  pregame-only facts), apply the compact card anatomy, set `align-self: start`,
+  and diminish the card to `opacity: 0.72`.
   Never keep a stale lineup dialog trigger on a non-scheduled card.
 
 ### Owner Directives — 2026-07-23 (paginated market popover)
@@ -269,6 +273,60 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   `prefers-reduced-motion` collapses smooth scrolling. A game with one edge
   or one scorable no-edge candidate keeps the plain single summary with no
   arrow; a game with no scorable candidate shows the unavailable-data copy.
+
+### Owner Directives — 2026-08-05 (card status header + pregame-only venue/time)
+
+> **SUPERSEDES** the 2026-07-17 "Gamecard matchup block" clause
+> *"Scheduled games own the time in this block; the card header shows LIVE/FINAL
+> only."* That clause is retired. Decision note: PR `feat/feed-card-status-header`,
+> evidence bundle `docs/audits/2026-08-05-feed-card-status-evidence/`.
+
+- **One status slot, one alignment, every state.** Every gamecard renders exactly
+  one status line in the card header, **horizontally centered**, directly above
+  the away/home matchup row. Nothing about WHERE the status sits is
+  lifecycle-specific — the header is no longer a live/final-only affordance and
+  the old top-right (`justify-content: flex-end`) placement is retired. The
+  scheduled card, which previously rendered no header at all, now renders one.
+- **Status content by state:**
+
+  | State | Header reads |
+  |---|---|
+  | scheduled | first-pitch time ET — "9:40 PM ET" |
+  | live | "LIVE · BOT 8TH" + the pulsing 7px mint dot |
+  | final | "FINAL" |
+  | postponed | "POSTPONED" |
+  | suspended | "SUSPENDED" |
+
+- **Suspended is a first-class state (2026-08-05).** It no longer collapses into
+  the "POSTPONED" label. `gameStatus === "suspended"` threads through as its own
+  lifecycle member with the label "SUSPENDED"; it takes the same compact anatomy,
+  `align-self: start`, and `opacity: 0.72` as postponed.
+- **The slot, alignment, and type register are shared; ink is not.** Every state
+  keeps the existing micro-label register — `--proj-meta` (12.00px at a 375
+  viewport, 14.05px at 1440), 600, `letter-spacing: 0.06em`, uppercase, Familjen
+  Grotesk in mono-STYLE with no mono face loaded — plus
+  `font-variant-numeric: tabular-nums`, inherited from the retired
+  `.matchup__time` rule so scheduled clock figures stay tabular. **Ink still
+  varies by state and is meant to:** live is `--mint-ink` (signal) with 0.08em
+  tracking and the light-theme compaction-contrast correction, and the four
+  compact states inherit the existing `--text-secondary → --foreground` remap
+  that holds AA through their `opacity: 0.72`. Measured composited contrast —
+  scheduled 8.13:1 dark / 6.54:1 light, live 6.41 / 4.62, settled 10.32 / 9.01;
+  all clear 4.5:1. Known consequence, logged for the owner rather than fixed
+  here: that remap makes the four **non-actionable** states the brightest text
+  in the slot, above the scheduled card a user can actually bet. Resolving it
+  means touching the lifecycle-compaction dim itself, which is owner territory.
+  This directive is placement and conditional rendering, not a restyle.
+- **Ballpark and first pitch are PREGAME-ONLY.** Live, final, postponed, and
+  suspended cards render neither, anywhere on the card. A scheduled card keeps
+  its ballpark line; its time now lives in the centered header and must not be
+  printed twice. Enforced at the adapter layer (`presentation.ts` team builder,
+  `fromFeedSpec.ts`) with `MatchupPanel` as a backstop.
+- **MLB is the scope of the venue rule.** The MLB feed row carries the ballpark
+  in the matchup context line (`meta = g.venue`), so the team-sport adapter gates
+  that context line on scheduled. Soccer's context line is the ROUND ("World Cup
+  Final"), not a venue — it survives at every state; only the soccer stadium line
+  and kickoff time are gated. Stage identity is not a ballpark.
 
 ### Owner Directives — 2026-08-02 (responsive rebuild — container-driven law)
 
