@@ -13,6 +13,11 @@ const OUT_DIR = path.resolve(HERE, '..', 'fullgame');
 const SAMPLE_N = 60;
 const SEED = 20260725;
 
+// numeric validation for API-derived values before they are serialized to disk.
+// Absent/blank stays blank — Number(null) is 0, which would silently write a real score.
+const csvNum = (v) =>
+  v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Number(v));
+
 // mulberry32 PRNG for reproducible sampling
 function mulberry32(a) {
   return function () {
@@ -84,7 +89,9 @@ for (const g of sample) {
     totMatch = apiSide === totRow[idx.actual] ? 1 : 0;
     if (totMatch === 1) totOk++; else totBad.push(g[idx.game_id]);
   }
-  out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], aAway, aHome, 'Final',
+  // API-derived scores are numeric-validated before serialization (identical output for
+  // real linescores; keeps unvalidated response data out of the written file)
+  out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], csvNum(aAway), csvNum(aHome), 'Final',
     mlRow?.[idx.actual] ?? '', mlMatch, totRow?.[idx.actual] ?? '', totRow?.[idx.line] ?? '', totMatch, ''].join(','));
   await new Promise((r) => setTimeout(r, 120)); // polite rate limit
 }

@@ -76,7 +76,8 @@ if (EXECUTE) {
     for (const u of hrUpdates) await conn.query(`UPDATE mlb_hr_props SET actualHr=? WHERE id=? AND actualHr IS NULL`, [u.hr, u.id]);
     await conn.commit();
   } catch (e) { await conn.rollback(); throw e; }
-  if (!fs.existsSync(EXEMPT_FILE)) fs.writeFileSync(EXEMPT_FILE, 'code,gameDate,gamePk,player,reason\n');
+  // create-exclusive: writes the header only when absent, without a check-then-act race
+  try { fs.writeFileSync(EXEMPT_FILE, 'code,gameDate,gamePk,player,reason\n', { flag: 'wx' }); } catch { /* header already present */ }
   fs.appendFileSync(EXEMPT_FILE, exemptions.join('\n') + (exemptions.length ? '\n' : ''));
   const [k] = await q(`SELECT COUNT(*) n FROM mlb_strikeout_props p JOIN games g ON g.id=p.gameId WHERE g.gameStatus='final' AND g.gameDate>='2026-03-01' AND g.gameDate<=? AND p.actualKs IS NULL`, [AS_OF]);
   const [h] = await q(`SELECT COUNT(*) n FROM mlb_hr_props p JOIN games g ON g.id=p.gameId WHERE g.gameStatus='final' AND g.gameDate>='2026-03-01' AND g.gameDate<=? AND p.actualHr IS NULL`, [AS_OF]);
