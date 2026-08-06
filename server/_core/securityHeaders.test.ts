@@ -63,11 +63,7 @@ describe("permissionsPolicy() middleware", () => {
   it("stamps the Permissions-Policy header and calls next()", () => {
     const setHeader = vi.fn();
     const next = vi.fn();
-    permissionsPolicy()(
-      {} as never,
-      { setHeader } as never,
-      next as never
-    );
+    permissionsPolicy()({} as never, { setHeader } as never, next as never);
     expect(setHeader).toHaveBeenCalledWith(
       "Permissions-Policy",
       PERMISSIONS_POLICY
