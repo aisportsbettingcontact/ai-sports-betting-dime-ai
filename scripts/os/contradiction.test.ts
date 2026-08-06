@@ -169,6 +169,32 @@ describe("contradiction.mts, executed end to end", () => {
     }
   });
 
+  it("does not claim 'no recorded cycles' when cycles exist but none resolved", () => {
+    // Found auditing #400 itself. When EVERY cycle is unresolvable, `measurable`
+    // is empty, so findPriorityContradiction correctly answers "you gave me zero
+    // cycles" — but the script printed that verbatim as "no recorded cycles yet".
+    // Ten cycles WERE recorded; they were all unreadable. The UNRESOLVED line
+    // carried the truth while the state line asserted something false, and this
+    // happens precisely in the degraded case the reporting exists to expose.
+    const good = git(sandbox, "show", "origin/os-ledger:cycles.jsonl");
+    writeLedgerRef(
+      sandbox,
+      [
+        JSON.stringify({ commitSha: "0".repeat(40), prNumber: 91 }),
+        JSON.stringify({ commitSha: "1".repeat(40), prNumber: 92 }),
+      ].join("\n") + "\n",
+    );
+    try {
+      const out = run(sandbox);
+      expect(out).toMatch(/UNRESOLVED\s+2 of 2/);
+      expect(out, "the ledger was not empty — saying so is false").not.toMatch(/no recorded cycles/);
+      expect(out).toMatch(/none of the 2 recorded cycles could be resolved/i);
+      expect(out).not.toMatch(/contradiction YES/);
+    } finally {
+      writeLedgerRef(sandbox, good.endsWith("\n") ? good : good + "\n");
+    }
+  });
+
   it("says no_ledger — not 'no cycles' — when the ledger ref is missing", () => {
     const bare = mkdtempSync(join(tmpdir(), "os-noledger-"));
     try {
