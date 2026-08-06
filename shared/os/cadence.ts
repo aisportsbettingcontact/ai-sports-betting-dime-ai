@@ -29,8 +29,16 @@ export interface CadenceVerdict extends CadenceInput {
   note: string | null;
 }
 
-/** Below this share of declared runs, a schedule is not being honoured. */
-const HONOURED_FLOOR = 0.5;
+/**
+ * Below this share of declared runs, a schedule is not being honoured.
+ *
+ * EXPORTED AND TESTED DELIBERATELY. This single number is the instrument's whole
+ * verdict, and nothing pinned it — a one-character edit would silently redefine
+ * "honoured" across every report LOOP-002 produces and every decision built on
+ * one. The boundary is INCLUSIVE: exactly half the declared runs counts as
+ * honoured, so a workflow at 50% is reported "no" rather than flagged.
+ */
+export const HONOURED_FLOOR = 0.5;
 
 /**
  * Expand one cron field into the concrete values it matches.
