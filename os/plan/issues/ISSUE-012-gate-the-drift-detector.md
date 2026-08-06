@@ -1,6 +1,6 @@
 # ISSUE-012 — Prove whether the self-patcher fires, then gate it
 
-**Wave:** 3 — Ownership · **Effort:** M · **Status:** IN PROGRESS · **DRI:** Prez
+**Wave:** 3 — Ownership · **Effort:** M · **Status:** IN PROGRESS · **DRI:** Prez · **observe_by:** 2026-08-20
 **Ruling dependency:** DR-014 Ruling 4 (HOLE B)
 **Doctrine:** D5 (agent authority matches demonstrated reliability) · D15 #2 (open-loop automation) · D16 criterion 3
 

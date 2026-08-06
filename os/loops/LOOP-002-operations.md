@@ -125,6 +125,16 @@ That blind spot is the **written trigger for building the TiDB observation tier*
 in-process scheduler's health becomes load-bearing, a CI-side observer is the wrong instrument and
 this loop must be re-scoped rather than trusted.
 
+**The reader refuses what it cannot parse, by name.** A precision audit measured the previous
+line-by-line YAML scan against five shapes GitHub accepts: of four that genuinely declared a
+schedule it found **one** — and that one aborted the whole run. It also invented two schedules that
+did not exist, reading the word `schedule:` out of a shell heredoc and out of an `env:` block.
+
+A dropped workflow is the worse half of that, because this loop exists to notice an unhonoured
+schedule and a schedule it cannot see is one it reports as fine forever. `shared/os/workflowSchedules.ts`
+now parses the unambiguous shapes and **refuses the rest by filename**, failing the run. Silence was
+the defect; a refusal is not.
+
 Two smaller limits, recorded so nobody rediscovers them:
 
 - GitHub retains run history for a bounded window, and `gh run list` pages at 300 rows — which
@@ -134,3 +144,8 @@ Two smaller limits, recorded so nobody rediscovers them:
   day's expectation would report every high-frequency workflow as unhonoured every day forever.
 - A workflow disabled in the UI reports zero runs and looks identical to one being throttled. The
   observer reports the count; it does not diagnose the cause.
+- "All zero schedules honoured" is refused as a verdict. Zero measured is not zero broken, and that
+  reading is how the shallow-clone defect presented; the run now fails rather than reporting it.
+- The honoured floor is **0.5**, inclusive — a workflow at exactly half its declared cadence is
+  reported as honoured. It is exported from `shared/os/cadence.ts` and pinned by tests, because
+  nothing else in the system defines what "honoured" means.
