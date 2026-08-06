@@ -22,3 +22,4 @@ retrieved automatically rather than buried in a postmortem *(doctrine §8, L7)*.
 | [A config API is not runtime truth](config-api-is-not-runtime-truth.md) | I refuted my own RAILPACK finding with one build-log read |
 | [A gate in the same command block is not a gate](a-gate-in-the-same-command-block-is-not-a-gate.md) | I scanned and pushed in one block; the scan gated nothing |
 | [The script that runs is not always the code that's tested](the-script-that-runs-is-not-the-code-thats-tested.md) | The PR #398 post-merge audit |
+| [An exit code cannot tell a diagnosis from a crash](an-exit-code-cannot-tell-a-diagnosis-from-a-crash.md) | Mutation-testing the #400 audit fixes |

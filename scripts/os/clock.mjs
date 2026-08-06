@@ -41,8 +41,37 @@ function field(md, name) {
   return m ? m[1].trim() : null;
 }
 
+/**
+ * Today, as a local calendar date at midnight.
+ *
+ * `observe_by` is a calendar date a human wrote, so it must be compared in the
+ * human's frame. Parsing it as UTC midnight and subtracting a local `new Date()`
+ * made an item overdue from 17:00 PDT on its own deadline day — seven hours
+ * before that day ended. Verified: a probe whose observe_by was TODAY reported
+ * "(1d)" overdue.
+ *
+ * OS_CLOCK_NOW (YYYY-MM-DD) overrides today, so the boundary is testable without
+ * waiting for a date to arrive. It affects nothing in normal operation.
+ */
+function todayLocal() {
+  const override = process.env.OS_CLOCK_NOW;
+  if (override && /^\d{4}-\d{2}-\d{2}$/.test(override)) {
+    const [y, m, d] = override.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+/** A `YYYY-MM-DD` string as local midnight, or null if unparseable. */
+function localDate(by) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(by)) return null;
+  const [y, m, d] = by.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 try {
-  const asOf = new Date();
+  const asOf = todayLocal();
   const overdue = [];
   for (const p of walk(OS)) {
     if (p.includes("/appendix/")) continue;
@@ -57,8 +86,14 @@ try {
       overdue.push({ id, days: null });
       continue;
     }
-    const due = new Date(`${by}T00:00:00Z`);
-    const days = Math.floor((asOf - due) / 86400000);
+    const due = localDate(by);
+    if (!due) {
+      overdue.push({ id, days: null });
+      continue;
+    }
+    // Whole calendar days, both sides at local midnight. An item is overdue only
+    // once the day AFTER its deadline has begun.
+    const days = Math.round((asOf - due) / 86400000);
     if (days > 0) overdue.push({ id, days });
   }
   if (overdue.length === 0) process.exit(0);
