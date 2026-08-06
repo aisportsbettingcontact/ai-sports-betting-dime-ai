@@ -286,3 +286,38 @@ describe("a cycle carrying no evidence must not weigh against the goal", () => {
     expect(r.totalCycles).toBe(3);
   });
 });
+
+describe("a fenced EXAMPLE is not a declaration — the two HIGH findings from the #403/#405 audit", () => {
+  const B = "`".repeat(3);
+
+  it("a fenced example containing `## Activity paths` does not replace the real one", () => {
+    // Confirmed live on main: the record declared the example's globs, and
+    // contradiction.mts printed "contradiction YES" against work that was 100%
+    // on-goal. Cause: the heading was located in the RAW document, so stripping
+    // fences from the selected slice could never affect WHICH slice was selected.
+    const doc = GOOD.replace(
+      "## Desired outcome",
+      `## How to write a goal record\n\n${B}markdown\n## Activity paths\n- \`example/only/**\`\n${B}\n\n## Desired outcome`,
+    );
+    expect(parseGoal(doc).activityPaths).toEqual(["os/**"]);
+  });
+
+  it("a fenced example mentioning a required field does not satisfy it", () => {
+    // The same root cause one step over: the required-field scan also read raw
+    // markdown, so documenting the format satisfied the requirement.
+    const doc = GOOD.replace("## Constraints\nNo production data.\n", "").replace(
+      "## Desired outcome",
+      `## How to write a goal record\n\n${B}markdown\n## Constraints\nexample text\n${B}\n\n## Desired outcome`,
+    );
+    expect(() => parseGoal(doc)).toThrow(/Constraints/);
+  });
+
+  it("a four-backtick fence wrapping a ``` example does not leak its contents", () => {
+    const B4 = "`".repeat(4);
+    const doc = GOOD.replace(
+      "- `os/**`",
+      `- \`os/**\`\n\n${B4}markdown\n${B}\n- \`leaked/path/**\`\n${B}\n${B4}`,
+    );
+    expect(parseGoal(doc).activityPaths).toEqual(["os/**"]);
+  });
+});

@@ -122,8 +122,10 @@ beforeAll(() => {
   mkdirSync(join(sandbox, "shared/os"), { recursive: true });
   mkdirSync(join(sandbox, "os/goals"), { recursive: true });
   cpSync(SCRIPT, join(sandbox, "scripts/os/contradiction.mts"));
-  cpSync(join(REPO, "shared/os/goal.ts"), join(sandbox, "shared/os/goal.ts"));
-  cpSync(join(REPO, "shared/os/cycle.ts"), join(sandbox, "shared/os/cycle.ts"));
+  // Copy the whole shared/os tree, not a named list. Listing files meant the
+  // sandbox broke the moment the script gained a new dependency — which it did,
+  // when the fence reader was extracted into shared/os/markdown.ts.
+  cpSync(join(REPO, "shared/os"), join(sandbox, "shared/os"), { recursive: true });
   writeFileSync(join(sandbox, "os/goals/GR-0001-test.md"), goalDoc("GR-0001", ["os/**"]));
   // node_modules is needed for `tsx`; symlink rather than install.
   execFileSync("ln", ["-sfn", join(REPO, "node_modules"), join(sandbox, "node_modules")]);
