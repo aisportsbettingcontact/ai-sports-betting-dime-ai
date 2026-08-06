@@ -119,7 +119,7 @@
     },
     {
       "artifact": "drizzle/schema.ts",
-      "sha256": "7ec89e190e1ab1fd104f0f060e0412632ad16923fbd09f643fc14bc065033689",
+      "sha256": "6465c80aff778e75e819527278d39df2c774242e5c7f59534cfda353a3e71230",
       "classification": "schema"
     },
     {
@@ -184,7 +184,7 @@
     },
     {
       "artifact": "ml/dime-1.0/evidence/benchmarks/product-route-observability-v1/local-baseline.json",
-      "sha256": "da2abf7d073232601d4895bcc99b25a489062ea6a57c4fff3dc9eb161101d430",
+      "sha256": "2cdfdf04fa136235e1caea4aec2ecd295b752ce632f285050c57ba4933237dc0",
       "classification": "synthetic_benchmark"
     },
     {
@@ -214,7 +214,7 @@
     },
     {
       "artifact": ".dockerignore",
-      "sha256": "8ca09f85ba1f6f1d6159dd9c891c2b834991681c6aa1a05e9fe08a67efb7922c",
+      "sha256": "a36f26b80b1a317c9e36ceeb077f522b4b993318286078937447ddf0cf92be51",
       "classification": "configuration"
     },
     {
@@ -264,7 +264,11 @@
     }
   ],
   "independentGate": {
-    "allowedVerdicts": ["REJECT", "REVISE", "SHADOW"],
+    "allowedVerdicts": [
+      "REJECT",
+      "REVISE",
+      "SHADOW"
+    ],
     "verdict": null,
     "reviewer": null,
     "issuedAt": null,
