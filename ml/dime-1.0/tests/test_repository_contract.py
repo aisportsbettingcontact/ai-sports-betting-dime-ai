@@ -309,7 +309,15 @@ def test_training_tree_is_excluded_except_for_pricing_registry() -> None:
         for pattern in dockerignore
         if pattern.startswith("!ml/dime-1.0/") and pattern != "!ml/dime-1.0/configs"
     ] == ["!ml/dime-1.0/configs/dime_observability_pricing_v1.json"]
-    assert "ml/dime-1.0" not in dockerfile
+    # The training tree must not be baked into the image EXCEPT the pricing
+    # registry: the .dockerignore allowlist ships that one file, and the
+    # selective runtime stage (COPY --from=build, no `COPY . .`) must copy it
+    # explicitly. So the ONLY permitted Dockerfile references to ml/dime-1.0 are
+    # that pricing-registry COPY (source + destination lines).
+    ml_dockerfile_refs = [line for line in dockerfile.splitlines() if "ml/dime-1.0" in line]
+    assert all(
+        "configs/dime_observability_pricing_v1.json" in line for line in ml_dockerfile_refs
+    ), ml_dockerfile_refs
 
 
 def test_hugging_face_registry_and_access_matrix_are_exact() -> None:

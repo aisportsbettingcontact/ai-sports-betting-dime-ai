@@ -6,7 +6,7 @@
     "fixture_path": "ml/dime-1.0/data/eval/product_route_observability_v1.benchmark.json",
     "fixture_sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372",
     "control_source_path": "server/_core/dimeEngineeringControl.ts",
-    "control_source_sha256": "a743dbef3231a9feae004ab1700a83bd2d67a93431fa5f837738a1f084e2bde5",
+    "control_source_sha256": "3c74c63e8a8d08fb435bb48ab4fe261748268bfc9ed54a38d8df4571f528b965",
     "deterministic_generated_at": "2026-07-29T00:00:00Z"
   },
   "data_governance": {

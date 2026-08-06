@@ -74,7 +74,7 @@
   "governed_artifacts": {
     "training_contract": {
       "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
-      "sha256": "35e970a9d3af67402c36c204592454eebd382730c0c3fe1f6ef6ba6ffb44307f",
+      "sha256": "07566d9e86eafd2ea3372142a8b8078ebc3f94f61a7d22b181174da9127dfb4b",
       "status": "INCOMPLETE_NOT_AUTHORIZED"
     },
     "training_contract_schema": {
