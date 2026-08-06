@@ -1046,14 +1046,32 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   };
 }
 
-/** Slate status tier (owner directive 2026-07-18): LIVE games always sit
- *  above upcoming games, and settled/final games sink to the bottom.
- *  Within a tier the existing order holds — Array.sort is stable, so MLB
- *  keeps earliest-first-pitch order and WC keeps the server's match order.
- *  timeLabel prefix covers both "FINAL" and "FINAL (PENS)". */
-export function slateStatusRank(card: Pick<FeedCardSpec, "liveLabel" | "timeLabel">): number {
-  if (card.liveLabel) return 0;
-  return card.timeLabel.startsWith("FINAL") ? 2 : 1;
+/**
+ * Slate status tier (owner directive 2026-07-18, amended 2026-08-06).
+ *
+ * LIVE sits above upcoming; SETTLED sinks to the bottom — and "settled" now
+ * means final PLUS postponed and suspended. Those two used to fall through into
+ * the upcoming tier and sort by their original first pitch, which put games
+ * nobody can bet above the ones they can.
+ *
+ * Exhaustive by construction: adding a GameStatus member without giving it a
+ * tier fails the typecheck here, instead of silently defaulting into one. That
+ * silent default is exactly how postponed and suspended slipped into the
+ * upcoming tier while the rank sniffed the timeLabel string for a FINAL
+ * prefix — a test that could only ever recognize the states it was written for.
+ *
+ * Within a tier the existing order holds: Array.sort is stable, so MLB keeps
+ * earliest-first-pitch order and WC keeps the server's match order.
+ */
+const SLATE_TIER: Record<GameStatus, number> = {
+  live: 0,
+  scheduled: 1,
+  final: 2,
+  postponed: 2,
+  suspended: 2,
+};
+export function slateStatusRank(card: Pick<FeedCardSpec, "status">): number {
+  return SLATE_TIER[card.status];
 }
 
 // ── Query orchestration (contracts: exact {sport, gameDate}; 60s poll;
