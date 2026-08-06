@@ -328,6 +328,13 @@ custom rule for the managed-rules part; harmless.)
 | `FEED_RATE_LIMIT_MAX` | feed limiter cap (per min/IP) | default 60 |
 | `FEED_RATE_LIMIT_DISABLED` | `1` = kill-switch for the feed class only | unset |
 | `ACCOUNT_LOCKOUT_THRESHOLD` / `_WINDOW_MS` / `_COOLDOWN_MS` / `_DISABLED` | per-account lockout tuning | defaults (10 / 15min / 15min / off) |
+| `EDGE_AGENT_BYPASS_KEY` | trusted-agent WAF-bypass key — the value the tooling sends as the `x-dime-agent` header (§12) | **NOT a Railway/server var** — Cloudflare rule value + the tooling's shell / CI only |
+
+> **Secret law:** never print, persist in evidence, or move these values between scopes. All are
+> Railway env **EXCEPT `EDGE_AGENT_BYPASS_KEY`**, which is a client/tooling secret — it lives in the
+> Cloudflare rule value + the tooling's shell/CI, **never on Railway** (the server never reads it;
+> see §12). Schema changes ride `db-push.yml` before dependent code (deploy-order law); env-only
+> changes just redeploy the same commit.
 
 > **Secret law:** never print, persist in evidence, or move these values between scopes. Railway env
 > only. Schema changes ride `db-push.yml` before dependent code (deploy-order law); env-only changes
@@ -453,10 +460,166 @@ request shape/params, or a gateway/quota issue.
 | #408 | L2 | Put every model-bearing feed read on the `public_feed` rate cap | `f9c481175` |
 | #410 | L4 / L3 | `Permissions-Policy` header + Broken-Access-Control audit (airtight) | `8090ce285` |
 | #414 | L6 | Self-healing origin-lock circuit breaker + Phase 4/lockout/XFF ratification | `646bb7dec` |
+| #419 | docs | This reference doc — anti-scraping program record + as-built config | — |
+| #420 | L7 | Trusted-agent `x-dime-agent` edge bypass for deploy-verification tooling (§12) | `be0a1bb7b` |
 
 Related source files: `server/feedGating.ts`, `server/_core/trpcRateLimitPolicy.ts`,
 `server/_core/originLock.ts`, `server/_core/edgeProxy.ts`, `server/_core/edgeCircuitBreaker.ts`,
 `server/_core/securityHeaders.ts`, `server/accountLockout.ts`, `server/_core/index.ts`,
+`scripts/smoke-deploy.mjs`, `scripts/dime-production-auth.mjs`,
+`docs/runbooks/edge-defense-cloudflare.md`. `EDGE_MODE=on` first went live on Railway deployment
+`dabf0453` (2026-08-06); the WAF/Bot layer + trusted-agent bypass went live the same day.
+
+---
+
+## 12. Trusted-agent access under the armed edge (deploy-verification bypass)
+
+Executed and verified 2026-08-06 · PR #420 (merge commit `be0a1bb7b`).
+
+### 12.1 The problem
+
+Arming the edge (§4.6 Super Bot Fight Mode "Definitely automated → **Block**") 403s **all** automated
+traffic on the document / web surface (`/`, `/assets/*`, `/checkout`, the SPA render) — including our
+own **deploy-verification tooling** (`scripts/smoke-deploy.mjs`, the Playwright harness
+`scripts/dime-production-auth.mjs`). Real *human* browsers are unaffected (they are not "definitely
+automated" — see §13). The `/api/*` + `/health` + `/dime-storage/*` surface stays reachable for agents
+(exempted by the `Skip WAF+Bot for app API` rule, §4.4), so *functional* verification already works;
+only *headless document-route render* is blocked. **Owner decision:** keep the strongest posture
+(Block) and give trusted automation an authenticated key, rather than soften to Managed Challenge.
+
+### 12.2 The design — an authenticated allowlist, not an IP allowlist
+
+Trusted automation presents a secret header only it knows; a Cloudflare rule waves through requests
+carrying it and blocks everyone else exactly as before. IP-independent (survives CI-runner / sandbox
+IP churn, which an IP allowlist would not).
+
+**Naming — two DIFFERENT things holding the SAME secret value (a genuine point of confusion):**
+
+- **`x-dime-agent`** = the **HTTP header name** the tooling sends and Cloudflare matches on.
+- **`EDGE_AGENT_BYPASS_KEY`** = the **environment-variable name** the tooling reads the secret from.
+- The secret VALUE (an `openssl rand -hex 32` output) lives in `EDGE_AGENT_BYPASS_KEY`; the tooling
+  puts that value into the `x-dime-agent` header; the Cloudflare rule matches that value.
+  Flow: `EDGE_AGENT_BYPASS_KEY=<secret>` → tool → `x-dime-agent: <secret>` → CF rule `== "<secret>"`.
+
+**Why it doesn't weaken the posture:**
+
+- No key → still bot-blocked. Wrong key → still blocked (the rule matches the EXACT value — verified).
+- A leaked key bypasses ONLY the bot/WAF layer; the model IP is still protected by L1 anon-strip
+  gating and L2 rate limiting; and it's rotatable.
+- The key is a bearer secret over HTTPS, read from env, NEVER committed, and **host-scoped** in both
+  tools so it can never leak to a third-party redirect (e.g. the Discord OAuth flow).
+
+### 12.3 The 5-step process (as executed)
+
+**Step 1 — Generate the key** *(owner · terminal)*
+`openssl rand -hex 32` → a 64-char secret. Store in a password manager. Used in TWO places (the Step-2
+Cloudflare rule value + the Step-4 tooling env). Never in code / git.
+
+**Step 2 — Cloudflare rule** *(owner · dashboard)*
+Security → WAF → Custom rules → Create rule:
+
+- Name: `Trusted agent bypass`
+- Expression (via **Edit expression**; `<KEY>` = the Step-1 secret VALUE, NOT the literal text
+  `EDGE_AGENT_BYPASS_KEY`): `any(http.request.headers["x-dime-agent"][*] == "<KEY>")`
+- Action: **Skip** → All managed rules + All Super Bot Fight Mode Rules + All remaining custom rules
+- Execution order: **First** · Status: **Active** · **Deploy**.
+
+**Step 3 — Tooling sends the header** *(PR #420 — merged, commit `be0a1bb7b`)*
+
+- `scripts/smoke-deploy.mjs`: a host-scoped `sfetch()` wrapper adds `x-dime-agent: $EDGE_AGENT_BYPASS_KEY`
+  to requests aimed at the smoke target host(s) only (`base` + `SMOKE_ORIGIN_URL`); every check routes
+  through it. **No-op when the env var is unset** (direct / localhost / non-edge runs byte-unchanged).
+- `scripts/dime-production-auth.mjs`: the Playwright login harness injects the header via
+  `context.route` **scoped to the platform origin only** — so the secret is never sent to a
+  third-party redirect. No-op when unset.
+- For any ad-hoc Playwright/Puppeteer:
+  `await page.setExtraHTTPHeaders({ "x-dime-agent": process.env.EDGE_AGENT_BYPASS_KEY })` — but prefer
+  a host-scoped `context.route` if the flow can redirect cross-origin.
+
+**Step 4 — Set the env var where the tooling runs** *(owner)*
+
+- Local shell: `export EDGE_AGENT_BYPASS_KEY='<the key>'` (persists for the current session only).
+- GitHub Actions: repo Secret `EDGE_AGENT_BYPASS_KEY`, referenced in the workflow env.
+- **NOT on Railway.** `EDGE_AGENT_BYPASS_KEY` is a client/tooling secret — the server never reads it
+  (unlike `EDGE_ORIGIN_SECRET`). Setting it on Railway is harmless but pointless; remove it for
+  hygiene (don't store a secret where it isn't used).
+
+**Step 5 — Verify** *(both)*
+
+- With key: `EDGE_AGENT_BYPASS_KEY=<key> node scripts/smoke-deploy.mjs https://aisportsbettingmodels.com`
+  → **10/10 checks passed** (document routes now 200). ✅ verified 2026-08-06.
+- One-liner: `curl -H "x-dime-agent: <key>" -o /dev/null -w "%{http_code}\n" https://aisportsbettingmodels.com/`
+  → **200**.
+- Without key / wrong key → **403** (public posture intact — verified).
+
+### 12.4 Operating notes
+
+- **Target the Cloudflare domain** (`https://aisportsbettingmodels.com`), NOT the raw
+  `*.up.railway.app` origin. Document routes against the raw origin are 403'd by the *origin lock*
+  (§3.7), which this bot-bypass cannot clear (it needs the CF secret + a CF-range upstream). Through
+  Cloudflare, the bypass skips the bot check and CF stamps the origin secret, so the origin lock passes.
+- **Rotation:** new `openssl rand -hex 32` → update the CF rule value (Step 2) + the env var (Step 4).
+
+### 12.5 Verification results (2026-08-06)
+
+| Client | Result | Meaning |
+| --- | --- | --- |
+| tooling **with** the key | smoke-deploy **10/10**, doc routes 200 | trusted automation passes ✅ |
+| no key | 403 (CF block page) | public blocked ✅ |
+| wrong key | 403 | rule matches the exact secret, not just any `x-dime-agent` header ✅ |
+| exempt `/api/*`, `/health` | 200 / 400 | unchanged ✅ |
+
+### 12.6 Troubleshooting (gotchas hit during rollout)
+
+- **`zsh: EDGE_AGENT_BYPASS_KEY: parameter not set`** → the key isn't set in *that* shell. `export` it
+  (persists for the current session only). Verify without printing the value:
+  `echo ${#EDGE_AGENT_BYPASS_KEY}` should be `64`.
+- **`__vsc_preexec:3: RPROMPT: parameter not set`** → harmless VS Code shell-integration noise printed
+  on every command; unrelated to the key.
+- **Wrong directory** → run from the repo root, not `/bin`, so `scripts/smoke-deploy.mjs` resolves.
+- **Stale tooling** → `git pull origin main` first; a pre-#420 `smoke-deploy.mjs` never sends the header.
+- **With-key still 403** → the CF rule value doesn't match the key (it must be the secret, not the
+  literal `EDGE_AGENT_BYPASS_KEY`), or the rule isn't Active/First, or a character mismatch.
+
+---
+
+## 13. Incident log — the P0 "outage" that wasn't (2026-08-06)
+
+**Report (from a parallel session):** *"Site down for users — `/`, `/feed`, `/login` all return 403,
+through Cloudflare and direct to the Railway origin. A headless Chromium gets Cloudflare's 'you have
+been blocked'."*
+
+**Verdict: false alarm. No production outage.** Root cause was **test methodology**, not the site:
+
+- Hitting the **raw Railway origin** (`…up.railway.app`) → 403 is the **origin lock working as
+  designed** (direct-origin traffic bypassing Cloudflare is *supposed* to be blocked).
+- A **headless Chromium** through Cloudflare → 403 is **Super Bot Fight Mode correctly blocking
+  automation**. A headless browser IS a bot from Cloudflare's view — it is not a real human browser.
+
+**Proof there was no outage** (Railway `http` request logs, same minutes as the report): real Chrome
+browsers (`Mozilla/5.0 … Chrome/150 … Safari`) got **200** on `/`, `/login`, `/chat`, the full SPA
+asset load, authenticated `appUsers.me`, feed data, and a complete **Discord OAuth** login (302s).
+Real-user success rate over the watch: **100%.** The only 403s were `node` / `curl` / empty-UA /
+spoofed-bot and raw-origin hits.
+
+**How to disambiguate outage-vs-security in the future (decisive):**
+
+1. Hit a **bot-exempt `/api/*`** path **through Cloudflare**. If it returns an APP response (400/401)
+   → Cloudflare is forwarding the secret and the origin lock passes CF traffic → **no outage**. If it
+   returns 403 → the edge proof is genuinely broken.
+2. Read Railway **`http`** logs for real browser-UA requests → look for **200s** on `/`, `/login`.
+   (Cloudflare-edge blocks never reach Railway, so a *quiet* app plus all-403 probes is NOT proof of a
+   block — check for real 200s instead.)
+3. Remember: **an automated probe (including the assistant's own) is always bot-flagged**, so it 403s
+   on the web surface *by design*. That is not evidence of a human outage.
+
+**Lessons:** headless ≠ human; a direct-origin 403 is the feature, not a bug; verify with the
+bot-exempt API surface + real-browser log evidence before declaring an outage; do NOT revert
+`EDGE_MODE` on the strength of automated-client 403s.
+
+---
+
+## 14. Cheat sheet
 `docs/runbooks/edge-defense-cloudflare.md`. `EDGE_MODE=on` first went live on Railway deployment
 `dabf0453` (2026-08-06).
 
@@ -474,6 +637,9 @@ node -e 'fetch("https://aisportsbettingmodels.com/api/trpc/games.list?batch=1&in
 
 # Confirm orange is live (must include cf-ray + resolve to a Cloudflare 104.x/172.64.x IP):
 node -e 'fetch("https://aisportsbettingmodels.com/health",{redirect:"manual"}).then(r=>console.log(r.status,r.headers.get("server"),r.headers.get("cf-ray")))'
+
+# Deploy-verify against the ARMED edge (trusted-agent bypass, §12) — with key → 10/10, no/wrong key → 403:
+EDGE_AGENT_BYPASS_KEY=<key> node scripts/smoke-deploy.mjs https://aisportsbettingmodels.com
 ```
 
 **Rollback, one move:** `EDGE_MODE=log` in Railway → instantly healthy, blocks nothing.

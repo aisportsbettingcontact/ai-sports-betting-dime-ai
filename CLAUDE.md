@@ -211,6 +211,13 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
   the ML lane is DORMANT — PR #289 closed (branch `agent/dime-v1-release-candidate-v1` preserves
   the checksummed dataset candidate), the RunPod endpoint decommissioned, its production env vars
   removed, and `dime-llm-validation.yml` triggers slimmed to the `ml/` tree only.
+- `references/notion-control-plane.md` — Notion is the organizational control plane (workspace
+  "Tailered Sports", root page "Dime AI — Operations HQ"): goals, projects, decisions, releases,
+  and AI governance metadata live there; GitHub stays authoritative for code, CI, and commit
+  evidence. Production releases get a Release record with exact evidence links; owner decisions
+  get a Decision record; PRs paste their Notion context URL into the PR template's "Notion
+  context" section (enables Notion's GitHub auto-relations). Never mirror GitHub issues into
+  Notion by hand, and never put secrets in Notion.
 
 ## Deploy law (IMPORTANT)
 
