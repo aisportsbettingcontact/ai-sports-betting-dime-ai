@@ -55,6 +55,12 @@ stripe of its own.
    remap still makes settled states the brightest text in the status slot.
    Resolving it means revisiting the lifecycle-compaction dim, also owner
    territory. Logged in the page law under the 2026-08-05 directive.
-3. **`mlbScoreRefresh.ts:103`** still comments that postponed/suspended are
-   "hidden from feed". `games.list` applies no such filter — the comment is
-   stale. Left alone: not raised in this PR's scope.
+3. ~~**`mlbScoreRefresh.ts:103`** still comments that postponed/suspended are
+   "hidden from feed".~~ **CLOSED 2026-08-06** by PR
+   `docs/mlb-status-comment-truth`. The claim turned out to appear **six**
+   times across three doc blocks and one in-function comment, not once, and
+   two further inaccuracies rode along with it (`suspended` was undocumented in
+   the status union even though the type has five members, and it was wrongly
+   folded into postponed's "postponed, suspended, or cancelled" description —
+   `mapMlbStatus` returns `"suspended"` for it, checked first). Comments only;
+   no behavior change.
