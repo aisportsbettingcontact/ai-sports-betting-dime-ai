@@ -62,10 +62,14 @@ export function cfConnectingIp(req: Pick<Request, "headers">): string | null {
 }
 
 // ─── Cloudflare edge IP ranges ──────────────────────────────────────────────
-// Snapshot of https://www.cloudflare.com/ips-v4 + /ips-v6 as of 2026-08-05.
-// SECOND-FACTOR / observability ONLY (design law #2) — a stale list degrades
-// defence-in-depth, never the primary secret gate. Refresh cadence + a boot
-// staleness alert are documented as a fast-follow in the runbook.
+// Snapshot of https://www.cloudflare.com/ips-v4 + /ips-v6, last VERIFIED against
+// upstream on CF_CIDR_SNAPSHOT_DATE. SECOND-FACTOR / observability ONLY (design
+// law #2) — a stale list degrades defence-in-depth, never the primary secret
+// gate, so staleness only warns, never blocks. scripts/refresh-cf-cidrs.mjs
+// rewrites the arrays AND the date; a scheduled workflow keeps it fresh and the
+// boot staleness alarm (below) is the backstop if that automation lapses.
+export const CF_CIDR_SNAPSHOT_DATE = "2026-08-05";
+
 export const CF_IPV4_CIDRS: readonly string[] = [
   "173.245.48.0/20",
   "103.21.244.0/22",
@@ -106,6 +110,47 @@ export function assertNonEmptyCfRanges(): void {
       "[edgeProxy] Cloudflare CIDR snapshot is empty — refusing to arm edge mode"
     );
   }
+}
+
+/** Default staleness threshold (days) — the monthly refresh keeps it well under. */
+export const CF_CIDR_MAX_AGE_DAYS = 90;
+
+/** Whole days since the CF CIDR snapshot was last verified. 0 if unparseable. */
+export function cfCidrSnapshotAgeDays(nowMs: number = Date.now()): number {
+  const t = Date.parse(`${CF_CIDR_SNAPSHOT_DATE}T00:00:00Z`);
+  if (Number.isNaN(t)) return 0;
+  return Math.max(0, Math.floor((nowMs - t) / 86_400_000));
+}
+
+/** True when the snapshot is older than the threshold (default 90d). */
+export function isCfCidrSnapshotStale(
+  maxAgeDays: number = CF_CIDR_MAX_AGE_DAYS,
+  nowMs: number = Date.now()
+): boolean {
+  return cfCidrSnapshotAgeDays(nowMs) > maxAgeDays;
+}
+
+/**
+ * Staleness verdict + a ready-to-log message. Observability only — a stale CF
+ * list is a defence-in-depth degradation (the second factor may miss newly
+ * added CF ranges), NEVER a reason to block, so the caller only warns. The boot
+ * path calls this when the edge is armed (edgeMode !== "off").
+ */
+export function cfCidrStalenessWarning(
+  maxAgeDays: number = CF_CIDR_MAX_AGE_DAYS,
+  nowMs: number = Date.now()
+): { stale: boolean; ageDays: number; message: string | null } {
+  const ageDays = cfCidrSnapshotAgeDays(nowMs);
+  const stale = ageDays > maxAgeDays;
+  return {
+    stale,
+    ageDays,
+    message: stale
+      ? `[edgeProxy] Cloudflare CIDR snapshot is ${ageDays}d old (> ${maxAgeDays}d) — ` +
+        `the second-factor CF-range check may miss newly added Cloudflare ranges. ` +
+        `Refresh with: node scripts/refresh-cf-cidrs.mjs`
+      : null,
+  };
 }
 
 function ipv4ToInt(ip: string): number | null {

@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   assertNonEmptyCfRanges,
+  CF_CIDR_SNAPSHOT_DATE,
+  cfCidrSnapshotAgeDays,
+  cfCidrStalenessWarning,
   cfConnectingIp,
   edgeMode,
   edgeProofPasses,
   hasOriginSecretConfigured,
   immediateUpstreamIp,
+  isCfCidrSnapshotStale,
   isCloudflareEdgeIp,
   originSecretOk,
 } from "./edgeProxy";
@@ -150,5 +154,45 @@ describe("edgeProxy — edgeProofPasses (dual proof)", () => {
         req({ "x-dime-edge-secret": "wrong", "x-forwarded-for": "104.16.5.5" })
       )
     ).toBe(false);
+  });
+});
+
+describe("edgeProxy — CF CIDR snapshot freshness", () => {
+  const base = Date.parse(`${CF_CIDR_SNAPSHOT_DATE}T00:00:00Z`);
+  const days = (n: number) => base + n * 86_400_000;
+
+  it("age is 0 on the snapshot date and grows by whole days", () => {
+    expect(cfCidrSnapshotAgeDays(base)).toBe(0);
+    expect(cfCidrSnapshotAgeDays(days(1))).toBe(1);
+    expect(cfCidrSnapshotAgeDays(days(89))).toBe(89);
+    expect(cfCidrSnapshotAgeDays(days(100))).toBe(100);
+  });
+
+  it("never returns a negative age for a clock before the snapshot", () => {
+    expect(cfCidrSnapshotAgeDays(days(-5))).toBe(0);
+  });
+
+  it("is not stale at/under the threshold, stale beyond it", () => {
+    expect(isCfCidrSnapshotStale(90, days(90))).toBe(false);
+    expect(isCfCidrSnapshotStale(90, days(91))).toBe(true);
+  });
+
+  it("staleness warning: null message when fresh, actionable message when stale", () => {
+    const fresh = cfCidrStalenessWarning(90, days(30));
+    expect(fresh.stale).toBe(false);
+    expect(fresh.message).toBeNull();
+
+    const stale = cfCidrStalenessWarning(90, days(200));
+    expect(stale.stale).toBe(true);
+    expect(stale.ageDays).toBe(200);
+    expect(stale.message).toContain("refresh-cf-cidrs.mjs");
+    expect(stale.message).toContain("200d old");
+  });
+
+  it("SNAPSHOT_DATE is a valid ISO date", () => {
+    expect(CF_CIDR_SNAPSHOT_DATE).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(Number.isNaN(Date.parse(`${CF_CIDR_SNAPSHOT_DATE}T00:00:00Z`))).toBe(
+      false
+    );
   });
 });

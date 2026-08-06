@@ -156,7 +156,12 @@ Manual spot-checks:
   -clouded / secret typo), auto-downgrade to `log` on a rolling all-fail window instead of relying on
   the operator. Today this is covered by the mandatory `log` soak + the healthy `log` rollback + loud
   alerts.
-- **CF CIDR snapshot refresh:** the checked-in Cloudflare range list (`server/_core/edgeProxy.ts`,
-  dated 2026-08-05) is a second-factor only; add a scheduled sync + boot staleness alert.
+- **CF CIDR snapshot refresh:** ✅ DONE. `CF_CIDR_SNAPSHOT_DATE` + a boot staleness alarm live in
+  `server/_core/edgeProxy.ts` (warns when armed and the snapshot is >90d old — observability only,
+  never blocks). `scripts/refresh-cf-cidrs.mjs` fetches/validates the published ranges (fail-closed on
+  empty/malformed) and rewrites the arrays + date (`--check` for drift detection). The monthly
+  read-only `.github/workflows/refresh-cf-cidrs.yml` goes RED on drift (the repo's Actions security
+  contract forbids self-mutating/PR-opening workflows); a maintainer then runs the script and opens
+  the refresh PR through the normal reviewed flow.
 - **Turnstile:** app-embedded widget on `/login` and sensitive forms, verified server-side — never an
   edge HTML interstitial on the XHR path (accessibility).

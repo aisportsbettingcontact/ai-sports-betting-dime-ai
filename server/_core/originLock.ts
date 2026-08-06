@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from "express";
 import {
   assertNonEmptyCfRanges,
+  cfCidrStalenessWarning,
   edgeMode,
   edgeProofPasses,
   hasOriginSecretConfigured,
@@ -57,7 +58,13 @@ export function originLock(
   // Fail fast at boot if we are arming with a corrupt CF range snapshot; a bad
   // list must never silently open the second factor or 403-storm. Gated on
   // mode so a corrupt list can never crash boot while the feature is dormant.
-  if (edgeMode() !== "off") assertNonEmptyCfRanges();
+  if (edgeMode() !== "off") {
+    assertNonEmptyCfRanges();
+    // Observability backstop: warn (never block) if the CF range snapshot has
+    // gone stale, in case the scheduled refresh lapsed. Second factor only.
+    const staleness = cfCidrStalenessWarning();
+    if (staleness.stale) console.warn(staleness.message);
+  }
 
   return (req, res, next) => {
     const mode = edgeMode();
