@@ -22,6 +22,39 @@ if (!/^https?:\/\//.test(base)) {
   process.exit(2);
 }
 
+// ── Trusted-agent edge bypass ────────────────────────────────────────────────
+// This smoke test is automated traffic, which the production Cloudflare edge
+// (Super Bot Fight Mode "definitely automated → Block") 403s on document routes
+// (/, /assets, /checkout). When EDGE_AGENT_BYPASS_KEY is set we present it as the
+// `x-dime-agent` request header, matched by the "Trusted agent bypass" Cloudflare
+// WAF Skip rule, so this trusted tool is waved through WITHOUT weakening the
+// public anti-scraping posture (no key → still blocked). The header is scoped to
+// the smoke target host(s) ONLY, so the secret can never leak to a third party.
+// No-op when the env var is unset (direct/localhost/non-edge targets unaffected).
+const AGENT_KEY = (process.env.EDGE_AGENT_BYPASS_KEY ?? "").trim();
+const AGENT_TARGETS = new Set();
+for (const u of [base, (process.env.SMOKE_ORIGIN_URL ?? "").replace(/\/$/, "")]) {
+  try {
+    if (u) AGENT_TARGETS.add(new URL(u).origin);
+  } catch {
+    /* ignore unparseable target */
+  }
+}
+function sfetch(url, opts = {}) {
+  if (!AGENT_KEY) return fetch(url, opts);
+  let sameTarget = false;
+  try {
+    sameTarget = AGENT_TARGETS.has(new URL(url, base).origin);
+  } catch {
+    /* ignore */
+  }
+  if (!sameTarget) return fetch(url, opts);
+  return fetch(url, {
+    ...opts,
+    headers: { ...(opts.headers ?? {}), "x-dime-agent": AGENT_KEY },
+  });
+}
+
 const results = [];
 
 async function check(name, fn) {
@@ -43,7 +76,7 @@ function expect(cond, msg) {
 console.log(`Smoke-testing ${base}\n`);
 
 await check("GET /health → 200", async () => {
-  const res = await fetch(`${base}/health`, { redirect: "manual" });
+  const res = await sfetch(`${base}/health`, { redirect: "manual" });
   expect(res.status === 200, `status ${res.status}`);
   return (await res.text()).slice(0, 60);
 });
@@ -53,7 +86,7 @@ await check("schema/code agreement — live app_users schema is not behind the c
   // /health 503, so Railway keeps the previous deploy. If this smoke ever runs
   // against such an origin, fail loudly with the exact remediation. `unknown`
   // (transient/DB-unavailable) is not a failure — the DB gate covers that.
-  const res = await fetch(`${base}/health`, { redirect: "manual" });
+  const res = await sfetch(`${base}/health`, { redirect: "manual" });
   let body = {};
   try {
     body = await res.json();
@@ -69,7 +102,7 @@ await check("schema/code agreement — live app_users schema is not behind the c
 
 let indexHtml = "";
 await check("GET / → 200 HTML shell", async () => {
-  const res = await fetch(`${base}/`);
+  const res = await sfetch(`${base}/`);
   expect(res.status === 200, `status ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
   expect(type.includes("text/html"), `content-type ${type}`);
@@ -80,7 +113,7 @@ await check("GET / → 200 HTML shell", async () => {
 await check("hashed asset → 200 + long-lived cache", async () => {
   const m = indexHtml.match(/\/assets\/[\w./-]+\.js/);
   expect(m, "no /assets/*.js reference found in index.html");
-  const res = await fetch(`${base}${m[0]}`);
+  const res = await sfetch(`${base}${m[0]}`);
   expect(res.status === 200, `status ${res.status}`);
   const cache = res.headers.get("cache-control") ?? "";
   expect(/max-age=\d{5,}/.test(cache), `weak cache-control: "${cache}"`);
@@ -88,7 +121,7 @@ await check("hashed asset → 200 + long-lived cache", async () => {
 });
 
 await check("GET /api/trpc/<bogus> → tRPC JSON error (API mounted)", async () => {
-  const res = await fetch(`${base}/api/trpc/smokeTest.doesNotExist`);
+  const res = await sfetch(`${base}/api/trpc/smokeTest.doesNotExist`);
   const type = res.headers.get("content-type") ?? "";
   expect(type.includes("application/json"), `content-type ${type} — SPA fallback answered; /api proxy or mount is broken`);
   expect(res.status < 500, `status ${res.status} — upstream/gateway error, not a tRPC response`);
@@ -99,7 +132,7 @@ await check("GET /api/trpc/<bogus> → tRPC JSON error (API mounted)", async () 
 });
 
 await check("POST /api/dime/chat unauthenticated → 401 JSON (auth gate)", async () => {
-  const res = await fetch(`${base}/api/dime/chat`, {
+  const res = await sfetch(`${base}/api/dime/chat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ messages: [{ role: "user", content: "smoke" }] }),
@@ -110,7 +143,7 @@ await check("POST /api/dime/chat unauthenticated → 401 JSON (auth gate)", asyn
 });
 
 await check("bot UA on / → v2 SEO content (prerender or shell block)", async () => {
-  const res = await fetch(`${base}/`, { headers: { "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)" } });
+  const res = await sfetch(`${base}/`, { headers: { "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)" } });
   expect(res.status === 200, `status ${res.status}`);
   const html = await res.text();
   // Express origins (Railway) serve the full prerender snapshot (X-Prerender: 1).
@@ -124,14 +157,14 @@ await check("bot UA on / → v2 SEO content (prerender or shell block)", async (
 });
 
 await check("vendored /dime-storage asset → 200 image (no external storage dependency)", async () => {
-  const res = await fetch(`${base}/dime-storage/mlb-logo_50fd8568.png`, { redirect: "follow" });
+  const res = await sfetch(`${base}/dime-storage/mlb-logo_50fd8568.png`, { redirect: "follow" });
   expect(res.status === 200, `status ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
   expect(type.startsWith("image/"), `content-type ${type} — storage proxy failed instead of serving the vendored file`);
 });
 
 await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com)", async () => {
-  const res = await fetch(`${base}/checkout?plan=monthly`, { headers: { "user-agent": "Mozilla/5.0 Chrome/126" } });
+  const res = await sfetch(`${base}/checkout?plan=monthly`, { headers: { "user-agent": "Mozilla/5.0 Chrome/126" } });
   const csp = res.headers.get("content-security-policy") ?? "";
   // Railway (Express + helmet) always sets a CSP header. A missing header means
   // the origin isn't serving through helmet — a real regression, not a lenient
@@ -180,10 +213,10 @@ await check("rate-limit keying resists X-Forwarded-For spoofing (Railway sanitiz
     const m = h.match(/remaining=(\d+)/i);
     return m ? Number(m[1]) : null;
   };
-  const first = await fetch(url);
+  const first = await sfetch(url);
   const r1 = remainingOf(first);
   expect(r1 !== null, "no RateLimit header on games.list — feed limiter not mounted");
-  const spoofed = await fetch(url, { headers: { "x-forwarded-for": "203.0.113.250" } });
+  const spoofed = await sfetch(url, { headers: { "x-forwarded-for": "203.0.113.250" } });
   const r2 = remainingOf(spoofed);
   expect(r2 !== null, "no RateLimit header on the spoofed request");
   // Shared key → r2 continues the same budget (strictly below the fresh max).
@@ -207,7 +240,7 @@ if (process.env.SMOKE_EDGE === "cloudflare") {
     if (!/^https?:\/\//.test(originUrl)) {
       return "N/A — set SMOKE_ORIGIN_URL to the direct *.up.railway.app origin to assert the lock";
     }
-    const res = await fetch(
+    const res = await sfetch(
       `${originUrl}/api/trpc/games.list?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22sport%22%3A%22MLB%22%7D%7D%7D`,
       { redirect: "manual" }
     );
@@ -220,7 +253,7 @@ if (process.env.SMOKE_EDGE === "cloudflare") {
 
   await check("origin lock: /health reachable on the direct origin (Railway probe)", async () => {
     if (!/^https?:\/\//.test(originUrl)) return "N/A — no SMOKE_ORIGIN_URL";
-    const res = await fetch(`${originUrl}/health`, { redirect: "manual" });
+    const res = await sfetch(`${originUrl}/health`, { redirect: "manual" });
     expect(res.status === 200, `/health returned ${res.status} on the direct origin — probe would fail`);
     return "/health stays 200 direct (healthcheck survives edge outage)";
   });
@@ -229,7 +262,7 @@ if (process.env.SMOKE_EDGE === "cloudflare") {
     // A legit chat message full of WAF-triggering tokens must REACH the origin
     // (auth gate → 401/400), never a Cloudflare 403/1010 edge block. Proves the
     // WAF SKIP for /api/dime/* is in place (collateral-damage fix).
-    const res = await fetch(`${base}/api/dime/chat`, {
+    const res = await sfetch(`${base}/api/dime/chat`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
