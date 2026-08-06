@@ -1,0 +1,7 @@
+market,source,modelVersion,n,minDate,maxDate
+hr_prop,live_pregame,live,9143,2026-03-25,2026-07-24
+hr_prop,walkforward_replay,wf-19288f01-p1,27810,2026-03-25,2026-07-24
+hr_prop,walkforward_replay,wf-19288f01-p2,27810,2026-03-25,2026-07-24
+k_prop,live_pregame,live,2686,2026-03-25,2026-07-24
+k_prop,walkforward_replay,wf-19288f01-p1,3090,2026-03-25,2026-07-24
+k_prop,walkforward_replay,wf-19288f01-p2,3090,2026-03-25,2026-07-24

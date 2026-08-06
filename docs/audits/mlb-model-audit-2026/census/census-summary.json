@@ -1,0 +1,48 @@
+{
+  "asOf": "2026-07-25",
+  "generatedBy": "run-census.mjs",
+  "sections": {
+    "universe": {
+      "scheduleGames": 1597,
+      "completed": 1556,
+      "postponed": 25,
+      "scheduledFuture": 16,
+      "linked": 1579,
+      "unlinked": 18,
+      "statusMismatches": 39,
+      "reverseOrphans": 1,
+      "withClosingML": 884,
+      "withClosingTotal": 884
+    },
+    "coverageCompleted": {
+      "completedGames": 1545,
+      "fg_proj": 1528,
+      "f5_proj": 1528,
+      "nrfi_proj": 1528,
+      "teamhr_proj": 641,
+      "k_any": 1437,
+      "hr_any": 893,
+      "fg_actual": 1499,
+      "f5_actual": 1497,
+      "nrfi_actual": 991,
+      "fg_graded_games": 0,
+      "f5_graded_games": 129,
+      "nrfi_graded_games": 14,
+      "bt_any": 891,
+      "bt_with_clv_any": 0
+    },
+    "nullAudit": {
+      "tablesScanned": 18,
+      "columnsWithNulls": 345
+    },
+    "currency": {
+      "lastCompletedSlate": "2026-07-24",
+      "lastFgGradedGames": null,
+      "lastBtSettled": "2026-07-23",
+      "lastKGraded": "2026-07-24",
+      "lastHrGraded": "2026-07-24",
+      "todaysProjected": 15,
+      "todaysGames": 15
+    }
+  }
+}

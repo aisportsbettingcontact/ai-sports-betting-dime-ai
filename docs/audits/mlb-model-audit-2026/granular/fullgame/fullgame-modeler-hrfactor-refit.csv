@@ -1,0 +1,4 @@
+month,refit_hr_factor,stored_hr_factor,abs_diff,refit_n,stored_n,n_from_live_props,n_from_boxscore,n_unlabelable
+2026-05,0.97088,0.97088,0.00000,8424,8424,6435,1989,0
+2026-06,0.96081,0.96081,0.00000,15966,15966,10489,5477,0
+2026-07,1.00182,1.00182,0.00000,23058,23058,10864,12194,0

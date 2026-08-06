@@ -1,0 +1,363 @@
+season	pitch_type_code	pitch_type_label	n
+2006	FA	Fastball	3097
+2006	CU	Curveball	693
+2006	SL	Slider	625
+2006	CH	Changeup	614
+2006	FC	Cutter	97
+2006	FS	Splitter	53
+2006	FF	Four-Seam Fastball	45
+2006	IN	Intentional Ball	35
+2006	SI	Sinker	30
+2006		Unknown	17
+2006	UN	Unknown	6
+2006	PO	Pitchout	5
+2006	KN	Knuckle Ball	2
+2007	FA	Fastball	190289
+2007	SL	Slider	50257
+2007	CH	Changeup	40051
+2007	CU	Curveball	33209
+2007	FC	Cutter	6368
+2007	SI	Sinker	1810
+2007	FS	Splitter	1724
+2007	IN	Intentional Ball	1607
+2007	KN	Knuckle Ball	1432
+2007	FF	Four-Seam Fastball	1269
+2007		Unknown	615
+2007	PO	Pitchout	379
+2007	UN	Unknown	214
+2007	AB	Automatic Ball	9
+2008	FF	Four-Seam Fastball	244876
+2008	SI	Sinker	170391
+2008	SL	Slider	100599
+2008	CH	Changeup	69011
+2008	CU	Curveball	56027
+2008	FC	Cutter	35200
+2008	FS	Splitter	10175
+2008	KC	Knuckle Curve	4191
+2008	IN	Intentional Ball	3948
+2008	KN	Knuckle Ball	3606
+2008	PO	Pitchout	611
+2008	FA	Fastball	292
+2008	FO	Forkball	202
+2008	EP	Eephus	163
+2008	SC	Screwball	39
+2008	UN	Unknown	20
+2008		Unknown	18
+2008	AB	Automatic Ball	8
+2009	FF	Four-Seam Fastball	255021
+2009	SI	Sinker	168852
+2009	SL	Slider	105275
+2009	CH	Changeup	70186
+2009	CU	Curveball	58717
+2009	FC	Cutter	36113
+2009	FS	Splitter	9734
+2009	KC	Knuckle Curve	5327
+2009	IN	Intentional Ball	3732
+2009	KN	Knuckle Ball	2771
+2009	FO	Forkball	742
+2009	PO	Pitchout	488
+2009		Unknown	339
+2009	SC	Screwball	235
+2009	FA	Fastball	165
+2009	EP	Eephus	104
+2009	AB	Automatic Ball	10
+2009	UN	Unknown	4
+2010	FF	Four-Seam Fastball	237007
+2010	SI	Sinker	178842
+2010	SL	Slider	101557
+2010	CH	Changeup	75299
+2010	CU	Curveball	56405
+2010	FC	Cutter	38315
+2010	FS	Splitter	10827
+2010	KC	Knuckle Curve	7317
+2010	KN	Knuckle Ball	4330
+2010	IN	Intentional Ball	3835
+2010	FO	Forkball	696
+2010	PO	Pitchout	548
+2010	FA	Fastball	179
+2010	EP	Eephus	142
+2010	SC	Screwball	103
+2010		Unknown	41
+2010	UN	Unknown	3
+2010	AB	Automatic Ball	2
+2011	FF	Four-Seam Fastball	238706
+2011	SI	Sinker	169242
+2011	SL	Slider	108365
+2011	CH	Changeup	72538
+2011	CU	Curveball	55508
+2011	FC	Cutter	42304
+2011	FS	Splitter	10850
+2011	KC	Knuckle Curve	9581
+2011	KN	Knuckle Ball	4438
+2011	IN	Intentional Ball	4058
+2011	PO	Pitchout	558
+2011	FO	Forkball	334
+2011	EP	Eephus	136
+2011	SC	Screwball	121
+2011		Unknown	121
+2011	FA	Fastball	78
+2011	ST	Sweeper	37
+2011	UN	Unknown	15
+2011	AB	Automatic Ball	2
+2012	FF	Four-Seam Fastball	241469
+2012	SI	Sinker	165719
+2012	SL	Slider	103247
+2012	CH	Changeup	70965
+2012	CU	Curveball	60801
+2012	FC	Cutter	40325
+2012	KC	Knuckle Curve	12475
+2012	FS	Splitter	10859
+2012	IN	Intentional Ball	3436
+2012	KN	Knuckle Ball	2861
+2012	ST	Sweeper	1351
+2012	PO	Pitchout	469
+2012	FO	Forkball	244
+2012	EP	Eephus	243
+2012	SC	Screwball	102
+2012		Unknown	36
+2012	UN	Unknown	18
+2012	FA	Fastball	10
+2012	AB	Automatic Ball	3
+2013	FF	Four-Seam Fastball	250411
+2013	SI	Sinker	159671
+2013	SL	Slider	104716
+2013	CH	Changeup	72697
+2013	CU	Curveball	56870
+2013	FC	Cutter	40440
+2013	KC	Knuckle Curve	14298
+2013	FS	Splitter	10841
+2013	IN	Intentional Ball	3485
+2013	KN	Knuckle Ball	3147
+2013	ST	Sweeper	2282
+2013	FO	Forkball	343
+2013	PO	Pitchout	306
+2013	EP	Eephus	266
+2013	SC	Screwball	105
+2013		Unknown	94
+2013	UN	Unknown	25
+2013	CS	Slow Curve	13
+2013	FA	Fastball	2
+2013	AB	Automatic Ball	1
+2014	FF	Four-Seam Fastball	245368
+2014	SI	Sinker	159117
+2014	SL	Slider	96279
+2014	CH	Changeup	73024
+2014	CU	Curveball	55864
+2014	FC	Cutter	44063
+2014	KC	Knuckle Curve	17250
+2014	FS	Splitter	11831
+2014	IN	Intentional Ball	3238
+2014	KN	Knuckle Ball	3215
+2014	ST	Sweeper	1953
+2014	SV	Slurve	469
+2014	EP	Eephus	459
+2014	PO	Pitchout	323
+2014	FO	Forkball	250
+2014	UN	Unknown	45
+2014	FA	Fastball	20
+2014	CS	Slow Curve	18
+2014	SC	Screwball	14
+2014	AB	Automatic Ball	1
+2015	FF	Four-Seam Fastball	252240
+2015	SI	Sinker	151780
+2015	SL	Slider	101234
+2015	CH	Changeup	75145
+2015	CU	Curveball	53593
+2015	FC	Cutter	40629
+2015	KC	Knuckle Curve	16465
+2015	FS	Splitter	11106
+2015	KN	Knuckle Ball	3800
+2015	IN	Intentional Ball	3237
+2015		Unknown	585
+2015	ST	Sweeper	564
+2015	EP	Eephus	321
+2015	PO	Pitchout	240
+2015	FO	Forkball	197
+2015	SV	Slurve	190
+2015	UN	Unknown	26
+2015	FA	Fastball	10
+2015	SC	Screwball	7
+2015	CS	Slow Curve	2
+2015	AB	Automatic Ball	2
+2016	FF	Four-Seam Fastball	261919
+2016	SI	Sinker	145938
+2016	SL	Slider	105647
+2016	CH	Changeup	73311
+2016	CU	Curveball	62431
+2016	FC	Cutter	38580
+2016	KC	Knuckle Curve	16507
+2016	FS	Splitter	10313
+2016	KN	Knuckle Ball	4208
+2016	IN	Intentional Ball	3101
+2016	ST	Sweeper	1712
+2016		Unknown	820
+2016	SV	Slurve	802
+2016	FO	Forkball	281
+2016	PO	Pitchout	183
+2016	EP	Eephus	97
+2016	SC	Screwball	30
+2016	UN	Unknown	22
+2016	CS	Slow Curve	13
+2016	AB	Automatic Ball	1
+2017	FF	Four-Seam Fastball	252927
+2017	SI	Sinker	152419
+2017	SL	Slider	111106
+2017	CH	Changeup	71520
+2017	CU	Curveball	55769
+2017	FC	Cutter	41107
+2017	KC	Knuckle Curve	22642
+2017	FS	Splitter	12511
+2017	ST	Sweeper	4251
+2017	KN	Knuckle Ball	2646
+2017	SV	Slurve	1993
+2017		Unknown	545
+2017	FO	Forkball	247
+2017	EP	Eephus	183
+2017	PO	Pitchout	115
+2017	FA	Fastball	59
+2017	SC	Screwball	39
+2017	CS	Slow Curve	7
+2017	UN	Unknown	4
+2018	FF	Four-Seam Fastball	256932
+2018	SI	Sinker	141642
+2018	SL	Slider	114167
+2018	CH	Changeup	75213
+2018	CU	Curveball	56172
+2018	FC	Cutter	43555
+2018	KC	Knuckle Curve	20780
+2018	FS	Splitter	10780
+2018	ST	Sweeper	6156
+2018	SV	Slurve	1717
+2018	KN	Knuckle Ball	731
+2018	EP	Eephus	219
+2018	FA	Fastball	202
+2018		Unknown	143
+2018	PO	Pitchout	87
+2018	FO	Forkball	84
+2018	SC	Screwball	37
+2018	CS	Slow Curve	23
+2019	FF	Four-Seam Fastball	267754
+2019	SL	Slider	121455
+2019	SI	Sinker	118703
+2019	CH	Changeup	79809
+2019	CU	Curveball	61642
+2019	FC	Cutter	49386
+2019	KC	Knuckle Curve	17737
+2019	FS	Splitter	11634
+2019	ST	Sweeper	7775
+2019	SV	Slurve	2478
+2019	FA	Fastball	292
+2019	KN	Knuckle Ball	215
+2019	CS	Slow Curve	154
+2019	EP	Eephus	42
+2019	FO	Forkball	36
+2019		Unknown	24
+2020	FF	Four-Seam Fastball	97441
+2020	SL	Slider	46133
+2020	SI	Sinker	43377
+2020	CH	Changeup	31993
+2020	CU	Curveball	22843
+2020	FC	Cutter	19914
+2020	KC	Knuckle Curve	7487
+2020	FS	Splitter	5104
+2020	ST	Sweeper	4037
+2020	SV	Slurve	808
+2020	FA	Fastball	289
+2020	KN	Knuckle Ball	101
+2020	CS	Slow Curve	66
+2020	EP	Eephus	43
+2021	FF	Four-Seam Fastball	256055
+2021	SL	Slider	119766
+2021	SI	Sinker	109571
+2021	CH	Changeup	80756
+2021	CU	Curveball	52717
+2021	FC	Cutter	52248
+2021	ST	Sweeper	17146
+2021	KC	Knuckle Curve	16482
+2021	FS	Splitter	11651
+2021	SV	Slurve	2950
+2021	FA	Fastball	837
+2021	CS	Slow Curve	153
+2021	EP	Eephus	128
+2021	KN	Knuckle Ball	89
+2021	SC	Screwball	1
+2022	FF	Four-Seam Fastball	239342
+2022	SL	Slider	116666
+2022	SI	Sinker	111045
+2022	CH	Changeup	79994
+2022	FC	Cutter	54242
+2022	CU	Curveball	52889
+2022	ST	Sweeper	32363
+2022	KC	Knuckle Curve	16869
+2022	FS	Splitter	11517
+2022	SV	Slurve	3325
+2022	FA	Fastball	1276
+2022	EP	Eephus	508
+2022	CS	Slow Curve	108
+2022	KN	Knuckle Ball	42
+2023	FF	Four-Seam Fastball	234674
+2023	SL	Slider	113433
+2023	SI	Sinker	112899
+2023	CH	Changeup	79137
+2023	FC	Cutter	57778
+2023	CU	Curveball	48003
+2023	ST	Sweeper	47009
+2023	FS	Splitter	16401
+2023	KC	Knuckle Curve	14578
+2023	SV	Slurve	3102
+2023	FA	Fastball	1115
+2023	FO	Forkball	778
+2023	EP	Eephus	558
+2023	KN	Knuckle Ball	192
+2023	SC	Screwball	74
+2023	CS	Slow Curve	71
+2024	FF	Four-Seam Fastball	230285
+2024	SI	Sinker	113978
+2024	SL	Slider	106189
+2024	CH	Changeup	73774
+2024	FC	Cutter	59244
+2024	ST	Sweeper	52645
+2024	CU	Curveball	44719
+2024	FS	Splitter	22226
+2024	KC	Knuckle Curve	12782
+2024	SV	Slurve	3739
+2024	KN	Knuckle Ball	1060
+2024	FA	Fastball	632
+2024	EP	Eephus	575
+2024	SC	Screwball	177
+2024	FO	Forkball	166
+2024	CS	Slow Curve	65
+2024	UN	Unknown	1
+2025	FF	Four-Seam Fastball	231075
+2025	SI	Sinker	112139
+2025	SL	Slider	104426
+2025	CH	Changeup	74258
+2025	ST	Sweeper	55105
+2025	FC	Cutter	54209
+2025	CU	Curveball	48601
+2025	FS	Splitter	24231
+2025	KC	Knuckle Curve	13044
+2025	SV	Slurve	3624
+2025	EP	Eephus	987
+2025	FA	Fastball	902
+2025	FO	Forkball	829
+2025	CS	Slow Curve	405
+2025	KN	Knuckle Ball	137
+2025	UN	Unknown	14
+2025	SC	Screwball	7
+2026	FF	Four-Seam Fastball	143560
+2026	SI	Sinker	78298
+2026	SL	Slider	62905
+2026	CH	Changeup	52267
+2026	ST	Sweeper	39122
+2026	FC	Cutter	37092
+2026	CU	Curveball	30233
+2026	FS	Splitter	15141
+2026	KC	Knuckle Curve	7800
+2026	SV	Slurve	2086
+2026	EP	Eephus	694
+2026	FA	Fastball	517
+2026	FO	Forkball	348
+2026	KN	Knuckle Ball	183
+2026	CS	Slow Curve	115
+2026	UN	Unknown	10
