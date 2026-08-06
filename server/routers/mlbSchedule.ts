@@ -19,6 +19,11 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { ownerProcedure, appUserProcedure } from "./appUsers";
 import {
+  listRecalibrationProposals,
+  decideRecalibration,
+  buildApprovalRequest,
+} from "../mlbRecalibrationGate";
+import {
   getLast5ForMatchup,
   getFullScheduleForTeam,
   getMlbSituationalStats,
@@ -30,7 +35,11 @@ import {
 } from "../mlbScheduleHistoryService";
 import { runMlbNightlyTrendsRefresh } from "../mlbNightlyTrendsRefresh";
 import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
-import { checkF5ShareDrift, triggerRecalibration } from "../mlbDriftDetector";
+import {
+  checkF5ShareDrift,
+  triggerRecalibration,
+  migrateCalibrationConstants,
+} from "../mlbDriftDetector";
 import { getDb } from "../db";
 import { games as gamesTable, type Game } from "../../drizzle/schema";
 import { and, eq, isNotNull, asc, desc, sql } from "drizzle-orm";
@@ -1296,6 +1305,102 @@ export const mlbScheduleRouter = router({
         `${tag} [OUTPUT] drilldown rows: ${result.length} for ${input.date} / ${input.market}`
       );
       return { date: input.date, market: input.market, games: result };
+    }),
+  /**
+   * Owner-only: the recalibration proposals awaiting a decision.
+   *
+   * ISSUE-012 listed this and `decideRecalibration` as "claimed as implemented
+   * and never written" — and that was the gap that made the gate a queue rather
+   * than a gate. A PROPOSED row nobody can see is not an approval step; it is a
+   * write nobody reads.
+   */
+  listRecalibrationProposals: ownerProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).optional().default(20),
+      })
+    )
+    .query(async ({ input }) => {
+      const tag = `${TAG}[listRecalibrationProposals]`;
+      try {
+        const proposals = await listRecalibrationProposals(input.limit);
+        const pending = proposals.filter(
+          p => p.envelope?.gate.status === "PROPOSED"
+        ).length;
+        console.log(
+          `${tag} [OUTPUT] ${proposals.length} row(s), ${pending} PROPOSED`
+        );
+        return { proposals, pending };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${tag} [ERROR] ${msg}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Could not list recalibration proposals: ${msg}`,
+        });
+      }
+    }),
+
+  /**
+   * Owner-only: approve or reject a PROPOSED recalibration.
+   *
+   * SECURITY. The approver's identity is taken from the authenticated session
+   * (`ctx.appUser`) and NEVER from the request body — `buildApprovalRequest`
+   * has no input field for it. If a caller could name themselves, both the
+   * self-approval check and the owner-only check would be bypassed by lying,
+   * and the proposing agent could promote its own recalibration.
+   *
+   * APPROVED patches the engine through the single existing implementation,
+   * `migrateCalibrationConstants`, which is otherwise unreachable by default.
+   */
+  decideRecalibration: ownerProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        decision: z.enum(["APPROVED", "REJECTED"]),
+        rationale: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const tag = `${TAG}[decideRecalibration]`;
+      const request = buildApprovalRequest(
+        {
+          id: ctx.appUser.id,
+          email: ctx.appUser.email,
+          role: ctx.appUser.role,
+        },
+        { decision: input.decision, rationale: input.rationale }
+      );
+      console.log(
+        `${tag} [INPUT] proposal=${input.proposalId} decision=${input.decision} by=${request.decidedBy} role=${request.role}`
+      );
+      try {
+        const result = await decideRecalibration(
+          input.proposalId,
+          request,
+          (calibration, reason) =>
+            migrateCalibrationConstants(calibration, reason)
+        );
+        if (!result.ok) {
+          console.warn(`${tag} [VERIFY] REFUSED — ${result.reason}`);
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.reason ?? "Decision refused",
+          });
+        }
+        console.log(
+          `${tag} [OUTPUT] ${result.status} constantsPatched=${result.constantsPatched ?? 0}`
+        );
+        return result;
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${tag} [ERROR] ${msg}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Recalibration decision failed: ${msg}`,
+        });
+      }
     }),
 });
 export type MlbScheduleRouter = typeof mlbScheduleRouter;

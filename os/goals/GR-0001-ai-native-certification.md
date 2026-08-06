@@ -180,3 +180,29 @@ glob matcher with a different sentinel than the tested library, so **the number 
 test covered**. `scripts/os/contradiction.mts` now imports `shared/os/goal.ts` and owns no matching
 logic. The 43% and 50% figures were both re-derived under the single implementation.
 
+### 2026-08-06 (later) — CONTRADICTION FLAGGED AGAIN (12 of 25, 48%)
+
+```
+cycles        25
+on-goal       12 (48%)
+contradiction YES — only 12/25 cycles touched the declared priority paths
+```
+
+The second real firing. Since the 4-of-8 reading, thirteen more merges landed and the split crossed
+back under the floor: PRs #402, #404, #408, #409, #410, #413 and #414 were security and feed work,
+against mission commits under `os/**`, `shared/os/**` and `scripts/os/**`.
+
+**The globs are not being widened.** They were not widened at the first firing and they are not being
+widened now. Adjusting a priority definition until the contradiction clears games the measure D13
+exists to provide, and this record says so in writing two sections above.
+
+This is a reading for the DRI, and there are only two honest responses:
+
+1. **Security work IS the current priority.** Then GR-0001 is out of date and should be amended —
+   deliberately, on the record, with the activity paths changed to match what Dime is actually
+   doing. That is a decision, not a metric adjustment.
+2. **Mission work has been crowded out.** Then the number is doing its job and the allocation is the
+   thing to change, not the goal.
+
+The executor has no basis for choosing between them. What it can say is that the mechanism is
+behaving correctly: it cleared when mission work dominated, and it fired again when it did not.

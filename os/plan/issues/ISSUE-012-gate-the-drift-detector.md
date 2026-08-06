@@ -63,7 +63,7 @@ Every criterion is checkable. A criterion that cannot be checked is not a criter
 
 **Phase 2 — gate (only after Phase 1):**
 - [x] Drift detection writes a **PROPOSED** record; it never patches the engine directly
-- [x] Promotion requires an approval artifact from a **distinct** approver; self-approval throws (test-covered) — `validateApproval`, 11 tests. **Not yet reachable: the tRPC procedures are still unwritten, so no one can act on a proposal.**
+- [x] Promotion requires an approval artifact from a **distinct** approver; self-approval throws (test-covered) — `validateApproval` + `buildApprovalRequest`, 15 tests. **Now reachable:** `mlbSchedule.listRecalibrationProposals` and `mlbSchedule.decideRecalibration` are wired, owner-gated, and take the approver identity from the session — never from the request body.
 - [x] `MLB_RECAL_MODE=autopatch` remains as a CRITICAL-logged emergency override
 - [ ] **STILL OPEN** — Every projection carries `modelVersion` + `paramsHash`, so *"did the last recalibration help?"* becomes answerable
 - [x] The gate is covered by a test that fails if the propose-first default is removed — behavioural, with an injectable patcher; 4 mutations verified to fail

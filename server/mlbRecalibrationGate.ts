@@ -129,6 +129,43 @@ export interface ApprovalRequest {
 
 export type ApprovalVerdict = { ok: true } | { ok: false; reason: string };
 
+/** The authenticated caller, as `ownerProcedure` resolves it from the DB. */
+export interface DecidingUser {
+  id: number;
+  email: string;
+  role: string;
+}
+
+/** What a client may say about a decision. Note what is ABSENT: any identity. */
+export interface DecisionInput {
+  decision: "APPROVED" | "REJECTED";
+  rationale: string;
+}
+
+/**
+ * Build the approval request from the SESSION, never from the request body.
+ *
+ * The entire gate rests on this. If `decidedBy` or `role` could be supplied by
+ * the caller, both the self-approval check and the owner-only check are bypassed
+ * by simply lying — the proposing agent could name itself a human owner. The
+ * signature is the enforcement: there is no input field for either, so a caller
+ * cannot express the attack.
+ *
+ * The identity is namespaced `appUser:<id>`, which cannot collide with
+ * `RECAL_PROPOSER` ("drift-detector-agent") for any numeric id.
+ */
+export function buildApprovalRequest(
+  user: DecidingUser,
+  input: DecisionInput
+): ApprovalRequest {
+  return {
+    decidedBy: `appUser:${user.id}`,
+    role: user.role,
+    decision: input.decision,
+    rationale: input.rationale,
+  };
+}
+
 /**
  * Pure: the independent-gate rules. Self-approval is structurally impossible
  * (proposer is an agent identity), but the check stays — a future agent-issued
