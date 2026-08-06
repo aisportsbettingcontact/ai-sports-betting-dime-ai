@@ -36,7 +36,14 @@ export async function isRequestAuthenticated(req: Request): Promise<boolean> {
 // audit: edges/diffs, the NRFI edge signal + pass flag, the Brier scores
 // (which algebraically reconstruct the nulled model probabilities on completed
 // games), and the model-correctness flags (reveal the model's pick direction).
-// Actual game RESULTS (fgMlResult, actual* scores) stay public — commodity.
+//
+// `nrfiBacktestResult` is MODEL-graded (mlbBacktestAuditCore grades NRFI as
+// WIN/LOSS vs the model's pick — same class as the HR-prop backtestResult leak),
+// distinct from the commodity `nrfiActualResult` (NRFI/YRFI, the actual outcome).
+// `*BacktestRunAt` are model-pipeline timing metadata (sibling of the model-rule
+// -stripped modelRunAt). All four are null in current data — stripped proactively
+// so they can never leak once populated. Actual game RESULTS (fgMlResult,
+// fg/f5 *Result, actual* scores, nrfiActualResult) stay public — commodity.
 const PROPRIETARY_GAME_FIELDS = [
   "spreadEdge",
   "spreadDiff",
@@ -56,6 +63,10 @@ const PROPRIETARY_GAME_FIELDS = [
   "f5RlCorrect",
   "f5TotalCorrect",
   "nrfiCorrect",
+  "nrfiBacktestResult",
+  "fgBacktestRunAt",
+  "f5BacktestRunAt",
+  "nrfiBacktestRunAt",
 ] as const;
 
 /**
@@ -97,7 +108,11 @@ function stripByModelRuleAndList<T extends Record<string, unknown>>(
 // Strikeout-prop proprietary fields WITHOUT a "model" token (the prefix rule
 // catches modelOverOdds/modelUnderOdds/modelError/modelCorrect/modelRunAt). NOTE
 // kLine is the MODEL-recommended line (schema: "Model recommended line") — IP;
-// bookLine is the commodity book line and stays.
+// bookLine is the commodity book line and stays. `backtestResult` here is NOT
+// stripped: for K-props it is OVER/UNDER/PUSH vs the BOOK line (kPropsBacktest
+// Service — a commodity outcome), unlike the HR-prop backtestResult which is
+// WIN/LOSS vs the model's verdict. `backtestRunAt` (model-pipeline timing,
+// sibling of the stripped modelRunAt) IS stripped for consistency.
 const STRIKEOUT_PROPRIETARY_FIELDS = [
   "kProj",
   "kMedian",
@@ -117,6 +132,7 @@ const STRIKEOUT_PROPRIETARY_FIELDS = [
   "distribution",
   "matchupRows",
   "inningBreakdown",
+  "backtestRunAt",
 ] as const;
 
 export function stripStrikeoutPropModelFields<
