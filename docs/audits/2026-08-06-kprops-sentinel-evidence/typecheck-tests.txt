@@ -1,0 +1,33 @@
+$ npx tsc --noEmit
+exit: 0
+
+$ npx prettier --check <changed files>
+Checking formatting...
+All matched files use Prettier code style!
+exit: 0
+
+$ npx vitest run server/kPropsBacktestService.test.ts   (CI env: no DATABASE_URL)
+
+ RUN  v4.1.10 /Users/danielwalker/src/ai-sports-betting-dime-ai/.claude/worktrees/fix+kprops-sentinel
+
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  01:42:05
+   Duration  459ms (transform 110ms, setup 0ms, import 369ms, tests 10ms, environment 0ms)
+
+
+$ npx vitest run client/src   (regression — TheModelResults is client code)
+
+ Test Files  55 passed (55)
+      Tests  794 passed (794)
+   Start at  01:42:05
+   Duration  1.34s (transform 1.31s, setup 0ms, import 2.87s, tests 569ms, environment 3ms)
+
+
+$ npx vitest run server/mlbScoreRefresh.matching.test.ts
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  01:42:07
+   Duration  433ms (transform 121ms, setup 0ms, import 347ms, tests 13ms, environment 0ms)
+

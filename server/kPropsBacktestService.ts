@@ -23,7 +23,52 @@
 
 import { getDb } from "./db";
 import { mlbStrikeoutProps, games } from "../drizzle/schema";
-import { eq, isNull, or, and } from "drizzle-orm";
+import { eq, isNull, or, and, inArray } from "drizzle-orm";
+
+/**
+ * Sentinel values written to `mlb_strikeout_props.backtestResult`.
+ *
+ * The column is `varchar(16)` (drizzle/schema.ts, created at that width by
+ * migration 0049 and never altered since). MySQL in strict mode REJECTS a
+ * longer value outright — it does not truncate — so an oversized sentinel is
+ * not a cosmetic problem: the UPDATE throws ER_DATA_TOO_LONG (errno 1406) and
+ * the row silently keeps its previous state.
+ *
+ * That is exactly what happened to the previous `"NAME_MATCH_FAILED"` (17
+ * chars): every write of it failed from the day it was introduced, so the
+ * marker never persisted, the row was re-queued forever, and each cycle logged
+ * a stack trace. `NAME_MISMATCH` is 13.
+ *
+ * `kPropsBacktestService.test.ts` reads the column width out of the schema and
+ * asserts every value here fits, so this cannot regress and cannot drift if the
+ * column is ever resized.
+ */
+export const K_BACKTEST_SENTINEL = {
+  /** Queued, not yet graded. */
+  PENDING: "PENDING",
+  /** No book line to grade against. */
+  NO_LINE: "NO_LINE",
+  /** The pitcher could not be matched to a box-score name. Retryable. */
+  NAME_MISMATCH: "NAME_MISMATCH",
+} as const;
+
+/**
+ * Values the retry sweep must treat as "still needs grading".
+ *
+ * Includes two legacy forms of the name-mismatch marker that this codebase can
+ * no longer produce. `NAME_MATCH_FAILED` could only have been stored by a
+ * server whose sql_mode omitted STRICT_TRANS_TABLES, and `NAME_MATCH_FAIL` is
+ * what MySQL would have truncated it to under that same non-strict mode. We
+ * have no evidence either exists — production is strict, which is why the write
+ * threw rather than truncating — but a stranded row costs one array entry to
+ * rescue and would otherwise never be graded again.
+ */
+export const K_BACKTEST_RETRYABLE: readonly string[] = [
+  K_BACKTEST_SENTINEL.PENDING,
+  K_BACKTEST_SENTINEL.NAME_MISMATCH,
+  "NAME_MATCH_FAILED",
+  "NAME_MATCH_FAIL",
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -308,8 +353,7 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
         eq(games.gameDate, dateStr),
         or(
           isNull(mlbStrikeoutProps.backtestResult),
-          eq(mlbStrikeoutProps.backtestResult, "PENDING"),
-          eq(mlbStrikeoutProps.backtestResult, "NAME_MATCH_FAILED")
+          inArray(mlbStrikeoutProps.backtestResult, [...K_BACKTEST_RETRYABLE])
         )
       )
     );
@@ -386,7 +430,7 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
         await db
           .update(mlbStrikeoutProps)
           .set({
-            backtestResult: "NO_LINE",
+            backtestResult: K_BACKTEST_SENTINEL.NO_LINE,
             backtestRunAt: Date.now(),
           })
           .where(eq(mlbStrikeoutProps.id, row.id));
@@ -416,13 +460,13 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
         }
         if (!matchedName) {
           console.warn(
-            `[KBacktest][${dateStr}] [WARN] Name match FAILED for "${row.pitcherName}" in gamePk ${gamePk}. Box score names: ${boxScoreNames.join(", ")} — marking NAME_MATCH_FAILED for retry`
+            `[KBacktest][${dateStr}] [WARN] Name match FAILED for "${row.pitcherName}" in gamePk ${gamePk}. Box score names: ${boxScoreNames.join(", ")} — marking ${K_BACKTEST_SENTINEL.NAME_MISMATCH} for retry`
           );
           nameMatchFailed++;
           await db
             .update(mlbStrikeoutProps)
             .set({
-              backtestResult: "NAME_MATCH_FAILED",
+              backtestResult: K_BACKTEST_SENTINEL.NAME_MISMATCH,
               backtestRunAt: Date.now(),
             })
             .where(eq(mlbStrikeoutProps.id, row.id));
