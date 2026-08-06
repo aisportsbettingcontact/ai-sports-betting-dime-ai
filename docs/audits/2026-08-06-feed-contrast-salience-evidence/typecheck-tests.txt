@@ -1,0 +1,25 @@
+$ npx tsc --noEmit
+exit: 0
+
+$ npx prettier --check <changed files>
+Checking formatting...
+All matched files use Prettier code style!
+exit: 0
+
+$ npx vitest run client/src   (includes the X-HEX ratchet)
+
+ RUN  v4.1.10 /Users/danielwalker/src/ai-sports-betting-dime-ai/.claude/worktrees/docs+status-comment
+
+
+ Test Files  55 passed (55)
+      Tests  794 passed (794)
+   Start at  00:20:34
+   Duration  1.74s (transform 1.63s, setup 0ms, import 3.75s, tests 768ms, environment 3ms)
+
+
+$ npx vitest run server/mlbScoreRefresh.matching.test.ts
+ Test Files  1 passed (1)
+      Tests  8 passed (8)
+   Start at  00:20:36
+   Duration  620ms (transform 170ms, setup 0ms, import 517ms, tests 17ms, environment 0ms)
+

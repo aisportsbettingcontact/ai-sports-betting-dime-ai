@@ -12,7 +12,7 @@ surface.
 | 4 | All icons SVG (brand kit or Lucide); no emojis as icons | **PASS (n/a)** | No icon added; the existing Lucide `TrendingUp` only changes colour. |
 | 5 | `cursor-pointer` on all clickable elements | **PASS (n/a)** | No interactive element added or removed. `.summary__next` keeps `cursor: pointer`. |
 | 6 | Hover states use the 160ms brand curve | **PASS (unchanged)** | The `.summary__next` transition declaration is untouched — see `motion-review.md`. Only the resting colour differs on an unplayable card. |
-| 7 | Text contrast 4.5:1 minimum (both themes) | **PASS for the diff** | The neutralized values are the tokens PASS cards already use: `--text-secondary` remapped to `--foreground` under `--compact`, measured `rgb(255,255,255)` dark / `rgb(0,0,0)` light on the card ground — higher contrast than the mint they replace. Separately, this PR **corrects** the wrong light-theme LIVE figure published by #409 (4.62 → 4.4969, a pre-existing 0.003 AA miss); see `summary.md`. |
+| 7 | Text contrast 4.5:1 minimum (both themes) | **PASS for the diff** | The neutralized values are the tokens PASS cards already use — whatever `--compact` remaps `--text-secondary` to — so they track that remap rather than pinning a colour of their own. *(At the time of this PR the remap went to `--foreground`, measuring `rgb(255,255,255)` dark / `rgb(0,0,0)` light; PR #416 later reduced it to a bounded mid tone, and these values followed automatically.)* Separately, this PR **corrects** the wrong light-theme LIVE figure published by #409 (4.62 → 4.4969, a pre-existing 0.003 AA miss); see `summary.md`. |
 | 8 | Focus states visible (3px `--ring`) | **PASS (unchanged)** | `.projection-card .summary__next:focus-visible` outline is untouched; the new rule sets `color` and `box-shadow` only, and focus rides `outline`. |
 | 9 | `prefers-reduced-motion` respected | **PASS (unchanged)** | Reduced-motion block untouched; no motion added. |
 | 10 | Responsive: 375/768/1024/1440; no horizontal scroll | **PASS** | No layout property changed — the diff alters colour and DOM order only. Card geometry is identical; the 1440 render shows no overflow. |
@@ -47,14 +47,19 @@ stripe of its own.
 
 ## Known issues NOT addressed here
 
-1. **Light-theme LIVE status at 4.4969:1** — pre-existing, documented and
-   quantified by this PR with a computed remedy (`color-mix` 60% → 50% gives
-   ≈4.96:1). Not applied: brand-token change on a governed surface is owner
-   territory.
-2. **Salience inversion** — `--compact`'s `--text-secondary → --foreground`
-   remap still makes settled states the brightest text in the status slot.
-   Resolving it means revisiting the lifecycle-compaction dim, also owner
-   territory. Logged in the page law under the 2026-08-05 directive.
-3. **`mlbScoreRefresh.ts:103`** still comments that postponed/suspended are
-   "hidden from feed". `games.list` applies no such filter — the comment is
-   stale. Left alone: not raised in this PR's scope.
+1. ~~**Light-theme LIVE status at 4.4969:1**~~ **CLOSED 2026-08-06** by PR #416
+   (owner-authorized). The `color-mix` deepened 60% → 50%; measured **5.0170:1**
+   — the estimate recorded here was ≈4.96, the browser says 5.0170.
+2. ~~**Salience inversion**~~ **CLOSED 2026-08-06** by PR #416
+   (owner-authorized). The remap no longer overshoots to `--foreground`; settled
+   labels now measure 6.85 dark / 5.27 light, below the bettable scheduled
+   card's 8.13 / 6.54, while still clearing the 4.5:1 floor.
+3. ~~**`mlbScoreRefresh.ts:103`** still comments that postponed/suspended are
+   "hidden from feed".~~ **CLOSED 2026-08-06** by PR
+   `docs/mlb-status-comment-truth`. The claim turned out to appear **six**
+   times across three doc blocks and one in-function comment, not once, and
+   two further inaccuracies rode along with it (`suspended` was undocumented in
+   the status union even though the type has five members, and it was wrongly
+   folded into postponed's "postponed, suspended, or cancelled" description —
+   `mapMlbStatus` returns `"suspended"` for it, checked first). Comments only;
+   no behavior change.

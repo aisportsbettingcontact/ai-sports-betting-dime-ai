@@ -12,7 +12,7 @@ pregame-only venue/time gate), not a re-audit of the whole surface.
 | 4 | All icons SVG (brand kit or Lucide); no emojis as icons | **PASS** | The diff adds no icon. The live dot is a styled `<span>`, unchanged. |
 | 5 | `cursor-pointer` on all clickable elements | **PASS (n/a to the diff)** | The status line is not interactive and correctly is not focusable (`tabIndex -1`, Assessment B). No interactive element is added or removed. |
 | 6 | Hover states use the 160ms brand curve | **PASS (n/a to the diff)** | No hover state added; no transition property touched — see `motion-review.md`. |
-| 7 | Text contrast 4.5:1 minimum (both themes) | **9 of 10 PASS — see correction below** | Composited (not raw) contrast against the card ground, accounting for `--compact`'s `opacity: 0.72`. Status text is 12.00px @375 / 14.05px @1440 → **normal text**, so 4.5:1 is the floor: scheduled **8.13** dark / **6.54** light · live **6.25** / **4.4969** · final, postponed, suspended **10.10** / **8.79**. Light-theme live is **0.003 below** the floor. |
+| 7 | Text contrast 4.5:1 minimum (both themes) | **10 of 10 PASS as of 2026-08-06 (PR #416); was 9 of 10 — see correction below** | Composited (not raw) contrast against the card ground, accounting for `--compact`'s `opacity: 0.72`. Status text is 12.00px @375 / 14.05px @1440 → **normal text**, so 4.5:1 is the floor: scheduled **8.13** dark / **6.54** light · live **6.25** / **4.4969** · final, postponed, suspended **10.10** / **8.79**. Light-theme live is **0.003 below** the floor. |
 | 8 | Focus states visible (3px `--ring`) | **PASS (n/a to the diff)** | No focusable element added. An 18-Tab sweep never lands in `.projection-card__head`, which is correct for non-interactive text; existing focusable controls (summary viewport, next-edge arrow, markets toggle, LINEUPS) are unchanged. |
 | 9 | `prefers-reduced-motion` respected | **PASS** | `getComputedStyle(.projection-card__live-dot).animationName === "none"` under `reducedMotion: "reduce"`; screenshot `reduced-motion-dark-1440x900.png`. Assessment B: exactly 45 pixels differ vs the animated frame — the dot and nothing else. |
 | 10 | Responsive: 375px, 768px, 1024px, 1440px; no horizontal scroll on mobile | **PASS** | Screenshots at all four widths × dark and light. `documentElement.scrollWidth > clientWidth` is **false** at 320 / 375 / 768 / 1024 / 1440 (Assessment B). The status line never truncates: `scrollWidth === clientWidth` for all five states at all five widths. At 200% zoom (720×450 @ DSF 2) the grid reflows 3-up → 2-up with no clipping ancestor over the status box. |
@@ -69,6 +69,12 @@ mint ink 60% with black. Deepening it to **50%** yields effective text
 `rgb(75,116,100)` and a ratio of **≈4.96:1** — clear of the floor with real
 margin, still the same single mint hue. That is a brand-token change on a
 governed surface, so it is proposed here, not applied.
+
+> **APPLIED 2026-08-06** by PR #416, owner-authorized. Measured in the browser
+> after the change: **5.0170:1** (the ≈4.96 above was the hand estimate). Item 7
+> is now a full pass in both themes, and the salience inversion listed below it
+> is closed in the same PR. Evidence:
+> `docs/audits/2026-08-06-feed-contrast-salience-evidence/`.
 
 ## Known issues carried forward, not fixed here
 
