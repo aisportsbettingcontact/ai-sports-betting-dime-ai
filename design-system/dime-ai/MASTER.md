@@ -54,7 +54,29 @@ purple, no gradients.**
 - Negative / no-edge / PASS states are GREY (`--text-secondary`), never red. De-emphasize whole PASS rows to ~82% opacity.
 - Coin-dot logic (brand): mint dot on black · mint dot + black hairline on white · white dot on mint.
 
+**Destructive-action exception:** `--dime-danger: #E5484D` (owner directive 2026-07-22,
+account-settings cancel flow) — destructive-action CONFIRMS only, e.g. the "Cancel plan"
+button in a cancel-confirm dialog. Never for emphasis, badges, or general error text —
+those stay grey per the negative-state rule above. Mint remains the sole accent; this is a
+single, scoped carve-out, not a second accent color.
+
+**Discord platform exception:** `--discord-blurple: #5865F2` + `--font-discord`
+(GG Sans) — owner directive 2026-07-24. Applies to exactly two controls that *represent
+Discord itself*: the "Continue with Discord" login button and the "Connect Discord" row in
+chat settings. Platform attribution, like team/country crest colors — not a second Dime
+accent. White on `#5865F2` measures 4.61:1 (AA small text); the pre-2021 `#7289DA` and the
+legacy `#738ADB` fail AA and are banned. Full rules, token table, and accepted risks:
+`dime-ai/THREE-COLOR-LAW.md` §"Discord platform exception".
+
 ### Typography
+
+> **SUPERSEDED (2026-07-24 audit note):** the single-font mandate in
+> `client/src/index.css:7-12` retires IBM Plex Mono — `--font-sans` AND
+> `--font-mono` both resolve to Familjen Grotesk, and no mono face is loaded
+> anywhere. Micro-labels keep the treatment below (10–11px caps, 0.08em
+> tracking) rendered in Familjen Grotesk. Do not reintroduce Plex Mono from
+> this file. The dark page background is likewise Law v2 `#000000`
+> (`client/src/index.css:126`), not the `#0B0B0F` in the table above.
 
 - **Heading & Body Font:** Familjen Grotesk (400, 500, 600, 700)
 - **Data labels / micro-labels:** IBM Plex Mono (400, 500) — 10–11px, UPPERCASE, letter-spacing `0.08em`, `--text-muted`
@@ -206,7 +228,11 @@ Shadows are minimal — surfaces separate by background tier + 1px borders, not 
 **Style:** Dark-first data product. Quiet surfaces, one signal color, mono micro-labels,
 tight numeric hierarchy. Light mode is a token swap, never a redesign.
 
-**Page shell:** 264px fixed sidebar (`--surface-sidebar`, 1px right border) + main pane.
+**Page shell:** sidebar (`--surface-sidebar`, 1px right border) + main pane. *(2026-08-02
+note: the original 264px sidebar spec is stale — the shipped shell sidebar measures ~381px
+border-box after the 2026-07-21 ×1.75 sidebar text directive. Feed layout no longer depends
+on sidebar width at all: columns derive from container queries on the league body — see
+`pages/ai-model-projections.md` §2026-08-02.)*
 Top bar: pill tabs (Chat / Slate / Bet Tracker) + context info right-aligned.
 Sidebar order: brand header → nav rows → Recent Chats (scroll) → profile row (top border).
 
@@ -246,3 +272,25 @@ Before delivering any UI code, verify:
 - [ ] `prefers-reduced-motion` respected
 - [ ] Responsive: 375px, 768px, 1024px, 1440px; no horizontal scroll on mobile
 - [ ] Real `<button>`/`<a>` elements with ARIA roles for menus/tabs
+
+---
+
+## Supported viewport contract (NEW 2026-07-24, evidence-derived)
+
+No support contract existed before this date (audit S5-001,
+`SUPPORT_CONTRACT_MISSING`). The bounds below are **new**, derived from
+repository evidence — breakpoints in `client/src/index.css` (375/640/768/
+1024/1280/1600), the viewport-scaling engine (`--vp-base: 393`, clamp floor
+0.81 ≈ 320px), the device database comment in the same file (320–3840), and
+Chromium-emulation sweeps run 2026-07-24 (integer widths 320–1440 on `/` and
+the 404 route, heights 500–1000). They are a floor to verify against, not a
+ceiling on what may work.
+
+| Axis | Supported | Verification status |
+|---|---|---|
+| Viewport width | 320–1920 CSS px | 320–1440 sweep-verified (Chromium emulation); 1441–1920 rule-derived, spot-checked |
+| Viewport height | 500–1000+ CSS px | 500–1000 sweep-verified at 390/1440 wide |
+| Device pixel ratio | 1–3 | probe-verified (calculated backing pixels) |
+| Zoom / text scale | 200% / 130% | spot-verified on `/`, `/feed` shell |
+| Engines | Chromium-class verified | WebKit/Firefox **unverified** — no runtime available in the audit environment |
+| Reduced motion | full support required | verified (shell, utilities, landing) |

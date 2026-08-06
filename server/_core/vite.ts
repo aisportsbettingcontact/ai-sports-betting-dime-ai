@@ -3,9 +3,8 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
 import { landingPrerenderMiddleware } from "../landingPrerender";
+import { logSafe } from "./logSafe";
 
 /**
  * [FIX] Cache-Control headers applied to every HTML response.
@@ -27,6 +26,21 @@ const NO_CACHE_HEADERS = {
 };
 
 export async function setupVite(app: Express, server: Server) {
+  // Dev-only lazy loading. vite and vite.config are devDependencies, and the
+  // production image ships prod deps only (multi-stage Dockerfile) — a static
+  // import here fails ESM linking at boot with ERR_MODULE_NOT_FOUND before a
+  // single route mounts. "vite" stays a literal dynamic import (esbuild's
+  // --packages=external keeps it dynamic in the bundle); the config specifier
+  // is a variable so esbuild cannot inline vite.config — whose own imports
+  // are dev-only plugins — into the production bundle.
+  const { createServer: createViteServer } = await import("vite");
+  const viteConfigSpecifier = "../../vite.config";
+  const viteConfig = (
+    (await import(viteConfigSpecifier)) as {
+      default: Record<string, unknown>;
+    }
+  ).default;
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -104,17 +118,74 @@ export function serveStatic(app: Express) {
   );
 
   // ── SSR prerender for bots/crawlers (prod) ────────────────────────────────
-  // MUST be mounted BEFORE express.static: static serves index.html for "/"
-  // (index option defaults on), which shadows the bot prerender entirely —
-  // crawlers would index the SPA shell instead of the landing snapshot.
+  // MUST be mounted BEFORE express.static: static's default `index` option
+  // would otherwise auto-serve index.html for "/" (shadowing the bot
+  // prerender entirely — crawlers would index the SPA shell instead of the
+  // landing snapshot). `index: false` below closes that hole too, but keep
+  // the ordering regardless — this middleware must stay first.
   app.use(landingPrerenderMiddleware);
 
   // ── Other static files (favicon, robots.txt, etc.) ───────────────────────────
-  app.use(express.static(distPath));
+  // [FIX 2026-07-22 stale-bfcache incident] `index: false` stops this
+  // middleware from auto-serving index.html for "/" with its own weak
+  // `Cache-Control: public, max-age=0` — that request now falls through to
+  // the no-store catch-all below, same as every other SPA route.
+  //
+  // Root cause: express.static's default `index: 'index.html'` made "/" the
+  // one HTML-serving route in the app that stayed bfcache-eligible (every
+  // other route already got NO_CACHE_HEADERS below). A tab that last loaded
+  // the bare domain root before a deploy, then restored via browser
+  // back/forward or tab/session restore after the deploy shipped, could get
+  // served a frozen pre-deploy page straight from bfcache — old JS, zero
+  // network requests, nothing in server logs. `index: false` only disables
+  // the directory-index auto-serve; a literal "/index.html" request still
+  // matches this middleware by filename, so `setHeaders` guards that path
+  // explicitly too.
+  app.use(
+    express.static(distPath, {
+      index: false,
+      setHeaders: (res: import('http').ServerResponse, filePath: string) => {
+        if (path.basename(filePath) === "index.html") {
+          for (const [key, value] of Object.entries(NO_CACHE_HEADERS)) {
+            res.setHeader(key, value);
+          }
+        }
+      },
+    })
+  );
 
-  // fall through to index.html if the file doesn't exist
-  // [FIX] Apply no-store headers so iOS Safari never serves a stale cached page.
-  app.use("*", (_req, res) => {
+  // ── Missing build assets must 404, never fall through to index.html ─────────
+  // [FIX 2026-07-31 stale-chunk incident]
+  //
+  // Vite code-splits routes into content-hashed chunks. A deploy replaces those
+  // filenames wholesale, so a browser that loaded the app BEFORE the deploy still
+  // holds references to the old ones. When it lazily imports a route, it requests
+  // a chunk that no longer exists — and the SPA catch-all below answered with
+  // `200 text/html` (index.html). The browser then tried to parse HTML as an ES
+  // module and threw:
+  //
+  //   TypeError: Failed to fetch dynamically imported module: /assets/Home-<hash>.js
+  //
+  // which surfaced to users as a hard "Something broke on this screen." That is
+  // the catch-all lying: the asset is genuinely gone, so say so. A truthful 404
+  // (a) stops the browser mis-parsing HTML as JavaScript, and (b) gives the
+  // client a signal it can actually recognise and recover from — see the
+  // stale-chunk reload guard in client/src/main.tsx.
+  //
+  // Scoped to build-output paths only. HTML routes must still fall through, or
+  // deep links like /admin/users would 404 instead of booting the SPA.
+  const BUILD_ASSET_PATH = /^\/assets\//;
+  const STATIC_FILE_EXT = /\.(?:js|mjs|cjs|css|map|json|wasm|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|avif|ico|mp4|webm)$/i;
+
+  app.use("*", (req, res) => {
+    const pathname = req.originalUrl.split("?")[0];
+    if (BUILD_ASSET_PATH.test(pathname) || STATIC_FILE_EXT.test(pathname)) {
+      console.warn(`[Static] 404 missing asset ${logSafe(pathname)} — stale client chunk or bad reference`);
+      res.status(404).type("text/plain").send("Not found");
+      return;
+    }
+    // SPA route: serve the shell. no-store so iOS Safari never restores a stale
+    // pre-deploy page from bfcache.
     res.set({ ...NO_CACHE_HEADERS });
     res.sendFile(path.resolve(distPath, "index.html"));
   });

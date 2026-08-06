@@ -168,12 +168,16 @@ function emitTzDebugLog(atMs?: number): void {
     "color:#45E0A8;font-weight:700;font-size:11px"
   );
   console.log(`UTC wall clock  : ${utcStr}`);
-  console.log(`UTC hour        : ${now.getUTCHours()} (cutoff=${FEED_CUTOFF_UTC_HOUR}, gate open=${!isBeforeCutoff})`);
+  console.log(
+    `UTC hour        : ${now.getUTCHours()} (cutoff=${FEED_CUTOFF_UTC_HOUR}, gate open=${!isBeforeCutoff})`
+  );
   console.log(`Effective date  : ${effectiveDate}`);
   console.log(`User timezone   : ${userTz}`);
   console.log(`User local date : ${localDate}`);
   console.log(`Show "TODAY"    : ${showToday}`);
-  console.log("── 5-timezone simulation ──────────────────────────────────────");
+  console.log(
+    "── 5-timezone simulation ──────────────────────────────────────"
+  );
   DEBUG_TIMEZONES.forEach(({ label, iana }) => {
     const tzLocalDate = localDateInTz(iana, ms);
     const tzLocalTime = new Intl.DateTimeFormat("en-US", {
@@ -185,7 +189,9 @@ function emitTzDebugLog(atMs?: number): void {
     }).format(new Date(ms));
     const tzShowToday = tzLocalDate === effectiveDate;
     const tzLabel = tzShowToday ? "TODAY" : `${tzLocalDate} (no TODAY)`;
-    console.log(`  ${label.padEnd(4)} | local=${tzLocalDate} ${tzLocalTime} | feed=${effectiveDate} | label=${tzLabel}`);
+    console.log(
+      `  ${label.padEnd(4)} | local=${tzLocalDate} ${tzLocalTime} | feed=${effectiveDate} | label=${tzLabel}`
+    );
   });
   console.groupEnd();
 }
@@ -196,7 +202,9 @@ function formatButtonLabel(dateStr: string, atMs?: number): string {
   if (shouldShowToday(dateStr, atMs)) return "TODAY";
   try {
     const d = new Date(dateStr + "T00:00:00Z");
-    const month = d.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" }).toUpperCase();
+    const month = d
+      .toLocaleDateString("en-US", { month: "long", timeZone: "UTC" })
+      .toUpperCase();
     const day = d.getUTCDate();
     return `${month} ${day}`;
   } catch {
@@ -235,10 +243,27 @@ interface CalendarPickerProps {
 }
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTHS = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
-export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin = false }: CalendarPickerProps) {
+export function CalendarPicker({
+  selectedDate,
+  onSelect,
+  availableDates,
+  isAdmin = false,
+}: CalendarPickerProps) {
   // Reactive "now" — re-computed every minute so the label updates when the
   // 11:00 UTC gate fires without requiring a page reload.
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -258,7 +283,10 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
         prev.getUTCHours() < FEED_CUTOFF_UTC_HOUR &&
         curr.getUTCHours() >= FEED_CUTOFF_UTC_HOUR;
       if (crossedCutoff) {
-        console.log("%c[CalendarPicker:tz] 11:00 UTC gate FIRED — feed rolling to new date", "color:#45E0A8;font-weight:700");
+        console.log(
+          "%c[CalendarPicker:tz] 11:00 UTC gate FIRED — feed rolling to new date",
+          "color:#45E0A8;font-weight:700"
+        );
         emitTzDebugLog(ms);
       }
     }, 60_000);
@@ -270,8 +298,12 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
 
   // Calendar view state — default to the month of the selected date (or today)
   const displayBase = selectedDate ?? today;
-  const [viewYear, setViewYear] = useState(() => parseInt(displayBase.slice(0, 4)));
-  const [viewMonth, setViewMonth] = useState(() => parseInt(displayBase.slice(5, 7)) - 1);
+  const [viewYear, setViewYear] = useState(() =>
+    parseInt(displayBase.slice(0, 4))
+  );
+  const [viewMonth, setViewMonth] = useState(
+    () => parseInt(displayBase.slice(5, 7)) - 1
+  );
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -280,7 +312,10 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
   useEffect(() => {
     if (!open) return;
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -294,11 +329,11 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
     if (!open || !dropdownRef.current) return;
     const rect = dropdownRef.current.getBoundingClientRect();
     if (rect.right > window.innerWidth - 8) {
-      dropdownRef.current.style.left = 'auto';
-      dropdownRef.current.style.right = '0';
+      dropdownRef.current.style.left = "auto";
+      dropdownRef.current.style.right = "0";
     } else {
-      dropdownRef.current.style.left = '0';
-      dropdownRef.current.style.right = 'auto';
+      dropdownRef.current.style.left = "0";
+      dropdownRef.current.style.right = "auto";
     }
   }, [open]);
 
@@ -320,35 +355,46 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
       if (viewYear === todayYear && viewMonth === todayMon) return;
       if (viewYear < todayYear) return;
     }
-    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
-    else setViewMonth(m => m - 1);
+    if (viewMonth === 0) {
+      setViewYear(y => y - 1);
+      setViewMonth(11);
+    } else setViewMonth(m => m - 1);
   }
 
   function nextMonth() {
-    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0); }
-    else setViewMonth(m => m + 1);
+    if (viewMonth === 11) {
+      setViewYear(y => y + 1);
+      setViewMonth(0);
+    } else setViewMonth(m => m + 1);
   }
 
-  const handleDayClick = useCallback((day: number) => {
-    const dateStr = toDateStr(viewYear, viewMonth, day);
-    const isPast = compareDates(dateStr, today) < 0;
-    if (isPast && !isAdmin) return;
-    onSelect(dateStr);
-    setOpen(false);
-  }, [viewYear, viewMonth, today, isAdmin, onSelect]);
+  const handleDayClick = useCallback(
+    (day: number) => {
+      const dateStr = toDateStr(viewYear, viewMonth, day);
+      const isPast = compareDates(dateStr, today) < 0;
+      if (isPast && !isAdmin) return;
+      onSelect(dateStr);
+      setOpen(false);
+    },
+    [viewYear, viewMonth, today, isAdmin, onSelect]
+  );
 
   const buttonLabel = formatButtonLabel(selectedDate ?? today, nowMs);
 
-  const prevDisabled = !isAdmin && (() => {
-    const todayYear = parseInt(today.slice(0, 4));
-    const todayMon = parseInt(today.slice(5, 7)) - 1;
-    return viewYear === todayYear && viewMonth === todayMon;
-  })();
+  const prevDisabled =
+    !isAdmin &&
+    (() => {
+      const todayYear = parseInt(today.slice(0, 4));
+      const todayMon = parseInt(today.slice(5, 7)) - 1;
+      return viewYear === todayYear && viewMonth === todayMon;
+    })();
 
   return (
     <div ref={containerRef} className="relative flex-shrink-0">
       {/* Trigger button */}
-      <button type="button" onClick={() => setOpen(o => !o)}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
         className="cal-trigger flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
         style={{
           background: "hsl(var(--card))",
@@ -356,7 +402,10 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
           border: "1px solid #FFFFFF",
         }}
       >
-        <CalendarDays className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: "#FFFFFF" }} />
+        <CalendarDays
+          className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0"
+          style={{ color: "#FFFFFF" }}
+        />
         <span>{buttonLabel}</span>
       </button>
 
@@ -369,7 +418,9 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
         >
           {/* Month navigation header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-white">
-            <button type="button" onClick={prevMonth}
+            <button
+              type="button"
+              onClick={prevMonth}
               disabled={prevDisabled}
               className="w-6 h-6 flex items-center justify-center rounded-full transition-colors"
               style={{
@@ -382,7 +433,9 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
             <span className="text-xs font-bold text-white tracking-widest uppercase">
               {MONTHS[viewMonth]} {viewYear}
             </span>
-            <button type="button" onClick={nextMonth}
+            <button
+              type="button"
+              onClick={nextMonth}
               className="w-6 h-6 flex items-center justify-center rounded-full transition-colors"
               style={{ color: "#FFFFFF" }}
             >
@@ -393,7 +446,11 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
           {/* Day-of-week headers */}
           <div className="grid grid-cols-7 px-2 pt-2 pb-1">
             {DAYS.map(d => (
-              <div key={d} className="text-center text-xs font-bold tracking-widest" style={{ color: "#FFFFFF" }}>
+              <div
+                key={d}
+                className="text-center text-xs font-bold tracking-widest"
+                style={{ color: "#FFFFFF" }}
+              >
                 {d}
               </div>
             ))}
@@ -411,29 +468,51 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
               const isSelected = dateStr === selectedDate;
               const isPast = compareDates(dateStr, today) < 0;
               const isLocked = isPast && !isAdmin;
-              const hasGames = (availableDates?.has(dateStr) ?? false) && (!isPast || isAdmin);
+              const hasGames =
+                (availableDates?.has(dateStr) ?? false) && (!isPast || isAdmin);
 
               const dayStyle: React.CSSProperties = (() => {
-                if (isLocked)              return { color: "#FFFFFF", cursor: "not-allowed" };
-                if (isSelected && isToday) return { background: "#45E0A8", color: "#000000", outline: "2px solid #45E0A8", outlineOffset: "1px" };
-                if (isSelected)            return { background: "#45E0A8", color: "#000000" };
-                if (isToday)               return { background: "transparent", color: "#45E0A8", outline: "1.5px solid #45E0A8", outlineOffset: "-1px" };
-                if (hasGames)              return { color: "#FFFFFF" };
+                if (isLocked)
+                  return { color: "#FFFFFF", cursor: "not-allowed" };
+                if (isSelected && isToday)
+                  return {
+                    background: "#45E0A8",
+                    color: "#000000",
+                    outline: "2px solid #45E0A8",
+                    outlineOffset: "1px",
+                  };
+                if (isSelected)
+                  return { background: "#45E0A8", color: "#000000" };
+                if (isToday)
+                  return {
+                    background: "transparent",
+                    color: "#45E0A8",
+                    outline: "1.5px solid #45E0A8",
+                    outlineOffset: "-1px",
+                  };
+                if (hasGames) return { color: "#FFFFFF" };
                 return { color: "#FFFFFF" };
               })();
 
               return (
-                <button type="button" key={day}
+                <button
+                  type="button"
+                  key={day}
                   onClick={() => handleDayClick(day)}
                   disabled={isLocked}
                   className="cal-day relative flex flex-col items-center justify-center w-full aspect-square rounded-full text-sm font-bold transition-all"
                   data-cal-state={
-                    isLocked ? "locked"
-                    : isSelected && isToday ? "selected-today"
-                    : isSelected ? "selected"
-                    : isToday ? "today"
-                    : hasGames ? "has-games"
-                    : "empty"
+                    isLocked
+                      ? "locked"
+                      : isSelected && isToday
+                        ? "selected-today"
+                        : isSelected
+                          ? "selected"
+                          : isToday
+                            ? "today"
+                            : hasGames
+                              ? "has-games"
+                              : "empty"
                   }
                   style={dayStyle}
                 >
@@ -441,7 +520,11 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
                   {hasGames && !isSelected && (
                     <span
                       className="cal-dot absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full"
-                      style={{ width: 3, height: 3, background: isToday ? "#45E0A8" : "#45E0A8" }}
+                      style={{
+                        width: 3,
+                        height: 3,
+                        background: isToday ? "#45E0A8" : "#45E0A8",
+                      }}
                     />
                   )}
                 </button>

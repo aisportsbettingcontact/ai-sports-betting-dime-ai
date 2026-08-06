@@ -15,10 +15,7 @@ export default function SubscribeCancel() {
   const plan = params.get("plan") ?? "monthly";
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "#000000" }}
-    >
+    <div className="min-h-screen flex items-center justify-center px-4 bg-black">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -34,7 +31,12 @@ export default function SubscribeCancel() {
           }}
         >
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M8 14h12" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+            <path
+              d="M8 14h12"
+              stroke="#FFFFFF"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
           </svg>
         </div>
 
@@ -45,7 +47,8 @@ export default function SubscribeCancel() {
           Checkout cancelled
         </h1>
         <p className="text-white text-sm mb-8">
-          No charge was made. You can return to the pricing page anytime to subscribe.
+          No charge was made. You can return to the pricing page anytime to
+          subscribe.
         </p>
 
         <div className="flex flex-col gap-3">
@@ -54,7 +57,9 @@ export default function SubscribeCancel() {
               navigate("/");
               // Small delay to let navigation complete, then scroll to pricing
               setTimeout(() => {
-                document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
+                document
+                  .getElementById("pricing")
+                  ?.scrollIntoView({ behavior: "smooth" });
               }, 100);
             }}
             className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
@@ -62,7 +67,13 @@ export default function SubscribeCancel() {
           >
             View pricing
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M3 8h10M9 4l4 4-4 4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
           <button

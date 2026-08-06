@@ -4,10 +4,10 @@
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  ARCHITECTURE NOTE — WHY ROUTES ARE UNDER /api/*                       │
  * │                                                                         │
- * │  The Manus production deployment uses a two-layer proxy:               │
+ * │  The legacy production deployment uses a two-layer proxy:              │
  * │    Browser → Edge Proxy → Cloud Run (Express)                           │
  * │                                                                         │
- * │  The Manus edge proxy ONLY forwards /api/* requests to Express.        │
+ * │  The legacy edge proxy ONLY forwards /api/* requests to Express.       │
  * │  Everything else is served by the static CDN (returns SPA index.html). │
  * │  Routes outside /api/* never reach Express — they return HTTP 200      │
  * │  with the SPA shell, which looks like a 404 to the user.               │
@@ -61,11 +61,16 @@ import { verifyAppUserToken } from "./routers/appUsers";
 import { getAppUserById, updateAppUser, getDb } from "./db";
 import { appUsers, discordOAuthStates } from "../drizzle/schema";
 import { eq, lt } from "drizzle-orm";
+import { syncDiscordRole } from "./discord/discordRoleSync";
+import { isOriginAllowed } from "./_core/trpc";
+import { randomBytes } from "crypto";
+import { logSafe } from "./_core/logSafe";
 
 const APP_USER_COOKIE = "app_session";
 const DISCORD_API = "https://discord.com/api/v10";
 
-// ── Route prefix — MUST be under /api/ for Manus production proxy ──────────
+// ── Route prefix — kept under /api/ (legacy proxy constraint; Discord ──────
+// redirect URIs are registered on these paths)
 // See architecture note above. DO NOT change this to /auth/discord/*.
 const ROUTE_PREFIX = "/api/auth/discord";
 
@@ -78,7 +83,7 @@ function getAppCookie(req: Request): string | undefined {
 }
 
 function generateState(): string {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  return randomBytes(32).toString("hex");
 }
 
 /**
@@ -117,12 +122,12 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     ` PUBLIC_ORIGIN env var is NOT SET — falling back to request-derived origin.` +
     ` THIS WILL FAIL IN PRODUCTION (Cloud Run internal hostname will be used).` +
     ` Set PUBLIC_ORIGIN=https://aisportsbettingmodels.com in production secrets.` +
-    ` | x-forwarded-proto="${fwdProto ?? "none"}"` +
-    ` | x-forwarded-host="${fwdHost ?? "none"}"` +
-    ` | x-forwarded-for="${req.get("x-forwarded-for") ?? "none"}"` +
-    ` | req.protocol="${reqProto}"` +
-    ` | req.hostname="${reqHostname}"` +
-    ` | host="${reqHost ?? "none"}"` +
+    ` | x-forwarded-proto="${logSafe(fwdProto ?? "none")}"` +
+    ` | x-forwarded-host="${logSafe(fwdHost ?? "none")}"` +
+    ` | x-forwarded-for="${logSafe(req.get("x-forwarded-for") ?? "none")}"` +
+    ` | req.protocol="${logSafe(reqProto)}"` +
+    ` | req.hostname="${logSafe(reqHostname)}"` +
+    ` | host="${logSafe(reqHost ?? "none")}"` +
     ` | NODE_ENV="${process.env.NODE_ENV ?? "none"}"`
   );
 
@@ -130,7 +135,7 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     const origin = `${fwdProto}://${fwdHost}`;
     console.log(
       `[DiscordAuth][ORIGIN] requestId=${requestId}` +
-      ` SOURCE=X_FORWARDED_HEADERS origin="${origin}"` +
+      ` SOURCE=X_FORWARDED_HEADERS origin="${logSafe(origin)}"` +
       ` (WARNING: fwdHost may be internal Cloud Run hostname, not public domain)`
     );
     return origin;
@@ -139,7 +144,7 @@ function buildPublicOrigin(req: Request, requestId: string): string {
   const origin = `${reqProto}://${reqHost ?? reqHostname}`;
   console.log(
     `[DiscordAuth][ORIGIN] requestId=${requestId}` +
-    ` SOURCE=EXPRESS_REQ origin="${origin}"` +
+    ` SOURCE=EXPRESS_REQ origin="${logSafe(origin)}"` +
     ` (WARNING: may be wrong behind proxy)`
   );
   return origin;
@@ -184,14 +189,14 @@ export function registerDiscordAuthRoutes(app: Express) {
     // ── CHECKPOINT 1: Full request context dump ──────────────────────────────
     console.log(
       `[DiscordAuth][CHECKPOINT:1] /connect — requestId=${requestId}` +
-      `\n  → x-forwarded-proto   : "${req.get("x-forwarded-proto") ?? "NOT_SET"}"` +
-      `\n  → x-forwarded-host    : "${req.get("x-forwarded-host") ?? "NOT_SET"}"` +
-      `\n  → x-forwarded-for     : "${req.get("x-forwarded-for") ?? "NOT_SET"}"` +
-      `\n  → host                : "${req.get("host") ?? "NOT_SET"}"` +
-      `\n  → origin (header)     : "${req.get("origin") ?? "NOT_SET"}"` +
-      `\n  → referer             : "${req.get("referer") ?? "NOT_SET"}"` +
-      `\n  → req.protocol        : "${req.protocol}"` +
-      `\n  → req.hostname        : "${req.hostname}"` +
+      `\n  → x-forwarded-proto   : "${logSafe(req.get("x-forwarded-proto") ?? "NOT_SET")}"` +
+      `\n  → x-forwarded-host    : "${logSafe(req.get("x-forwarded-host") ?? "NOT_SET")}"` +
+      `\n  → x-forwarded-for     : "${logSafe(req.get("x-forwarded-for") ?? "NOT_SET")}"` +
+      `\n  → host                : "${logSafe(req.get("host") ?? "NOT_SET")}"` +
+      `\n  → origin (header)     : "${logSafe(req.get("origin") ?? "NOT_SET")}"` +
+      `\n  → referer             : "${logSafe(req.get("referer") ?? "NOT_SET")}"` +
+      `\n  → req.protocol        : "${logSafe(req.protocol)}"` +
+      `\n  → req.hostname        : "${logSafe(req.hostname)}"` +
       `\n  → ENV.publicOrigin    : "${ENV.publicOrigin || "NOT_SET"}"` +
       `\n  → NODE_ENV            : "${process.env.NODE_ENV ?? "NOT_SET"}"` +
       `\n  → cookie_present      : ${!!(req.headers.cookie)}` +
@@ -292,14 +297,14 @@ export function registerDiscordAuthRoutes(app: Express) {
 
     console.log(
       `[DiscordAuth][CHECKPOINT:3.OK] /connect — requestId=${requestId}` +
-      ` userId=${payload.userId}` +
+      ` userId=${logSafe(payload.userId)}` +
       `\n  → STATE_STORAGE      : DB (discord_oauth_states table)` +
-      `\n  → state              : "${state.slice(0, 8)}…" (${state.length} chars)` +
+      `\n  → state              : "${logSafe(state.slice(0, 8))}…" (${state.length} chars)` +
       `\n  → state_expires_at   : ${new Date(expiresAt).toISOString()} (${STATE_TTL_MS/60000} min from now)` +
-      `\n  → publicOrigin       : "${publicOrigin}"` +
-      `\n  → redirectUri        : "${redirectUri}"` +
-      `\n  → Discord Portal must have this URI registered: "${redirectUri}"` +
-      `\n  → authorizeUrl       : "${authorizeUrl.slice(0, 140)}…"`
+      `\n  → publicOrigin       : "${logSafe(publicOrigin)}"` +
+      `\n  → redirectUri        : "${logSafe(redirectUri)}"` +
+      `\n  → Discord Portal must have this URI registered: "${logSafe(redirectUri)}"` +
+      `\n  → authorizeUrl       : "${logSafe(authorizeUrl.slice(0, 140))}…"`
     );
 
     // ── CHECKPOINT 4: Redirect ───────────────────────────────────────────────
@@ -329,17 +334,17 @@ export function registerDiscordAuthRoutes(app: Express) {
       `[DiscordAuth][CHECKPOINT:5] /callback — requestId=${requestId}` +
       `\n  → code_present     : ${!!code}` +
       `\n  → state_present    : ${!!state}` +
-      `\n  → state_length     : ${state?.length ?? 0}` +
-      `\n  → discord_error    : "${error ?? "none"}"` +
-      `\n  → query_keys       : ${JSON.stringify(Object.keys(req.query))}` +
-      `\n  → x-forwarded-host : "${req.get("x-forwarded-host") ?? "NOT_SET"}"` +
+      `\n  → state_length     : ${logSafe(state?.length ?? 0)}` +
+      `\n  → discord_error    : "${logSafe(error ?? "none")}"` +
+      `\n  → query_keys       : ${logSafe(JSON.stringify(Object.keys(req.query)))}` +
+      `\n  → x-forwarded-host : "${logSafe(req.get("x-forwarded-host") ?? "NOT_SET")}"` +
       `\n  → ENV.publicOrigin : "${ENV.publicOrigin || "NOT_SET"}"`
     );
 
     if (error) {
       console.log(
         `[DiscordAuth][CHECKPOINT:5.DISCORD_ERROR] /callback — requestId=${requestId}` +
-        ` Discord returned error="${error}" (user denied OAuth or Discord-side error).` +
+        ` Discord returned error="${logSafe(error)}" (user denied OAuth or Discord-side error).` +
         ` Redirecting to /feed/model/mlb?discord_error=denied`
       );
       res.redirect(302, "/feed/model/mlb?discord_error=denied");
@@ -390,7 +395,7 @@ export function registerDiscordAuthRoutes(app: Express) {
     console.log(
       `[DiscordAuth][CHECKPOINT:6] /callback — requestId=${requestId}` +
       ` DB CSRF state lookup:` +
-      `\n  → state_prefix   : "${state.slice(0, 8)}…"` +
+      `\n  → state_prefix   : "${logSafe(state.slice(0, 8))}…"` +
       `\n  → state_found_in_db : ${!!stateRow}` +
       `\n  → state_expired  : ${stateRow ? stateRow.expiresAt < now : "N/A"}` +
       `\n  → state_userId   : ${stateRow?.userId ?? "N/A"}` +
@@ -401,7 +406,7 @@ export function registerDiscordAuthRoutes(app: Express) {
     if (!stateRow) {
       console.error(
         `[DiscordAuth][CHECKPOINT:6.FAIL] /callback — requestId=${requestId}` +
-        ` REJECTED: state "${state.slice(0, 8)}…" NOT FOUND in discord_oauth_states DB table.` +
+        ` REJECTED: state "${logSafe(state.slice(0, 8))}…" NOT FOUND in discord_oauth_states DB table.` +
         ` POSSIBLE CAUSES:` +
         `\n  1. State expired (TTL=${STATE_TTL_MS/60000} min) — user took too long to authorize` +
         `\n  2. State was already consumed (duplicate callback request)` +
@@ -416,7 +421,7 @@ export function registerDiscordAuthRoutes(app: Express) {
     if (stateRow.expiresAt < now) {
       console.error(
         `[DiscordAuth][CHECKPOINT:6.FAIL] /callback — requestId=${requestId}` +
-        ` REJECTED: state "${state.slice(0, 8)}…" EXPIRED at ${new Date(stateRow.expiresAt).toISOString()}` +
+        ` REJECTED: state "${logSafe(state.slice(0, 8))}…" EXPIRED at ${new Date(stateRow.expiresAt).toISOString()}` +
         ` (${Math.round((now - stateRow.expiresAt) / 1000)}s ago).` +
         ` User must restart the OAuth flow. Redirecting to /feed/model/mlb?discord_error=state_expired`
       );
@@ -436,8 +441,8 @@ export function registerDiscordAuthRoutes(app: Express) {
     console.log(
       `[DiscordAuth][CHECKPOINT:6.OK] /callback — requestId=${requestId}` +
       ` CSRF state valid and consumed: userId=${userId}` +
-      `\n  → publicOrigin : "${publicOrigin}"` +
-      `\n  → redirectUri  : "${redirectUri}"` +
+      `\n  → publicOrigin : "${logSafe(publicOrigin)}"` +
+      `\n  → redirectUri  : "${logSafe(redirectUri)}"` +
       `\n  → Proceeding to Discord token exchange…`
     );
 
@@ -447,8 +452,8 @@ export function registerDiscordAuthRoutes(app: Express) {
         `[DiscordAuth][CHECKPOINT:7] /callback — requestId=${requestId}` +
         ` POST ${DISCORD_API}/oauth2/token` +
         `\n  → grant_type  : "authorization_code"` +
-        `\n  → redirect_uri: "${redirectUri}"` +
-        `\n  → code_length : ${code.length}` +
+        `\n  → redirect_uri: "${logSafe(redirectUri)}"` +
+        `\n  → code_length : ${logSafe(code.length)}` +
         `\n  → client_id   : "${ENV.discordClientId.slice(0,8)}…"`
       );
 
@@ -467,7 +472,7 @@ export function registerDiscordAuthRoutes(app: Express) {
       console.log(
         `[DiscordAuth][CHECKPOINT:7.RESPONSE] /callback — requestId=${requestId}` +
         ` Discord token exchange: HTTP ${tokenRes.status} ok=${tokenRes.ok}` +
-        `\n  → redirectUri used: "${redirectUri}"` +
+        `\n  → redirectUri used: "${logSafe(redirectUri)}"` +
         `\n  → NOTE: This redirectUri must EXACTLY match the one sent in /connect AND registered in Discord Portal`
       );
 
@@ -476,11 +481,11 @@ export function registerDiscordAuthRoutes(app: Express) {
         console.error(
           `[DiscordAuth][CHECKPOINT:7.FAIL] /callback — requestId=${requestId}` +
           ` Token exchange FAILED: HTTP ${tokenRes.status}` +
-          `\n  → Discord error body: "${errText.slice(0, 500)}"` +
-          `\n  → redirectUri used: "${redirectUri}"` +
+          `\n  → Discord error body: "${logSafe(errText.slice(0, 500))}"` +
+          `\n  → redirectUri used: "${logSafe(redirectUri)}"` +
           `\n  → LIKELY CAUSE: redirect_uri mismatch between /connect and /callback,` +
           `\n    OR the URI is not registered in Discord Developer Portal → OAuth2 → Redirects.` +
-          `\n  → REGISTERED URI must be: "${redirectUri}"` +
+          `\n  → REGISTERED URI must be: "${logSafe(redirectUri)}"` +
           ` Redirecting to /feed/model/mlb?discord_error=token_exchange_failed`
         );
         res.redirect(302, "/feed/model/mlb?discord_error=token_exchange_failed");
@@ -640,6 +645,11 @@ export function registerDiscordAuthRoutes(app: Express) {
         return;
       }
 
+      // Role synchronization is non-blocking; the verified DB link is authoritative.
+      void syncDiscordRole(userId, updatedUser?.hasAccess === true).catch((syncErr: unknown) =>
+        console.warn(`[DiscordAuth][ROLE_SYNC_WARN] requestId=${requestId} userId=${userId}`, syncErr)
+      );
+
       // ── CHECKPOINT 11: SUCCESS ────────────────────────────────────────────
       console.log(
         `[DiscordAuth][CHECKPOINT:11.SUCCESS] /callback — requestId=${requestId}` +
@@ -667,6 +677,12 @@ export function registerDiscordAuthRoutes(app: Express) {
   // CHECKPOINT C: SUCCESS — return {success: true}
   app.post(`${ROUTE_PREFIX}/disconnect`, async (req: Request, res: Response) => {
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const origin = req.get("origin");
+    if (!origin || !isOriginAllowed(origin)) {
+      console.warn(`[DiscordAuth][CHECKPOINT:A.FAIL] /disconnect — requestId=${requestId} rejected origin="${logSafe(origin ?? "missing")}"`);
+      res.status(403).json({ error: "Invalid request origin" });
+      return;
+    }
     console.log(
       `[DiscordAuth][CHECKPOINT:A] /disconnect — requestId=${requestId}` +
       ` cookie_present=${!!(req.headers.cookie)}`

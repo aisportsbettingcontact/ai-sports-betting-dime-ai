@@ -5,45 +5,82 @@ import {
   sportAdapters,
   formatDoubleChanceSelection,
   toPresentation,
+  type EventStatus,
   type FeedEventLike,
   type SportPresentationModel,
 } from "./presentation";
-import { isRawCountryCode, countryIdentity, flagEmojiFromIso2 } from "./countries";
+import {
+  isRawCountryCode,
+  countryIdentity,
+  flagEmojiFromIso2,
+} from "./countries";
 
 // A World Cup event as the feed normalizes it: away = Spain (top), home = France.
 const WC_EVENT: FeedEventLike = {
   id: "esp-fra",
   liveLabel: null,
   timeLabel: "3:00 PM ET",
-  away: { name: "Spain", crest: { code: "ESP", url: null, bg: "#C60B1E" }, score: null },
-  home: { name: "France", crest: { code: "FRA", url: null, bg: "#0055A4" }, score: null },
+  away: {
+    name: "Spain",
+    crest: { code: "ESP", url: null, bg: "#C60B1E" },
+    score: null,
+  },
+  home: {
+    name: "France",
+    crest: { code: "FRA", url: null, bg: "#0055A4" },
+    score: null,
+  },
   meta: "Semifinal · MetLife Stadium, East Rutherford",
   venueLine: "Semifinal · MetLife Stadium, East Rutherford",
   markets: [
-    { title: "ML", foot: { label: "ESP ML · +3.1%", edge: true }, rows: [
-      { label: "ESP", book: "+140", model: "+120" },
-      { label: "FRA", book: "+190", model: "+200" },
-    ] },
-    { title: "Draw", foot: { label: "NO EDGE", edge: false }, rows: [
-      { label: "DRAW", book: "+210", model: "+205" },
-      { label: "NO DRAW", book: "-280", model: "-270" },
-    ] },
-    { title: "Total", foot: { label: "NO EDGE", edge: false }, rows: [
-      { label: "O 2.5", book: "+105", model: "+110" },
-      { label: "U 2.5", book: "-125", model: "-130" },
-    ] },
-    { title: "Spread", foot: { label: "NO EDGE", edge: false }, rows: [
-      { label: "ESP -0.5", book: "+140", model: "+120" },
-      { label: "FRA +0.5", book: "-170", model: "-150" },
-    ] },
-    { title: "Dbl Chc", foot: { label: "NO EDGE", edge: false }, rows: [
-      { label: "HOME WD", book: "-115", model: "-120" },
-      { label: "AWAY WD", book: "-130", model: "-140" },
-    ] },
-    { title: "BTTS", foot: { label: "NO EDGE", edge: false }, rows: [
-      { label: "YES", book: "-105", model: "-110" },
-      { label: "NO", book: "-115", model: "-110" },
-    ] },
+    {
+      title: "ML",
+      foot: { label: "ESP ML · +3.1%", edge: true },
+      rows: [
+        { label: "ESP", book: "+140", model: "+120" },
+        { label: "FRA", book: "+190", model: "+200" },
+      ],
+    },
+    {
+      title: "Draw",
+      foot: { label: "NO EDGE", edge: false },
+      rows: [
+        { label: "DRAW", book: "+210", model: "+205" },
+        { label: "NO DRAW", book: "-280", model: "-270" },
+      ],
+    },
+    {
+      title: "Total",
+      foot: { label: "NO EDGE", edge: false },
+      rows: [
+        { label: "O 2.5", book: "+105", model: "+110" },
+        { label: "U 2.5", book: "-125", model: "-130" },
+      ],
+    },
+    {
+      title: "Spread",
+      foot: { label: "NO EDGE", edge: false },
+      rows: [
+        { label: "ESP -0.5", book: "+140", model: "+120" },
+        { label: "FRA +0.5", book: "-170", model: "-150" },
+      ],
+    },
+    {
+      title: "Dbl Chc",
+      foot: { label: "NO EDGE", edge: false },
+      rows: [
+        { label: "HOME WD", book: "-115", model: "-120" },
+        { label: "AWAY WD", book: "-130", model: "-140" },
+      ],
+    },
+    {
+      title: "BTTS",
+      foot: { label: "NO EDGE", edge: false },
+      rows: [
+        { label: "YES", book: "-105", model: "-110" },
+        { label: "NO", book: "-115", model: "-110" },
+      ],
+    },
   ],
 };
 
@@ -58,7 +95,12 @@ function renderedStrings(model: SportPresentationModel): string[] {
     model.awayParticipant.shortName,
     model.contextLine ?? "",
     model.venue ?? "",
-    ...model.markets.flatMap((m) => [m.label, m.resultLabel ?? "", ...m.selections.map((s) => s.label)]),
+    model.startTime ?? "",
+    ...model.markets.flatMap(m => [
+      m.label,
+      m.resultLabel ?? "",
+      ...m.selections.map(s => s.label),
+    ]),
   ];
 }
 
@@ -73,6 +115,10 @@ describe("createSoccerPresentation — country identity", () => {
     expect(isRawCountryCode(model.homeParticipant.displayName)).toBe(false);
   });
 
+  it("carries kickoff time for scheduled events (matchup block's last line)", () => {
+    expect(model.startTime).toBe("3:00 PM ET");
+  });
+
   it("binds each participant's flag and name to the same ISO code", () => {
     const spain = countryIdentity("ESP", "Spain");
     expect(model.awayParticipant.iso2).toBe("ES");
@@ -83,20 +129,45 @@ describe("createSoccerPresentation — country identity", () => {
   });
 
   it("expands ML / spread codes to full country names", () => {
-    const ml = model.markets.find((m) => m.key === "ml")!;
-    expect(ml.selections.map((s) => s.label)).toEqual(["Spain", "France"]);
-    const spread = model.markets.find((m) => m.key === "spread")!;
+    const ml = model.markets.find(m => m.key === "ml")!;
+    // "<Country> ML" per row with the participant's flag (owner directive 2026-07-18)
+    expect(ml.selections.map(s => s.label)).toEqual(["Spain ML", "France ML"]);
+    expect(ml.selections[0].flag).toBe(model.awayParticipant.flag);
+    expect(ml.selections[1].flag).toBe(model.homeParticipant.flag);
+    const spread = model.markets.find(m => m.key === "spread")!;
     expect(spread.selections[0].label).toBe("Spain -0.5");
     expect(spread.selections[1].label).toBe("France +0.5");
+    expect(spread.selections[0].flag).toBe(model.awayParticipant.flag);
   });
 
   it("renders Total / BTTS / Draw with human labels", () => {
-    expect(model.markets.find((m) => m.key === "total")!.selections.map((s) => s.label))
-      .toEqual(["Over 2.5", "Under 2.5"]);
-    expect(model.markets.find((m) => m.key === "btts")!.selections.map((s) => s.label))
-      .toEqual(["Both teams to score — Yes", "Both teams to score — No"]);
-    expect(model.markets.find((m) => m.key === "draw")!.selections.map((s) => s.label))
-      .toEqual(["Draw", "No Draw"]);
+    expect(
+      model.markets.find(m => m.key === "total")!.selections.map(s => s.label)
+    ).toEqual(["Over 2.5", "Under 2.5"]);
+    // YES/NO rows under the spelled-out title (owner directive 2026-07-18)
+    expect(
+      model.markets.find(m => m.key === "btts")!.selections.map(s => s.label)
+    ).toEqual(["YES", "NO"]);
+    expect(
+      model.markets.find(m => m.key === "draw")!.selections.map(s => s.label)
+    ).toEqual(["Draw", "No Draw"]);
+  });
+
+  it("spells out market titles (owner directive 2026-07-18)", () => {
+    const labels = Object.fromEntries(model.markets.map(m => [m.key, m.label]));
+    expect(labels["ml"]).toBe("Moneyline");
+    expect(labels["dbl-chc"]).toBe("Double Chance");
+    expect(labels["btts"]).toBe("Both Teams to Score");
+    expect(labels["total"]).toBe("Total");
+  });
+
+  it("puts edges in the footer, re-anchored on relabeled sides (2026-07-18)", () => {
+    const ml = model.markets.find(m => m.key === "ml")!;
+    expect(ml.resultLabel).toBe("Spain ML · +3.1%");
+    expect(ml.resultIsEdge).toBe(true);
+    const draw = model.markets.find(m => m.key === "draw")!;
+    expect(draw.resultLabel).toBe("NO EDGE");
+    expect(draw.resultIsEdge).toBe(false);
   });
 
   it("NO raw abbreviation reaches ANY rendered string", () => {
@@ -107,7 +178,7 @@ describe("createSoccerPresentation — country identity", () => {
   });
 
   it("preserves prices unchanged (calculations untouched)", () => {
-    const ml = model.markets.find((m) => m.key === "ml")!;
+    const ml = model.markets.find(m => m.key === "ml")!;
     expect(ml.selections[0]).toMatchObject({ bookPrice: 140, modelPrice: 120 });
     expect(ml.selections[1]).toMatchObject({ bookPrice: 190, modelPrice: 200 });
   });
@@ -117,18 +188,22 @@ describe("formatDoubleChanceSelection — resolved via participant identity", ()
   const model = createSoccerPresentation(WC_EVENT);
 
   it("HOME_OR_DRAW always resolves to the home participant", () => {
-    expect(formatDoubleChanceSelection("HOME_OR_DRAW", model)).toBe("France Win or Draw");
-    const dbl = model.markets.find((m) => m.key === "dbl-chc")!;
+    expect(formatDoubleChanceSelection("HOME_OR_DRAW", model)).toBe(
+      "France Win/Draw"
+    );
+    const dbl = model.markets.find(m => m.key === "dbl-chc")!;
     // row 0 (HOME WD) → home participant, France; carries France's flag
-    expect(dbl.selections[0].label).toBe("France Win or Draw");
+    expect(dbl.selections[0].label).toBe("France Win/Draw");
     expect(dbl.selections[0].participantId).toBe(model.homeParticipant.id);
     expect(dbl.selections[0].flag).toBe(model.homeParticipant.flag);
   });
 
   it("AWAY_OR_DRAW always resolves to the away participant", () => {
-    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", model)).toBe("Spain Win or Draw");
-    const dbl = model.markets.find((m) => m.key === "dbl-chc")!;
-    expect(dbl.selections[1].label).toBe("Spain Win or Draw");
+    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", model)).toBe(
+      "Spain Win/Draw"
+    );
+    const dbl = model.markets.find(m => m.key === "dbl-chc")!;
+    expect(dbl.selections[1].label).toBe("Spain Win/Draw");
     expect(dbl.selections[1].participantId).toBe(model.awayParticipant.id);
     expect(dbl.selections[1].flag).toBe(model.awayParticipant.flag);
   });
@@ -144,42 +219,298 @@ describe("formatDoubleChanceSelection — resolved via participant identity", ()
       home: WC_EVENT.away,
     });
     // now home = Spain, away = France
-    expect(formatDoubleChanceSelection("HOME_OR_DRAW", swapped)).toBe("Spain Win or Draw");
-    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", swapped)).toBe("France Win or Draw");
-    const dbl = swapped.markets.find((m) => m.key === "dbl-chc")!;
-    expect(dbl.selections[0].label).toBe("Spain Win or Draw"); // HOME WD → Spain now
-    expect(dbl.selections[1].label).toBe("France Win or Draw"); // AWAY WD → France now
+    expect(formatDoubleChanceSelection("HOME_OR_DRAW", swapped)).toBe(
+      "Spain Win/Draw"
+    );
+    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", swapped)).toBe(
+      "France Win/Draw"
+    );
+    const dbl = swapped.markets.find(m => m.key === "dbl-chc")!;
+    expect(dbl.selections[0].label).toBe("Spain Win/Draw"); // HOME WD → Spain now
+    expect(dbl.selections[1].label).toBe("France Win/Draw"); // AWAY WD → France now
     // flags follow identity too
     expect(dbl.selections[0].flag).toBe(swapped.homeParticipant.flag);
+  });
+});
+
+describe("WC winner-scope markets + (90 Min) tags (owner directive 2026-07-18)", () => {
+  // The Final as wcMatchToCard emits it: ARG away (top) / ESP home (bottom),
+  // winner market in the ML slot, 90-min tags on Draw/Spread/Dbl Chc/BTTS.
+  const FINAL_EVENT: FeedEventLike = {
+    id: "wc26-final-104",
+    timeLabel: "3:00 PM ET",
+    away: {
+      name: "Argentina",
+      crest: { code: "ARG", url: null, bg: "#75AADB" },
+      score: null,
+    },
+    home: {
+      name: "Spain",
+      crest: { code: "ESP", url: null, bg: "#C60B1E" },
+      score: null,
+    },
+    meta: "World Cup Final",
+    markets: [
+      {
+        title: "To Win the World Cup",
+        foot: { label: "ESP · +4.2%", edge: true },
+        rows: [
+          { label: "ARG", book: "+130", model: "+155" },
+          { label: "ESP", book: "-150", model: "-182" },
+        ],
+      },
+      {
+        title: "Draw (90 Min)",
+        foot: { label: "NO EDGE", edge: false },
+        rows: [
+          { label: "DRAW", book: "+200", model: "+205" },
+          { label: "NO DRAW", book: "-278", model: "-270" },
+        ],
+      },
+      {
+        title: "Spread (90 Min)",
+        foot: { label: "NO EDGE", edge: false },
+        rows: [
+          { label: "ARG +0.75", book: "-222", model: "-210" },
+          { label: "ESP -0.75", book: "+168", model: "+160" },
+        ],
+      },
+      {
+        title: "Dbl Chc (90 Min)",
+        foot: { label: "NO EDGE", edge: false },
+        rows: [
+          { label: "HOME WD", book: "-345", model: "-350" },
+          { label: "AWAY WD", book: "-161", model: "-155" },
+        ],
+      },
+      {
+        title: "BTTS (90 Min)",
+        foot: { label: "NO EDGE", edge: false },
+        rows: [
+          { label: "YES", book: "-110", model: "-115" },
+          { label: "NO", book: "-110", model: "-105" },
+        ],
+      },
+    ],
+  };
+  const model = createSoccerPresentation(FINAL_EVENT);
+  const byKey = Object.fromEntries(model.markets.map(mk => [mk.key, mk]));
+
+  it("winner market picks carry the market: '<Country> to Win WC'", () => {
+    const winner = byKey["to-win-the-world-cup"];
+    expect(winner.label).toBe("To Win the World Cup");
+    expect(winner.selections.map(s => s.label)).toEqual([
+      "Argentina to Win WC",
+      "Spain to Win WC",
+    ]);
+    expect(winner.selections[0]).toMatchObject({
+      bookPrice: 130,
+      modelPrice: 155,
+    });
+    expect(winner.selections[1]).toMatchObject({
+      bookPrice: -150,
+      modelPrice: -182,
+    });
+  });
+
+  it("re-anchors the winner edge footer on the spelled-out pick", () => {
+    expect(byKey["to-win-the-world-cup"].resultLabel).toBe(
+      "Spain to Win WC · +4.2%"
+    );
+    expect(byKey["to-win-the-world-cup"].resultIsEdge).toBe(true);
+  });
+
+  it("'3rd Place' picks for the bronze match", () => {
+    const bronze = createSoccerPresentation({
+      ...FINAL_EVENT,
+      id: "wc26-3rd-103",
+      away: { name: "England", crest: { code: "ENG", url: null }, score: null },
+      home: { name: "France", crest: { code: "FRA", url: null }, score: null },
+      markets: [
+        {
+          title: "World Cup 3rd Place",
+          foot: { label: "FRA · +2.0%", edge: true },
+          rows: [
+            { label: "ENG", book: "+170", model: "+185" },
+            { label: "FRA", book: "-215", model: "-240" },
+          ],
+        },
+      ],
+    });
+    expect(bronze.markets[0].label).toBe("World Cup 3rd Place");
+    expect(bronze.markets[0].selections.map(s => s.label)).toEqual([
+      "England 3rd Place",
+      "France 3rd Place",
+    ]);
+    expect(bronze.markets[0].resultLabel).toBe("France 3rd Place · +2.0%");
+  });
+
+  it("(90 Min) is display-only: labels carry it, market shapes still resolve", () => {
+    expect(byKey["draw-90-min"].label).toBe("Draw (90 Min)");
+    expect(byKey["spread-90-min"].label).toBe("Spread (90 Min)");
+    expect(byKey["dbl-chc-90-min"].label).toBe("Double Chance (90 Min)");
+    expect(byKey["btts-90-min"].label).toBe("Both Teams to Score (90 Min)");
+    // Shape resolution survived the tag: Dbl Chc still spells Win/Draw sides,
+    // spread still de-codes the leading FIFA token.
+    expect(byKey["dbl-chc-90-min"].selections.map(s => s.label)).toEqual([
+      "Spain Win/Draw",
+      "Argentina Win/Draw",
+    ]);
+    expect(byKey["spread-90-min"].selections.map(s => s.label)).toEqual([
+      "Argentina +0.75",
+      "Spain -0.75",
+    ]);
   });
 });
 
 describe("sportAdapters registry", () => {
   it("covers every sport", () => {
     expect(Object.keys(sportAdapters).sort()).toEqual(
-      ["MLB", "NBA", "NCAAF", "NCAAM", "NFL", "NHL", "SOCCER"].sort(),
+      ["MLB", "NBA", "NCAAF", "NCAAM", "NFL", "NHL", "SOCCER"].sort()
     );
   });
 
-  it("MLB adapter keeps team codes and does not touch numbers", () => {
-    const mlb: FeedEventLike = {
-      id: "mil-pit",
-      timeLabel: "FINAL",
-      away: { name: "Brewers", crest: { code: "MIL", url: "/mil.svg", bg: "#12284B" }, score: "5" },
-      home: { name: "Pirates", crest: { code: "PIT", url: null, bg: "#111111" }, score: "14" },
-      meta: "Gasser vs Skenes",
-      markets: [
-        { title: "Moneyline", foot: { label: "NO EDGE", edge: false }, rows: [
+  // Owner directive 2026-07-18: team-sport market tables spell out their side
+  // labels — moneyline rows read "<Team> ML" (the market context travels with
+  // the pick), run line rows spell the team name and keep the line, total rows
+  // spell Over/Under. Prices are never touched.
+  const MLB_EVENT: FeedEventLike = {
+    id: "mil-pit",
+    timeLabel: "FINAL",
+    away: {
+      name: "Brewers",
+      crest: { code: "MIL", url: "/mil.svg", bg: "#12284B" },
+      score: "5",
+    },
+    home: {
+      name: "Pirates",
+      crest: { code: "PIT", url: null, bg: "#111111" },
+      score: "14",
+    },
+    meta: "PNC Park",
+    markets: [
+      {
+        title: "Run Line",
+        foot: { label: "MIL +1.5 · +4.8%", edge: true },
+        rows: [
+          { label: "MIL +1.5", book: "-170", model: "-210" },
+          { label: "PIT -1.5", book: "+140", model: "+210" },
+        ],
+      },
+      {
+        title: "Total",
+        foot: { label: "NO EDGE", edge: false },
+        rows: [
+          { label: "O 9", book: "-114", model: "-116" },
+          { label: "U 9", book: "-105", model: "+116" },
+        ],
+      },
+      {
+        title: "Moneyline",
+        foot: { label: "MIL ML · +9.1%", edge: true },
+        rows: [
           { label: "MIL", book: "-140", model: "-150" },
           { label: "PIT", book: "+120", model: "+130" },
-        ] },
-      ],
-    };
-    const model = createMlbPresentation(mlb);
+        ],
+      },
+    ],
+  };
+
+  /** Owner directive 2026-08-05: ballpark + first pitch are pregame-only. On MLB
+   *  rows the ballpark arrives as `meta` (the feed sets meta = g.venue), so the
+   *  team adapter gates the CONTEXT line, not just `venue`. */
+  describe("pregame-only venue + first pitch (owner directive 2026-08-05)", () => {
+    const NON_PREGAME: ReadonlyArray<EventStatus> = [
+      "live",
+      "final",
+      "postponed",
+      "suspended",
+    ];
+
+    it("drops the ballpark context and the start time on every non-scheduled MLB state", () => {
+      for (const status of NON_PREGAME) {
+        const model = createMlbPresentation({
+          ...MLB_EVENT,
+          status,
+          timeLabel: "7:05 PM ET",
+          venueLine: "PNC Park",
+          liveLabel: status === "live" ? "LIVE · BOT 8TH" : null,
+        });
+        expect(model.status).toBe(status);
+        expect(model.contextLine).toBeUndefined();
+        expect(model.venue).toBeUndefined();
+        expect(model.startTime).toBeUndefined();
+      }
+    });
+
+    it("keeps the ballpark and the first pitch on a scheduled MLB card", () => {
+      const model = createMlbPresentation({
+        ...MLB_EVENT,
+        status: "scheduled",
+        timeLabel: "7:05 PM ET",
+        away: { ...MLB_EVENT.away, score: null },
+        home: { ...MLB_EVENT.home, score: null },
+      });
+      expect(model.contextLine).toBe("PNC Park");
+      expect(model.startTime).toBe("7:05 PM ET");
+    });
+
+    it("soccer keeps its ROUND context at every state but loses stadium + kickoff", () => {
+      // Distinct meta/venueLine, matching how wcMatchToCard actually splits
+      // them: meta = round label, venueLine = stadium · city.
+      const wc = {
+        ...WC_EVENT,
+        meta: "World Cup Final",
+        venueLine: "MetLife Stadium · East Rutherford, NJ",
+      };
+      expect(createSoccerPresentation(wc).venue).toBe(
+        "MetLife Stadium · East Rutherford, NJ"
+      );
+
+      const live = createSoccerPresentation({
+        ...wc,
+        status: "live",
+        liveLabel: "LIVE 78'",
+      });
+      expect(live.contextLine).toBe("World Cup Final"); // stage identity is not a venue
+      expect(live.venue).toBeUndefined();
+      expect(live.startTime).toBeUndefined();
+    });
+  });
+
+  it("MLB adapter keeps event identity and does not touch numbers", () => {
+    const model = createMlbPresentation(MLB_EVENT);
     expect(model.sport).toBe("MLB");
     expect(model.status).toBe("final");
-    expect(model.awayParticipant).toMatchObject({ kind: "team", displayName: "Brewers", shortName: "MIL" });
-    expect(model.markets[0].selections[0]).toMatchObject({ label: "MIL", bookPrice: -140, modelPrice: -150 });
+    expect(model.startTime).toBeUndefined(); // finals have no first-pitch line
+    expect(model.awayParticipant).toMatchObject({
+      kind: "team",
+      displayName: "Brewers",
+      shortName: "MIL",
+    });
+    expect(model.markets[2].selections[0]).toMatchObject({
+      label: "Brewers ML",
+      bookPrice: -140,
+      modelPrice: -150,
+    });
+  });
+
+  it("spells out team-sport side labels: '<Team> ML', 'Team +1.5', 'Over/Under N' (2026-07-18)", () => {
+    const model = createMlbPresentation(MLB_EVENT);
+    const labels = Object.fromEntries(
+      model.markets.map(m => [m.key, m.selections.map(s => s.label)])
+    );
+    expect(labels["run-line"]).toEqual(["Brewers +1.5", "Pirates -1.5"]);
+    expect(labels["total"]).toEqual(["Over 9", "Under 9"]);
+    expect(labels["moneyline"]).toEqual(["Brewers ML", "Pirates ML"]);
+  });
+
+  it("re-anchors team-sport edge footers on the spelled-out side (2026-07-18)", () => {
+    const model = createMlbPresentation(MLB_EVENT);
+    expect(model.markets[0].resultLabel).toBe("Brewers +1.5 · +4.8%");
+    expect(model.markets[0].resultIsEdge).toBe(true);
+    expect(model.markets[2].resultLabel).toBe("Brewers ML · +9.1%");
+    expect(model.markets[1].resultLabel).toBe("NO EDGE");
   });
 
   it("toPresentation dispatches by sport key", () => {

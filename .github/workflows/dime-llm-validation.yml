@@ -1,0 +1,100 @@
+name: Dime LLM Validation
+
+on:
+  push:
+    branches: [main]
+    # Slimmed 2026-08-04 (owner decision: Dime Chat is API-based; ML lane
+    # dormant — #289 closed, RunPod decommissioned). This job validates ONLY
+    # the ml/ tree (working-directory: ml/dime-1.0), so it now triggers only
+    # when that dormant tree or its shared schemas are actually touched —
+    # not on every chat-server PR (~3min per run saved).
+    paths:
+      - "ml/dime-1.0/**"
+      - "shared/dime/**"
+      - ".github/workflows/dime-llm-validation.yml"
+  pull_request:
+    branches: [main]
+    # Slimmed 2026-08-04 (owner decision: Dime Chat is API-based; ML lane
+    # dormant — #289 closed, RunPod decommissioned). This job validates ONLY
+    # the ml/ tree (working-directory: ml/dime-1.0), so it now triggers only
+    # when that dormant tree or its shared schemas are actually touched —
+    # not on every chat-server PR (~3min per run saved).
+    paths:
+      - "ml/dime-1.0/**"
+      - "shared/dime/**"
+      - ".github/workflows/dime-llm-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dime-llm-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Dime LLM Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml/dime-1.0
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      DATASETS_OFFLINE: "1"
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: "[STEP] Setup Python 3.12"
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: "[STEP] Setup pinned uv"
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: "ml/dime-1.0/uv.lock"
+
+      - name: "[STEP] Synchronize frozen CPU dependencies"
+        run: |
+          uv lock --check
+          uv sync --frozen --dev
+          uv pip check
+
+      - name: "[STEP] Format, lint, compile, and test"
+        run: |
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run python -m compileall -q src scripts infrastructure
+          uv run pytest -q
+
+      - name: "[STEP] Validate public data and contracts"
+        run: |
+          uv run python scripts/validate_data.py
+          uv run python scripts/validate_governed_json.py
+          uv run python scripts/validate_foundation_control.py
+          uv run python scripts/validate_foundation_data_factory.py
+          uv run python scripts/prepare_reviewer_runtime.py --check
+          uv run python scripts/validate_reviewer_signer_iac.py
+
+      - name: "[STEP] Reproduce deterministic starter audits"
+        run: |
+          audit_dir="$(mktemp -d)"
+          trap 'rm -rf "${audit_dir}"' EXIT
+          uv run python scripts/audit_curriculum.py \
+            --report "${audit_dir}/curriculum-audit.json"
+          uv run python scripts/audit_evaluation_program.py \
+            --report "${audit_dir}/evaluation-program-audit.json"
+          cmp "${audit_dir}/curriculum-audit.json" \
+            evidence/audits/starter-v1.2.0/curriculum-audit.json
+          cmp "${audit_dir}/evaluation-program-audit.json" \
+            evidence/audits/starter-v1.2.0/evaluation-program-audit.json
+
+      - name: "[OUTPUT] Confirm CPU-only non-release validation"
+        run: |
+          echo "PASS: source, schemas, fixtures, prompts, tools, and audits validated."
+          echo "NOT EXECUTED: model/tokenizer download, GPU tests, training, publishing, or serving."

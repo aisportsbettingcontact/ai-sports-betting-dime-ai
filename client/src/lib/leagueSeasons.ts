@@ -34,7 +34,10 @@ const SEASON_WINDOWS: Record<SplitsLeague, { start: string; end: string }> = {
 const ISO_DATE_RE = /^\d{4}-(\d{2}-\d{2})$/;
 
 /** True when the league's season window contains the given ISO date. */
-export function isLeagueInSeason(league: SplitsLeague, isoDate: string): boolean {
+export function isLeagueInSeason(
+  league: SplitsLeague,
+  isoDate: string
+): boolean {
   const match = ISO_DATE_RE.exec(isoDate);
   if (!match) return true; // fail-open on malformed dates
   const monthDay = match[1]!;
@@ -50,7 +53,9 @@ export function isLeagueInSeason(league: SplitsLeague, isoDate: string): boolean
  * Never returns an empty list (fail-open).
  */
 export function inSeasonLeagues(isoDate: string): SplitsLeague[] {
-  const active = SPLITS_LEAGUES.filter((league) => isLeagueInSeason(league, isoDate));
+  const active = SPLITS_LEAGUES.filter(league =>
+    isLeagueInSeason(league, isoDate)
+  );
   return active.length > 0 ? active : [...SPLITS_LEAGUES];
 }
 

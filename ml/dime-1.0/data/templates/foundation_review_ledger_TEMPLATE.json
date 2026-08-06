@@ -1,0 +1,26 @@
+{
+  "schema_version": "dime-foundation-review-ledger-v1",
+  "dataset_version": "dime-sft-foundation-v1",
+  "rubric": {
+    "rubric_id": "dime-answer-v1",
+    "sha256": "REPLACE_WITH_RUBRIC_SHA256"
+  },
+  "decisions": [
+    {
+      "example_id": "REPLACE_WITH_EXAMPLE_ID",
+      "record_sha256": "REPLACE_WITH_CANONICAL_RECORD_SHA256",
+      "reviewer_id": "REPLACE_WITH_REVIEWER_ID",
+      "agent_decision_receipt_sha256": null,
+      "decision": "approve",
+      "reviewed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "rubric_sha256": "REPLACE_WITH_RUBRIC_SHA256",
+      "content_quality_passed": true,
+      "grounding_passed": true,
+      "numeric_trace_passed": true,
+      "policy_behavior_passed": true,
+      "privacy_passed": true,
+      "rights_passed": true,
+      "findings": []
+    }
+  ]
+}

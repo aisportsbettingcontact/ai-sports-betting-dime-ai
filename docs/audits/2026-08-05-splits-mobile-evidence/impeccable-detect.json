@@ -1,0 +1,32 @@
+[
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/user/wt-splitsm/client/src/components/GameCard.tsx",
+    "line": 4539,
+    "snippet": "borderLeft: `3px solid"
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/user/wt-splitsm/client/src/components/GameCard.tsx",
+    "line": 5019,
+    "snippet": "borderLeft: `3px solid"
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/user/wt-splitsm/client/src/styles/dime-mobile.css",
+    "line": 305,
+    "snippet": "border-left: 3px solid var(--dime-mint) !important"
+  }
+]

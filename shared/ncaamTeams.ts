@@ -38,7 +38,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "duke",
     anSlug: "duke-blue-devils",
     kenpomSlug: "Duke",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/duke.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/duke.svg",
     primaryColor: "#003087",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#012169",
@@ -53,7 +54,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "virginia",
     anSlug: "virginia-cavaliers",
     kenpomSlug: "Virginia",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/virginia.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/virginia.svg",
     primaryColor: "#232D4B",
     secondaryColor: "#F84C1E",
     tertiaryColor: "#FFFFFF",
@@ -68,7 +70,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "miami_fl",
     anSlug: "miami-fl-hurricanes",
     kenpomSlug: "Miami FL",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/miami-fl.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/miami-fl.svg",
     primaryColor: "#F47321",
     secondaryColor: "#005030",
     tertiaryColor: "#FFFFFF",
@@ -83,7 +86,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "north_carolina",
     anSlug: "north-carolina-tar-heels",
     kenpomSlug: "North Carolina",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-carolina.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-carolina.svg",
     primaryColor: "#7BAFD4",
     secondaryColor: "#13294B",
     tertiaryColor: "#FFFFFF",
@@ -98,7 +102,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "clemson",
     anSlug: "clemson-tigers",
     kenpomSlug: "Clemson",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/clemson.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/clemson.svg",
     primaryColor: "#F56600",
     secondaryColor: "#522D80",
     tertiaryColor: "#FFFFFF",
@@ -113,7 +118,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "louisville",
     anSlug: "louisville-cardinals",
     kenpomSlug: "Louisville",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/louisville.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/louisville.svg",
     primaryColor: "#AD0000",
     secondaryColor: "#000000",
     tertiaryColor: "#FDB913",
@@ -128,7 +134,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "nc_state",
     anSlug: "north-carolina-st-wolfpack",
     kenpomSlug: "N.C. State",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-carolina-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-carolina-st.svg",
     primaryColor: "#CC0000",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -143,7 +150,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "california",
     anSlug: "california-golden-bears",
     kenpomSlug: "California",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/cal_b6dd94ad.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/cal_b6dd94ad.png",
     primaryColor: "#003262",
     secondaryColor: "#FDB515",
     tertiaryColor: "#FFFFFF",
@@ -158,7 +166,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "florida_st",
     anSlug: "florida-st-seminoles",
     kenpomSlug: "Florida St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/florida-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/florida-st.svg",
     primaryColor: "#782F40",
     secondaryColor: "#CEB888",
     tertiaryColor: "#000000",
@@ -173,7 +182,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "smu",
     anSlug: "smu-mustangs",
     kenpomSlug: "SMU",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/smu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/smu.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#0033A0",
     tertiaryColor: "#FFFFFF",
@@ -188,7 +198,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "virginia_tech",
     anSlug: "virginia-tech-hokies",
     kenpomSlug: "Virginia Tech",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/virginia-tech.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/virginia-tech.svg",
     primaryColor: "#630031",
     secondaryColor: "#CF4420",
     tertiaryColor: "#FFFFFF",
@@ -203,7 +214,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "stanford",
     anSlug: "stanford-cardinal",
     kenpomSlug: "Stanford",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stanford.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stanford.svg",
     primaryColor: "#8C1515",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -218,7 +230,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wake_forest",
     anSlug: "wake-forest-demon-deacons",
     kenpomSlug: "Wake Forest",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wake-forest.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wake-forest.svg",
     primaryColor: "#9E7E38",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -233,7 +246,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "syracuse",
     anSlug: "syracuse-orange",
     kenpomSlug: "Syracuse",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/syracuse.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/syracuse.svg",
     primaryColor: "#D44500",
     secondaryColor: "#0C2340",
     tertiaryColor: "#FFFFFF",
@@ -248,7 +262,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "notre_dame",
     anSlug: "notre-dame-fighting-irish",
     kenpomSlug: "Notre Dame",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/notre-dame_cca05904.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/notre-dame_cca05904.png",
     primaryColor: "#0C2340",
     secondaryColor: "#C99700",
     tertiaryColor: "#FFFFFF",
@@ -263,7 +278,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "pittsburgh",
     anSlug: "pittsburgh-panthers",
     kenpomSlug: "Pittsburgh",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/pittsburgh.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/pittsburgh.svg",
     primaryColor: "#003594",
     secondaryColor: "#FFB81C",
     tertiaryColor: "#FFFFFF",
@@ -278,7 +294,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "boston_college",
     anSlug: "boston-college-eagles",
     kenpomSlug: "Boston College",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/boston-college.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/boston-college.svg",
     primaryColor: "#98002E",
     secondaryColor: "#BC9B6A",
     tertiaryColor: "#FFFFFF",
@@ -293,7 +310,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "georgia_tech",
     anSlug: "georgia-tech-yellow-jackets",
     kenpomSlug: "Georgia Tech",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgia-tech.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgia-tech.svg",
     primaryColor: "#B3A369",
     secondaryColor: "#003057",
     tertiaryColor: "#FFFFFF",
@@ -308,7 +326,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "umbc",
     anSlug: "umbc-retrievers",
     kenpomSlug: "UMBC",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/umbc.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/umbc.svg",
     primaryColor: "#FFC20E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -323,7 +342,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "vermont",
     anSlug: "vermont-catamounts",
     kenpomSlug: "Vermont",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vermont.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vermont.svg",
     primaryColor: "#154734",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -338,7 +358,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "njit",
     anSlug: "njit-highlanders",
     kenpomSlug: "NJIT",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/njit.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/njit.svg",
     primaryColor: "#D22630",
     secondaryColor: "#002D72",
     tertiaryColor: "#FFFFFF",
@@ -353,7 +374,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "umass_lowell",
     anSlug: "umass-lowell-river-hawks",
     kenpomSlug: "UMass Lowell",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/umass-lowell.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/umass-lowell.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#BA0C2F",
     tertiaryColor: "#FFFFFF",
@@ -368,7 +390,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "albany",
     anSlug: "albany-ny-great-danes",
     kenpomSlug: "Albany",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/albany-ny.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/albany-ny.svg",
     primaryColor: "#46166B",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -383,7 +406,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "maine",
     anSlug: "maine-black-bears",
     kenpomSlug: "Maine",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/maine.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/maine.svg",
     primaryColor: "#003263",
     secondaryColor: "#9DC3E6",
     tertiaryColor: "#FFFFFF",
@@ -398,7 +422,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "new_hampshire",
     anSlug: "new-hampshire-wildcats",
     kenpomSlug: "New Hampshire",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-hampshire.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-hampshire.svg",
     primaryColor: "#003366",
     secondaryColor: "#66CCFF",
     tertiaryColor: "#FFFFFF",
@@ -413,7 +438,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "bryant",
     anSlug: "bryant-bulldogs",
     kenpomSlug: "Bryant",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bryant.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bryant.svg",
     primaryColor: "#000000",
     secondaryColor: "#C4CED4",
     tertiaryColor: "#FFFFFF",
@@ -428,7 +454,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "binghamton",
     anSlug: "binghamton-bearcats",
     kenpomSlug: "Binghamton",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/binghamton.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/binghamton.svg",
     primaryColor: "#006747",
     secondaryColor: "#004B87",
     tertiaryColor: "#FFFFFF",
@@ -443,7 +470,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "south_florida",
     anSlug: "south-fla-bulls",
     kenpomSlug: "South Florida",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-fla.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-fla.svg",
     primaryColor: "#006747",
     secondaryColor: "#CFC493",
     tertiaryColor: "#FFFFFF",
@@ -458,7 +486,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wichita_st",
     anSlug: "wichita-st-shockers",
     kenpomSlug: "Wichita St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wichita-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wichita-st.svg",
     primaryColor: "#000000",
     secondaryColor: "#FFC20E",
     tertiaryColor: "#FFFFFF",
@@ -473,7 +502,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tulsa",
     anSlug: "tulsa-golden-hurricane",
     kenpomSlug: "Tulsa",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tulsa.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tulsa.svg",
     primaryColor: "#002D72",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -488,7 +518,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uab",
     anSlug: "uab-blazers",
     kenpomSlug: "UAB",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uab.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uab.svg",
     primaryColor: "#1D7D3F",
     secondaryColor: "#C1A875",
     tertiaryColor: "#FFFFFF",
@@ -503,7 +534,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "fl_atlantic",
     anSlug: "fla-atlantic-owls",
     kenpomSlug: "Florida Atlantic",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fla-atlantic.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fla-atlantic.svg",
     primaryColor: "#003366",
     secondaryColor: "#CC0000",
     tertiaryColor: "#FFFFFF",
@@ -518,7 +550,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "charlotte",
     anSlug: "charlotte-49ers",
     kenpomSlug: "Charlotte",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/charlotte.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/charlotte.svg",
     primaryColor: "#046A38",
     secondaryColor: "#B9975B",
     tertiaryColor: "#FFFFFF",
@@ -533,7 +566,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tulane",
     anSlug: "tulane-green-wave",
     kenpomSlug: "Tulane",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tulane.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tulane.svg",
     primaryColor: "#006747",
     secondaryColor: "#418FDE",
     tertiaryColor: "#FFFFFF",
@@ -548,7 +582,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "north_texas",
     anSlug: "north-texas-mean-green",
     kenpomSlug: "North Texas",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-texas.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-texas.svg",
     primaryColor: "#00853E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -563,7 +598,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "temple",
     anSlug: "temple-owls",
     kenpomSlug: "Temple",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/temple.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/temple.svg",
     primaryColor: "#9D2235",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -578,7 +614,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "memphis",
     anSlug: "memphis-tigers",
     kenpomSlug: "Memphis",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/memphis.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/memphis.svg",
     primaryColor: "#003087",
     secondaryColor: "#898D8D",
     tertiaryColor: "#FFFFFF",
@@ -593,7 +630,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "east_carolina",
     anSlug: "east-carolina-pirates",
     kenpomSlug: "East Carolina",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/east-carolina.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/east-carolina.svg",
     primaryColor: "#592A8A",
     secondaryColor: "#FEC923",
     tertiaryColor: "#FFFFFF",
@@ -608,7 +646,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "rice",
     anSlug: "rice-owls",
     kenpomSlug: "Rice",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rice.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rice.svg",
     primaryColor: "#00205B",
     secondaryColor: "#C1C6C8",
     tertiaryColor: "#FFFFFF",
@@ -623,7 +662,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_san_antonio",
     anSlug: "utsa-roadrunners",
     kenpomSlug: "UTSA",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utsa.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utsa.svg",
     primaryColor: "#F15A22",
     secondaryColor: "#002244",
     tertiaryColor: "#FFFFFF",
@@ -638,7 +678,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "austin_peay",
     anSlug: "austin-peay-governors",
     kenpomSlug: "Austin Peay",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/austin-peay.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/austin-peay.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -653,7 +694,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "c_arkansas",
     anSlug: "central-ark-bears",
     kenpomSlug: "Central Arkansas",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/central-ark.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/central-ark.svg",
     primaryColor: "#4F2D7F",
     secondaryColor: "#A7A8AA",
     tertiaryColor: "#FFFFFF",
@@ -668,7 +710,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "queens_nc",
     anSlug: "queens-nc-royals",
     kenpomSlug: "Queens",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/queens-nc.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/queens-nc.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#D4AF37",
     tertiaryColor: "#FFFFFF",
@@ -683,7 +726,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lipscomb",
     anSlug: "lipscomb-bisons",
     kenpomSlug: "Lipscomb",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lipscomb.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lipscomb.svg",
     primaryColor: "#331E54",
     secondaryColor: "#C5B783",
     tertiaryColor: "#FFFFFF",
@@ -698,7 +742,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "w_georgia",
     anSlug: "west-ga-wolves",
     kenpomSlug: "West Georgia",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/west-ga.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/west-ga.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -713,7 +758,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "fl_gulf_coast",
     anSlug: "fgcu-eagles",
     kenpomSlug: "Florida Gulf Coast",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fgcu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fgcu.svg",
     primaryColor: "#002D72",
     secondaryColor: "#00A651",
     tertiaryColor: "#FFFFFF",
@@ -728,7 +774,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "bellarmine",
     anSlug: "bellarmine-knights",
     kenpomSlug: "Bellarmine",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bellarmine.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bellarmine.svg",
     primaryColor: "#6C1D45",
     secondaryColor: "#A89968",
     tertiaryColor: "#FFFFFF",
@@ -743,7 +790,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "stetson",
     anSlug: "stetson-hatters",
     kenpomSlug: "Stetson",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stetson.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stetson.svg",
     primaryColor: "#006747",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -758,7 +806,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "jacksonville",
     anSlug: "jacksonville-dolphins",
     kenpomSlug: "Jacksonville",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/jacksonville.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/jacksonville.svg",
     primaryColor: "#006747",
     secondaryColor: "#B9975B",
     tertiaryColor: "#FFFFFF",
@@ -773,7 +822,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "e_kentucky",
     anSlug: "eastern-ky-colonels",
     kenpomSlug: "Eastern Kentucky",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-ky.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-ky.svg",
     primaryColor: "#8A1538",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -788,7 +838,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_florida",
     anSlug: "north-florida-ospreys",
     kenpomSlug: "North Florida",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-florida.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-florida.svg",
     primaryColor: "#00246B",
     secondaryColor: "#B9975B",
     tertiaryColor: "#FFFFFF",
@@ -803,7 +854,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_alabama",
     anSlug: "north-ala-lions",
     kenpomSlug: "North Alabama",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-ala.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-ala.svg",
     primaryColor: "#46166B",
     secondaryColor: "#A7A8AA",
     tertiaryColor: "#FFFFFF",
@@ -818,7 +870,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "saint_louis",
     anSlug: "saint-louis-billikens",
     kenpomSlug: "Saint Louis",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/saint-louis.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/saint-louis.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -833,7 +886,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "va_commonwealth",
     anSlug: "virginia-commonwealth-rams",
     kenpomSlug: "VCU",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vcu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vcu.svg",
     primaryColor: "#000000",
     secondaryColor: "#F8B800",
     tertiaryColor: "#FFFFFF",
@@ -848,7 +902,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "dayton",
     anSlug: "dayton-flyers",
     kenpomSlug: "Dayton",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/dayton.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/dayton.svg",
     primaryColor: "#CE1141",
     secondaryColor: "#002B5C",
     tertiaryColor: "#FFFFFF",
@@ -863,7 +918,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_josephs",
     anSlug: "saint-josephs-pa-hawks",
     kenpomSlug: "Saint Joseph's",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/saint-josephs.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/saint-josephs.svg",
     primaryColor: "#9E1B32",
     secondaryColor: "#A7A8AA",
     tertiaryColor: "#FFFFFF",
@@ -878,7 +934,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "george_mason",
     anSlug: "george-mason-patriots",
     kenpomSlug: "George Mason",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/george-mason.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/george-mason.svg",
     primaryColor: "#006633",
     secondaryColor: "#FFCC33",
     tertiaryColor: "#FFFFFF",
@@ -893,7 +950,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "davidson",
     anSlug: "davidson-wildcats",
     kenpomSlug: "Davidson",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/davidson.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/davidson.svg",
     primaryColor: "#AC1A2F",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -908,7 +966,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "george_washington",
     anSlug: "george-washington-colonials",
     kenpomSlug: "George Washington",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/george-washington.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/george-washington.svg",
     primaryColor: "#002F6C",
     secondaryColor: "#E6BE8A",
     tertiaryColor: "#FFFFFF",
@@ -923,7 +982,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "duquesne",
     anSlug: "duquesne-dukes",
     kenpomSlug: "Duquesne",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/duquesne.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/duquesne.svg",
     primaryColor: "#041E42",
     secondaryColor: "#BA0C2F",
     tertiaryColor: "#FFFFFF",
@@ -938,7 +998,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "rhode_island",
     anSlug: "rhode-island-rams",
     kenpomSlug: "Rhode Island",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rhode-island.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rhode-island.svg",
     primaryColor: "#002D72",
     secondaryColor: "#68ACE5",
     tertiaryColor: "#FFFFFF",
@@ -953,7 +1014,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "fordham",
     anSlug: "fordham-rams",
     kenpomSlug: "Fordham",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fordham.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fordham.svg",
     primaryColor: "#860038",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -968,7 +1030,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "richmond",
     anSlug: "richmond-spiders",
     kenpomSlug: "Richmond",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/richmond.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/richmond.svg",
     primaryColor: "#000000",
     secondaryColor: "#E41B23",
     tertiaryColor: "#FFFFFF",
@@ -983,7 +1046,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "la_salle",
     anSlug: "la-salle-explorers",
     kenpomSlug: "La Salle",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/la-salle.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/la-salle.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FDB913",
     tertiaryColor: "#FFFFFF",
@@ -998,7 +1062,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_bonaventure",
     anSlug: "st-bonaventure-bonnies",
     kenpomSlug: "St. Bonaventure",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-bonaventure.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-bonaventure.svg",
     primaryColor: "#54261A",
     secondaryColor: "#FDB913",
     tertiaryColor: "#FFFFFF",
@@ -1013,7 +1078,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "loyola_chicago",
     anSlug: "loyola-chicago-ramblers",
     kenpomSlug: "Loyola Chicago",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/loyola-chicago.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/loyola-chicago.svg",
     primaryColor: "#800000",
     secondaryColor: "#FDB913",
     tertiaryColor: "#FFFFFF",
@@ -1028,7 +1094,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "arizona",
     anSlug: "arizona-wildcats",
     kenpomSlug: "Arizona",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arizona.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arizona.svg",
     primaryColor: "#003366",
     secondaryColor: "#CC0033",
     tertiaryColor: "#FFFFFF",
@@ -1043,7 +1110,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "houston",
     anSlug: "houston-cougars",
     kenpomSlug: "Houston",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/houston.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/houston.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1058,7 +1126,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_tech",
     anSlug: "texas-tech-red-raiders",
     kenpomSlug: "Texas Tech",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-tech.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-tech.svg",
     primaryColor: "#CC0000",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1073,7 +1142,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "iowa_st",
     anSlug: "iowa-state-cyclones",
     kenpomSlug: "Iowa St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/iowa-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/iowa-st.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#F1BE48",
     tertiaryColor: "#FFFFFF",
@@ -1088,7 +1158,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "kansas",
     anSlug: "kansas-jayhawks",
     kenpomSlug: "Kansas",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kansas.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kansas.svg",
     primaryColor: "#0051BA",
     secondaryColor: "#E8000D",
     tertiaryColor: "#FFFFFF",
@@ -1103,7 +1174,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tcu",
     anSlug: "tcu-horned-frogs",
     kenpomSlug: "TCU",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tcu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tcu.svg",
     primaryColor: "#4D1979",
     secondaryColor: "#A3A9AC",
     tertiaryColor: "#FFFFFF",
@@ -1118,7 +1190,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "c_florida",
     anSlug: "ucf-knights",
     kenpomSlug: "UCF",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ucf.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ucf.svg",
     primaryColor: "#000000",
     secondaryColor: "#BA9B37",
     tertiaryColor: "#FFFFFF",
@@ -1133,7 +1206,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "cincinnati",
     anSlug: "cincinnati-bearcats",
     kenpomSlug: "Cincinnati",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/cincinnati_963275d9.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/cincinnati_963275d9.png",
     primaryColor: "#E00122",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1148,7 +1222,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "brigham_young",
     anSlug: "byu-cougars",
     kenpomSlug: "BYU",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/byu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/byu.svg",
     primaryColor: "#002E5D",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1163,7 +1238,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "west_virginia",
     anSlug: "west-virginia-mountaineers",
     kenpomSlug: "West Virginia",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/west-virginia.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/west-virginia.svg",
     primaryColor: "#002855",
     secondaryColor: "#EAAA00",
     tertiaryColor: "#FFFFFF",
@@ -1178,7 +1254,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "colorado",
     anSlug: "colorado-buffaloes",
     kenpomSlug: "Colorado",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/colorado.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/colorado.svg",
     primaryColor: "#000000",
     secondaryColor: "#CFB87C",
     tertiaryColor: "#FFFFFF",
@@ -1193,7 +1270,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "arizona_st",
     anSlug: "arizona-st-sun-devils",
     kenpomSlug: "Arizona St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arizona-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arizona-st.svg",
     primaryColor: "#8C1D40",
     secondaryColor: "#FFC627",
     tertiaryColor: "#FFFFFF",
@@ -1208,7 +1286,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "oklahoma_st",
     anSlug: "oklahoma-st-cowboys",
     kenpomSlug: "Oklahoma St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oklahoma-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oklahoma-st.svg",
     primaryColor: "#FF7300",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1223,7 +1302,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "baylor",
     anSlug: "baylor-bears",
     kenpomSlug: "Baylor",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/baylor.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/baylor.svg",
     primaryColor: "#003015",
     secondaryColor: "#FFB81C",
     tertiaryColor: "#FFFFFF",
@@ -1238,7 +1318,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "kansas_st",
     anSlug: "kansas-st-wildcats",
     kenpomSlug: "Kansas St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kansas-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kansas-st.svg",
     primaryColor: "#512888",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1253,7 +1334,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "utah",
     anSlug: "utah-utes",
     kenpomSlug: "Utah",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah.svg",
     primaryColor: "#CC0000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1268,7 +1350,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "connecticut",
     anSlug: "connecticut-huskies",
     kenpomSlug: "Connecticut",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uconn.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uconn.svg",
     primaryColor: "#000E2F",
     secondaryColor: "#E4002B",
     tertiaryColor: "#FFFFFF",
@@ -1283,7 +1366,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_johns",
     anSlug: "st-johns-red-storm",
     kenpomSlug: "St. John's",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-johns-ny.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-johns-ny.svg",
     primaryColor: "#BA0C2F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1298,7 +1382,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "villanova",
     anSlug: "villanova-wildcats",
     kenpomSlug: "Villanova",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/villanova.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/villanova.svg",
     primaryColor: "#00205B",
     secondaryColor: "#13B5EA",
     tertiaryColor: "#FFFFFF",
@@ -1313,7 +1398,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "seton_hall",
     anSlug: "seton-hall-pirates",
     kenpomSlug: "Seton Hall",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/seton-hall.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/seton-hall.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#A7A8AA",
     tertiaryColor: "#FFFFFF",
@@ -1328,7 +1414,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "creighton",
     anSlug: "creighton-bluejays",
     kenpomSlug: "Creighton",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/creighton.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/creighton.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1343,7 +1430,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "depaul",
     anSlug: "depaul-blue-demons",
     kenpomSlug: "DePaul",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/depaul.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/depaul.svg",
     primaryColor: "#005EB8",
     secondaryColor: "#D50032",
     tertiaryColor: "#FFFFFF",
@@ -1358,7 +1446,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "providence",
     anSlug: "providence-friars",
     kenpomSlug: "Providence",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/providence.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/providence.svg",
     primaryColor: "#000000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#A7A8AA",
@@ -1373,7 +1462,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "butler",
     anSlug: "butler-bulldogs",
     kenpomSlug: "Butler",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/butler.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/butler.svg",
     primaryColor: "#13294B",
     secondaryColor: "#A7A8AA",
     tertiaryColor: "#FFFFFF",
@@ -1388,7 +1478,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "xavier",
     anSlug: "xavier-musketeers",
     kenpomSlug: "Xavier",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/xavier.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/xavier.svg",
     primaryColor: "#0C2340",
     secondaryColor: "#9EA2A2",
     tertiaryColor: "#FFFFFF",
@@ -1403,7 +1494,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "marquette",
     anSlug: "marquette-golden-eagles",
     kenpomSlug: "Marquette",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/marquette.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/marquette.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -1418,7 +1510,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "georgetown",
     anSlug: "georgetown-hoyas",
     kenpomSlug: "Georgetown",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgetown.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgetown.svg",
     primaryColor: "#041E42",
     secondaryColor: "#A7A8AA",
     tertiaryColor: "#FFFFFF",
@@ -1433,7 +1526,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "portland_st",
     anSlug: "portland-st-vikings",
     kenpomSlug: "Portland St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/portland-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/portland-st.svg",
     primaryColor: "#006A4D",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1448,7 +1542,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "montana_st",
     anSlug: "montana-st-bobcats",
     kenpomSlug: "Montana St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/montana-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/montana-st.svg",
     primaryColor: "#0C2340",
     secondaryColor: "#C99700",
     tertiaryColor: "#FFFFFF",
@@ -1463,7 +1558,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "e_washington",
     anSlug: "eastern-wash-eagles",
     kenpomSlug: "Eastern Washington",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-wash.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-wash.svg",
     primaryColor: "#A10022",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1478,7 +1574,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_colorado",
     anSlug: "northern-colo-bears",
     kenpomSlug: "Northern Colorado",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-colo.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-colo.svg",
     primaryColor: "#013A81",
     secondaryColor: "#F6B40E",
     tertiaryColor: "#FFFFFF",
@@ -1493,7 +1590,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "weber_st",
     anSlug: "weber-st-wildcats",
     kenpomSlug: "Weber St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/weber-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/weber-st.svg",
     primaryColor: "#4B2682",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1508,7 +1606,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "montana",
     anSlug: "montana-grizzlies",
     kenpomSlug: "Montana",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/montana.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/montana.svg",
     primaryColor: "#862633",
     secondaryColor: "#B9975B",
     tertiaryColor: "#FFFFFF",
@@ -1523,7 +1622,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "idaho",
     anSlug: "idaho-vandals",
     kenpomSlug: "Idaho",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/idaho.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/idaho.svg",
     primaryColor: "#B9975B",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1538,7 +1638,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "sacramento_st",
     anSlug: "sacramento-st-hornets",
     kenpomSlug: "Sacramento St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/sacramento-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/sacramento-st.svg",
     primaryColor: "#043927",
     secondaryColor: "#B9975B",
     tertiaryColor: "#FFFFFF",
@@ -1553,7 +1654,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "idaho_st",
     anSlug: "idaho-st-bengals",
     kenpomSlug: "Idaho St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/idaho-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/idaho-st.svg",
     primaryColor: "#FF6600",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1568,7 +1670,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_arizona",
     anSlug: "northern-ariz-lumberjacks",
     kenpomSlug: "Northern Arizona",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-ariz.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-ariz.svg",
     primaryColor: "#003466",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -1583,7 +1686,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "high_point",
     anSlug: "high-point-panthers",
     kenpomSlug: "High Point",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/high-point.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/high-point.svg",
     primaryColor: "#330072",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1598,7 +1702,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "winthrop",
     anSlug: "winthrop-eagles",
     kenpomSlug: "Winthrop",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/winthrop.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/winthrop.svg",
     primaryColor: "#6B001F",
     secondaryColor: "#C4CED4",
     tertiaryColor: "#FFFFFF",
@@ -1613,7 +1718,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "radford",
     anSlug: "radford-highlanders",
     kenpomSlug: "Radford",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/radford.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/radford.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1628,7 +1734,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "longwood",
     anSlug: "longwood-lancers",
     kenpomSlug: "Longwood",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/longwood.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/longwood.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1643,7 +1750,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "unc_asheville",
     anSlug: "unc-asheville-bulldogs",
     kenpomSlug: "UNC Asheville",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unc-asheville.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unc-asheville.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1658,7 +1766,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "presbyterian",
     anSlug: "presbyterian-blue-hose",
     kenpomSlug: "Presbyterian",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/presbyterian.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/presbyterian.svg",
     primaryColor: "#005EB8",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1673,7 +1782,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "charleston_southern",
     anSlug: "charleston-so-buccaneers",
     kenpomSlug: "Charleston Southern",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/charleston-so.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/charleston-so.svg",
     primaryColor: "#002D72",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1688,7 +1798,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "sc_upstate",
     anSlug: "usc-upstate-spartans",
     kenpomSlug: "USC Upstate",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/usc-upstate.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/usc-upstate.svg",
     primaryColor: "#046A38",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -1703,7 +1814,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "gardner_webb",
     anSlug: "gardner-webb-runnin-bulldogs",
     kenpomSlug: "Gardner Webb",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/gardner-webb.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/gardner-webb.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1718,7 +1830,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "michigan",
     anSlug: "michigan-wolverines",
     kenpomSlug: "Michigan",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/michigan.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/michigan.svg",
     primaryColor: "#00274C",
     secondaryColor: "#FFCB05",
     tertiaryColor: "#FFFFFF",
@@ -1733,7 +1846,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "michigan_st",
     anSlug: "michigan-state-spartans",
     kenpomSlug: "Michigan St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/michigan-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/michigan-st.svg",
     primaryColor: "#18453B",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1748,7 +1862,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "nebraska",
     anSlug: "nebraska-cornhuskers",
     kenpomSlug: "Nebraska",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nebraska.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nebraska.svg",
     primaryColor: "#E41C38",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1763,7 +1878,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "illinois",
     anSlug: "illinois-fighting-illini",
     kenpomSlug: "Illinois",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/illinois.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/illinois.svg",
     primaryColor: "#13294B",
     secondaryColor: "#E84A27",
     tertiaryColor: "#FFFFFF",
@@ -1778,7 +1894,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "purdue",
     anSlug: "purdue-boilermakers",
     kenpomSlug: "Purdue",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/purdue.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/purdue.svg",
     primaryColor: "#000000",
     secondaryColor: "#CFB991",
     tertiaryColor: "#FFFFFF",
@@ -1793,7 +1910,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wisconsin",
     anSlug: "wisconsin-badgers",
     kenpomSlug: "Wisconsin",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wisconsin.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wisconsin.svg",
     primaryColor: "#C5050C",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1808,7 +1926,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ucla",
     anSlug: "ucla-bruins",
     kenpomSlug: "UCLA",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ucla.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ucla.svg",
     primaryColor: "#2D68C4",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -1823,7 +1942,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ohio_st",
     anSlug: "ohio-state-buckeyes",
     kenpomSlug: "Ohio St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ohio-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ohio-st.svg",
     primaryColor: "#BB0000",
     secondaryColor: "#666666",
     tertiaryColor: "#FFFFFF",
@@ -1838,7 +1958,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "iowa",
     anSlug: "iowa-hawkeyes",
     kenpomSlug: "Iowa",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/iowa_6a63a0ca.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/iowa_6a63a0ca.png",
     primaryColor: "#FFCD00",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1853,7 +1974,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "indiana",
     anSlug: "indiana-hoosiers",
     kenpomSlug: "Indiana",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/indiana.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/indiana.svg",
     primaryColor: "#990000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1868,7 +1990,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "usc",
     anSlug: "southern-california-trojans",
     kenpomSlug: "USC",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-california.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-california.svg",
     primaryColor: "#990000",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -1883,7 +2006,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "washington",
     anSlug: "washington-huskies",
     kenpomSlug: "Washington",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/washington.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/washington.svg",
     primaryColor: "#4B2E83",
     secondaryColor: "#B7A57A",
     tertiaryColor: "#FFFFFF",
@@ -1898,7 +2022,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "minnesota",
     anSlug: "minnesota-golden-gophers",
     kenpomSlug: "Minnesota",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/minnesota.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/minnesota.svg",
     primaryColor: "#7A0019",
     secondaryColor: "#FFCC33",
     tertiaryColor: "#FFFFFF",
@@ -1913,7 +2038,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "rutgers",
     anSlug: "rutgers-scarlet-knights",
     kenpomSlug: "Rutgers",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rutgers.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rutgers.svg",
     primaryColor: "#CC0033",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -1928,7 +2054,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "northwestern",
     anSlug: "northwestern-wildcats",
     kenpomSlug: "Northwestern",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northwestern.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northwestern.svg",
     primaryColor: "#4E2A84",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1943,7 +2070,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "oregon",
     anSlug: "oregon-ducks",
     kenpomSlug: "Oregon",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oregon.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oregon.svg",
     primaryColor: "#154733",
     secondaryColor: "#FEE123",
     tertiaryColor: "#FFFFFF",
@@ -1958,7 +2086,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "maryland",
     anSlug: "maryland-terrapins",
     kenpomSlug: "Maryland",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/maryland.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/maryland.svg",
     primaryColor: "#E03A3E",
     secondaryColor: "#FFD520",
     tertiaryColor: "#000000",
@@ -1973,7 +2102,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "penn_st",
     anSlug: "penn-st-nittany-lions",
     kenpomSlug: "Penn St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/penn-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/penn-st.svg",
     primaryColor: "#041E42",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -1988,7 +2118,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "hawaii",
     anSlug: "hawaii-warriors",
     kenpomSlug: "Hawaii",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/hawaii.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/hawaii.svg",
     primaryColor: "#024731",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2003,7 +2134,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uc_irvine",
     anSlug: "uc-irvine-anteaters",
     kenpomSlug: "UC Irvine",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-irvine.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-irvine.svg",
     primaryColor: "#1E4D8F",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -2018,7 +2150,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uc_san_diego",
     anSlug: "uc-san-diego-tritons",
     kenpomSlug: "UC San Diego",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-san-diego.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-san-diego.svg",
     primaryColor: "#002B5C",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -2033,7 +2166,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "csu_northridge",
     anSlug: "cal-state-northridge-matadors",
     kenpomSlug: "CSUN",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/csun_d38c340b.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/csun_d38c340b.png",
     primaryColor: "#CC0000",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -2048,7 +2182,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uc_santa_barbara",
     anSlug: "uc-santa-barbara-gauchos",
     kenpomSlug: "UC Santa Barbara",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-santa-barbara.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-santa-barbara.svg",
     primaryColor: "#003660",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -2063,7 +2198,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uc_davis",
     anSlug: "uc-davis-aggies",
     kenpomSlug: "UC Davis",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/uc-davis_2371565d.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/uc-davis_2371565d.png",
     primaryColor: "#022851",
     secondaryColor: "#FFBF00",
     tertiaryColor: "#FFFFFF",
@@ -2078,7 +2214,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "csu_fullerton",
     anSlug: "cal-state-fullerton-titans",
     kenpomSlug: "Cal St. Fullerton",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cal-st-fullerton.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cal-st-fullerton.svg",
     primaryColor: "#00274C",
     secondaryColor: "#FF7900",
     tertiaryColor: "#FFFFFF",
@@ -2093,7 +2230,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "cal_poly_slo",
     anSlug: "cal-poly-mustangs",
     kenpomSlug: "Cal Poly",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cal-poly.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cal-poly.svg",
     primaryColor: "#154734",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -2108,7 +2246,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "long_beach_st",
     anSlug: "long-beach-st-beach",
     kenpomSlug: "Long Beach St.",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/long-beach-state_699fe4c4.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/long-beach-state_699fe4c4.png",
     primaryColor: "#000000",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -2123,7 +2262,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uc_riverside",
     anSlug: "uc-riverside-highlanders",
     kenpomSlug: "UC Riverside",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-riverside.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uc-riverside.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#F1AB00",
     tertiaryColor: "#FFFFFF",
@@ -2138,7 +2278,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "csu_bakersfield",
     anSlug: "bakersfield-roadrunners",
     kenpomSlug: "Cal St. Bakersfield",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bakersfield.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bakersfield.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FF6A13",
     tertiaryColor: "#FFFFFF",
@@ -2153,7 +2294,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "unc_wilmington",
     anSlug: "unc-wilmington-seahawks",
     kenpomSlug: "UNC Wilmington",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unc-wilmington.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unc-wilmington.svg",
     primaryColor: "#006747",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -2168,7 +2310,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "charleston",
     anSlug: "col-of-charleston-cougars",
     kenpomSlug: "Charleston",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/col-of-charleston.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/col-of-charleston.svg",
     primaryColor: "#800000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2183,7 +2326,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "hofstra",
     anSlug: "hofstra-pride",
     kenpomSlug: "Hofstra",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/hofstra.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/hofstra.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFB81C",
     tertiaryColor: "#FFFFFF",
@@ -2198,7 +2342,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "monmouth",
     anSlug: "monmouth-hawks",
     kenpomSlug: "Monmouth",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/monmouth.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/monmouth.svg",
     primaryColor: "#041E42",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2213,7 +2358,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "william_and_mary",
     anSlug: "william-mary-tribe",
     kenpomSlug: "William & Mary",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/william-mary.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/william-mary.svg",
     primaryColor: "#115740",
     secondaryColor: "#C99700",
     tertiaryColor: "#FFFFFF",
@@ -2228,7 +2374,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "drexel",
     anSlug: "drexel-dragons",
     kenpomSlug: "Drexel",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/drexel.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/drexel.svg",
     primaryColor: "#07294D",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -2243,7 +2390,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "stony_brook",
     anSlug: "stony-brook-seawolves",
     kenpomSlug: "Stony Brook",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stony-brook.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stony-brook.svg",
     primaryColor: "#990000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2258,7 +2406,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "towson",
     anSlug: "towson-tigers",
     kenpomSlug: "Towson",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/towson.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/towson.svg",
     primaryColor: "#000000",
     secondaryColor: "#FFB81C",
     tertiaryColor: "#FFFFFF",
@@ -2273,7 +2422,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "campbell",
     anSlug: "campbell-camels",
     kenpomSlug: "Campbell",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/campbell.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/campbell.svg",
     primaryColor: "#F15A22",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -2288,7 +2438,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "hampton",
     anSlug: "hampton-pirates",
     kenpomSlug: "Hampton",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/hampton.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/hampton.svg",
     primaryColor: "#00205B",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -2303,7 +2454,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "elon",
     anSlug: "elon-phoenix",
     kenpomSlug: "Elon",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/elon.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/elon.svg",
     primaryColor: "#8C1D40",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2318,7 +2470,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_carolina_a_and_t",
     anSlug: "nc-at-aggies",
     kenpomSlug: "North Carolina A&T",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nc-at.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nc-at.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -2333,7 +2486,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "northeastern",
     anSlug: "northeastern-huskies",
     kenpomSlug: "Northeastern",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northeastern.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northeastern.svg",
     primaryColor: "#CC0000",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -2348,7 +2502,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "liberty",
     anSlug: "liberty-flames",
     kenpomSlug: "Liberty",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/liberty.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/liberty.svg",
     primaryColor: "#B00000",
     secondaryColor: "#002D62",
     tertiaryColor: "#FFFFFF",
@@ -2363,7 +2518,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "sam_houston_st",
     anSlug: "sam-houston-state-bearkats",
     kenpomSlug: "Sam Houston St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/sam-houston-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/sam-houston-st.svg",
     primaryColor: "#F15A22",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2378,7 +2534,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "w_kentucky",
     anSlug: "western-ky-hilltoppers",
     kenpomSlug: "Western Kentucky",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-ky.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-ky.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2393,7 +2550,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "kennesaw_st",
     anSlug: "kennesaw-state-owls",
     kenpomSlug: "Kennesaw St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kennesaw-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kennesaw-st.svg",
     primaryColor: "#000000",
     secondaryColor: "#FDBB30",
     tertiaryColor: "#FFFFFF",
@@ -2408,7 +2566,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "louisiana_tech",
     anSlug: "louisiana-tech-bulldogs",
     kenpomSlug: "Louisiana Tech",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/louisiana-tech.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/louisiana-tech.svg",
     primaryColor: "#003087",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -2423,7 +2582,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "middle_tenn_st",
     anSlug: "middle-tenn-blue-raiders",
     kenpomSlug: "Middle Tennessee",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/middle-tenn.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/middle-tenn.svg",
     primaryColor: "#0066CC",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2438,7 +2598,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "jacksonville_st",
     anSlug: "jacksonville-st-gamecocks",
     kenpomSlug: "Jacksonville St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/jacksonville-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/jacksonville-st.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2453,7 +2614,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "florida_intl",
     anSlug: "fiu-panthers",
     kenpomSlug: "FIU",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fiu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fiu.svg",
     primaryColor: "#081E3F",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -2468,7 +2630,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "missouri_st",
     anSlug: "missouri-state-bears",
     kenpomSlug: "Missouri St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/missouri-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/missouri-st.svg",
     primaryColor: "#5E0009",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2483,7 +2646,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "new_mexico_st",
     anSlug: "new-mexico-st-aggies",
     kenpomSlug: "New Mexico St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-mexico-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-mexico-st.svg",
     primaryColor: "#861F41",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2498,7 +2662,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_el_paso",
     anSlug: "utep-miners",
     kenpomSlug: "UTEP",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utep.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utep.svg",
     primaryColor: "#041E42",
     secondaryColor: "#FF8200",
     tertiaryColor: "#FFFFFF",
@@ -2513,7 +2678,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "delaware",
     anSlug: "delaware-blue-hens",
     kenpomSlug: "Delaware",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/delaware.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/delaware.svg",
     primaryColor: "#00539F",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -2528,7 +2694,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wright_st",
     anSlug: "wright-st-raiders",
     kenpomSlug: "Wright St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wright-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wright-st.svg",
     primaryColor: "#006747",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -2543,7 +2710,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "robert_morris",
     anSlug: "robert-morris-colonials",
     kenpomSlug: "Robert Morris",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/robert-morris.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/robert-morris.svg",
     primaryColor: "#00205B",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -2558,7 +2726,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uw_green_bay",
     anSlug: "green-bay-phoenix",
     kenpomSlug: "Green Bay",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/green-bay.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/green-bay.svg",
     primaryColor: "#006747",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -2573,7 +2742,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "detroit",
     anSlug: "detroit-titans",
     kenpomSlug: "Detroit Mercy",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/detroit.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/detroit.svg",
     primaryColor: "#A6093D",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2588,7 +2758,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "oakland",
     anSlug: "oakland-golden-grizzlies",
     kenpomSlug: "Oakland",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oakland.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oakland.svg",
     primaryColor: "#000000",
     secondaryColor: "#B59A57",
     tertiaryColor: "#FFFFFF",
@@ -2603,7 +2774,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ipfw",
     anSlug: "ipfw-mastodons",
     kenpomSlug: "Purdue Fort Wayne",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ipfw.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ipfw.svg",
     primaryColor: "#000000",
     secondaryColor: "#005BAC",
     tertiaryColor: "#FFFFFF",
@@ -2618,7 +2790,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_kentucky",
     anSlug: "northern-ky-norse",
     kenpomSlug: "Northern Kentucky",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-ky.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-ky.svg",
     primaryColor: "#FFCC00",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -2633,7 +2806,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "youngstown_st",
     anSlug: "youngstown-st-penguins",
     kenpomSlug: "Youngstown St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/youngstown-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/youngstown-st.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2648,7 +2822,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "uw_milwaukee",
     anSlug: "milwaukee-panthers",
     kenpomSlug: "Milwaukee",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/milwaukee.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/milwaukee.svg",
     primaryColor: "#000000",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -2663,7 +2838,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "cleveland_st",
     anSlug: "cleveland-st-vikings",
     kenpomSlug: "Cleveland St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cleveland-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cleveland-st.svg",
     primaryColor: "#006A4D",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2678,7 +2854,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "iupui",
     anSlug: "iu-indy-jaguars",
     kenpomSlug: "IU Indy",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/iu-indy.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/iu-indy.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -2693,7 +2870,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "yale",
     anSlug: "yale-bulldogs",
     kenpomSlug: "Yale",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/yale.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/yale.svg",
     primaryColor: "#00356B",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2708,7 +2886,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "harvard",
     anSlug: "harvard-crimson",
     kenpomSlug: "Harvard",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/harvard.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/harvard.svg",
     primaryColor: "#A51C30",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2723,7 +2902,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "pennsylvania",
     anSlug: "penn-quakers",
     kenpomSlug: "Penn",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/penn.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/penn.svg",
     primaryColor: "#011F5B",
     secondaryColor: "#990000",
     tertiaryColor: "#FFFFFF",
@@ -2738,7 +2918,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "cornell",
     anSlug: "cornell-big-red",
     kenpomSlug: "Cornell",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cornell.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/cornell.svg",
     primaryColor: "#B31B1B",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2753,7 +2934,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "columbia",
     anSlug: "columbia-lions",
     kenpomSlug: "Columbia",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/columbia.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/columbia.svg",
     primaryColor: "#9BDDFF",
     secondaryColor: "#002147",
     tertiaryColor: "#FFFFFF",
@@ -2768,7 +2950,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "dartmouth",
     anSlug: "dartmouth-big-green",
     kenpomSlug: "Dartmouth",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/dartmouth.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/dartmouth.svg",
     primaryColor: "#00693E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2783,7 +2966,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "princeton",
     anSlug: "princeton-tigers",
     kenpomSlug: "Princeton",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/princeton.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/princeton.svg",
     primaryColor: "#FF8F00",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -2798,7 +2982,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "brown",
     anSlug: "brown-bears",
     kenpomSlug: "Brown",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/brown.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/brown.svg",
     primaryColor: "#4E3629",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2813,7 +2998,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "merrimack",
     anSlug: "merrimack-warriors",
     kenpomSlug: "Merrimack",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/merrimack.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/merrimack.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -2828,7 +3014,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_peters",
     anSlug: "st-peters-peacocks",
     kenpomSlug: "Saint Peter's",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-peters.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-peters.svg",
     primaryColor: "#0072CE",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2843,7 +3030,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "siena",
     anSlug: "siena-saints",
     kenpomSlug: "Siena",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/siena.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/siena.svg",
     primaryColor: "#007A33",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -2858,7 +3046,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "marist",
     anSlug: "marist-red-foxes",
     kenpomSlug: "Marist",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/marist.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/marist.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2873,7 +3062,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "quinnipiac",
     anSlug: "quinnipiac-bobcats",
     kenpomSlug: "Quinnipiac",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/quinnipiac.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/quinnipiac.svg",
     primaryColor: "#002F6C",
     secondaryColor: "#FDB913",
     tertiaryColor: "#FFFFFF",
@@ -2888,7 +3078,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "fairfield",
     anSlug: "fairfield-stags",
     kenpomSlug: "Fairfield",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fairfield.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fairfield.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2903,7 +3094,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "mt_st_marys",
     anSlug: "mt-st-marys-mountaineers",
     kenpomSlug: "Mount St. Mary's",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mt-st-marys.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mt-st-marys.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -2918,7 +3110,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "iona",
     anSlug: "iona-gaels",
     kenpomSlug: "Iona",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/iona.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/iona.svg",
     primaryColor: "#6F263D",
     secondaryColor: "#C9A227",
     tertiaryColor: "#FFFFFF",
@@ -2933,7 +3126,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "sacred_heart",
     anSlug: "sacred-heart-pioneers",
     kenpomSlug: "Sacred Heart",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/sacred-heart.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/sacred-heart.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2948,7 +3142,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "manhattan",
     anSlug: "manhattan-jaspers",
     kenpomSlug: "Manhattan",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/manhattan.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/manhattan.svg",
     primaryColor: "#00703C",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2963,7 +3158,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "canisius",
     anSlug: "canisius-golden-griffins",
     kenpomSlug: "Canisius",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/canisius.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/canisius.svg",
     primaryColor: "#002D72",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -2978,7 +3174,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "niagara",
     anSlug: "niagara-purple-eagles",
     kenpomSlug: "Niagara",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/niagara.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/niagara.svg",
     primaryColor: "#4B2E83",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -2993,7 +3190,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "rider",
     anSlug: "rider-broncs",
     kenpomSlug: "Rider",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rider.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/rider.svg",
     primaryColor: "#7C2529",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3008,7 +3206,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "miami_oh",
     anSlug: "miami-oh-redhawks",
     kenpomSlug: "Miami OH",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/miami-oh.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/miami-oh.svg",
     primaryColor: "#B61E2E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3023,7 +3222,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "akron",
     anSlug: "akron-zips",
     kenpomSlug: "Akron",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/akron.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/akron.svg",
     primaryColor: "#041E42",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -3038,7 +3238,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "kent",
     anSlug: "kent-state-golden-flashes",
     kenpomSlug: "Kent St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kent-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kent-st.svg",
     primaryColor: "#002664",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -3053,7 +3254,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "toledo",
     anSlug: "toledo-rockets",
     kenpomSlug: "Toledo",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/toledo.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/toledo.svg",
     primaryColor: "#003E7E",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -3068,7 +3270,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ohio",
     anSlug: "ohio-bobcats",
     kenpomSlug: "Ohio",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ohio.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ohio.svg",
     primaryColor: "#00694E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3083,7 +3286,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "bowling_green",
     anSlug: "bowling-green-falcons",
     kenpomSlug: "Bowling Green",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bowling-green.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bowling-green.svg",
     primaryColor: "#4F2C1D",
     secondaryColor: "#FF7300",
     tertiaryColor: "#FFFFFF",
@@ -3098,7 +3302,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "buffalo",
     anSlug: "buffalo-bulls",
     kenpomSlug: "Buffalo",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/buffalo.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/buffalo.svg",
     primaryColor: "#005BBB",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3113,7 +3318,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "massachusetts",
     anSlug: "massachusetts-minutemen",
     kenpomSlug: "Massachusetts",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/massachusetts.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/massachusetts.svg",
     primaryColor: "#971B2F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3128,7 +3334,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ball_st",
     anSlug: "ball-st-cardinals",
     kenpomSlug: "Ball St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ball-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ball-st.svg",
     primaryColor: "#BA0C2F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3143,7 +3350,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "c_michigan",
     anSlug: "central-mich-chippewas",
     kenpomSlug: "Central Michigan",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/central-mich.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/central-mich.svg",
     primaryColor: "#6A0032",
     secondaryColor: "#FFCC33",
     tertiaryColor: "#FFFFFF",
@@ -3158,7 +3366,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "w_michigan",
     anSlug: "western-mich-broncos",
     kenpomSlug: "Western Michigan",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-mich.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-mich.svg",
     primaryColor: "#6C4023",
     secondaryColor: "#CFAE70",
     tertiaryColor: "#FFFFFF",
@@ -3173,7 +3382,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "e_michigan",
     anSlug: "eastern-mich-eagles",
     kenpomSlug: "Eastern Michigan",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-mich.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-mich.svg",
     primaryColor: "#006633",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3188,7 +3398,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_illinois",
     anSlug: "northern-ill-huskies",
     kenpomSlug: "Northern Illinois",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-ill.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northern-ill.svg",
     primaryColor: "#BA0C2F",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3203,7 +3414,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "howard",
     anSlug: "howard-bison",
     kenpomSlug: "Howard",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/howard.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/howard.svg",
     primaryColor: "#002D62",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -3218,7 +3430,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "morgan_st",
     anSlug: "morgan-st-bears",
     kenpomSlug: "Morgan St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/morgan-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/morgan-st.svg",
     primaryColor: "#F6B40E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3233,7 +3446,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "norfolk_st",
     anSlug: "norfolk-st-spartans",
     kenpomSlug: "Norfolk St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/norfolk-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/norfolk-st.svg",
     primaryColor: "#007A33",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3248,7 +3462,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "nc_central",
     anSlug: "north-carolina-central-eagles",
     kenpomSlug: "North Carolina Central",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nc-central.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nc-central.svg",
     primaryColor: "#8C1515",
     secondaryColor: "#808080",
     tertiaryColor: "#FFFFFF",
@@ -3263,7 +3478,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_carolina_st",
     anSlug: "south-carolina-state-bulldogs",
     kenpomSlug: "South Carolina St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-carolina-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-carolina-st.svg",
     primaryColor: "#841617",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3278,7 +3494,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "md_e_shore",
     anSlug: "md-east-shore-hawks",
     kenpomSlug: "Maryland Eastern Shore",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/md-east-shore.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/md-east-shore.svg",
     primaryColor: "#8C1515",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -3293,7 +3510,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "coppin_st",
     anSlug: "coppin-st-eagles",
     kenpomSlug: "Coppin St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/coppin-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/coppin-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -3308,7 +3526,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "delaware_st",
     anSlug: "delaware-state-hornets",
     kenpomSlug: "Delaware St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/delaware-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/delaware-st.svg",
     primaryColor: "#E5B80B",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3323,7 +3542,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "utah_st",
     anSlug: "utah-state-aggies",
     kenpomSlug: "Utah St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah-st.svg",
     primaryColor: "#00263A",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3338,7 +3558,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "new_mexico",
     anSlug: "new-mexico-lobos",
     kenpomSlug: "New Mexico",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-mexico.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-mexico.svg",
     primaryColor: "#BA0C2F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3353,7 +3574,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "san_diego_st",
     anSlug: "san-diego-state-aztecs",
     kenpomSlug: "San Diego St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-diego-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-diego-st.svg",
     primaryColor: "#A6192E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3368,7 +3590,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "grand_canyon",
     anSlug: "grand-canyon-antelopes",
     kenpomSlug: "Grand Canyon",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/grand-canyon.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/grand-canyon.svg",
     primaryColor: "#522398",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3383,7 +3606,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "colorado_st",
     anSlug: "colorado-st-rams",
     kenpomSlug: "Colorado St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/colorado-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/colorado-st.svg",
     primaryColor: "#1E4D2B",
     secondaryColor: "#C8C372",
     tertiaryColor: "#FFFFFF",
@@ -3398,7 +3622,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "boise_st",
     anSlug: "boise-st-broncos",
     kenpomSlug: "Boise St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/boise-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/boise-st.svg",
     primaryColor: "#0033A0",
     secondaryColor: "#D64309",
     tertiaryColor: "#FFFFFF",
@@ -3413,7 +3638,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "nevada",
     anSlug: "nevada-wolf-pack",
     kenpomSlug: "Nevada",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/nevada_e0045e96.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/nevada_e0045e96.png",
     primaryColor: "#003366",
     secondaryColor: "#807F84",
     tertiaryColor: "#FFFFFF",
@@ -3428,7 +3654,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "unlv",
     anSlug: "unlv-rebels",
     kenpomSlug: "UNLV",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unlv.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unlv.svg",
     primaryColor: "#B10202",
     secondaryColor: "#666666",
     tertiaryColor: "#FFFFFF",
@@ -3443,7 +3670,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wyoming",
     anSlug: "wyoming-cowboys",
     kenpomSlug: "Wyoming",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wyoming.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wyoming.svg",
     primaryColor: "#492F24",
     secondaryColor: "#FFC425",
     tertiaryColor: "#FFFFFF",
@@ -3458,7 +3686,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "fresno_st",
     anSlug: "fresno-st-bulldogs",
     kenpomSlug: "Fresno St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fresno-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fresno-st.svg",
     primaryColor: "#C41230",
     secondaryColor: "#13294B",
     tertiaryColor: "#FFFFFF",
@@ -3473,7 +3702,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "san_jose_st",
     anSlug: "san-jose-st-spartans",
     kenpomSlug: "San Jose St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-jose-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-jose-st.svg",
     primaryColor: "#0055A2",
     secondaryColor: "#E5A823",
     tertiaryColor: "#FFFFFF",
@@ -3488,7 +3718,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "air_force",
     anSlug: "air-force-falcons",
     kenpomSlug: "Air Force",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/air-force.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/air-force.svg",
     primaryColor: "#003087",
     secondaryColor: "#8A8D8F",
     tertiaryColor: "#FFFFFF",
@@ -3503,7 +3734,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "belmont",
     anSlug: "belmont-bruins",
     kenpomSlug: "Belmont",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/belmont.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/belmont.svg",
     primaryColor: "#002855",
     secondaryColor: "#C99700",
     tertiaryColor: "#FFFFFF",
@@ -3518,7 +3750,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "bradley",
     anSlug: "bradley-braves",
     kenpomSlug: "Bradley",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bradley.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bradley.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#13294B",
     tertiaryColor: "#FFFFFF",
@@ -3533,7 +3766,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "murray_st",
     anSlug: "murray-st-racers",
     kenpomSlug: "Murray St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/murray-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/murray-st.svg",
     primaryColor: "#00205B",
     secondaryColor: "#C60C30",
     tertiaryColor: "#FFFFFF",
@@ -3548,7 +3782,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "illinois_st",
     anSlug: "illinois-st-redbirds",
     kenpomSlug: "Illinois St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/illinois-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/illinois-st.svg",
     primaryColor: "#CE1126",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3563,7 +3798,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "illinois_chicago",
     anSlug: "ill-chicago-flames",
     kenpomSlug: "Illinois Chicago",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ill-chicago.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ill-chicago.svg",
     primaryColor: "#001E62",
     secondaryColor: "#D50032",
     tertiaryColor: "#FFFFFF",
@@ -3578,7 +3814,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_iowa",
     anSlug: "uni-panthers",
     kenpomSlug: "Northern Iowa",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uni.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uni.svg",
     primaryColor: "#4B2E83",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -3593,7 +3830,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "valparaiso",
     anSlug: "valparaiso-beacons",
     kenpomSlug: "Valparaiso",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/valparaiso.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/valparaiso.svg",
     primaryColor: "#5E6A71",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -3608,7 +3846,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_illinois",
     anSlug: "southern-ill-salukis",
     kenpomSlug: "Southern Illinois",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-ill.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-ill.svg",
     primaryColor: "#660000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3623,7 +3862,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "drake",
     anSlug: "drake-bulldogs",
     kenpomSlug: "Drake",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/drake.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/drake.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3638,7 +3878,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "indiana_st",
     anSlug: "indiana-st-sycamores",
     kenpomSlug: "Indiana St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/indiana-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/indiana-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3653,7 +3894,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "evansville",
     anSlug: "evansville-purple-aces",
     kenpomSlug: "Evansville",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/evansville.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/evansville.svg",
     primaryColor: "#522398",
     secondaryColor: "#FEC925",
     tertiaryColor: "#FFFFFF",
@@ -3668,7 +3910,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "liu_brooklyn",
     anSlug: "long-island-sharks",
     kenpomSlug: "LIU",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/long-island.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/long-island.svg",
     primaryColor: "#000000",
     secondaryColor: "#9EA2A2",
     tertiaryColor: "#FFFFFF",
@@ -3683,7 +3926,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "c_conn_st",
     anSlug: "central-conn-st-blue-devils",
     kenpomSlug: "Central Connecticut",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/central-conn-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/central-conn-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3698,7 +3942,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "mercyhurst",
     anSlug: "mercyhurst-lakers",
     kenpomSlug: "Mercyhurst",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mercyhurst.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mercyhurst.svg",
     primaryColor: "#003A8F",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -3713,7 +3958,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lemoyne",
     anSlug: "le-moyne-dolphins",
     kenpomSlug: "Le Moyne",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/le-moyne.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/le-moyne.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3728,7 +3974,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "new_haven",
     anSlug: "new-haven-chargers",
     kenpomSlug: "New Haven",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-haven.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-haven.svg",
     primaryColor: "#0C2340",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -3743,7 +3990,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wagner",
     anSlug: "wagner-seahawks",
     kenpomSlug: "Wagner",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wagner.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wagner.svg",
     primaryColor: "#004B87",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3758,7 +4006,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "stonehill",
     anSlug: "stonehill-skyhawks",
     kenpomSlug: "Stonehill",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stonehill.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stonehill.svg",
     primaryColor: "#592A8A",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3773,7 +4022,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "fairleigh_dickinson",
     anSlug: "fdu-knights",
     kenpomSlug: "Fairleigh Dickinson",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fdu.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/fdu.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -3788,7 +4038,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_francis_pa",
     anSlug: "st-francis-pa-red-flash",
     kenpomSlug: "Saint Francis",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-francis-pa.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-francis-pa.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3803,7 +4054,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "chicago_st",
     anSlug: "chicago-st-cougars",
     kenpomSlug: "Chicago St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/chicago-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/chicago-st.svg",
     primaryColor: "#006747",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3818,7 +4070,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tennessee_st",
     anSlug: "tennessee-st-tigers",
     kenpomSlug: "Tennessee St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tennessee-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tennessee-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3833,7 +4086,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "morehead_st",
     anSlug: "morehead-st-eagles",
     kenpomSlug: "Morehead St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/morehead-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/morehead-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -3848,7 +4102,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "se_missouri_st",
     anSlug: "southeast-mo-st-redhawks",
     kenpomSlug: "Southeast Missouri",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southeast-mo-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southeast-mo-st.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3863,7 +4118,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tennessee_martin",
     anSlug: "ut-martin-skyhawks",
     kenpomSlug: "Tennessee Martin",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ut-martin.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ut-martin.svg",
     primaryColor: "#002D72",
     secondaryColor: "#FF8200",
     tertiaryColor: "#FFFFFF",
@@ -3878,7 +4134,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "siu_edwardsville",
     anSlug: "siu-edwardsville-cougars",
     kenpomSlug: "SIUE",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/siu-edwardsville.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/siu-edwardsville.svg",
     primaryColor: "#E41C38",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3893,7 +4150,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lindenwood",
     anSlug: "lindenwood-mo-lions",
     kenpomSlug: "Lindenwood",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lindenwood-mo.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lindenwood-mo.svg",
     primaryColor: "#000000",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -3908,7 +4166,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ark_little_rock",
     anSlug: "ualr-trojans",
     kenpomSlug: "Little Rock",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ualr.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ualr.svg",
     primaryColor: "#B10202",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -3923,7 +4182,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tennessee_tech",
     anSlug: "tennessee-tech-golden-eagles",
     kenpomSlug: "Tennessee Tech",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tennessee-tech.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tennessee-tech.svg",
     primaryColor: "#512888",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -3938,7 +4198,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "e_illinois",
     anSlug: "eastern-ill-panthers",
     kenpomSlug: "Eastern Illinois",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-ill.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/eastern-ill.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3953,7 +4214,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_indiana",
     anSlug: "southern-ind-screaming-eagles",
     kenpomSlug: "Southern Indiana",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-ind.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-ind.svg",
     primaryColor: "#860038",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3968,7 +4230,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "w_illinois",
     anSlug: "western-ill-leathernecks",
     kenpomSlug: "Western Illinois",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-ill.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-ill.svg",
     primaryColor: "#663399",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -3983,7 +4246,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "navy",
     anSlug: "navy-midshipmen",
     kenpomSlug: "Navy",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/navy.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/navy.svg",
     primaryColor: "#00205B",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -3998,7 +4262,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "colgate",
     anSlug: "colgate-raiders",
     kenpomSlug: "Colgate",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/colgate.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/colgate.svg",
     primaryColor: "#862633",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4013,7 +4278,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lehigh",
     anSlug: "lehigh-mountain-hawks",
     kenpomSlug: "Lehigh",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lehigh.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lehigh.svg",
     primaryColor: "#653600",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4028,7 +4294,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "boston_u",
     anSlug: "boston-u-terriers",
     kenpomSlug: "Boston University",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/boston-u.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/boston-u.svg",
     primaryColor: "#CC0000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4043,7 +4310,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "american",
     anSlug: "american-eagles",
     kenpomSlug: "American",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/american.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/american.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4058,7 +4326,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "loyola_maryland",
     anSlug: "loyola-maryland-greyhounds",
     kenpomSlug: "Loyola MD",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/loyola-maryland.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/loyola-maryland.svg",
     primaryColor: "#006341",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -4073,7 +4342,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lafayette",
     anSlug: "lafayette-leopards",
     kenpomSlug: "Lafayette",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lafayette.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lafayette.svg",
     primaryColor: "#9D2235",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4088,7 +4358,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "bucknell",
     anSlug: "bucknell-bison",
     kenpomSlug: "Bucknell",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bucknell.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bucknell.svg",
     primaryColor: "#FF6600",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4103,7 +4374,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "army",
     anSlug: "army-black-knights",
     kenpomSlug: "Army",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/army.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/army.svg",
     primaryColor: "#000000",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -4118,7 +4390,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "holy_cross",
     anSlug: "holy-cross-crusaders",
     kenpomSlug: "Holy Cross",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/holy-cross.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/holy-cross.svg",
     primaryColor: "#4B2E83",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4133,7 +4406,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "florida",
     anSlug: "florida-gators",
     kenpomSlug: "Florida",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/florida.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/florida.svg",
     primaryColor: "#0021A5",
     secondaryColor: "#FA4616",
     tertiaryColor: "#FFFFFF",
@@ -4148,7 +4422,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "alabama",
     anSlug: "alabama-crimson-tide",
     kenpomSlug: "Alabama",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alabama.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alabama.svg",
     primaryColor: "#9E1B32",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4163,7 +4438,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "arkansas",
     anSlug: "arkansas-razorbacks",
     kenpomSlug: "Arkansas",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arkansas.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arkansas.svg",
     primaryColor: "#9D2235",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4178,7 +4454,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tennessee",
     anSlug: "tennessee-volunteers",
     kenpomSlug: "Tennessee",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tennessee.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tennessee.svg",
     primaryColor: "#FF8200",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4193,7 +4470,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "vanderbilt",
     anSlug: "vanderbilt-commodores",
     kenpomSlug: "Vanderbilt",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vanderbilt.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vanderbilt.svg",
     primaryColor: "#000000",
     secondaryColor: "#866D4B",
     tertiaryColor: "#FFFFFF",
@@ -4208,7 +4486,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_a_and_m",
     anSlug: "texas-am-aggies",
     kenpomSlug: "Texas A&M",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-am.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-am.svg",
     primaryColor: "#500000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4223,7 +4502,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "missouri",
     anSlug: "missouri-tigers",
     kenpomSlug: "Missouri",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/missouri.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/missouri.svg",
     primaryColor: "#F1B82D",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4238,7 +4518,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "kentucky",
     anSlug: "kentucky-wildcats",
     kenpomSlug: "Kentucky",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kentucky.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/kentucky.svg",
     primaryColor: "#0033A0",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4253,7 +4534,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "georgia",
     anSlug: "georgia-bulldogs",
     kenpomSlug: "Georgia",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgia.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgia.svg",
     primaryColor: "#BA0C2F",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4268,7 +4550,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas",
     anSlug: "texas-longhorns",
     kenpomSlug: "Texas",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas.svg",
     primaryColor: "#BF5700",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4283,7 +4566,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "auburn",
     anSlug: "auburn-tigers",
     kenpomSlug: "Auburn",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/auburn.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/auburn.svg",
     primaryColor: "#0C2340",
     secondaryColor: "#E87722",
     tertiaryColor: "#FFFFFF",
@@ -4298,7 +4582,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "oklahoma",
     anSlug: "oklahoma-sooners",
     kenpomSlug: "Oklahoma",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oklahoma.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oklahoma.svg",
     primaryColor: "#841617",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4313,7 +4598,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "mississippi_st",
     anSlug: "mississippi-st-bulldogs",
     kenpomSlug: "Mississippi St.",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/mississippi-state_2459361a.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/mississippi-state_2459361a.png",
     primaryColor: "#660000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4328,7 +4614,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "mississippi",
     anSlug: "ole-miss-rebels",
     kenpomSlug: "Mississippi",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ole-miss.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ole-miss.svg",
     primaryColor: "#CE1126",
     secondaryColor: "#00205B",
     tertiaryColor: "#FFFFFF",
@@ -4343,7 +4630,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lsu",
     anSlug: "lsu-tigers",
     kenpomSlug: "LSU",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/lsu_b8df0123.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/lsu_b8df0123.png",
     primaryColor: "#461D7C",
     secondaryColor: "#FDD023",
     tertiaryColor: "#FFFFFF",
@@ -4358,7 +4646,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "south_carolina",
     anSlug: "south-carolina-gamecocks",
     kenpomSlug: "South Carolina",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-carolina.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-carolina.svg",
     primaryColor: "#73000A",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4373,7 +4662,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "e_tennessee_st",
     anSlug: "east-tenn-st-buccaneers",
     kenpomSlug: "East Tennessee St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/east-tenn-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/east-tenn-st.svg",
     primaryColor: "#041E42",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -4388,7 +4678,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "mercer",
     anSlug: "mercer-bears",
     kenpomSlug: "Mercer",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mercer.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mercer.svg",
     primaryColor: "#F76800",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4403,7 +4694,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "wofford",
     anSlug: "wofford-terriers",
     kenpomSlug: "Wofford",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wofford.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/wofford.svg",
     primaryColor: "#85714D",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4418,7 +4710,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "samford",
     anSlug: "samford-bulldogs",
     kenpomSlug: "Samford",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/samford.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/samford.svg",
     primaryColor: "#002F6C",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -4433,7 +4726,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "furman",
     anSlug: "furman-paladins",
     kenpomSlug: "Furman",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/furman.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/furman.svg",
     primaryColor: "#4B2E83",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4448,7 +4742,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "w_carolina",
     anSlug: "western-caro-catamounts",
     kenpomSlug: "Western Carolina",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-caro.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/western-caro.svg",
     primaryColor: "#592A8A",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4463,7 +4758,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "unc_greensboro",
     anSlug: "unc-greensboro-spartans",
     kenpomSlug: "UNC Greensboro",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unc-greensboro.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/unc-greensboro.svg",
     primaryColor: "#0C2340",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -4478,7 +4774,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "chattanooga",
     anSlug: "chattanooga-mocs",
     kenpomSlug: "Chattanooga",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/chattanooga.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/chattanooga.svg",
     primaryColor: "#0033A0",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -4493,7 +4790,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "the_citadel",
     anSlug: "citadel-bulldogs",
     kenpomSlug: "The Citadel",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/citadel.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/citadel.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4508,7 +4806,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "vmi",
     anSlug: "vmi-keydets",
     kenpomSlug: "VMI",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vmi.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/vmi.svg",
     primaryColor: "#AE122A",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4523,7 +4822,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "stephen_f_austin",
     anSlug: "stephen-f-austin-lumberjacks",
     kenpomSlug: "Stephen F. Austin",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stephen-f-austin.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/stephen-f-austin.svg",
     primaryColor: "#592A8A",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4538,7 +4838,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "mcneese_st",
     anSlug: "mcneese-cowboys",
     kenpomSlug: "McNeese",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mcneese.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mcneese.svg",
     primaryColor: "#00529B",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -4553,7 +4854,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "utrgv",
     anSlug: "utrgv-vaqueros",
     kenpomSlug: "UT Rio Grande Valley",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utrgv.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utrgv.svg",
     primaryColor: "#FF6600",
     secondaryColor: "#002D72",
     tertiaryColor: "#FFFFFF",
@@ -4568,7 +4870,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_a_and_m_cc",
     anSlug: "am-corpus-chris-islanders",
     kenpomSlug: "Texas A&M Corpus Chris",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/am-corpus-chris.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/am-corpus-chris.svg",
     primaryColor: "#007A33",
     secondaryColor: "#00539F",
     tertiaryColor: "#FFFFFF",
@@ -4583,7 +4886,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "new_orleans",
     anSlug: "new-orleans-privateers",
     kenpomSlug: "New Orleans",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-orleans.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/new-orleans.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4598,7 +4902,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "nicholls_st",
     anSlug: "nicholls-st-colonels",
     kenpomSlug: "Nicholls",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nicholls-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/nicholls-st.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4613,7 +4918,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "houston_christian",
     anSlug: "houston-christian-huskies",
     kenpomSlug: "Houston Christian",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/houston-christian.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/houston-christian.svg",
     primaryColor: "#002D62",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -4628,7 +4934,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "northwestern_st",
     anSlug: "northwestern-st-demons",
     kenpomSlug: "Northwestern St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northwestern-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/northwestern-st.svg",
     primaryColor: "#522398",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4643,7 +4950,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "incarnate_word",
     anSlug: "uiw-cardinals",
     kenpomSlug: "Incarnate Word",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uiw.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/uiw.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4658,7 +4966,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "lamar",
     anSlug: "lamar-cardinals",
     kenpomSlug: "Lamar",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lamar.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/lamar.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4673,7 +4982,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "east_texas_a_and_m",
     anSlug: "tex-am-commerce-lions",
     kenpomSlug: "East Texas A&M",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tex-am-commerce.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tex-am-commerce.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4688,7 +4998,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "se_louisiana",
     anSlug: "southeastern-la-lions",
     kenpomSlug: "Southeastern Louisiana",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southeastern-la.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southeastern-la.svg",
     primaryColor: "#006747",
     secondaryColor: "#FFD100",
     tertiaryColor: "#FFFFFF",
@@ -4703,7 +5014,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_dakota_st",
     anSlug: "north-dakota-st-bison",
     kenpomSlug: "North Dakota St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-dakota-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-dakota-st.svg",
     primaryColor: "#0B3D2E",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -4718,7 +5030,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_thomas_mn_",
     anSlug: "st-thomas-mn-tommies",
     kenpomSlug: "St. Thomas",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-thomas-mn.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-thomas-mn.svg",
     primaryColor: "#7A0019",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4733,7 +5046,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "n_dakota",
     anSlug: "north-dakota-fighting-hawks",
     kenpomSlug: "North Dakota",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-dakota.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/north-dakota.svg",
     primaryColor: "#009A44",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4748,7 +5062,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_dakota",
     anSlug: "south-dakota-coyotes",
     kenpomSlug: "South Dakota",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-dakota.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-dakota.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4763,7 +5078,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "denver",
     anSlug: "denver-pioneers",
     kenpomSlug: "Denver",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/denver.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/denver.svg",
     primaryColor: "#8B2332",
     secondaryColor: "#C8C372",
     tertiaryColor: "#FFFFFF",
@@ -4778,7 +5094,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "nebraska_omaha",
     anSlug: "neb-omaha-mavericks",
     kenpomSlug: "Nebraska Omaha",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/neb-omaha.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/neb-omaha.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4793,7 +5110,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_dakota_st",
     anSlug: "south-dakota-st-jackrabbits",
     kenpomSlug: "South Dakota St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-dakota-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-dakota-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFD200",
     tertiaryColor: "#FFFFFF",
@@ -4808,7 +5126,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "oral_roberts",
     anSlug: "oral-roberts-golden-eagles",
     kenpomSlug: "Oral Roberts",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oral-roberts.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oral-roberts.svg",
     primaryColor: "#002F6C",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -4823,7 +5142,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "umkc",
     anSlug: "umkc-roos",
     kenpomSlug: "Kansas City",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/umkc.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/umkc.svg",
     primaryColor: "#005EB8",
     secondaryColor: "#FFC72C",
     tertiaryColor: "#FFFFFF",
@@ -4838,7 +5158,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "troy",
     anSlug: "troy-trojans",
     kenpomSlug: "Troy",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/troy.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/troy.svg",
     primaryColor: "#8C1515",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4853,7 +5174,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_alabama",
     anSlug: "south-ala-jaguars",
     kenpomSlug: "South Alabama",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-ala.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/south-ala.svg",
     primaryColor: "#00205B",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -4868,7 +5190,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "arkansas_st",
     anSlug: "arkansas-st-red-wolves",
     kenpomSlug: "Arkansas St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arkansas-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/arkansas-st.svg",
     primaryColor: "#CC0000",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4883,7 +5206,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "marshall",
     anSlug: "marshall-thundering-herd",
     kenpomSlug: "Marshall",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/marshall.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/marshall.svg",
     primaryColor: "#006747",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -4898,7 +5222,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_st",
     anSlug: "texas-st-bobcats",
     kenpomSlug: "Texas St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-st.svg",
     primaryColor: "#501214",
     secondaryColor: "#C99700",
     tertiaryColor: "#FFFFFF",
@@ -4913,7 +5238,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "coastal_carolina",
     anSlug: "coastal-caro-chanticleers",
     kenpomSlug: "Coastal Carolina",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/coastal-caro.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/coastal-caro.svg",
     primaryColor: "#006F71",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -4928,7 +5254,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "appalachian_st",
     anSlug: "appalachian-st-mountaineers",
     kenpomSlug: "Appalachian St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/appalachian-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/appalachian-st.svg",
     primaryColor: "#000000",
     secondaryColor: "#FFCC00",
     tertiaryColor: "#FFFFFF",
@@ -4943,7 +5270,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "james_madison",
     anSlug: "james-madison-dukes",
     kenpomSlug: "James Madison",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/james-madison.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/james-madison.svg",
     primaryColor: "#512888",
     secondaryColor: "#CBB677",
     tertiaryColor: "#FFFFFF",
@@ -4958,7 +5286,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "southern_miss",
     anSlug: "southern-miss-golden-eagles",
     kenpomSlug: "Southern Miss",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-miss.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-miss.svg",
     primaryColor: "#000000",
     secondaryColor: "#FFAB00",
     tertiaryColor: "#FFFFFF",
@@ -4973,7 +5302,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "georgia_southern",
     anSlug: "ga-southern-eagles",
     kenpomSlug: "Georgia Southern",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ga-southern.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ga-southern.svg",
     primaryColor: "#011E41",
     secondaryColor: "#A3AAAE",
     tertiaryColor: "#FFFFFF",
@@ -4988,7 +5318,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "old_dominion",
     anSlug: "old-dominion-monarchs",
     kenpomSlug: "Old Dominion",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/old-dominion.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/old-dominion.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#7C878E",
     tertiaryColor: "#FFFFFF",
@@ -5003,7 +5334,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "la_lafayette",
     anSlug: "la-lafayette-ragin-cajuns",
     kenpomSlug: "Louisiana",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/la-lafayette.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/la-lafayette.svg",
     primaryColor: "#CE1126",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -5018,7 +5350,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "georgia_st",
     anSlug: "georgia-st-panthers",
     kenpomSlug: "Georgia St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgia-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/georgia-st.svg",
     primaryColor: "#0039A6",
     secondaryColor: "#C60C30",
     tertiaryColor: "#FFFFFF",
@@ -5033,7 +5366,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "la_monroe",
     anSlug: "la-monroe-warhawks",
     kenpomSlug: "Louisiana Monroe",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/la-monroe.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/la-monroe.svg",
     primaryColor: "#7A0019",
     secondaryColor: "#C99700",
     tertiaryColor: "#FFFFFF",
@@ -5048,7 +5382,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "bethune_cookman",
     anSlug: "bethune-cookman-wildcats",
     kenpomSlug: "Bethune Cookman",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bethune-cookman.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/bethune-cookman.svg",
     primaryColor: "#F6A800",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -5063,7 +5398,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "alabama_a_and_m",
     anSlug: "alabama-am-bulldogs",
     kenpomSlug: "Alabama A&M",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alabama-am.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alabama-am.svg",
     primaryColor: "#800000",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5078,7 +5414,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "southern_u",
     anSlug: "southern-university-jaguars",
     kenpomSlug: "Southern",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-u.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-u.svg",
     primaryColor: "#0072CE",
     secondaryColor: "#FDD023",
     tertiaryColor: "#FFFFFF",
@@ -5093,7 +5430,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "florida_a_and_m",
     anSlug: "florida-am-rattlers",
     kenpomSlug: "Florida A&M",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/florida-am.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/florida-am.svg",
     primaryColor: "#006747",
     secondaryColor: "#FF8200",
     tertiaryColor: "#FFFFFF",
@@ -5108,7 +5446,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_southern",
     anSlug: "texas-southern-tigers",
     kenpomSlug: "Texas Southern",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-southern.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-southern.svg",
     primaryColor: "#7A0019",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5123,7 +5462,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "ark_pine_bluff",
     anSlug: "ark-pine-bluff-golden-lions",
     kenpomSlug: "Arkansas Pine Bluff",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ark-pine-bluff.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/ark-pine-bluff.svg",
     primaryColor: "#9D2235",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5138,7 +5478,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "jackson_st",
     anSlug: "jackson-st-tigers",
     kenpomSlug: "Jackson St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/jackson-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/jackson-st.svg",
     primaryColor: "#003DA5",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5153,7 +5494,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "prairie_view_a_and_m",
     anSlug: "prairie-view-am-panthers",
     kenpomSlug: "Prairie View A&M",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/prairie-view.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/prairie-view.svg",
     primaryColor: "#522398",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -5168,7 +5510,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "alabama_st",
     anSlug: "alabama-st-hornets",
     kenpomSlug: "Alabama St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alabama-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alabama-st.svg",
     primaryColor: "#FFD100",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -5183,7 +5526,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "alcorn_st",
     anSlug: "alcorn-braves",
     kenpomSlug: "Alcorn St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alcorn.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/alcorn.svg",
     primaryColor: "#461D7C",
     secondaryColor: "#FFCD00",
     tertiaryColor: "#FFFFFF",
@@ -5198,7 +5542,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "grambling_st",
     anSlug: "grambling-tigers",
     kenpomSlug: "Grambling St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/grambling.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/grambling.svg",
     primaryColor: "#000000",
     secondaryColor: "#FDD023",
     tertiaryColor: "#FFFFFF",
@@ -5213,7 +5558,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "miss_valley_st",
     anSlug: "mississippi-val-delta-devils",
     kenpomSlug: "Mississippi Valley St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mississippi-val.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/mississippi-val.svg",
     primaryColor: "#0072CE",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -5228,7 +5574,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "utah_valley",
     anSlug: "utah-valley-wolverines",
     kenpomSlug: "Utah Valley",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah-valley.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah-valley.svg",
     primaryColor: "#275D38",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5243,7 +5590,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "california_baptist",
     anSlug: "california-baptist-lancers",
     kenpomSlug: "Cal Baptist",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/california-baptist.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/california-baptist.svg",
     primaryColor: "#002F6C",
     secondaryColor: "#C69214",
     tertiaryColor: "#FFFFFF",
@@ -5258,7 +5606,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "utah_tech",
     anSlug: "dixie-state-trailblazers",
     kenpomSlug: "Utah Tech",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah-tech.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/utah-tech.svg",
     primaryColor: "#D22630",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5273,7 +5622,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "texas_arlington",
     anSlug: "texas-arlington-mavericks",
     kenpomSlug: "UT Arlington",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-arlington.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/texas-arlington.svg",
     primaryColor: "#005EB8",
     secondaryColor: "#F58025",
     tertiaryColor: "#FFFFFF",
@@ -5288,7 +5638,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "s_utah",
     anSlug: "southern-utah-thunderbirds",
     kenpomSlug: "Southern Utah",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-utah.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/southern-utah.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5303,7 +5654,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "abilene_chr",
     anSlug: "abilene-christian-wildcats",
     kenpomSlug: "Abilene Christian",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/abilene-christian.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/abilene-christian.svg",
     primaryColor: "#4B2E83",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5318,7 +5670,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "tarleton_st",
     anSlug: "tarleton-st-texans",
     kenpomSlug: "Tarleton St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tarleton-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/tarleton-st.svg",
     primaryColor: "#592A8A",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5333,7 +5686,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "gonzaga",
     anSlug: "gonzaga-bulldogs",
     kenpomSlug: "Gonzaga",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/gonzaga.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/gonzaga.svg",
     primaryColor: "#041E42",
     secondaryColor: "#C8102E",
     tertiaryColor: "#FFFFFF",
@@ -5348,7 +5702,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "st_marys",
     anSlug: "st-marys-ca-gaels",
     kenpomSlug: "Saint Mary's",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-marys-ca.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/st-marys-ca.svg",
     primaryColor: "#8C1515",
     secondaryColor: "#C8C372",
     tertiaryColor: "#FFFFFF",
@@ -5363,7 +5718,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "santa_clara",
     anSlug: "santa-clara-broncos",
     kenpomSlug: "Santa Clara",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/santa-clara.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/santa-clara.svg",
     primaryColor: "#862633",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5378,7 +5734,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "oregon_st",
     anSlug: "oregon-st-beavers",
     kenpomSlug: "Oregon St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oregon-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/oregon-st.svg",
     primaryColor: "#DC4405",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -5393,7 +5750,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "seattle_u",
     anSlug: "seattle-redhawks",
     kenpomSlug: "Seattle",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/seattle.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/seattle.svg",
     primaryColor: "#C8102E",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5408,7 +5766,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "pacific",
     anSlug: "pacific-tigers",
     kenpomSlug: "Pacific",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/pacific.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/pacific.svg",
     primaryColor: "#F76900",
     secondaryColor: "#000000",
     tertiaryColor: "#FFFFFF",
@@ -5423,7 +5782,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "san_francisco",
     anSlug: "san-francisco-dons",
     kenpomSlug: "San Francisco",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-francisco.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-francisco.svg",
     primaryColor: "#00543C",
     secondaryColor: "#FDB913",
     tertiaryColor: "#FFFFFF",
@@ -5438,7 +5798,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "washington_st",
     anSlug: "washington-st-cougars",
     kenpomSlug: "Washington St.",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/washington-st.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/washington-st.svg",
     primaryColor: "#981E32",
     secondaryColor: "#5E6A71",
     tertiaryColor: "#FFFFFF",
@@ -5453,7 +5814,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "loyola_marymount",
     anSlug: "loyola-marymount-lions",
     kenpomSlug: "Loyola Marymount",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/loyola-marymount.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/loyola-marymount.svg",
     primaryColor: "#8C1515",
     secondaryColor: "#708090",
     tertiaryColor: "#FFFFFF",
@@ -5468,7 +5830,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "portland",
     anSlug: "portland-pilots",
     kenpomSlug: "Portland",
-    logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/portland_3a0a6441.png",
+    logoUrl:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/portland_3a0a6441.png",
     primaryColor: "#4B2E83",
     secondaryColor: "#FFFFFF",
     tertiaryColor: "#000000",
@@ -5483,7 +5846,8 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "san_diego",
     anSlug: "san-diego-toreros",
     kenpomSlug: "San Diego",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-diego.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/san-diego.svg",
     primaryColor: "#00205B",
     secondaryColor: "#75B2DD",
     tertiaryColor: "#FFFFFF",
@@ -5498,11 +5862,12 @@ export const NCAAM_TEAMS: NcaamTeam[] = [
     dbSlug: "pepperdine",
     anSlug: "pepperdine-waves",
     kenpomSlug: "Pepperdine",
-    logoUrl: "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/pepperdine.svg",
+    logoUrl:
+      "https://www.ncaa.com/sites/default/files/images/logos/schools/bgl/pepperdine.svg",
     primaryColor: "#00205B",
     secondaryColor: "#F15A22",
     tertiaryColor: "#FFFFFF",
-  }
+  },
 ];
 
 // ─── Lookup maps ──────────────────────────────────────────────────────────────
@@ -5550,7 +5915,9 @@ export const NCAAM_AN_SLUG_ALIASES = new Map<string, string>([
 export const VALID_DB_SLUGS = new Set<string>(NCAAM_TEAMS.map(t => t.dbSlug));
 
 /** Set of all valid NCAA slugs — used for NCAA scoreboard filtering */
-export const VALID_NCAA_SLUGS = new Set<string>(NCAAM_TEAMS.map(t => t.ncaaSlug));
+export const VALID_NCAA_SLUGS = new Set<string>(
+  NCAAM_TEAMS.map(t => t.ncaaSlug)
+);
 
 // ─── Helper functions ─────────────────────────────────────────────────────────
 

@@ -380,30 +380,30 @@ export const NCAAM_ESPN_IDS: Record<string, string> = {
 // shortDisplayName-based slugs generated above.
 const DB_SLUG_ALIASES: Record<string, string> = {
   // Mismatched short names
-  florida_state: "52",          // DB: florida_state → ESPN: florida_st
-  chicago_state: "2130",        // DB: chicago_state → ESPN: chicago_st
-  wright_state: "2750",         // DB: wright_state → ESPN: wright_st
-  youngstown_state: "2754",     // DB: youngstown_state → ESPN: youngstown_st
-  eastern_illinois: "2197",     // DB: eastern_illinois → ESPN: e_illinois
-  eastern_kentucky: "2198",     // DB: eastern_kentucky → ESPN: e_kentucky
-  northern_kentucky: "94",      // DB: northern_kentucky → ESPN: n_kentucky
+  florida_state: "52", // DB: florida_state → ESPN: florida_st
+  chicago_state: "2130", // DB: chicago_state → ESPN: chicago_st
+  wright_state: "2750", // DB: wright_state → ESPN: wright_st
+  youngstown_state: "2754", // DB: youngstown_state → ESPN: youngstown_st
+  eastern_illinois: "2197", // DB: eastern_illinois → ESPN: e_illinois
+  eastern_kentucky: "2198", // DB: eastern_kentucky → ESPN: e_kentucky
+  northern_kentucky: "94", // DB: northern_kentucky → ESPN: n_kentucky
   south_carolina_upstate: "2908", // DB: south_carolina_upstate → ESPN: sc_upstate
-  george_washington: "45",      // DB: george_washington → ESPN: g_washington
-  siu_edwardsville: "2565",     // DB: siu_edwardsville → ESPN: siue
-  gardner_webb: "2241",         // DB: gardner_webb → ESPN: gardnerwebb
-  central_connecticut: "2115",  // DB: central_connecticut → ESPN: c_connecticut
-  colorado_state: "36",         // DB: colorado_state → ESPN: colorado_st
-  fairleigh_dickinson: "161",   // DB: fairleigh_dickinson → ESPN: fdu
-  miami_fl: "2390",             // DB: miami_fl → ESPN: miami
-  umkc: "140",                  // DB: umkc → ESPN: kansas_city
-  liu: "112358",                // DB: liu → ESPN: long_island
-  st_josephs: "2603",           // DB: st_josephs → ESPN: saint_josephs
-  pittsburgh: "221",           // DB: pittsburgh → ESPN: pitt
-  cleveland_state: "325",       // DB: cleveland_state → ESPN: cleveland_st
-  florida_gulf_coast: "526",    // DB: florida_gulf_coast → ESPN: fgcu
-  ul_lafayette: "309",          // DB: ul_lafayette → ESPN: louisiana (ID 309)
-  georgia_southern: "290",      // DB: georgia_southern → ESPN: georgia-southern (ID 290)
-  lindenwood: "2815",           // DB: lindenwood → ESPN: lindenwood (ID 2815)
+  george_washington: "45", // DB: george_washington → ESPN: g_washington
+  siu_edwardsville: "2565", // DB: siu_edwardsville → ESPN: siue
+  gardner_webb: "2241", // DB: gardner_webb → ESPN: gardnerwebb
+  central_connecticut: "2115", // DB: central_connecticut → ESPN: c_connecticut
+  colorado_state: "36", // DB: colorado_state → ESPN: colorado_st
+  fairleigh_dickinson: "161", // DB: fairleigh_dickinson → ESPN: fdu
+  miami_fl: "2390", // DB: miami_fl → ESPN: miami
+  umkc: "140", // DB: umkc → ESPN: kansas_city
+  liu: "112358", // DB: liu → ESPN: long_island
+  st_josephs: "2603", // DB: st_josephs → ESPN: saint_josephs
+  pittsburgh: "221", // DB: pittsburgh → ESPN: pitt
+  cleveland_state: "325", // DB: cleveland_state → ESPN: cleveland_st
+  florida_gulf_coast: "526", // DB: florida_gulf_coast → ESPN: fgcu
+  ul_lafayette: "309", // DB: ul_lafayette → ESPN: louisiana (ID 309)
+  georgia_southern: "290", // DB: georgia_southern → ESPN: georgia-southern (ID 290)
+  lindenwood: "2815", // DB: lindenwood → ESPN: lindenwood (ID 2815)
   // _state → _st aliases (DB uses full _state, ESPN map uses _st abbreviation)
   michigan_state: "127",
   arizona_state: "9",

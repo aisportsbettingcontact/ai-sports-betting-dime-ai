@@ -1,0 +1,73 @@
+# os-observe-crons — LOOP-002's daily observer (ISSUE-013).
+#
+# Compares the cadence each workflow DECLARES against the runs GitHub actually
+# recorded, and fails when a schedule is not honoured. Read-only: it changes no
+# schedule, retries nothing, and touches no production system.
+#
+# WHY IT IS ALLOWED TO FAIL. The finding it exists to surface is that four
+# production pipelines run at 4-22% of their declared cadence while every
+# recorded run reports success — see os/loops/observations/OBS-0002. A check
+# that reported that as green would reproduce the exact defect it is watching
+# for. It is deliberately NOT a required status check on main: it observes
+# scheduled infrastructure, not the contents of a pull request, so gating merges
+# on it would block unrelated work for a condition no PR author can fix.
+name: os-observe-crons
+
+on:
+  schedule:
+    - cron: "40 10 * * *" # 10:40 UTC daily, off the hour — GitHub cron is congested on :00
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "UTC date to measure (YYYY-MM-DD); defaults to today"
+        required: false
+        type: string
+
+# Read-only. `actions: read` is what `gh run list` needs; nothing here writes.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: os-observe-crons
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: os-observe-crons
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: "[INPUT] Checkout main"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          # Full history — the observer asks git when each workflow was added.
+          # At the default depth 1 every file looks added today, every workflow
+          # is excluded, and the run reports a false all-clear.
+          fetch-depth: 0
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: "[STEP] Install pnpm"
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+
+      - name: "[STEP] Install dependencies"
+        run: pnpm install --frozen-lockfile
+
+      # The measured date is passed via env, never interpolated into the shell —
+      # a workflow_dispatch input is attacker-influenced in the general case, and
+      # the script validates the format before use.
+      - name: "[VERIFY] Declared cron cadence vs. observed runs"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OBSERVE_DATE: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+          if [ -n "${OBSERVE_DATE:-}" ]; then
+            npx tsx scripts/os/observe-crons.mts --date "$OBSERVE_DATE"
+          else
+            npx tsx scripts/os/observe-crons.mts
+          fi

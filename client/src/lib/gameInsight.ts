@@ -30,7 +30,12 @@
  * removed" comparison the card shows — they are supporting detail, not the label.
  */
 
-import { americanToImplied, americanToDecimal, removeVig } from "./edgeUtils";
+import {
+  americanToImplied,
+  americanToDecimal,
+  calculateRoi,
+  removeVig,
+} from "./edgeUtils";
 
 export type Recommendation = "BET" | "WATCH" | "NO_EDGE";
 
@@ -49,7 +54,7 @@ export interface EdgeThresholds {
  */
 export function classifyEdge(
   edgePercentagePoints: number,
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): Recommendation {
   const bet = thresholds.bet ?? BET_THRESHOLD_PP;
   const watch = thresholds.watch ?? WATCH_THRESHOLD_PP;
@@ -64,8 +69,12 @@ export function classifyEdge(
  * model's probability. EV = p·decimal − 1. Positive EV = +units per unit risked.
  * Returns NaN on invalid input.
  */
-export function expectedValue(modelProbability: number, americanPrice: number): number {
-  if (!Number.isFinite(modelProbability) || !Number.isFinite(americanPrice)) return NaN;
+export function expectedValue(
+  modelProbability: number,
+  americanPrice: number
+): number {
+  if (!Number.isFinite(modelProbability) || !Number.isFinite(americanPrice))
+    return NaN;
   const decimal = americanToDecimal(americanPrice);
   if (isNaN(decimal)) return NaN;
   return modelProbability * decimal - 1;
@@ -105,6 +114,12 @@ export interface MarketInsight {
   noVigEdgePP: number | null;
   /** expected value per unit staked at the book price */
   evUnits: number;
+  /**
+   * Canonical display ROI, in percentage points. This compares model
+   * probability with the book's no-vig probability (calculateRoi), so it is
+   * deliberately distinct from posted-price `evUnits`.
+   */
+  roiPct: number | null;
   recommendation: Recommendation;
 }
 
@@ -118,7 +133,7 @@ function toNum(v: number | null | undefined): number {
  */
 export function scoreMarketSide(
   side: MarketSideInput,
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): MarketInsight | null {
   const bookPrice = toNum(side.bookPrice);
   const modelPrice = toNum(side.modelPrice);
@@ -133,6 +148,7 @@ export function scoreMarketSide(
   // No-vig fair book price for this side (needs the opposite side's price).
   let bookNoVigPct: number | null = null;
   let noVigEdgePP: number | null = null;
+  let roiPct: number | null = null;
   const oppPrice = toNum(side.bookOppPrice);
   if (!isNaN(oppPrice)) {
     const fair = removeVig(String(bookPrice), String(oppPrice));
@@ -140,6 +156,8 @@ export function scoreMarketSide(
       bookNoVigPct = fair[0]; // removeVig returns [thisSide, oppSide] for the args passed
       noVigEdgePP = modelProb * 100 - bookNoVigPct;
     }
+    const canonicalRoi = calculateRoi(modelPrice, bookPrice, oppPrice);
+    if (Number.isFinite(canonicalRoi)) roiPct = canonicalRoi;
   }
 
   return {
@@ -154,6 +172,7 @@ export function scoreMarketSide(
     edgePP,
     noVigEdgePP,
     evUnits: expectedValue(modelProb, bookPrice),
+    roiPct,
     recommendation: classifyEdge(edgePP, thresholds),
   };
 }
@@ -165,10 +184,10 @@ export function scoreMarketSide(
  */
 export function rankMarkets(
   sides: MarketSideInput[],
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): MarketInsight[] {
   return sides
-    .map((s) => scoreMarketSide(s, thresholds))
+    .map(s => scoreMarketSide(s, thresholds))
     .filter((x): x is MarketInsight => x !== null)
     .sort((a, b) => {
       if (b.edgePP !== a.edgePP) return b.edgePP - a.edgePP;
@@ -183,7 +202,7 @@ export function rankMarkets(
  */
 export function primaryInsight(
   sides: MarketSideInput[],
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): MarketInsight | null {
   const top = rankMarkets(sides, thresholds)[0];
   if (!top) return null;

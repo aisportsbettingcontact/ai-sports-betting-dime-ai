@@ -1,7 +1,11 @@
 import { trpc } from "@/lib/trpc";
 
 export function useAppAuth() {
-  const { data: appUser, isLoading, refetch } = trpc.appUsers.me.useQuery(undefined, {
+  const {
+    data: appUser,
+    isLoading,
+    refetch,
+  } = trpc.appUsers.me.useQuery(undefined, {
     // staleTime: 0 (default) — auth state must always be re-fetched after a full page
     // navigation. A stale null from a previous unauthenticated visit would cause
     // RequireAuth to immediately redirect to /login even after a successful Discord

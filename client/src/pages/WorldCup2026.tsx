@@ -113,7 +113,13 @@ const WC_DATE_LABELS: Record<string, string> = {
   "2026-07-19": "Sun Jul 19",
 };
 
-const SUB_TABS = ["PROJECTIONS", "SPLITS", "LINEUPS", "STANDINGS", "FUTURES"] as const;
+const SUB_TABS = [
+  "PROJECTIONS",
+  "SPLITS",
+  "LINEUPS",
+  "STANDINGS",
+  "FUTURES",
+] as const;
 type SubTab = (typeof SUB_TABS)[number];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -222,9 +228,13 @@ function OddsRow({
         {/* Model odds */}
         <span
           className="text-xs tabular-nums w-[44px] text-right font-bold"
-          style={{ color: modelOdds != null ? '#45E0A8' : undefined }}
+          style={{ color: modelOdds != null ? "#45E0A8" : undefined }}
         >
-          {modelOdds != null ? fmtAmerican(modelOdds) : <span className="text-white">—</span>}
+          {modelOdds != null ? (
+            fmtAmerican(modelOdds)
+          ) : (
+            <span className="text-white">—</span>
+          )}
         </span>
       </div>
     </div>
@@ -242,15 +252,17 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
     (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
   const hasModel =
     modelOdds != null &&
-    (modelOdds.home != null || modelOdds.away != null || modelOdds.draw != null);
+    (modelOdds.home != null ||
+      modelOdds.away != null ||
+      modelOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
 
   return (
     <div
       className={cn(
         "rounded-xl border transition-all duration-150",
-        "bg-[#000000] border-white",
-        isLive && "border-[#45E0A8]"
+        "bg-black border-white",
+        isLive && "border-primary"
       )}
     >
       {/* ── Card header: group + kickoff ── */}
@@ -262,7 +274,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             </span>
           )}
           {isLive && (
-            <span className="text-[9px] px-1.5 py-0.5 text-[#45E0A8] border border-[#45E0A8] font-bold rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 text-primary border border-primary font-bold rounded animate-pulse">
               LIVE
             </span>
           )}
@@ -289,7 +301,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             }
             alt={awayTeam?.fifaCode ?? ""}
             className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white"
-            onError={(e) => {
+            onError={e => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
@@ -323,7 +335,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             }
             alt={homeTeam?.fifaCode ?? ""}
             className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white"
-            onError={(e) => {
+            onError={e => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
@@ -349,16 +361,31 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             <span className="text-[9px] text-white uppercase tracking-widest font-bold w-[44px] text-right">
               BOOK
             </span>
-            <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#45E0A8' }}>
+            <span
+              className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right"
+              style={{ color: "#45E0A8" }}
+            >
               MODEL
             </span>
           </div>
         </div>
 
         {/* 1X2 rows */}
-        <OddsRow label="HOME ML" bookOdds={hasOdds ? dkOdds?.home : null} modelOdds={hasModel ? modelOdds?.home : null} />
-        <OddsRow label="DRAW" bookOdds={hasOdds ? dkOdds?.draw : null} modelOdds={hasModel ? modelOdds?.draw : null} />
-        <OddsRow label="AWAY ML" bookOdds={hasOdds ? dkOdds?.away : null} modelOdds={hasModel ? modelOdds?.away : null} />
+        <OddsRow
+          label="HOME ML"
+          bookOdds={hasOdds ? dkOdds?.home : null}
+          modelOdds={hasModel ? modelOdds?.home : null}
+        />
+        <OddsRow
+          label="DRAW"
+          bookOdds={hasOdds ? dkOdds?.draw : null}
+          modelOdds={hasModel ? modelOdds?.draw : null}
+        />
+        <OddsRow
+          label="AWAY ML"
+          bookOdds={hasOdds ? dkOdds?.away : null}
+          modelOdds={hasModel ? modelOdds?.away : null}
+        />
 
         {/* Divider */}
         <div className="border-t border-white my-1.5" />
@@ -384,9 +411,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             {venue.stadium}, {venue.city}
           </span>
           {venue.elevationM > 500 && (
-            <span className="ml-1 text-white">
-              ⚠ {venue.elevationM}m alt
-            </span>
+            <span className="ml-1 text-white">⚠ {venue.elevationM}m alt</span>
           )}
         </div>
       )}
@@ -396,7 +421,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
 
 function MatchCardSkeleton() {
   return (
-    <div className="rounded-xl border border-white bg-[#000000] p-4 space-y-3">
+    <div className="rounded-xl border border-white bg-black p-4 space-y-3">
       <div className="flex justify-between">
         <Skeleton className="h-4 w-24 bg-black" />
         <Skeleton className="h-4 w-16 bg-black" />
@@ -409,7 +434,7 @@ function MatchCardSkeleton() {
         <Skeleton className="h-5 w-7 bg-black rounded-sm" />
       </div>
       <div className="pt-2 border-t border-white space-y-2">
-        {[1, 2, 3, 4, 5].map((i) => (
+        {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className="flex justify-between">
             <Skeleton className="h-3 w-16 bg-black" />
             <Skeleton className="h-3 w-12 bg-black" />
@@ -440,7 +465,7 @@ function ProjectionsFeed({ date }: { date: string }) {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3].map(i => (
           <MatchCardSkeleton key={i} />
         ))}
       </div>
@@ -463,7 +488,7 @@ function ProjectionsFeed({ date }: { date: string }) {
 
   return (
     <div className="space-y-3">
-      {(matchs as MatchWithTeams[]).map((f) => (
+      {(matchs as MatchWithTeams[]).map(f => (
         <MatchCard key={f.matchId} match={f} />
       ))}
     </div>
@@ -490,9 +515,15 @@ export default function WorldCup2026() {
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultDate);
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white">
+    <div
+      className="min-h-screen bg-black text-white"
+      // Black-fixed surface: raw mint stays legal ink here (owner law 2026-07-31).
+      style={{ ["--mint-ink" as string]: "#45E0A8" }}
+    >
       {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-40 bg-[#000000] backdrop-blur-sm border-b border-white">
+      {/* <header> (not div): the floating-nav sticky offset targets
+          header.sticky.top-0 (index.css) so this re-anchors below the nav. */}
+      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
         <div className="max-w-2xl mx-auto px-3 sm:px-4">
           {/* Title row */}
           <div className="flex items-center gap-3 pt-3 pb-2">
@@ -500,7 +531,7 @@ export default function WorldCup2026() {
               src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75"
               alt="FIFA World Cup 2026"
               className="h-8 w-auto object-contain flex-shrink-0"
-              onError={(e) => {
+              onError={e => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}
             />
@@ -510,17 +541,16 @@ export default function WorldCup2026() {
               </div>
               <div className="text-[10px] text-white uppercase tracking-widest">
                 {/* [2026-06-29] Dynamic stage label: KO Round of 32 started Jun 28 */}
-                {selectedDate >= '2026-06-28'
-                  ? 'Knockout Stage · Round of 32'
-                  : 'Group Stage · USA / CAN / MEX'
-                }
+                {selectedDate >= "2026-06-28"
+                  ? "Knockout Stage · Round of 32"
+                  : "Group Stage · USA / CAN / MEX"}
               </div>
             </div>
           </div>
 
           {/* Sub-tab nav */}
           <div className="flex items-center gap-0 overflow-x-auto no-scrollbar -mx-3 px-3 pb-0">
-            {SUB_TABS.map((tab) => (
+            {SUB_TABS.map(tab => (
               <button
                 key={tab}
                 type="button"
@@ -537,7 +567,7 @@ export default function WorldCup2026() {
             ))}
           </div>
         </div>
-      </div>
+      </header>
 
       {/* ── Content ── */}
       <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4">
@@ -545,7 +575,7 @@ export default function WorldCup2026() {
           <>
             {/* Date selector */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-3 px-3 mb-4 pb-1">
-              {WC_DATE_RANGE.map((d) => (
+              {WC_DATE_RANGE.map(d => (
                 <button
                   key={d}
                   type="button"
@@ -554,7 +584,7 @@ export default function WorldCup2026() {
                     "px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all whitespace-nowrap flex-shrink-0",
                     selectedDate === d
                       ? "bg-transparent text-white border border-white"
-                      : "bg-[#000000] text-white border border-white"
+                      : "bg-black text-white border border-white"
                   )}
                 >
                   {WC_DATE_LABELS[d]}
@@ -570,7 +600,9 @@ export default function WorldCup2026() {
         {activeTab === "SPLITS" && <ComingSoonTab label="Betting Splits" />}
         {activeTab === "LINEUPS" && <ComingSoonTab label="Lineups" />}
         {activeTab === "STANDINGS" && <ComingSoonTab label="Group Standings" />}
-        {activeTab === "FUTURES" && <ComingSoonTab label="Futures & Outrights" />}
+        {activeTab === "FUTURES" && (
+          <ComingSoonTab label="Futures & Outrights" />
+        )}
       </div>
     </div>
   );

@@ -31,8 +31,8 @@ function desktopSegMinPx(pct: number): number {
 interface SegmentResult {
   awayVisible: boolean;
   homeVisible: boolean;
-  awayLabel: string | null;  // null = not rendered
-  homeLabel: string | null;  // null = not rendered
+  awayLabel: string | null; // null = not rendered
+  homeLabel: string | null; // null = not rendered
   awayMinWidth: number | null; // null = not applicable (full-bar case)
   homeMinWidth: number | null;
   dividerVisible: boolean;
@@ -56,21 +56,22 @@ function computeSegments(
   const awayLabel = isAwayFull
     ? "100%"
     : awayPct > 0 && !isHomeFull
-    ? `${awayPct}%`
-    : null;
+      ? `${awayPct}%`
+      : null;
 
   const homeLabel = isHomeFull
     ? "100%"
     : homePct > 0 && !isAwayFull
-    ? `${homePct}%`
-    : null;
+      ? `${homePct}%`
+      : null;
 
   // minWidth — applied to every non-full segment that is visible
   const awayMinWidth = awayVisible && !isAwayFull ? minPxFn(awayPct) : null;
   const homeMinWidth = homeVisible && !isHomeFull ? minPxFn(homePct) : null;
 
   // Divider only between two non-full segments
-  const dividerVisible = !isAwayFull && !isHomeFull && awayPct > 0 && homePct > 0;
+  const dividerVisible =
+    !isAwayFull && !isHomeFull && awayPct > 0 && homePct > 0;
 
   return {
     awayVisible,
@@ -94,10 +95,10 @@ describe("Splits bar segment logic — 100%/0% cases", () => {
     expect(r.homeIsFull).toBe(false);
     // awayVisible tracks the normal segment branch ({away > 0 && !isHomeFull});
     // the full-bar is rendered via the separate {isAwayFull && ...} branch
-    expect(r.awayVisible).toBe(true);  // 100 > 0 && !isHomeFull(false) → true
+    expect(r.awayVisible).toBe(true); // 100 > 0 && !isHomeFull(false) → true
     expect(r.homeVisible).toBe(false); // home is 0, so hidden
-    expect(r.awayLabel).toBe("100%");  // label says 100%
-    expect(r.homeLabel).toBe(null);    // 0% is NEVER shown
+    expect(r.awayLabel).toBe("100%"); // label says 100%
+    expect(r.homeLabel).toBe(null); // 0% is NEVER shown
     expect(r.dividerVisible).toBe(false);
   });
 
@@ -108,9 +109,9 @@ describe("Splits bar segment logic — 100%/0% cases", () => {
     expect(r.awayVisible).toBe(false); // away is 0, so hidden
     // homeVisible tracks the normal segment branch ({home > 0 && !isAwayFull});
     // the full-bar is rendered via the separate {isHomeFull && ...} branch
-    expect(r.homeVisible).toBe(true);  // 100 > 0 && !isAwayFull(false) → true
-    expect(r.homeLabel).toBe("100%");  // label says 100%
-    expect(r.awayLabel).toBe(null);    // 0% is NEVER shown
+    expect(r.homeVisible).toBe(true); // 100 > 0 && !isAwayFull(false) → true
+    expect(r.homeLabel).toBe("100%"); // label says 100%
+    expect(r.awayLabel).toBe(null); // 0% is NEVER shown
     expect(r.dividerVisible).toBe(false);
   });
 });
@@ -254,14 +255,43 @@ describe("Splits bar segment logic — no outside labels ever (full invariant sw
   // AND that the label is always set (not null) for visible segments.
 
   const testCases = [
-    [1, 99], [2, 98], [3, 97], [4, 96], [5, 95],
-    [6, 94], [7, 93], [8, 92], [9, 91], [10, 90],
-    [11, 89], [12, 88], [13, 87], [14, 86], [15, 85],
-    [20, 80], [25, 75], [30, 70], [50, 50],
-    [70, 30], [75, 25], [80, 20], [85, 15],
-    [86, 14], [87, 13], [88, 12], [89, 11], [90, 10],
-    [91, 9], [92, 8], [93, 7], [94, 6], [95, 5],
-    [96, 4], [97, 3], [98, 2], [99, 1],
+    [1, 99],
+    [2, 98],
+    [3, 97],
+    [4, 96],
+    [5, 95],
+    [6, 94],
+    [7, 93],
+    [8, 92],
+    [9, 91],
+    [10, 90],
+    [11, 89],
+    [12, 88],
+    [13, 87],
+    [14, 86],
+    [15, 85],
+    [20, 80],
+    [25, 75],
+    [30, 70],
+    [50, 50],
+    [70, 30],
+    [75, 25],
+    [80, 20],
+    [85, 15],
+    [86, 14],
+    [87, 13],
+    [88, 12],
+    [89, 11],
+    [90, 10],
+    [91, 9],
+    [92, 8],
+    [93, 7],
+    [94, 6],
+    [95, 5],
+    [96, 4],
+    [97, 3],
+    [98, 2],
+    [99, 1],
   ];
 
   for (const [away, home] of testCases) {

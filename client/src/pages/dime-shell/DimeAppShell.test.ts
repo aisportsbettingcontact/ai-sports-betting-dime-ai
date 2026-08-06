@@ -29,7 +29,8 @@ const trackerSource = fs.readFileSync(
 
 describe("DimeAppShell integration contract", () => {
   // [PR #70 REMEDIATION 2026-07-12] /chat used to fall through to a SEPARATE
-  // lazily-loaded component (pages/DimeChat.tsx) below 768px, while
+  // lazily-loaded component (the legacy pages/DimeChat.tsx shim, since
+  // deleted) below 768px, while
   // >=768px mounted DimeAppShell at the same React tree position. Crossing
   // 768px therefore swapped which lazy component occupied that slot, which
   // remounted DimeChatPage — destroying conversation state, any in-flight
@@ -85,7 +86,7 @@ describe("DimeAppShell integration contract", () => {
     );
   });
 
-  it("gates shell-only bookkeeping (splits canonicalization, pane content, scroll/focus restore) on mode === \"shell\"", () => {
+  it('gates shell-only bookkeeping (splits canonicalization, pane content, scroll/focus restore) on mode === "shell"', () => {
     expect(shellSource).toMatch(
       /if \(mode !== "shell"\) return;\s*\n\s*if \(actualRoute\.pane !== "splits"\) return;/
     );
@@ -119,8 +120,9 @@ describe("DimeAppShell integration contract", () => {
     expect(shellSource).toMatch(
       /navigate\(resolveRouteHref\(canonical\), \{ replace: true \}\)/
     );
+    // Combined feed (2026-07-18): date nav canonicalizes on the mlb- slug.
     expect(feedSource).toMatch(
-      /navigate\(resolveRouteHref\(feedModelPath\(nextSport, nextIso\)\)\)/
+      /navigate\(resolveRouteHref\(feedModelPath\("MLB", nextIso\)\)\)/
     );
     expect(splitsSource).toMatch(
       /setLocation\(resolveRouteHref\(bettingSplitsPath\(sport, selectedDate\)\)\)/
@@ -201,12 +203,14 @@ describe("DimeAppShell integration contract", () => {
     );
   });
 
-  it("embeds feed with chrome suppression and tracker wholesale", () => {
+  it("embeds feed with chrome suppression and tracker/splits heading demotion", () => {
     expect(shellSource).toMatch(/<DimeModelFeed[\s\S]*embeddedInShell/);
+    // A11Y-NO-H1: embedded pages demote their own h1 (the shell pane's
+    // sr-only heading is the page's sole h1), so the shell must say so.
     expect(shellSource).toMatch(
-      /paneContent = <BetTracker previewMode=\{previewMode\} \/>/
+      /paneContent = <BetTracker previewMode=\{previewMode\} embeddedInShell \/>/
     );
-    expect(shellSource).not.toMatch(/<BetTracker[^>]+embeddedInShell/);
+    expect(shellSource).toMatch(/<BettingSplits[\s\S]*?embeddedInShell/);
   });
 
   it("renders tracker chrome in preview without granting protected query access", () => {
@@ -238,5 +242,15 @@ describe("DimeAppShell integration contract", () => {
     expect(cleanup).toMatch(/abortRef\.current\?\.abort\(\)/);
     expect(cleanup).toMatch(/activeBatcherRef\.current\?\.dispose\(\)/);
     expect(cleanup).toMatch(/drawerAnimationRef\.current\?\.stop\(\)/);
+  });
+
+  it("keeps engagement-session tracking OFF the critical path (lazy SessionTracker, not a direct hook import)", () => {
+    // Regression guard for the chat-critical-path bundle budget: the session
+    // hook must be lazy-loaded, never imported straight into the shell chunk.
+    expect(shellSource).toMatch(
+      /lazy\(\(\) => import\("@\/components\/SessionTracker"\)\)/
+    );
+    expect(shellSource).toMatch(/<SessionTracker \/>/);
+    expect(shellSource).not.toMatch(/from "@\/hooks\/useSessionTracking"/);
   });
 });

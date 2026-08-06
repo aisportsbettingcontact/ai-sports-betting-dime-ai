@@ -27,7 +27,9 @@ export function isLifetimeMember(user: SidebarUser): boolean {
 }
 
 /** Sidebar profile-row name — the frozen design renders it in caps (D/L:75). */
-export function displaySidebarName(username: string | null | undefined): string {
+export function displaySidebarName(
+  username: string | null | undefined
+): string {
   return (username ?? "").trim().toUpperCase();
 }
 

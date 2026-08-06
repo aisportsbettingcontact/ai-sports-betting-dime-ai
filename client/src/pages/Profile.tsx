@@ -71,7 +71,7 @@ export default function Profile() {
       await utils.appUsers.me.invalidate();
       window.location.href = "/";
     },
-    onError: (err) => {
+    onError: err => {
       profileLog("profile.logout.error", { error: err.message });
       toast.error("Logout failed. Please try again.");
     },
@@ -83,7 +83,7 @@ export default function Profile() {
       profileLog("profile.reset_password.click", { userId: appUser?.id });
       toast.success("Password reset email sent. Check your inbox.");
     },
-    onError: (err) => {
+    onError: err => {
       profileLog("profile.load.error", {
         errorClass: "PasswordResetError",
         detail: err.message,
@@ -115,7 +115,7 @@ export default function Profile() {
   // ─── Loading state (stable skeleton, no layout shift) ──────────────────────
   if (loading) {
     return (
-      <div className="pf-page">
+      <main className="pf-page">
         <header className="pf-hero">
           <div
             className="pf-skeleton pf-skeleton--circle"
@@ -146,7 +146,7 @@ export default function Profile() {
             style={{ width: "100%", height: 104, borderRadius: 14 }}
           />
         </section>
-      </div>
+      </main>
     );
   }
 
@@ -154,7 +154,7 @@ export default function Profile() {
   if (!appUser) {
     profileLog("profile.load.error", { errorClass: "Unauthenticated" });
     return (
-      <div className="pf-page">
+      <main className="pf-page">
         <div className="pf-error">
           <p className="pf-error-text">
             Unable to load your profile. Please log in again.
@@ -166,7 +166,7 @@ export default function Profile() {
             Log in
           </button>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -178,11 +178,15 @@ export default function Profile() {
     : `@${appUser.username}`;
 
   return (
-    <div className="pf-page">
+    <main className="pf-page">
       {/* ------- Identity ------- */}
       <header className="pf-hero">
         <span className="pf-wordmark" aria-label="dime">
-          d<span className="pf-wordmark-i">ı<span className="pf-coindot" /></span>me
+          d
+          <span className="pf-wordmark-i">
+            ı<span className="pf-coindot" />
+          </span>
+          me
         </span>
         <h1 className="pf-username">{displayUsername}</h1>
         <div className="pf-plan">
@@ -200,9 +204,7 @@ export default function Profile() {
           <div className="pf-card">
             <div className="pf-row">
               <span className="pf-row-key">Discord</span>
-              <span className="pf-row-value">
-                @{appUser.discordUsername}
-              </span>
+              <span className="pf-row-value">@{appUser.discordUsername}</span>
             </div>
           </div>
         </section>
@@ -288,6 +290,6 @@ export default function Profile() {
           Help is available: 1-800-GAMBLER
         </p>
       </footer>
-    </div>
+    </main>
   );
 }

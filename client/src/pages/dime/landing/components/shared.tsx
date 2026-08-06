@@ -18,17 +18,31 @@ export function Wordmark({ fontSize }: { fontSize?: number }) {
 export function MintCheck({ muted }: { muted?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width={13} height={13} aria-hidden="true">
-      <path d="M4 12 L10 18 L20 6" fill="none" stroke={muted ? "var(--text-muted)" : "#45E0A8"} strokeWidth={3} strokeLinecap="square" />
+      <path
+        d="M4 12 L10 18 L20 6"
+        fill="none"
+        stroke={muted ? "var(--text-muted)" : "#45E0A8"}
+        strokeWidth={3}
+        strokeLinecap="square"
+      />
     </svg>
   );
 }
 
 /** Classification pill. Screen readers get an explicit "Classification:" prefix. */
-export function StatePill({ state, label }: { state: MarketState | "locked"; label: string }) {
+export function StatePill({
+  state,
+  label,
+}: {
+  state: MarketState | "locked";
+  label: string;
+}) {
   const cls =
-    state === "edge" ? "state-pill state-pill--edge"
-    : state === "monitor" ? "state-pill state-pill--monitor"
-    : "state-pill state-pill--pass";
+    state === "edge"
+      ? "state-pill state-pill--edge"
+      : state === "monitor"
+        ? "state-pill state-pill--monitor"
+        : "state-pill state-pill--pass";
   return (
     <span className={cls}>
       <span className="dot" aria-hidden="true" />
@@ -58,7 +72,9 @@ export function SectionHead({
   center?: boolean;
 }) {
   return (
-    <div className={center ? "section-head section-head--center" : "section-head"}>
+    <div
+      className={center ? "section-head section-head--center" : "section-head"}
+    >
       {eyebrow && <span className="mono mono--mint">{eyebrow}</span>}
       <h2>
         {headline.before}
@@ -88,7 +104,12 @@ export function CtaRow({
     <div className="cta-row">
       <span className="mono">{label}</span>
       <span className="lead" aria-hidden="true" />
-      <a href={href} data-cta-id={ctaId} data-cta-location={location} data-mode="paid">
+      <a
+        href={href}
+        data-cta-id={ctaId}
+        data-cta-location={location}
+        data-mode="paid"
+      >
         {cta} →
       </a>
     </div>

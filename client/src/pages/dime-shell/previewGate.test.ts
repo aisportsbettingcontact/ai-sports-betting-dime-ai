@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  allowsLocalDimePreview,
-  withLocalDimePreview,
-} from "./previewGate";
+import { allowsLocalDimePreview, withLocalDimePreview } from "./previewGate";
 
 const appSource = fs.readFileSync(
   path.join(import.meta.dirname, "..", "..", "App.tsx"),

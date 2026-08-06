@@ -39,6 +39,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { todayUTC } from "@/components/CalendarPicker";
@@ -82,22 +84,32 @@ function useFeedPrefetch(authenticated: boolean) {
     const gameDate = dm ? `${dm[3]}-${dm[1]}-${dm[2]}` : todayUTC();
 
     if (sport === "wc") {
-      void utils.wc2026.matchesByDate.prefetch({ date: gameDate }, { staleTime: 60 * 1000 });
+      void utils.wc2026.matchesByDate.prefetch(
+        { date: gameDate },
+        { staleTime: 60 * 1000 }
+      );
     } else {
-      void utils.games.list.prefetch({ sport: "MLB", gameDate }, { staleTime: 60 * 1000 });
+      void utils.games.list.prefetch(
+        { sport: "MLB", gameDate },
+        { staleTime: 60 * 1000 }
+      );
     }
   }, [authenticated, utils]);
 }
 
 export function RequireAuth({ children }: RequireAuthProps) {
   const { appUser, loading } = useAppAuth();
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   // Safety timeout: if auth check takes > 10s, treat as unauthenticated
   const [timedOut, setTimedOut] = useState(false);
   useEffect(() => {
     if (!loading) return;
     const t = setTimeout(() => {
-      console.warn("[RequireAuth] Auth check timed out after 10s — redirecting to login");
+      console.warn(
+        "[RequireAuth] Auth check timed out after 10s — redirecting to login"
+      );
       setTimedOut(true);
     }, 10000);
     return () => clearTimeout(t);
@@ -126,13 +138,22 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
     // [ACTION] Not authenticated — redirect to login
     const returnPath = window.location.pathname + window.location.search;
-    const loginUrl = returnPath === "/login" || returnPath === "/"
-      ? "/login"
-      : `/login?returnPath=${encodeURIComponent(returnPath)}`;
+    const loginUrl =
+      returnPath === "/login" || returnPath === "/"
+        ? "/login"
+        : `/login?returnPath=${encodeURIComponent(returnPath)}`;
 
-    console.log(`[RequireAuth] Unauthenticated — redirecting to ${loginUrl} (timedOut=${timedOut} minWaitDone=${minWaitDone})`);
-    window.location.href = loginUrl;
-  }, [appUser, loading, timedOut, minWaitDone]);
+    console.log(
+      `[RequireAuth] Unauthenticated — redirecting to ${loginUrl} (timedOut=${timedOut} minWaitDone=${minWaitDone})`
+    );
+    // Client-side navigation instead of a full document reload (audit
+    // D-REQAUTH: the reload produced shell → reload → second shell, with one
+    // observed 15s hang). The reload's documented purpose was clearing stale
+    // React Query auth state — queryClient.clear() achieves that without
+    // tearing down the document.
+    queryClient.clear();
+    navigate(loginUrl, { replace: true });
+  }, [appUser, loading, timedOut, minWaitDone, navigate, queryClient]);
 
   // [PERF] No inline loading state — return null so the HTML shell covers the auth wait.
   // The HTML shell (index.html) is visible until React renders real content into #root.

@@ -132,7 +132,7 @@
   --popover: #141414;           /* v2: raised tier — menus/popovers get depth */
   --popover-foreground: #FFFFFF;
 
-  /* Mint is the single accent (was purple #6C63FF). Black ink on mint. */
+  /* Mint is the single accent (was the retired purple). Black ink on mint. */
   --primary: #45E0A8;
   --primary-foreground: #000000;
 
@@ -156,10 +156,28 @@
 
   /* Positive edge = mint; negative/pass = plain ink (no red) */
   --edge-green: #45E0A8;
+  /* Mint as INK (text/icons). Dark: raw mint. Light remaps below — owner law
+   * 2026-07-31: on light surfaces mint exists ONLY as a fill with black ink. */
+  --mint-ink: var(--primary);
   --edge-red: #FFFFFF;
 
   /* Scoped exception: bet-loss indicators (Bet Tracker / calendar) keep red. */
   --loss-red: #FF3B3B;
+
+  /* ── Discord platform exception (owner-approved 2026-07-24) ───────────────
+   * Discord's own brand colour + typeface, permitted ONLY on controls that
+   * represent Discord itself (the "Continue with Discord" login button and
+   * the "Connect Discord" settings row). This is platform attribution, not a
+   * second accent — mint remains the only Dime accent. Never use these tokens
+   * for emphasis, edges, links, or any non-Discord surface.
+   * #5865F2 is Discord's CURRENT blurple (their 2021 rebrand). White on it
+   * measures 4.61:1 — AA for small text. The pre-2021 #7289DA and the
+   * #738ADB in the deleted legacy code both fail AA (3.33 / 3.29) and are
+   * banned. Rules: dime-ai/THREE-COLOR-LAW.md §"Discord platform exception". */
+  --discord-blurple: #5865F2;
+  --discord-blurple-hover: #4752C4;   /* Discord's own pressed/hover step */
+  --discord-on-blurple: #FFFFFF;
+  --font-discord: 'GG Sans', 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
 
   /* Sidebar */
   --sidebar: #000000;
@@ -173,7 +191,11 @@
 
   /* v2 tonal ramp — extra tiers consumed by app components directly */
   --text-secondary: #A6A6A6;    /* 8.6:1 on black */
-  --text-muted: #6E6E6E;        /* 4.1:1 on black */
+  /* Audit DIME-UI-005 (2026-07-31): the old 6E-grey measured 3.6–4.1:1 under
+   * the 10–13px labels that consume this token (tracker bt-label, splits
+   * separators, landing captions) — below WCAG AA 4.5:1 for small text. The
+   * 7E-grey holds 5.2:1 on black, 4.9:1 on tier-1 cards, 4.5:1 on raised. */
+  --text-muted: #7E7E7E;
   --surface-raised: #141414;
   --row-hover: #141414;         /* hover returns (was transparent) */
   --row-active: #1F1F1F;
@@ -202,8 +224,9 @@ html:not(.dark) {
   --input: #D9D9D9;
   --ring: #45E0A8;
   --edge-green: #45E0A8;
+  --mint-ink: #0A7C50; /* the one sanctioned mint-ink tone on light (5.2:1 white / 4.9:1 F7-tier) */
   --edge-red: #000000;
-  --loss-red: #FF3B3B;
+  --loss-red: #D92D2D; /* theme audit 2026-07-31: FF3B3B measured 3.3:1 on light; 4.8:1 on white here. Dark keeps FF3B3B (5.9:1 on black). */
   --sidebar: #FFFFFF;
   --sidebar-foreground: #000000;
   --sidebar-primary: #45E0A8;
@@ -219,6 +242,26 @@ html:not(.dark) {
   --row-active: #E4E4E4;
 }
 
+/* Z-INDEX LADDER (documented 2026-07-24, PR #198 X-ZINDEX census — no
+ * collisions found, values recorded so future layers slot in knowingly):
+ *   0–50    page chrome (Tailwind z-10/20/30/40; z-50 = sticky headers, chat
+ *           drawer stack in conversation.css runs 60–100)
+ *   99–100  full-screen overlays (mobile-nav debug panel, plan-editor modal,
+ *           BetTracker banner)
+ *   200     top app modals (chat modal in conversation.css, UserManagement
+ *           confirm) — mutually exclusive by route, never stacked
+ *   toasts  sonner library default (≫200) — always above everything
+ * New layers: chrome ≤50, overlays 100, modals 200. Do not mint new values
+ * above 200; toasts must stay on the library default. */
+
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): System
+ * previously carried its own fixed neutral-grey appearance (18/24/32-level
+ * grey canvas/card/raised tiers — exact values in git history). That third
+ * identity produced a canvas seam against Law-v2 pure-black surfaces, so
+ * System now follows Dark exactly (pure-black canvas, tiers from :root).
+ * Light remains white. No html[data-theme-mode="system"] overrides remain —
+ * do not reintroduce a distinct System palette without a law amendment. */
+
 /* ═══ Law v3 — Dimensional amendment (owner-approved 2026-07-13) ══════════════
    Relaxes Law v2's flat/no-shadow rule for the projections product. NEW: mint
    ACCENT SURFACES (tinted cell + border + high-contrast foreground) and
@@ -227,6 +270,9 @@ html:not(.dark) {
    stay flat, mint stays the one hue. Full rules in dime-ai/THREE-COLOR-LAW.md §v3.
    Contrast verified: light fg #09251C on tint 14.6:1; dark fg #DFF9EF on tint 14.8:1. */
 :root {
+  /* The one brand mint (2026-08-02): every component consumes this token —
+     raw #45E0A8 literals outside this block are a law violation. */
+  --brand-mint: #45E0A8;
   /* dark-theme defaults (solid fallbacks; color-mix upgrade below) */
   --brand-mint-surface: #0B241B;
   --brand-mint-border: #298665;
@@ -248,8 +294,8 @@ html:not(.dark) {
 /* Modern-CSS upgrade: derive the tint/border from the live mint via color-mix.
    Falls back to the solid hexes above on engines without color-mix. */
 @supports (color: color-mix(in srgb, red, red)) {
-  :root { --brand-mint-surface: color-mix(in srgb, #45E0A8 16%, #000000); --brand-mint-border: color-mix(in srgb, #45E0A8 60%, #000000); }
-  html:not(.dark) { --brand-mint-surface: color-mix(in srgb, #45E0A8 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, #45E0A8 68%, #000000); }
+  :root { --brand-mint-surface: color-mix(in srgb, var(--brand-mint) 16%, #000000); --brand-mint-border: color-mix(in srgb, var(--brand-mint) 60%, #000000); }
+  html:not(.dark) { --brand-mint-surface: color-mix(in srgb, var(--brand-mint) 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, var(--brand-mint) 68%, #000000); }
 }
 
 /* ═══ Animated theme transition (View Transitions API) ════════════════════════
@@ -271,13 +317,49 @@ html:not(.dark) {
   ::view-transition-new(*) {
     animation: none !important;
   }
+  /* MASTER.md motion law: pulses and spins are disabled under reduced motion.
+   * Tailwind's animate-* utilities have no built-in guard (43 animate-pulse
+   * usages across 12 files as of the 2026-07-31 forensic audit; originally
+   * 33/10, audit D-PULSE-REDUCE). !important is required here to beat the
+   * utility layer; this media block is the single sanctioned place for it.
+   * The tw-animate-css classes (animate-in/out, accordion, caret) drive every
+   * Radix overlay — dialog, sheet, popover, drawer — and ship no guard of
+   * their own (audit DIME-UI-003), so they are killed here too. */
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping,
+  .animate-in,
+  .animate-out,
+  .animate-accordion-down,
+  .animate-accordion-up,
+  .animate-caret-blink,
+  .prez-game-pulse {
+    animation: none !important;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  /* Unified focus treatment (audit D-FOCUS-UNIFY): one visible 2px mint ring
+   * on :focus-visible everywhere, replacing the old 1px 50%-alpha outline that
+   * coexisted with two stronger page-local treatments. Keyboard users get the
+   * same signal on every surface; pointer clicks stay ring-free. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   html {
+    /* Fluid base type (apple-design: size with the viewport). Scales rem-based
+     * text up on larger screens so the UI never reads cramped on desktop/wide,
+     * while staying at the comfortable ~16px browser default at ≤~1067px so
+     * mobile/tablet layouts (and the pinned responsive feed geometry) are
+     * unchanged. rem min/max respect the user's browser font-size (zoom/a11y);
+     * the vw term drives the screen-size response. Fixed-px utilities
+     * (text-[11px] micro-labels, .feed-tab) intentionally stay put. */
+    font-size: clamp(1rem, 0.8rem + 0.3vw, 1.18rem);
     /* Prevent iOS rubber-band overscroll from revealing white/gray background.
      * overscroll-behavior: none on html prevents the bounce from propagating
      * to the document root. Individual scrollable containers still bounce. */
@@ -304,13 +386,33 @@ html:not(.dark) {
     /* No max-width — layout fills full viewport width and scales with screen size */
     width: 100%;
   }
-  .flex {
+  /* Flexbox min-size fix at ZERO specificity (:where) so any explicit
+   * min-h-* / min-w-* utility on the same element wins the cascade.
+   * The previous plain `.flex` selector tied Tailwind's own utilities and,
+   * being later in the layer, silently clobbered min-h-screen on 30 of 41
+   * usages (audit D-FLEX-MINH). */
+  :where(.flex) {
     min-width: 0;
     min-height: 0;
   }
   /* Edge color helpers */
   .text-edge-green { color: var(--edge-green); }
   .text-edge-red   { color: var(--edge-red); }
+}
+
+/* Owner law (2026-07-31): raw mint TEXT cannot render on light surfaces —
+   the text-primary utility remaps to the mint-ink tone in light mode. Mint
+   FILLS (bg-primary + black ink) are untouched. Dark-fixed pages (login,
+   WC2026) pin --mint-ink back to raw mint at their roots; the admin area is
+   dark-fixed via AdminShell, so this never applies there. */
+html:not(.dark) .text-primary {
+  color: var(--mint-ink);
+}
+/* Raw mint ink stays legal on BLACK surfaces regardless of the html theme —
+   black-fixed containers (Subscribe result pages, etc.) tag themselves with
+   the bg-black utility and inherit the pin. */
+html:not(.dark) .bg-black {
+  --mint-ink: var(--primary);
 }
 
 /* ── Safe area utility classes ─────────────────────────────────────────────
@@ -335,18 +437,23 @@ html:not(.dark) {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
 }
 
-/* When mobile owner tabs are visible, add extra bottom padding to prevent content being covered */
-.mobile-owner-tabs-active .feed-pb-safe {
-  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+/* ── Floating mobile nav clearance (docs/plans/2026-07-18-mobile-floating-nav.md)
+   While the top-floating nav is mounted (body.dime-floating-nav-active), it
+   publishes its measured height (+8px breathing room) as --dime-floating-nav-h
+   on <html> via ResizeObserver. Reserve real document-flow space equal to that
+   height so the assembly never occludes page headings/content, and re-anchor
+   viewport-sticky page headers below it. The 112px fallback only covers the
+   single frame before the observer's first publish. */
+body.dime-floating-nav-active {
+  padding-top: var(--dime-floating-nav-h, 112px);
 }
 
-/* Global clearance while the fixed bottom tab bar is mounted: reserve real
-   document-flow space so the 60px bar (+ home indicator) never occludes the
-   last row of ANY page — game cards, the 21+ / 1-800-GAMBLER line, etc.
-   (The old in-component "spacer" was position:fixed and reserved nothing.)
-   60px bar + 8px breathing room (4/8pt rhythm) + home-indicator inset. */
-body.mobile-owner-tabs-active {
-  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+/* Viewport-sticky page headers (Tailwind `sticky top-0` on <header> — splits,
+   tracker, model-results, account) re-anchor below the floating
+   nav instead of sliding underneath it. Scoped to <header> so stickies inside
+   overflow containers (e.g. table header rows) are untouched. */
+body.dime-floating-nav-active header.sticky.top-0 {
+  top: var(--dime-floating-nav-h, 112px);
 }
 
 /* ── Scrollbar styling ────────────────────────────────────────────────────── */
@@ -355,58 +462,11 @@ body.mobile-owner-tabs-active {
 ::-webkit-scrollbar-thumb { background: var(--foreground); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--foreground); }
 
-/* ── Fix #9: MLB sub-tab scroll-snap ─────────────────────────────────────── */
-.feed-tabs-scroll::-webkit-scrollbar { display: none; }
-.feed-tabs-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-.feed-tab { scroll-snap-align: start; flex-shrink: 0; }
+/* (Removed 2026-07-31, audit DIME-UI-026/-041: the `.feed-tab` /
+   `.feed-tabs-scroll` block and its three !important breakpoint tiers styled a
+   class no component renders — the legacy query-tab feed page was unrouted in
+   the 2026-07-11 navigation reconstruction.) */
 
-/* ── md: (768px+) tab bar scaling ─────────────────────────────────────────────────────────────────────────────────
- * Scale up tab buttons at tablet width to match the larger sport pill aesthetic.
- * Overrides the inline style padding/font-size with !important to win specificity.
- * padding: 10px 20px (vs 7px 12px mobile — wider horizontal padding for 15px text)
- * font-size: 15px (vs 13px mobile — bumped for full header row typographic consistency)
- *   Math: 6 MLB tabs @ 15px + 20px padding = 640px total ≤ 768px viewport (128px spare)
- *   Scroll mechanism handles any overflow if tab count grows beyond 6.
- * letter-spacing: 0.07em (vs 0.06em mobile — slightly wider for readability)
- * ───────────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 768px) {
-  .feed-tab {
-    padding: 10px 20px !important;
-    font-size: 15px !important;
-    letter-spacing: 0.07em !important;
-  }
-}
-
-/* ── lg: (1024px+) tab bar scaling ────────────────────────────────────────────────────────────────────────────────
- * Complete the mobile→tablet→desktop typographic progression for the feed tab bar.
- * padding: 11px 22px (vs 10px 20px at 768px — wider for 17px text)
- * font-size: 17px (vs 15px at 768px — full desktop scale)
- *   Math: 6 MLB tabs @ 17px Barlow Condensed + 22px h-padding = 718px ≤ 1024px viewport (306px spare)
- *   Scroll mechanism handles any overflow if tab count grows beyond 6.
- * letter-spacing: 0.08em (vs 0.07em at 768px — slightly wider for 17px readability)
- * ───────────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 1024px) {
-  .feed-tab {
-    padding: 11px 22px !important;
-    font-size: 17px !important;
-    letter-spacing: 0.08em !important;
-  }
-}
-/* ── xl: (1280px+) tab bar scaling ────────────────────────────────────────────────────────────────────────────────
- * Complete the 4-tier typographic progression: mobile 13 → tablet 15 → desktop 17 → wide 18.
- * padding: 12px 24px (vs 11px 22px at 1024px — slightly wider for 18px text)
- * font-size: 18px (vs 17px at 1024px — final step in the scale)
- *   Math: 6 MLB tabs @ 18px Barlow Condensed + 24px h-padding = 721px ≤ 1280px viewport (559px spare)
- *   Scroll mechanism handles any overflow if tab count grows beyond 6.
- * letter-spacing: 0.09em (vs 0.08em at 1024px — slightly wider for 18px readability)
- * ───────────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 1280px) {
-  .feed-tab {
-    padding: 12px 24px !important;
-    font-size: 18px !important;
-    letter-spacing: 0.09em !important;
-  }
-}
 /* Hide scrollbar but keep scrollability */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */

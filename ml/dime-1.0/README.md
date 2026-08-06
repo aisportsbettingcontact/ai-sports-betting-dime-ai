@@ -1,228 +1,370 @@
-# Dime 1.0 — training, quantization, and serving runbook
+# Dime 1.0 — governed Llama 3.1 post-training foundation
 
-Dime 1.0 is the self-hosted model behind Dime Chat's `"dime1"` provider: a QLoRA
-fine-tune of `meta-llama/Meta-Llama-3-8B-Instruct`, quantized to 4-bit AWQ, served
-by vLLM behind a **private RunPod Serverless endpoint**.
+`ml/dime-1.0/` is the canonical reviewed development avenue for Dime AI model
+post-training and evaluation.
 
-- **Product alias:** `Dime 1.0` (what the platform and served model name use)
-- **Artifact name:** `Llama-3-Dime-1.0` — the Meta Llama 3 license requires
-  derivative model names to begin with "Llama 3" (see [License compliance](#license-compliance))
-- **Profile version:** `1.0.0` (`server/_core/dime1Model.ts`)
+This is not pretraining a model from scratch. It is a governed QLoRA/SFT
+post-training foundation built from a pinned pretrained Llama 3.1 8B Base
+checkpoint.
 
-## v1 role (deliberately narrow)
+## Frozen foundation
 
-1. Sports-betting-only analysis and explanation
-2. Retrieval-grounded answers from Dime's live database context
-3. Odds, projections, splits, and line-movement interpretation
-4. Routing, extraction, classification, tagging, and summarization
-5. Strict refusal to invent missing data
+| Contract                             | Value                                      |
+| ------------------------------------ | ------------------------------------------ |
+| Parent model                         | `meta-llama/Llama-3.1-8B`                  |
+| Parent revision                      | `d04e592bb4f6aa9cfee91e2e20afa771667e1d4b` |
+| Model type                           | Llama 3.1 8B Base, not Instruct            |
+| Development method                   | QLoRA/SFT post-training and evaluation     |
+| Private candidate workbench          | `taileredsports/dime-foundation-workbench` |
+| Approved-training dataset repository | `taileredsports/dime-foundation-sft`       |
+| Development-evaluation repository    | `taileredsports/dime-eval-development`     |
+| Locked-evaluation repository         | `taileredsports/dime-eval-locked`          |
+| Promoted-adapter repository          | `taileredsports/Llama-3-Dime-1.0`          |
+| Initial verified GPU                 | RTX 4090 24 GB                             |
+| Training quantization                | NF4 4-bit with double quantization         |
+| Compute dtype                        | BF16                                       |
+| Artifact name                        | `Llama-3-Dime-1.0`                         |
 
-Non-goals for v1: web browsing, tool use, general chat, code, long-form content.
+A Base checkpoint does not provide the instruction following, chat behavior,
+tool grammar, grounded answers, abstention, or safety required by Dime. Those
+behaviors must be taught and evaluated explicitly.
 
-## Architecture
+## Current status: foundation only
 
-Railway hosts Dime AI. RunPod hosts the Dime 1.0 GPU model. Do not run the model
-on Railway, and do not move the backend off Railway.
+The application chat provider is pinned to `"anthropic"` (`DIME_CHAT_LLM_PROVIDER`
+in `server/_core/dimeChatModel.ts`, owner decision 2026-08-04; changing it requires
+an explicit owner-authorized code change enforced by
+`server/dimeChatProviderFreeze.test.ts`). This project does not
+authorize a model call, deployment, or production change.
 
-```
-Dime AI frontend
-        ↓
-Railway backend            ← control plane (this repo)
-  auth · entitlement · rate limits · sports/projection/splits retrieval
-  prompt construction · deterministic calculations · response validation · logging
-        ↓
-Private RunPod endpoint    ← execution plane
-  Dime 1.0 · vLLM · 4-bit AWQ · OpenAI-compatible API
-        ↓
-Validated response returned through Railway
-```
-
-| Component | Host |
-|---|---|
-| Dime website / backend API / database / data pipelines | Railway |
-| Retrieval and prompt construction | Railway |
-| Dime 1.0 inference | RunPod Serverless (load-balancing endpoint) |
-| QLoRA training | Temporary RunPod Pod (terminated after artifacts are saved) |
-| Model artifacts | Private Hugging Face repository |
-| Serving engine | vLLM |
-| Production GPU | 24 GB class (L4 / A5000 / 3090) — **not** an H100 |
-
-Server wiring in this repo: `server/_core/dime1Client.ts` (transport),
-`dime1Model.ts` (profile + system prompt), `dime1ChatHandler.ts` (chat branch),
-`dime1Tasks.ts` (utility scopes), registered in `server/dime-chat.route.ts`
-behind `DIME_CHAT_LLM_PROVIDER` in `server/_core/dimeChatModel.ts`.
-
-## Environment variables
-
-Railway backend (runtime):
-
-| Variable | Purpose |
-|---|---|
-| `RUNPOD_ENDPOINT_ID` | Derives `https://api.runpod.ai/v2/<id>/openai/v1` |
-| `DIME_MODEL_API_SECRET` | Bearer token for the private endpoint (wins over the API key) |
-| `RUNPOD_API_KEY` | RunPod account key (fallback bearer; also used by tooling) |
-| `DIME_MODEL_VERSION` | Served model name pin, e.g. `dime-1.0-v1.0.0` (falls back to `dime-1.0`) |
-| `DIME_MODEL_BASE_URL` | Optional explicit OpenAI-compatible base URL incl. `/v1` (local dev override) |
-| `DIME_MODEL_TIMEOUT_MS` | Optional request timeout (default 60000) |
-
-Training / artifact side: `HF_TOKEN` (gated Llama 3 access + private repo pushes).
-Never commit any of these; never bake them into images.
-
-## Hugging Face private repo layout
-
-One private repo, e.g. `aisportsbetting/Llama-3-Dime-1.0`:
-
-```
-adapter/          QLoRA adapter (LoRA weights + adapter_config.json)
-merged/           fp16 merged checkpoint
-awq/              4-bit AWQ production checkpoint  ← what RunPod serves
-eval/             eval reports per version
-MANIFEST.json     version manifest: base model, data hash, training args, eval scores
-README.md         model card ("Built with Meta Llama 3", intended use, limits)
-```
-
-Tag every push with the `DIME_MODEL_VERSION` string. RunPod caches HF models
-(including gated ones) across worker restarts — prefer HF-cached loading over
-baking weights into the Docker image.
-
-## Pipeline
-
-### 0. License + access (once)
-
-Accept the Meta Llama 3 license on the gated `meta-llama/Meta-Llama-3-8B-Instruct`
-repo with the HF account that owns `HF_TOKEN`.
-
-### 1. Create the training Pod (temporary)
-
-| GPU | VRAM | ~$/hr | Use |
-|---|---|---|---|
-| RTX A6000 | 48 GB | $0.49 | **Default QLoRA training** |
-| L40S | 48 GB | $0.99 | Faster training, newer hardware |
-| A100 PCIe | 80 GB | $1.39 | Large runs, rapid experimentation |
-
-PyTorch template, ≥100 GB volume. The Pod exists only for the run and is
-**terminated after** the adapter, merged checkpoint, quantized artifact, eval
-report, and training metadata are saved to HF.
+Validate the non-authorizing Foundation, evaluation-identity, and model-execution
+control plane with:
 
 ```bash
-git clone <this repo> && cd ai-sports-betting-dime-ai/ml/dime-1.0
-pip install -r requirements.txt
-export HF_TOKEN=...
+.venv/bin/python scripts/validate_foundation_control.py
+.venv/bin/python scripts/validate_foundation_data_factory.py
 ```
 
-### 2. Prepare data
+- No production-trained Dime checkpoint exists.
+- No production release evaluation has passed.
+- No verified merged model exists.
+- No verified AWQ serving artifact exists.
+- No production vLLM endpoint exists.
+- No provider activation is approved.
 
-See `data/README.md` for the schema (chat-format JSONL) and required category
-mix — grounded analysis, missing-data refusals, off-topic refusals, utility
-tasks, responsible gambling, injection resistance. `data/sample.train.jsonl`
-shows the exact shape. Real training data is built from platform exports and
-**never committed** to this repo.
+The four private Hugging Face release repositories currently contain
+governance cards only. No approved foundation dataset, development-evaluation
+release, locked-evaluation release, or serving-approved adapter has been
+published. Their current card commits are registry evidence, not training,
+evaluation, or serving revisions. The separate private Foundation candidate
+workbench now exists at governance commit
+`ace82f0ccef7313b39f66ecbd46cfb3784999dcd`; it contains only
+`.gitattributes` and `README.md`. Candidate-data admission remains blocked
+until its least-privilege credential and identity controls pass live
+verification.
 
-`data/build_dataset.py` generates the full dataset from real `games` rows
-(`--games export.json` or `--from-db` with `DATABASE_URL`), enforcing the mix,
-mirroring production context formatting, and computing grounded answers
-deterministically — see the usage section in `data/README.md`.
+`configs/curriculum_v1.yaml` remains a proposed curriculum. The tracked
+Foundation v1 candidate, review, audit, and freeze contracts make a future
+dataset reviewable; they do not create an approved dataset, publish anything
+to Hugging Face, authorize training, change serving, or activate the provider.
 
-### 3. Train (QLoRA, 4-bit NF4)
+The AWS signing control plane for the two Foundation AI reviewer runtimes is
+deployed in `us-west-2` as stack `dime-foundation-reviewer-signers` and remains
+in fail-closed `LOCKED` mode. Its reviewer profile hashes are unpopulated and
+signing is unavailable. No RunPod reviewer endpoint, active reviewer
+authority, or reviewer GPU execution is authorized by this repository state.
+The sanitized external-state observation is recorded in
+`evidence/foundation/production_entry_state_2026-07-28.json`.
+
+The small 2026-07-25 rehearsal proved only that selected infrastructure
+mechanics execute. It used 8 training and 4 validation records, scored 3 of 10
+expected evaluation cases, passed zero cases, retained critical failures, and
+set `release_gate_pass` to `false`.
+
+## Ownership
+
+GitHub `main` is the canonical reviewed source for code, prompts, templates,
+tool contracts, schemas, synthetic public fixtures, configurations, tests,
+documentation, sanitized evidence, and release gates. Branches and pull
+requests are review-visible draft work.
+
+The production-safe product-capability catalog is canonical at
+`shared/dime/platform_knowledge_v1.json` so Railway includes the same bytes
+that model-development evaluation loads. Its deterministic SHA-256 is written
+into runtime prompts and Trace events.
+
+The tool-contract identity covers the request and market catalogs, both
+governing schemas, the response registry and envelope, and all seven data
+schemas. Stored nonempty results are validated against their originating call
+arguments plus executable scope, freshness, numeric, and temporal rules.
+
+Approved data and model artifacts are separated across four private Hugging
+Face repositories. The model repository is adapter-only: it must never receive
+Meta base weights, merged full-model weights, quantized full-model weights, or
+training checkpoints. RunPod provides temporary compute and a persistent
+working volume, but it is never the only authoritative location for an
+important artifact. Locked evaluations must never enter the training
+environment.
+
+See:
+
+- [Composite LLM engineering control](docs/COMPOSITE_ENGINEERING_CONTROL.md)
+- [Tool and canonical market contracts](docs/TOOL_AND_MARKET_CONTRACTS.md)
+- [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
+- [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
+- [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Foundation Data Factory governance v1](docs/FOUNDATION_DATA_FACTORY_GOVERNANCE_V1.md)
+- [Foundation AI-agent decision receipts](docs/FOUNDATION_AI_DECISION_RECEIPTS.md)
+- [Foundation AI reviewer provisioning](docs/FOUNDATION_AI_REVIEWER_PROVISIONING.md)
+- [Foundation AI reviewer runtime](docs/FOUNDATION_AI_REVIEWER_RUNTIME.md)
+- [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
+- [Candidate-to-locked-evaluator handoff](docs/CANDIDATE_EVALUATION_HANDOFF.md)
+- [Public data boundary](data/README.md)
+
+## Repository map
+
+```text
+ml/dime-1.0/
+├── configs/                 # Runtime identity and guarded training configs
+├── data/                    # Synthetic public samples and private-workflow templates
+├── docs/                    # Governance, plans, research, and release gates
+├── evidence/                # Reviewed sanitized audits and rehearsal evidence
+├── infrastructure/          # Non-authorizing, deployable cloud control planes
+├── prompts/                 # Versioned training prompt and chat template
+├── schemas/                 # Dataset, evaluation, and tool contracts
+├── scripts/                 # CPU validation plus explicitly gated GPU utilities
+├── src/dime_ai/             # Validation, formatting, math, and audit code
+├── tests/                   # Static and deterministic CPU tests
+└── tools/                   # Versioned read-only tool catalog
+```
+
+Generated artifacts, caches, raw/private/hidden data, weights, checkpoints,
+merged or quantized models, and packaging archives are ignored. Reviewed
+evidence lives under `evidence/`, separate from generated `artifacts/`.
+
+## Dependency contracts
+
+`pyproject.toml` and `uv.lock` are the canonical CPU development and test
+dependency contract. From this directory:
 
 ```bash
-python train_qlora.py \
-  --data /workspace/data/train.jsonl \
-  --eval-data /workspace/data/val.jsonl \
-  --out /workspace/out/adapter
+uv sync --frozen --dev
+uv lock --check
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest -q
 ```
 
-Defaults: LoRA r=32 α=32 dropout=0.05 on all attention+MLP projections, NF4
-double-quant base, bf16 compute, lr 2e-4 cosine, 2 epochs, seq len 4096.
-~10–14 GB VRAM — fits the A6000 with headroom.
+`requirements.lock.txt` is a pinned environment freeze scoped to the documented
+RunPod image. It is not a standalone cross-platform lock: PyTorch is supplied
+by that image and verified separately by `scripts/verify_runtime.py`.
 
-### 4. Merge and quantize (AWQ 4-bit for vLLM)
+## CPU-local validation
+
+CPU validation is secretless, offline with respect to Hugging Face, and does
+not download a model or tokenizer:
 
 ```bash
-python merge_adapter.py --adapter /workspace/out/adapter --out /workspace/out/merged
-python quantize_awq.py  --model  /workspace/out/merged  --out /workspace/out/awq
+uv sync --frozen --dev
+uv lock --check
+uv run ruff check .
+uv run pytest -q
+uv run python -m compileall -q src scripts infrastructure
+uv run python scripts/validate_data.py
+uv run python scripts/audit_platform_knowledge.py
+uv run python scripts/prepare_reviewer_runtime.py --check
+uv run python scripts/validate_reviewer_signer_iac.py
+
+audit_dir="$(mktemp -d)"
+uv run python scripts/audit_curriculum.py \
+  --report "${audit_dir}/curriculum-audit.json"
+uv run python scripts/audit_evaluation_program.py \
+  --report "${audit_dir}/evaluation-program-audit.json"
+cmp "${audit_dir}/curriculum-audit.json" \
+  evidence/audits/starter-v1.2.0/curriculum-audit.json
+cmp "${audit_dir}/evaluation-program-audit.json" \
+  evidence/audits/starter-v1.2.0/evaluation-program-audit.json
+uv pip check
 ```
 
-AWQ (w4, group 128, GEMM) is the production format — vLLM loads it directly
-with `--quantization awq`. (GPTQ or BitsAndBytes also work with vLLM if ever
-needed; GGUF is for llama.cpp, not vLLM.)
+The starter audits intentionally report that production quotas are not met.
+Validation checks their deterministic integrity and non-release labeling; it
+does not convert those truthful failures into release passes.
 
-### 5. Evaluate — gates for unfreezing
+## RunPod GPU validation
+
+GPU validation begins from a clone or synchronized checkout of this GitHub
+repository:
 
 ```bash
-# serve the AWQ checkpoint locally on the pod first (serve/local-vllm.sh), then:
-python eval/eval_grounding.py \
-  --endpoint http://127.0.0.1:8000/v1 --model dime-1.0 \
-  --cases eval/sample.eval.jsonl --out /workspace/out/eval-report.json
+git clone https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai.git
+cd ai-sports-betting-dime-ai/ml/dime-1.0
+bash scripts/bootstrap_env.sh
+source /opt/dime-venv/bin/activate
 ```
 
-Hard gates (script exits non-zero below thresholds):
-- Missing-data refusal recall ≥ 0.95 (never answers with invented lines)
-- Zero prohibited-certainty hits ("lock", "guaranteed", "risk-free", …)
-- Off-topic refusal recall ≥ 0.95
-- Grounded-answer accuracy ≥ 0.90 on must-contain checks
+`scripts/bootstrap_env.sh` derives the project root from its own location.
+`DIME_PROJECT_DIR` remains an optional explicit override for controlled
+environments.
 
-### 6. Push artifacts, terminate the Pod
+Training uses the fine-grained, read-only `dime-training-read-v1` Hugging Face
+credential supplied through the compute platform. It can read the approved
+foundation dataset, development evaluations, promoted-adapter repository, and
+gated Meta base model; it cannot read locked evaluations and cannot publish.
+Publishing and serving use separate least-privilege credentials. Never paste,
+print, read back, copy, or commit any credential.
 
-```bash
-huggingface-cli upload aisportsbetting/Llama-3-Dime-1.0 /workspace/out/adapter adapter --private
-huggingface-cli upload aisportsbetting/Llama-3-Dime-1.0 /workspace/out/merged  merged  --private
-huggingface-cli upload aisportsbetting/Llama-3-Dime-1.0 /workspace/out/awq     awq     --private
-huggingface-cli upload aisportsbetting/Llama-3-Dime-1.0 /workspace/out/eval-report.json eval/v1.0.0.json --private
-```
+The Foundation candidate auditor and freezer are CPU-safe, but their
+development-evaluation provenance gate is an authenticated remote operation.
+Both require an explicit nonempty `HF_TOKEN` and identity schema
+`dime-foundation-development-eval-identity-v2`. The verifier resolves
+`taileredsports/dime-eval-development` at the identity's exact lowercase
+40-character commit SHA, proves the repository is private, requires its root
+`README.md` and `evaluation_manifest.json`, enumerates the complete recursive
+`cases/**/*.jsonl` inventory, and byte-compares every declared manifest and
+case file with the local working copy. A missing token, inaccessible remote,
+moving alias, public repository, partial inventory, hash/count mismatch, or
+byte mismatch fails closed. There is no local-only or cached-evidence fallback.
 
-Update `MANIFEST.json`, then **terminate the Pod**.
+The following validations are Hugging-Face- or GPU-gated and are intentionally
+excluded from public CPU CI:
 
-### 7. Deploy the RunPod Serverless endpoint
+- `scripts/verify_runtime.py`
+- `scripts/model_smoke_test.py`
+- `scripts/template_contract_test.py`
+- `scripts/baseline_generate.py`
+- `scripts/train_qlora.py`
+- `scripts/adapter_smoke_test.py`
+- `scripts/publish_adapter.py`
 
-RunPod Console → Serverless → New Endpoint → vLLM worker:
+`template_contract_test.py` loads the gated tokenizer to verify exact tokenizer
+behavior. Static chat-template invariants are covered separately by the CPU
+test suite without downloading the gated tokenizer or model.
 
-- **Endpoint type:** Load balancing (low-latency real-time API)
-- **GPU:** 24 GB class (L4 / A5000 / 3090) — ~$0.69/hr active; 4090 Pro tier
-  ~$1.10/hr if latency demands it. A 4-bit 8B model is ~4 GB of weights; 24 GB
-  is the production minimum for KV cache, batching, and long prompts. **No H100.**
-- **GPUs per worker:** 1
-- Model: `aisportsbetting/Llama-3-Dime-1.0` (subfolder `awq`), `HF_TOKEN` set
-- vLLM env: `QUANTIZATION=awq`, `SERVED_MODEL_NAME=dime-1.0` (must match
-  `DIME_MODEL_VERSION` if pinned), `MAX_MODEL_LEN=8192`,
-  `GPU_MEMORY_UTILIZATION=0.90`, API key = `DIME_MODEL_API_SECRET`
+## QLoRA rehearsal
 
-Worker settings:
+The tracked rehearsal configuration is a tiny infrastructure diagnostic. It
+may verify tokenization, assistant-only labels, NF4 double quantization,
+checkpoint writing, and adapter reload on an approved GPU. It is not full
+training and cannot establish model quality.
 
-| Phase | Active workers | Max workers | Idle timeout |
-|---|---|---|---|
-| Internal testing | 0 (scale-to-zero; cold starts expected) | 1 | 5–15 s |
-| Paid beta | 1 (~$0.69 × 730h ≈ **$503.70/mo**) | 3 | default |
+The reviewed, non-weight 2026-07-25 evidence is under
+`evidence/rehearsals/2026-07-25/`. The rehearsal adapter is rejected for release
+and must not be used as a production starting checkpoint.
 
-Flex workers cost nothing while idle and absorb bursts; the active worker
-carries baseline traffic. Access is private: Railway is the only caller,
-authenticated with the bearer secret.
+## Full training
 
-### 8. Wire Railway and unfreeze
+No full run is authorized until:
 
-1. Set the Railway env vars from the table above.
-2. Smoke the endpoint from a Railway shell:
-   `curl -s $BASE/chat/completions -H "Authorization: Bearer $DIME_MODEL_API_SECRET" -d '{"model":"dime-1.0","messages":[{"role":"user","content":"ping"}],"max_tokens":8}'`
-3. Flip `DIME_CHAT_LLM_PROVIDER` to `"dime1"` in `server/_core/dimeChatModel.ts`.
-   This is a deliberate code change (not an env var) and requires updating the
-   provider-freeze contract test expectations in the same PR.
-4. Do this only after the step-5 eval gates pass on the deployed checkpoint.
+1. every record passes provenance, public/private placement, privacy, rights,
+   consent, and quality review;
+2. train, validation, locked, hidden, and adversarial partitions are governed;
+3. partition, future-data, semantic-deduplication, and contamination audits
+   pass;
+4. deterministic tool, math, policy, and safety contracts pass, including
+   successful tool-result evidence for every assistant numeric token across
+   every task family and independent recomputation of market-math results;
+5. the private Foundation snapshot has the exact five-file inventory, all
+   hashes and record counts match an approved v4 manifest, and its independent
+   review and audit evidence is bound into authorization; and
+6. the release gates in [RELEASE_GATES.md](docs/RELEASE_GATES.md) are adopted.
 
-## License compliance
+The sample audits are intentionally non-passing against production quotas.
+Strict full-training commands must fail closed when governed metadata or quota
+evidence is missing.
 
-Meta Llama 3 Community License:
-- Derivative model names must begin with "Llama 3" → the artifact is
-  **`Llama-3-Dime-1.0`**. "Dime 1.0" is the product/service alias only.
-- Include "Built with Meta Llama 3" attribution on the model card and any
-  public surface that names the underlying model.
-- Redistribute the license and Acceptable Use Policy with any weight sharing
-  (the private HF repo counts — keep them in the repo).
-- Weights are gated: every environment that pulls them needs an HF token whose
-  account accepted the license.
+The tracked full-run file is a template, not an authorization. The current
+platform contract sets `authorization.full_training` to `false`, so the
+training entrypoint rejects it even if every placeholder is filled. A later
+candidate-specific authorization pull request must move the platform to
+`training_authorized` and populate `authorization.training_candidate` with
+the exact experiment, prior clean source commit, config hash, foundation
+dataset-manifest and checksum-manifest hashes, preflight run-manifest hash,
+full 40-character foundation and development-evaluation revisions, and the
+approved locked-evaluation full revision or structured opaque reference.
+It must also include `foundation_evidence_hashes`, matching the approved v4
+manifest exactly:
 
-## Local development
+- the system-prompt, Foundation build-config, source-registry, exact
+  source-artifact aggregate, review-ledger, candidate-audit, and
+  approval-record SHA-256 values; and
+- the independently reviewed semantic-deduplication,
+  privacy-and-identifiers, rights, development-evaluation-contamination,
+  locked-evaluation-contamination, and numeric-traceability report SHA-256
+  values.
 
-No GPU on Railway or laptops? Run the AWQ checkpoint on any CUDA box with
-`serve/local-vllm.sh`, then point the backend at it with
-`DIME_MODEL_BASE_URL=http://127.0.0.1:8000/v1`. The backend behaves identically —
-the client resolves an explicit base URL before the RunPod-derived one.
+A dataset revision, manifest hash, or passing local audit alone is not
+training authorization.
+
+Authorization uses two reviewed commits to avoid a circular hash:
+
+1. source commit `S` contains all executable code, schemas, templates, and the
+   completed training config;
+2. the preflight `run_manifest.json` is built from `S` and the approved
+   immutable inputs in the isolated experiment directory;
+3. authorization commit `A` follows `S`, binds that manifest's hash, and
+   changes only `ml/dime-1.0/configs/platform_contract.json` across the entire
+   repository;
+4. training runs from a clean checkout of `A`, verifies that `S` is its
+   ancestor, and verifies every candidate field and content hash.
+
+Training output is always labeled
+`completed_unreviewed`; only a separate human review may advance that exact
+candidate to `approved_for_release_review`.
+
+Publication has a second candidate-bound gate:
+`authorization.release_candidate` must match the exact training-contract,
+adapter, config, manifest, sanitized evaluation-summary, canonical bundle
+payload, locked-suite manifest and expected-case count, immutable comparison
+control kind/repository/revision/artifact, paired comparison report, quality
+slice report, and destination parent hashes. A later release must retain and
+beat or tie the current promoted champion; only the inaugural release may use
+the pinned Meta base control. The publisher loads only the canonical contract
+from a clean reviewed Git checkout; no caller-supplied contract can override
+it.
+
+## Model publishing
+
+No upload is performed by this project automatically. A later,
+owner-authorized release must satisfy the license checklist, model-card,
+evaluation, attestation, and artifact-hash gates before the separate
+`dime-release-publisher-v1` credential publishes an allowlisted adapter release
+to `taileredsports/Llama-3-Dime-1.0`.
+
+Training remains read-only. Publishing and serving remain separate from
+training and from each other. The publisher must never create a repository,
+change visibility, or upload a whole workspace.
+
+## Future serving and promotion
+
+`server/_core/dime1Model.ts` remains a frozen runtime integration scaffold.
+`prompts/dime_system_v1.md` is the versioned training behavior contract,
+`prompts/llama3_dime_chat_template_v1.jinja` is the chat-template contract, and
+`tools/tools.v1.json` is the tool catalog.
+
+The runtime and training prompts are not claimed to be identical. A later
+promotion pull request must reconcile and hash the approved runtime prompt
+against the canonical training prompt, prove every release gate, preserve
+application policy controls, and explicitly change the provider constant.
+
+## Required reading
+
+- [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
+- [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
+- [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
+- [Machine-readable platform contract](configs/platform_contract.json)
+- [Data governance](docs/DATA_GOVERNANCE.md)
+- [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Dime answer rubric v1](docs/DIME_ANSWER_RUBRIC_V1.md)
+- [Sol-target capability benchmark](docs/DIME_SOL_TARGET_CAPABILITY_BENCHMARK_V1.md)
+- [System architecture](docs/DIME_V1_SYSTEM_ARCHITECTURE.md)
+- [Curriculum and evaluation](docs/DIME_V1_CURRICULUM_AND_EVALUATION.md)
+- [Release gates](docs/RELEASE_GATES.md)
+- [Training roadmap](docs/TRAINING_ROADMAP.md)
+- [Llama license checklist](docs/LLAMA_LICENSE_CHECKLIST.md)
+- [Sanitized evidence index](evidence/README.md)
+- [Infrastructure setup evidence](evidence/infrastructure/2026-07-26/README.md)
+- [Rehearsal evidence](evidence/rehearsals/2026-07-25/README.md)
+
+The included `LICENSE` and `NOTICE` remain unchanged. The parent weights remain
+governed by the applicable Meta Llama 3.1 terms and are not redistributed here.

@@ -19,6 +19,11 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { ownerProcedure, appUserProcedure } from "./appUsers";
 import {
+  listRecalibrationProposals,
+  decideRecalibration,
+  buildApprovalRequest,
+} from "../mlbRecalibrationGate";
+import {
   getLast5ForMatchup,
   getFullScheduleForTeam,
   getMlbSituationalStats,
@@ -30,7 +35,11 @@ import {
 } from "../mlbScheduleHistoryService";
 import { runMlbNightlyTrendsRefresh } from "../mlbNightlyTrendsRefresh";
 import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
-import { checkF5ShareDrift, triggerRecalibration } from "../mlbDriftDetector";
+import {
+  checkF5ShareDrift,
+  triggerRecalibration,
+  migrateCalibrationConstants,
+} from "../mlbDriftDetector";
 import { getDb } from "../db";
 import { games as gamesTable, type Game } from "../../drizzle/schema";
 import { and, eq, isNotNull, asc, desc, sql } from "drizzle-orm";
@@ -44,7 +53,10 @@ const zodAnSlug = z
   .string()
   .min(2)
   .max(64)
-  .regex(/^[a-z0-9-]+$/, "Invalid team slug — must be lowercase letters, digits, and hyphens only");
+  .regex(
+    /^[a-z0-9-]+$/,
+    "Invalid team slug — must be lowercase letters, digits, and hyphens only"
+  );
 
 /** YYYYMMDD date string for the AN API */
 const zodAnDate = z
@@ -70,7 +82,7 @@ export const mlbScheduleRouter = router({
     .query(async ({ input, ctx }) => {
       console.log(
         `${TAG}[getLast5ForMatchup] AUTHED userId=${ctx.appUser.id} Fetching Last 5 for matchup:` +
-        ` away="${input.awaySlug}" vs home="${input.homeSlug}"`
+          ` away="${input.awaySlug}" vs home="${input.homeSlug}"`
       );
 
       try {
@@ -81,7 +93,7 @@ export const mlbScheduleRouter = router({
 
         console.log(
           `${TAG}[getLast5ForMatchup] Returning` +
-          ` away=${awayLast5.length} games, home=${homeLast5.length} games`
+            ` away=${awayLast5.length} games, home=${homeLast5.length} games`
         );
 
         return { awayLast5, homeLast5 };
@@ -148,7 +160,7 @@ export const mlbScheduleRouter = router({
         const stats = await getMlbSituationalStats(input.teamSlug);
         console.log(
           `${TAG}[getSituationalStats] Returning stats for team="${input.teamSlug}"` +
-          ` gamesAnalyzed=${stats.gamesAnalyzed}`
+            ` gamesAnalyzed=${stats.gamesAnalyzed}`
         );
         return stats;
       } catch (err) {
@@ -179,10 +191,14 @@ export const mlbScheduleRouter = router({
         `${TAG}[getH2HGames] AUTHED userId=${ctx.appUser.id} Fetching H2H games: "${input.slugA}" vs "${input.slugB}" limit=${input.limit}`
       );
       try {
-        const games = await getMlbH2HGames(input.slugA, input.slugB, input.limit);
+        const games = await getMlbH2HGames(
+          input.slugA,
+          input.slugB,
+          input.limit
+        );
         console.log(
           `${TAG}[getH2HGames] Returning ${games.length} H2H games` +
-          ` between "${input.slugA}" and "${input.slugB}"`
+            ` between "${input.slugA}" and "${input.slugB}"`
         );
         return { games };
       } catch (err) {
@@ -215,8 +231,8 @@ export const mlbScheduleRouter = router({
 
         console.log(
           `${TAG}[refreshScheduleForDate] Complete:` +
-          ` fetched=${result.fetched} upserted=${result.upserted}` +
-          ` errors=${result.errors.length}`
+            ` fetched=${result.fetched} upserted=${result.upserted}` +
+            ` errors=${result.errors.length}`
         );
 
         return result;
@@ -251,14 +267,23 @@ export const mlbScheduleRouter = router({
       try {
         const results = await refreshMlbScheduleLastNDays(input.daysBack);
 
-        const totalFetched = results.reduce((s: number, r: MlbScheduleRefreshResult) => s + r.fetched, 0);
-        const totalUpserted = results.reduce((s: number, r: MlbScheduleRefreshResult) => s + r.upserted, 0);
-        const totalErrors = results.reduce((s: number, r: MlbScheduleRefreshResult) => s + r.errors.length, 0);
+        const totalFetched = results.reduce(
+          (s: number, r: MlbScheduleRefreshResult) => s + r.fetched,
+          0
+        );
+        const totalUpserted = results.reduce(
+          (s: number, r: MlbScheduleRefreshResult) => s + r.upserted,
+          0
+        );
+        const totalErrors = results.reduce(
+          (s: number, r: MlbScheduleRefreshResult) => s + r.errors.length,
+          0
+        );
 
         console.log(
           `${TAG}[backfillSchedule] Complete:` +
-          ` dates=${results.length} totalFetched=${totalFetched}` +
-          ` totalUpserted=${totalUpserted} totalErrors=${totalErrors}`
+            ` dates=${results.length} totalFetched=${totalFetched}` +
+            ` totalUpserted=${totalUpserted} totalErrors=${totalErrors}`
         );
 
         return { results, totalFetched, totalUpserted, totalErrors };
@@ -289,15 +314,21 @@ export const mlbScheduleRouter = router({
   fullHistoricalBackfill: ownerProcedure
     .input(
       z.object({
-        startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).default("2023-03-30"),
-        endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        startDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .default("2023-03-30"),
+        endDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
         delayMs: z.number().int().min(200).max(2000).default(400),
       })
     )
     .mutation(async ({ input }) => {
       console.log(
         `${TAG}[fullHistoricalBackfill] Full Phase 1 backfill triggered` +
-        ` | startDate=${input.startDate} endDate=${input.endDate ?? "today"} delayMs=${input.delayMs}`
+          ` | startDate=${input.startDate} endDate=${input.endDate ?? "today"} delayMs=${input.delayMs}`
       );
 
       try {
@@ -309,10 +340,10 @@ export const mlbScheduleRouter = router({
 
         console.log(
           `${TAG}[fullHistoricalBackfill] COMPLETE:` +
-          ` totalDates=${result.totalDates}` +
-          ` totalFetched=${result.totalFetched}` +
-          ` totalUpserted=${result.totalUpserted}` +
-          ` totalErrors=${result.totalErrors}`
+            ` totalDates=${result.totalDates}` +
+            ` totalFetched=${result.totalFetched}` +
+            ` totalUpserted=${result.totalUpserted}` +
+            ` totalErrors=${result.totalErrors}`
         );
 
         return {
@@ -346,14 +377,17 @@ export const mlbScheduleRouter = router({
   triggerNightlyTrendsRefresh: ownerProcedure
     .input(
       z.object({
-        targetDate: z.string().regex(/^\d{8}$/).optional(),
+        targetDate: z
+          .string()
+          .regex(/^\d{8}$/)
+          .optional(),
       })
     )
     .mutation(async ({ input }) => {
       const tag = `${TAG}[triggerNightlyTrendsRefresh]`;
       console.log(
         `${tag} Manual trigger invoked` +
-        ` | targetDate=${input.targetDate ?? "yesterday EST (default)"}`
+          ` | targetDate=${input.targetDate ?? "yesterday EST (default)"}`
       );
       try {
         await runMlbNightlyTrendsRefresh(input.targetDate);
@@ -387,15 +421,22 @@ export const mlbScheduleRouter = router({
     )
     .mutation(async ({ input }) => {
       const tag = `${TAG}[triggerOutcomeIngestion]`;
-      console.log(`${tag} Manual trigger: dateStr=${input.dateStr} force=${input.force}`);
+      console.log(
+        `${tag} Manual trigger: dateStr=${input.dateStr} force=${input.force}`
+      );
       try {
         const summary = await ingestMlbOutcomes(input.dateStr, input.force);
-        console.log(`${tag} COMPLETE: written=${summary.written} errors=${summary.errors}`);
+        console.log(
+          `${tag} COMPLETE: written=${summary.written} errors=${summary.errors}`
+        );
         return summary;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`${tag} ERROR: ${msg}`);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Outcome ingestion failed: ${msg}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Outcome ingestion failed: ${msg}`,
+        });
       }
     }),
 
@@ -414,15 +455,22 @@ export const mlbScheduleRouter = router({
     )
     .query(async ({ input }) => {
       const tag = `${TAG}[checkDrift]`;
-      console.log(`${tag} Manual drift check: triggerRecal=${input.triggerRecal}`);
+      console.log(
+        `${tag} Manual drift check: triggerRecal=${input.triggerRecal}`
+      );
       try {
         const result = await checkF5ShareDrift(input.triggerRecal);
-        console.log(`${tag} COMPLETE: driftDetected=${result.driftDetected} delta=${result.delta}`);
+        console.log(
+          `${tag} COMPLETE: driftDetected=${result.driftDetected} delta=${result.delta}`
+        );
         return result;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`${tag} ERROR: ${msg}`);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Drift check failed: ${msg}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Drift check failed: ${msg}`,
+        });
       }
     }),
 
@@ -449,28 +497,30 @@ export const mlbScheduleRouter = router({
     )
     .query(async ({ input }) => {
       const tag = `${TAG}[getBrierTrend]`;
-      console.log(`${tag} [INPUT] windowSize=${input.windowSize} sport=${input.sport}`);
+      console.log(
+        `${tag} [INPUT] windowSize=${input.windowSize} sport=${input.sport}`
+      );
       const db = await getDb();
 
       // ── Step 1: Fetch all outcome-ingested games with Brier scores, ordered chronologically
       const rows = await db
         .select({
-          id:                gamesTable.id,
-          gameDate:          gamesTable.gameDate,
-          awayTeam:          gamesTable.awayTeam,
-          homeTeam:          gamesTable.homeTeam,
-          brierFgMl:         gamesTable.brierFgMl,
-          brierF5Ml:         gamesTable.brierF5Ml,
-          brierNrfi:         gamesTable.brierNrfi,
-          brierFgTotal:      gamesTable.brierFgTotal,
-          brierF5Total:      gamesTable.brierF5Total,
+          id: gamesTable.id,
+          gameDate: gamesTable.gameDate,
+          awayTeam: gamesTable.awayTeam,
+          homeTeam: gamesTable.homeTeam,
+          brierFgMl: gamesTable.brierFgMl,
+          brierF5Ml: gamesTable.brierF5Ml,
+          brierNrfi: gamesTable.brierNrfi,
+          brierFgTotal: gamesTable.brierFgTotal,
+          brierF5Total: gamesTable.brierF5Total,
           outcomeIngestedAt: gamesTable.outcomeIngestedAt,
         })
         .from(gamesTable)
         .where(
           and(
             eq(gamesTable.sport, input.sport),
-            isNotNull(gamesTable.outcomeIngestedAt),
+            isNotNull(gamesTable.outcomeIngestedAt)
           )
         )
         .orderBy(asc(gamesTable.gameDate), asc(gamesTable.id));
@@ -481,53 +531,104 @@ export const mlbScheduleRouter = router({
         console.log(`${tag} [OUTPUT] No ingested games found`);
         return {
           games: [] as Array<{
-            gameIndex: number; gameDate: string; matchup: string;
-            brierFgMl: number | null; brierF5Ml: number | null; brierNrfi: number | null;
-            brierFgTotal: number | null; brierF5Total: number | null;
+            gameIndex: number;
+            gameDate: string;
+            matchup: string;
+            brierFgMl: number | null;
+            brierF5Ml: number | null;
+            brierNrfi: number | null;
+            brierFgTotal: number | null;
+            brierF5Total: number | null;
           }>,
           rolling: [] as Array<{
             gameIndex: number;
-            rollFgMl: number | null; rollF5Ml: number | null; rollNrfi: number | null;
-            rollFgTotal: number | null; rollF5Total: number | null;
+            rollFgMl: number | null;
+            rollF5Ml: number | null;
+            rollNrfi: number | null;
+            rollFgTotal: number | null;
+            rollF5Total: number | null;
           }>,
-          summary: { totalGames: 0, avgFgMl: null as number | null, avgF5Ml: null as number | null, avgNrfi: null as number | null, avgFgTotal: null as number | null, avgF5Total: null as number | null, windowSize: input.windowSize },
+          summary: {
+            totalGames: 0,
+            avgFgMl: null as number | null,
+            avgF5Ml: null as number | null,
+            avgNrfi: null as number | null,
+            avgFgTotal: null as number | null,
+            avgF5Total: null as number | null,
+            windowSize: input.windowSize,
+          },
         };
       }
 
       // ── Step 2: Build per-game array with sequential index
       type GamePoint = {
-        gameIndex: number; gameDate: string; matchup: string;
-        brierFgMl: number | null; brierF5Ml: number | null; brierNrfi: number | null;
-        brierFgTotal: number | null; brierF5Total: number | null;
+        gameIndex: number;
+        gameDate: string;
+        matchup: string;
+        brierFgMl: number | null;
+        brierF5Ml: number | null;
+        brierNrfi: number | null;
+        brierFgTotal: number | null;
+        brierF5Total: number | null;
       };
-      type BrierRow = Pick<Game, "id" | "gameDate" | "awayTeam" | "homeTeam" | "brierFgMl" | "brierF5Ml" | "brierNrfi" | "brierFgTotal" | "brierF5Total" | "outcomeIngestedAt">;
-      const gamePoints: GamePoint[] = (rows as BrierRow[]).map((r: BrierRow, i: number) => ({
-        gameIndex:    i + 1,
-        gameDate:     r.gameDate ?? "",
-        matchup:      `${r.awayTeam}@${r.homeTeam}`,
-        brierFgMl:    r.brierFgMl    !== null ? parseFloat(String(r.brierFgMl))    : null,
-        brierF5Ml:    r.brierF5Ml    !== null ? parseFloat(String(r.brierF5Ml))    : null,
-        brierNrfi:    r.brierNrfi    !== null ? parseFloat(String(r.brierNrfi))    : null,
-        brierFgTotal: r.brierFgTotal !== null ? parseFloat(String(r.brierFgTotal)) : null,
-        brierF5Total: r.brierF5Total !== null ? parseFloat(String(r.brierF5Total)) : null,
-      }));
+      type BrierRow = Pick<
+        Game,
+        | "id"
+        | "gameDate"
+        | "awayTeam"
+        | "homeTeam"
+        | "brierFgMl"
+        | "brierF5Ml"
+        | "brierNrfi"
+        | "brierFgTotal"
+        | "brierF5Total"
+        | "outcomeIngestedAt"
+      >;
+      const gamePoints: GamePoint[] = (rows as BrierRow[]).map(
+        (r: BrierRow, i: number) => ({
+          gameIndex: i + 1,
+          gameDate: r.gameDate ?? "",
+          matchup: `${r.awayTeam}@${r.homeTeam}`,
+          brierFgMl:
+            r.brierFgMl !== null ? parseFloat(String(r.brierFgMl)) : null,
+          brierF5Ml:
+            r.brierF5Ml !== null ? parseFloat(String(r.brierF5Ml)) : null,
+          brierNrfi:
+            r.brierNrfi !== null ? parseFloat(String(r.brierNrfi)) : null,
+          brierFgTotal:
+            r.brierFgTotal !== null ? parseFloat(String(r.brierFgTotal)) : null,
+          brierF5Total:
+            r.brierF5Total !== null ? parseFloat(String(r.brierF5Total)) : null,
+        })
+      );
 
       // ── Step 3: Compute rolling averages (window = last N games including current)
       const W = input.windowSize;
-      type BrierField = "brierFgMl" | "brierF5Ml" | "brierNrfi" | "brierFgTotal" | "brierF5Total";
+      type BrierField =
+        | "brierFgMl"
+        | "brierF5Ml"
+        | "brierNrfi"
+        | "brierFgTotal"
+        | "brierF5Total";
       const rolling = gamePoints.map((_: GamePoint, i: number) => {
         const window = gamePoints.slice(Math.max(0, i - W + 1), i + 1);
         const avg = (field: BrierField): number | null => {
-          const vals = window.map((g: GamePoint) => g[field]).filter((v: number | null): v is number => v !== null);
+          const vals = window
+            .map((g: GamePoint) => g[field])
+            .filter((v: number | null): v is number => v !== null);
           return vals.length > 0
-            ? parseFloat((vals.reduce((s: number, v: number) => s + v, 0) / vals.length).toFixed(6))
+            ? parseFloat(
+                (
+                  vals.reduce((s: number, v: number) => s + v, 0) / vals.length
+                ).toFixed(6)
+              )
             : null;
         };
         return {
-          gameIndex:   gamePoints[i].gameIndex,
-          rollFgMl:    avg("brierFgMl"),
-          rollF5Ml:    avg("brierF5Ml"),
-          rollNrfi:    avg("brierNrfi"),
+          gameIndex: gamePoints[i].gameIndex,
+          rollFgMl: avg("brierFgMl"),
+          rollF5Ml: avg("brierF5Ml"),
+          rollNrfi: avg("brierNrfi"),
           rollFgTotal: avg("brierFgTotal"),
           rollF5Total: avg("brierF5Total"),
         };
@@ -535,28 +636,34 @@ export const mlbScheduleRouter = router({
 
       // ── Step 4: All-time averages for summary cards
       const allAvg = (field: BrierField): number | null => {
-        const vals = gamePoints.map((g: GamePoint) => g[field]).filter((v: number | null): v is number => v !== null);
+        const vals = gamePoints
+          .map((g: GamePoint) => g[field])
+          .filter((v: number | null): v is number => v !== null);
         return vals.length > 0
-          ? parseFloat((vals.reduce((s: number, v: number) => s + v, 0) / vals.length).toFixed(6))
+          ? parseFloat(
+              (
+                vals.reduce((s: number, v: number) => s + v, 0) / vals.length
+              ).toFixed(6)
+            )
           : null;
       };
       const summary = {
-        totalGames:  gamePoints.length,
-        avgFgMl:     allAvg("brierFgMl"),
-        avgF5Ml:     allAvg("brierF5Ml"),
-        avgNrfi:     allAvg("brierNrfi"),
-        avgFgTotal:  allAvg("brierFgTotal"),
-        avgF5Total:  allAvg("brierF5Total"),
+        totalGames: gamePoints.length,
+        avgFgMl: allAvg("brierFgMl"),
+        avgF5Ml: allAvg("brierF5Ml"),
+        avgNrfi: allAvg("brierNrfi"),
+        avgFgTotal: allAvg("brierFgTotal"),
+        avgF5Total: allAvg("brierF5Total"),
         windowSize: W,
       };
 
       console.log(
         `${tag} [OUTPUT] games=${gamePoints.length} ` +
-        `avgFgMl=${summary.avgFgMl ?? "null"} ` +
-        `avgF5Ml=${summary.avgF5Ml ?? "null"} ` +
-        `avgNrfi=${summary.avgNrfi ?? "null"} ` +
-        `avgFgTotal=${summary.avgFgTotal ?? "null"} ` +
-        `avgF5Total=${summary.avgF5Total ?? "null"}`
+          `avgFgMl=${summary.avgFgMl ?? "null"} ` +
+          `avgF5Ml=${summary.avgF5Ml ?? "null"} ` +
+          `avgNrfi=${summary.avgNrfi ?? "null"} ` +
+          `avgFgTotal=${summary.avgFgTotal ?? "null"} ` +
+          `avgF5Total=${summary.avgF5Total ?? "null"}`
       );
       return { games: gamePoints, rolling, summary };
     }),
@@ -572,20 +679,30 @@ export const mlbScheduleRouter = router({
   triggerRecalibration: ownerProcedure
     .input(
       z.object({
-        reason: z.enum(["MANUAL", "SCHEDULED", "DRIFT_DETECTED"]).optional().default("MANUAL"),
+        reason: z
+          .enum(["MANUAL", "SCHEDULED", "DRIFT_DETECTED"])
+          .optional()
+          .default("MANUAL"),
       })
     )
     .mutation(async ({ input }) => {
       const tag = `${TAG}[triggerRecalibration]`;
-      console.log(`${tag} Manual recalibration trigger: reason=${input.reason}`);
+      console.log(
+        `${tag} Manual recalibration trigger: reason=${input.reason}`
+      );
       try {
         const result = await triggerRecalibration(input.reason);
-        console.log(`${tag} COMPLETE: success=${result.success} constantsPatched=${result.constantsPatched}`);
+        console.log(
+          `${tag} COMPLETE: success=${result.success} constantsPatched=${result.constantsPatched}`
+        );
         return result;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`${tag} ERROR: ${msg}`);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Recalibration failed: ${msg}` });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Recalibration failed: ${msg}`,
+        });
       }
     }),
 
@@ -613,10 +730,10 @@ export const mlbScheduleRouter = router({
       // Fetch all outcome-ingested games with Brier scores
       const rows = await db
         .select({
-          gameDate:     gamesTable.gameDate,
-          brierFgMl:    gamesTable.brierFgMl,
-          brierF5Ml:    gamesTable.brierF5Ml,
-          brierNrfi:    gamesTable.brierNrfi,
+          gameDate: gamesTable.gameDate,
+          brierFgMl: gamesTable.brierFgMl,
+          brierF5Ml: gamesTable.brierF5Ml,
+          brierNrfi: gamesTable.brierNrfi,
           brierFgTotal: gamesTable.brierFgTotal,
           brierF5Total: gamesTable.brierF5Total,
         })
@@ -624,7 +741,7 @@ export const mlbScheduleRouter = router({
         .where(
           and(
             eq(gamesTable.sport, input.sport),
-            isNotNull(gamesTable.outcomeIngestedAt),
+            isNotNull(gamesTable.outcomeIngestedAt)
           )
         )
         .orderBy(asc(gamesTable.gameDate), asc(gamesTable.id));
@@ -632,55 +749,61 @@ export const mlbScheduleRouter = router({
       console.log(`${tag} [STATE] total ingested rows: ${rows.length}`);
 
       // Group by date and compute per-market averages
-      type BrierRow = typeof rows[number];
+      type BrierRow = (typeof rows)[number];
       type DateRow = {
         date: string;
         games: number;
-        avgFgMl:    number | null;
-        avgF5Ml:    number | null;
-        avgNrfi:    number | null;
+        avgFgMl: number | null;
+        avgF5Ml: number | null;
+        avgNrfi: number | null;
         avgFgTotal: number | null;
         avgF5Total: number | null;
-        nullFgMl:    number;
-        nullF5Ml:    number;
-        nullNrfi:    number;
+        nullFgMl: number;
+        nullF5Ml: number;
+        nullNrfi: number;
         nullFgTotal: number;
         nullF5Total: number;
       };
 
       const dateMap = new Map<string, BrierRow[]>();
       for (const r of rows) {
-        const d = r.gameDate ?? 'unknown';
+        const d = r.gameDate ?? "unknown";
         if (!dateMap.has(d)) dateMap.set(d, []);
         dateMap.get(d)!.push(r);
       }
 
       const avg = (vals: (number | null | undefined)[]): number | null => {
-        const nums = vals.filter((v): v is number => v != null && !isNaN(v as number));
+        const nums = vals.filter(
+          (v): v is number => v != null && !isNaN(v as number)
+        );
         if (nums.length === 0) return null;
         return nums.reduce((s, v) => s + v, 0) / nums.length;
       };
 
-      const sortedEntries = Array.from(dateMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+      const sortedEntries = Array.from(dateMap.entries()).sort(([a], [b]) =>
+        a.localeCompare(b)
+      );
       const heatmap: DateRow[] = [];
       for (const [date, vals] of sortedEntries) {
         heatmap.push({
           date,
-          games:      vals.length,
-          avgFgMl:    avg(vals.map((r: BrierRow) => r.brierFgMl)),
-          avgF5Ml:    avg(vals.map((r: BrierRow) => r.brierF5Ml)),
-          avgNrfi:    avg(vals.map((r: BrierRow) => r.brierNrfi)),
+          games: vals.length,
+          avgFgMl: avg(vals.map((r: BrierRow) => r.brierFgMl)),
+          avgF5Ml: avg(vals.map((r: BrierRow) => r.brierF5Ml)),
+          avgNrfi: avg(vals.map((r: BrierRow) => r.brierNrfi)),
           avgFgTotal: avg(vals.map((r: BrierRow) => r.brierFgTotal)),
           avgF5Total: avg(vals.map((r: BrierRow) => r.brierF5Total)),
-          nullFgMl:    vals.filter((r: BrierRow) => r.brierFgMl    == null).length,
-          nullF5Ml:    vals.filter((r: BrierRow) => r.brierF5Ml    == null).length,
-          nullNrfi:    vals.filter((r: BrierRow) => r.brierNrfi    == null).length,
-          nullFgTotal: vals.filter((r: BrierRow) => r.brierFgTotal == null).length,
-          nullF5Total: vals.filter((r: BrierRow) => r.brierF5Total == null).length,
+          nullFgMl: vals.filter((r: BrierRow) => r.brierFgMl == null).length,
+          nullF5Ml: vals.filter((r: BrierRow) => r.brierF5Ml == null).length,
+          nullNrfi: vals.filter((r: BrierRow) => r.brierNrfi == null).length,
+          nullFgTotal: vals.filter((r: BrierRow) => r.brierFgTotal == null)
+            .length,
+          nullF5Total: vals.filter((r: BrierRow) => r.brierF5Total == null)
+            .length,
         });
       }
 
-       console.log(`${tag} [OUTPUT] heatmap rows: ${heatmap.length}`);
+      console.log(`${tag} [OUTPUT] heatmap rows: ${heatmap.length}`);
       return { heatmap };
     }),
 
@@ -695,39 +818,43 @@ export const mlbScheduleRouter = router({
    *   raw = odds < 0 ? (-odds) / (-odds + 100) : 100 / (odds + 100)
    */
   getF5EdgeLeaderboard: ownerProcedure
-    .input(z.object({
-      minEdge:     z.number().optional().default(0),
-      side:        z.enum(['away', 'home', 'both']).optional().default('both'),
-      withOutcome: z.boolean().optional().default(false),
-      limit:       z.number().min(1).max(500).optional().default(200),
-    }))
+    .input(
+      z.object({
+        minEdge: z.number().optional().default(0),
+        side: z.enum(["away", "home", "both"]).optional().default("both"),
+        withOutcome: z.boolean().optional().default(false),
+        limit: z.number().min(1).max(500).optional().default(200),
+      })
+    )
     .query(async ({ input }) => {
       const tag = `${TAG}[getF5EdgeLeaderboard]`;
-      console.log(`${tag} [INPUT] minEdge=${input.minEdge} side=${input.side} withOutcome=${input.withOutcome} limit=${input.limit}`);
+      console.log(
+        `${tag} [INPUT] minEdge=${input.minEdge} side=${input.side} withOutcome=${input.withOutcome} limit=${input.limit}`
+      );
 
       const db = await getDb();
       const rows = await db
         .select({
-          id:                  gamesTable.id,
-          gameDate:            gamesTable.gameDate,
-          awayTeam:            gamesTable.awayTeam,
-          homeTeam:            gamesTable.homeTeam,
-          f5AwayML:            gamesTable.f5AwayML,
-          f5HomeML:            gamesTable.f5HomeML,
-          modelF5AwayWinPct:   gamesTable.modelF5AwayWinPct,
-          modelF5HomeWinPct:   gamesTable.modelF5HomeWinPct,
-          f5MlResult:          gamesTable.f5MlResult,
-          f5MlCorrect:         gamesTable.f5MlCorrect,
-          actualF5AwayScore:   gamesTable.actualF5AwayScore,
-          actualF5HomeScore:   gamesTable.actualF5HomeScore,
-          brierF5Ml:           gamesTable.brierF5Ml,
+          id: gamesTable.id,
+          gameDate: gamesTable.gameDate,
+          awayTeam: gamesTable.awayTeam,
+          homeTeam: gamesTable.homeTeam,
+          f5AwayML: gamesTable.f5AwayML,
+          f5HomeML: gamesTable.f5HomeML,
+          modelF5AwayWinPct: gamesTable.modelF5AwayWinPct,
+          modelF5HomeWinPct: gamesTable.modelF5HomeWinPct,
+          f5MlResult: gamesTable.f5MlResult,
+          f5MlCorrect: gamesTable.f5MlCorrect,
+          actualF5AwayScore: gamesTable.actualF5AwayScore,
+          actualF5HomeScore: gamesTable.actualF5HomeScore,
+          brierF5Ml: gamesTable.brierF5Ml,
         })
         .from(gamesTable)
         .where(
           and(
             isNotNull(gamesTable.modelF5AwayWinPct),
             isNotNull(gamesTable.f5AwayML),
-            isNotNull(gamesTable.f5HomeML),
+            isNotNull(gamesTable.f5HomeML)
           )
         )
         .orderBy(asc(gamesTable.gameDate));
@@ -739,7 +866,7 @@ export const mlbScheduleRouter = router({
         if (!ml) return null;
         const n = parseFloat(ml);
         if (isNaN(n)) return null;
-        return n < 0 ? (-n) / (-n + 100) : 100 / (n + 100);
+        return n < 0 ? -n / (-n + 100) : 100 / (n + 100);
       };
 
       type EdgeRow = {
@@ -747,7 +874,7 @@ export const mlbScheduleRouter = router({
         gameDate: string;
         awayTeam: string;
         homeTeam: string;
-        side: 'away' | 'home';
+        side: "away" | "home";
         modelWinPct: number;
         bookImpliedPct: number;
         edgePct: number;
@@ -772,18 +899,27 @@ export const mlbScheduleRouter = router({
         const noVigAway = (rawAway / total) * 100;
         const noVigHome = (rawHome / total) * 100;
 
-        const modelAway = row.modelF5AwayWinPct != null ? parseFloat(String(row.modelF5AwayWinPct)) : null;
-        const modelHome = row.modelF5HomeWinPct != null ? parseFloat(String(row.modelF5HomeWinPct)) : null;
+        const modelAway =
+          row.modelF5AwayWinPct != null
+            ? parseFloat(String(row.modelF5AwayWinPct))
+            : null;
+        const modelHome =
+          row.modelF5HomeWinPct != null
+            ? parseFloat(String(row.modelF5HomeWinPct))
+            : null;
 
-        if (modelAway != null && (input.side === 'away' || input.side === 'both')) {
+        if (
+          modelAway != null &&
+          (input.side === "away" || input.side === "both")
+        ) {
           const edge = modelAway - noVigAway;
           if (Math.abs(edge) >= input.minEdge) {
             edgeRows.push({
               id: row.id,
-              gameDate: row.gameDate ?? '',
+              gameDate: row.gameDate ?? "",
               awayTeam: row.awayTeam,
               homeTeam: row.homeTeam,
-              side: 'away',
+              side: "away",
               modelWinPct: modelAway,
               bookImpliedPct: noVigAway,
               edgePct: edge,
@@ -798,15 +934,18 @@ export const mlbScheduleRouter = router({
           }
         }
 
-        if (modelHome != null && (input.side === 'home' || input.side === 'both')) {
+        if (
+          modelHome != null &&
+          (input.side === "home" || input.side === "both")
+        ) {
           const edge = modelHome - noVigHome;
           if (Math.abs(edge) >= input.minEdge) {
             edgeRows.push({
               id: row.id,
-              gameDate: row.gameDate ?? '',
+              gameDate: row.gameDate ?? "",
               awayTeam: row.awayTeam,
               homeTeam: row.homeTeam,
-              side: 'home',
+              side: "home",
               modelWinPct: modelHome,
               bookImpliedPct: noVigHome,
               edgePct: edge,
@@ -827,34 +966,49 @@ export const mlbScheduleRouter = router({
       const limited = edgeRows.slice(0, input.limit);
 
       // ─ Summary stats ─────────────────────────────────────────────────────────
-      const withOutcome = edgeRows.filter(r => r.f5MlResult != null && r.f5MlResult !== '');
-      const wins = withOutcome.filter(r => r.edgePct > 0 && r.f5MlCorrect === 1).length;
-      const losses = withOutcome.filter(r => r.edgePct > 0 && r.f5MlCorrect === 0).length;
+      const withOutcome = edgeRows.filter(
+        r => r.f5MlResult != null && r.f5MlResult !== ""
+      );
+      const wins = withOutcome.filter(
+        r => r.edgePct > 0 && r.f5MlCorrect === 1
+      ).length;
+      const losses = withOutcome.filter(
+        r => r.edgePct > 0 && r.f5MlCorrect === 0
+      ).length;
       const positiveEdge = edgeRows.filter(r => r.edgePct > 0);
       const negativeEdge = edgeRows.filter(r => r.edgePct < 0);
-      const avgPositiveEdge = positiveEdge.length > 0
-        ? positiveEdge.reduce((s, r) => s + r.edgePct, 0) / positiveEdge.length
-        : 0;
-      const avgNegativeEdge = negativeEdge.length > 0
-        ? negativeEdge.reduce((s, r) => s + r.edgePct, 0) / negativeEdge.length
-        : 0;
+      const avgPositiveEdge =
+        positiveEdge.length > 0
+          ? positiveEdge.reduce((s, r) => s + r.edgePct, 0) /
+            positiveEdge.length
+          : 0;
+      const avgNegativeEdge =
+        negativeEdge.length > 0
+          ? negativeEdge.reduce((s, r) => s + r.edgePct, 0) /
+            negativeEdge.length
+          : 0;
 
       const summary = {
-        totalGames:      rows.length,
-        edgeRows:        edgeRows.length,
-        positiveEdge:    positiveEdge.length,
-        negativeEdge:    negativeEdge.length,
+        totalGames: rows.length,
+        edgeRows: edgeRows.length,
+        positiveEdge: positiveEdge.length,
+        negativeEdge: negativeEdge.length,
         avgPositiveEdge: parseFloat(avgPositiveEdge.toFixed(2)),
         avgNegativeEdge: parseFloat(avgNegativeEdge.toFixed(2)),
-        winsOnPositiveEdge:   wins,
+        winsOnPositiveEdge: wins,
         lossesOnPositiveEdge: losses,
-        winRateOnPositiveEdge: withOutcome.length > 0 && (wins + losses) > 0
-          ? parseFloat((wins / (wins + losses) * 100).toFixed(1))
-          : null,
+        winRateOnPositiveEdge:
+          withOutcome.length > 0 && wins + losses > 0
+            ? parseFloat(((wins / (wins + losses)) * 100).toFixed(1))
+            : null,
       };
 
-      console.log(`${tag} [OUTPUT] edgeRows=${edgeRows.length} positiveEdge=${positiveEdge.length} negativeEdge=${negativeEdge.length} wins=${wins} losses=${losses}`);
-      console.log(`${tag} [VERIFY] ${summary.winRateOnPositiveEdge != null ? `PASS — win rate on positive edge: ${summary.winRateOnPositiveEdge}%` : 'PENDING — no outcomes yet'}`);
+      console.log(
+        `${tag} [OUTPUT] edgeRows=${edgeRows.length} positiveEdge=${positiveEdge.length} negativeEdge=${negativeEdge.length} wins=${wins} losses=${losses}`
+      );
+      console.log(
+        `${tag} [VERIFY] ${summary.winRateOnPositiveEdge != null ? `PASS — win rate on positive edge: ${summary.winRateOnPositiveEdge}%` : "PENDING — no outcomes yet"}`
+      );
 
       return { rows: limited, summary };
     }),
@@ -866,38 +1020,42 @@ export const mlbScheduleRouter = router({
    * modelAwayWinPct, modelHomeWinPct, awayML, homeML, fgMlResult, fgMlCorrect, brierFgMl.
    */
   getFgEdgeLeaderboard: ownerProcedure
-    .input(z.object({
-      minEdge:     z.number().optional().default(0),
-      side:        z.enum(['away', 'home', 'both']).optional().default('both'),
-      withOutcome: z.boolean().optional().default(false),
-      limit:       z.number().min(1).max(500).optional().default(200),
-    }))
+    .input(
+      z.object({
+        minEdge: z.number().optional().default(0),
+        side: z.enum(["away", "home", "both"]).optional().default("both"),
+        withOutcome: z.boolean().optional().default(false),
+        limit: z.number().min(1).max(500).optional().default(200),
+      })
+    )
     .query(async ({ input }) => {
       const tag = `${TAG}[getFgEdgeLeaderboard]`;
-      console.log(`${tag} [INPUT] minEdge=${input.minEdge} side=${input.side} withOutcome=${input.withOutcome} limit=${input.limit}`);
+      console.log(
+        `${tag} [INPUT] minEdge=${input.minEdge} side=${input.side} withOutcome=${input.withOutcome} limit=${input.limit}`
+      );
       const db = await getDb();
       const rows = await db
         .select({
-          id:              gamesTable.id,
-          gameDate:        gamesTable.gameDate,
-          awayTeam:        gamesTable.awayTeam,
-          homeTeam:        gamesTable.homeTeam,
-          awayML:          gamesTable.awayML,
-          homeML:          gamesTable.homeML,
+          id: gamesTable.id,
+          gameDate: gamesTable.gameDate,
+          awayTeam: gamesTable.awayTeam,
+          homeTeam: gamesTable.homeTeam,
+          awayML: gamesTable.awayML,
+          homeML: gamesTable.homeML,
           modelAwayWinPct: gamesTable.modelAwayWinPct,
           modelHomeWinPct: gamesTable.modelHomeWinPct,
-          fgMlResult:      gamesTable.fgMlResult,
-          fgMlCorrect:     gamesTable.fgMlCorrect,
+          fgMlResult: gamesTable.fgMlResult,
+          fgMlCorrect: gamesTable.fgMlCorrect,
           actualAwayScore: gamesTable.actualAwayScore,
           actualHomeScore: gamesTable.actualHomeScore,
-          brierFgMl:       gamesTable.brierFgMl,
+          brierFgMl: gamesTable.brierFgMl,
         })
         .from(gamesTable)
         .where(
           and(
             isNotNull(gamesTable.modelAwayWinPct),
             isNotNull(gamesTable.awayML),
-            isNotNull(gamesTable.homeML),
+            isNotNull(gamesTable.homeML)
           )
         )
         .orderBy(asc(gamesTable.gameDate));
@@ -906,14 +1064,23 @@ export const mlbScheduleRouter = router({
         if (!ml) return null;
         const n = parseFloat(ml);
         if (isNaN(n)) return null;
-        return n < 0 ? (-n) / (-n + 100) : 100 / (n + 100);
+        return n < 0 ? -n / (-n + 100) : 100 / (n + 100);
       };
       type FgEdgeRow = {
-        id: number; gameDate: string; awayTeam: string; homeTeam: string;
-        side: 'away' | 'home'; modelWinPct: number; bookImpliedPct: number; edgePct: number;
-        awayML: string | null; homeML: string | null;
-        fgMlResult: string | null; fgMlCorrect: number | null;
-        actualAwayScore: number | null; actualHomeScore: number | null;
+        id: number;
+        gameDate: string;
+        awayTeam: string;
+        homeTeam: string;
+        side: "away" | "home";
+        modelWinPct: number;
+        bookImpliedPct: number;
+        edgePct: number;
+        awayML: string | null;
+        homeML: string | null;
+        fgMlResult: string | null;
+        fgMlCorrect: number | null;
+        actualAwayScore: number | null;
+        actualHomeScore: number | null;
         brierFgMl: string | null;
       };
       const edgeRows: FgEdgeRow[] = [];
@@ -925,30 +1092,60 @@ export const mlbScheduleRouter = router({
         if (total <= 0) continue;
         const noVigAway = (rawAway / total) * 100;
         const noVigHome = (rawHome / total) * 100;
-        const modelAway = row.modelAwayWinPct != null ? parseFloat(String(row.modelAwayWinPct)) : null;
-        const modelHome = row.modelHomeWinPct != null ? parseFloat(String(row.modelHomeWinPct)) : null;
-        if (modelAway != null && (input.side === 'away' || input.side === 'both')) {
+        const modelAway =
+          row.modelAwayWinPct != null
+            ? parseFloat(String(row.modelAwayWinPct))
+            : null;
+        const modelHome =
+          row.modelHomeWinPct != null
+            ? parseFloat(String(row.modelHomeWinPct))
+            : null;
+        if (
+          modelAway != null &&
+          (input.side === "away" || input.side === "both")
+        ) {
           const edge = modelAway - noVigAway;
           if (Math.abs(edge) >= input.minEdge) {
             edgeRows.push({
-              id: row.id, gameDate: row.gameDate ?? '', awayTeam: row.awayTeam, homeTeam: row.homeTeam,
-              side: 'away', modelWinPct: modelAway, bookImpliedPct: noVigAway, edgePct: edge,
-              awayML: row.awayML, homeML: row.homeML,
-              fgMlResult: row.fgMlResult, fgMlCorrect: row.fgMlCorrect,
-              actualAwayScore: row.actualAwayScore, actualHomeScore: row.actualHomeScore,
+              id: row.id,
+              gameDate: row.gameDate ?? "",
+              awayTeam: row.awayTeam,
+              homeTeam: row.homeTeam,
+              side: "away",
+              modelWinPct: modelAway,
+              bookImpliedPct: noVigAway,
+              edgePct: edge,
+              awayML: row.awayML,
+              homeML: row.homeML,
+              fgMlResult: row.fgMlResult,
+              fgMlCorrect: row.fgMlCorrect,
+              actualAwayScore: row.actualAwayScore,
+              actualHomeScore: row.actualHomeScore,
               brierFgMl: row.brierFgMl != null ? String(row.brierFgMl) : null,
             });
           }
         }
-        if (modelHome != null && (input.side === 'home' || input.side === 'both')) {
+        if (
+          modelHome != null &&
+          (input.side === "home" || input.side === "both")
+        ) {
           const edge = modelHome - noVigHome;
           if (Math.abs(edge) >= input.minEdge) {
             edgeRows.push({
-              id: row.id, gameDate: row.gameDate ?? '', awayTeam: row.awayTeam, homeTeam: row.homeTeam,
-              side: 'home', modelWinPct: modelHome, bookImpliedPct: noVigHome, edgePct: edge,
-              awayML: row.awayML, homeML: row.homeML,
-              fgMlResult: row.fgMlResult, fgMlCorrect: row.fgMlCorrect,
-              actualAwayScore: row.actualAwayScore, actualHomeScore: row.actualHomeScore,
+              id: row.id,
+              gameDate: row.gameDate ?? "",
+              awayTeam: row.awayTeam,
+              homeTeam: row.homeTeam,
+              side: "home",
+              modelWinPct: modelHome,
+              bookImpliedPct: noVigHome,
+              edgePct: edge,
+              awayML: row.awayML,
+              homeML: row.homeML,
+              fgMlResult: row.fgMlResult,
+              fgMlCorrect: row.fgMlCorrect,
+              actualAwayScore: row.actualAwayScore,
+              actualHomeScore: row.actualHomeScore,
               brierFgMl: row.brierFgMl != null ? String(row.brierFgMl) : null,
             });
           }
@@ -956,29 +1153,47 @@ export const mlbScheduleRouter = router({
       }
       edgeRows.sort((a, b) => Math.abs(b.edgePct) - Math.abs(a.edgePct));
       const limited = edgeRows.slice(0, input.limit);
-      const withOutcomeRows = edgeRows.filter(r => r.fgMlResult != null && r.fgMlResult !== '');
-      const wins = withOutcomeRows.filter(r => r.edgePct > 0 && r.fgMlCorrect === 1).length;
-      const losses = withOutcomeRows.filter(r => r.edgePct > 0 && r.fgMlCorrect === 0).length;
+      const withOutcomeRows = edgeRows.filter(
+        r => r.fgMlResult != null && r.fgMlResult !== ""
+      );
+      const wins = withOutcomeRows.filter(
+        r => r.edgePct > 0 && r.fgMlCorrect === 1
+      ).length;
+      const losses = withOutcomeRows.filter(
+        r => r.edgePct > 0 && r.fgMlCorrect === 0
+      ).length;
       const positiveEdge = edgeRows.filter(r => r.edgePct > 0);
       const negativeEdge = edgeRows.filter(r => r.edgePct < 0);
-      const avgPositiveEdge = positiveEdge.length > 0
-        ? positiveEdge.reduce((s, r) => s + r.edgePct, 0) / positiveEdge.length : 0;
-      const avgNegativeEdge = negativeEdge.length > 0
-        ? negativeEdge.reduce((s, r) => s + r.edgePct, 0) / negativeEdge.length : 0;
+      const avgPositiveEdge =
+        positiveEdge.length > 0
+          ? positiveEdge.reduce((s, r) => s + r.edgePct, 0) /
+            positiveEdge.length
+          : 0;
+      const avgNegativeEdge =
+        negativeEdge.length > 0
+          ? negativeEdge.reduce((s, r) => s + r.edgePct, 0) /
+            negativeEdge.length
+          : 0;
       const summary = {
-        totalGames:           rows.length,
-        edgeRows:             edgeRows.length,
-        positiveEdge:         positiveEdge.length,
-        negativeEdge:         negativeEdge.length,
-        avgPositiveEdge:      parseFloat(avgPositiveEdge.toFixed(2)),
-        avgNegativeEdge:      parseFloat(avgNegativeEdge.toFixed(2)),
-        winsOnPositiveEdge:   wins,
+        totalGames: rows.length,
+        edgeRows: edgeRows.length,
+        positiveEdge: positiveEdge.length,
+        negativeEdge: negativeEdge.length,
+        avgPositiveEdge: parseFloat(avgPositiveEdge.toFixed(2)),
+        avgNegativeEdge: parseFloat(avgNegativeEdge.toFixed(2)),
+        winsOnPositiveEdge: wins,
         lossesOnPositiveEdge: losses,
-        winRateOnPositiveEdge: withOutcomeRows.length > 0 && (wins + losses) > 0
-          ? parseFloat((wins / (wins + losses) * 100).toFixed(1)) : null,
+        winRateOnPositiveEdge:
+          withOutcomeRows.length > 0 && wins + losses > 0
+            ? parseFloat(((wins / (wins + losses)) * 100).toFixed(1))
+            : null,
       };
-      console.log(`${tag} [OUTPUT] edgeRows=${edgeRows.length} positiveEdge=${positiveEdge.length} negativeEdge=${negativeEdge.length} wins=${wins} losses=${losses}`);
-      console.log(`${tag} [VERIFY] ${summary.winRateOnPositiveEdge != null ? `PASS — win rate on positive edge: ${summary.winRateOnPositiveEdge}%` : 'PENDING — no outcomes yet'}`);
+      console.log(
+        `${tag} [OUTPUT] edgeRows=${edgeRows.length} positiveEdge=${positiveEdge.length} negativeEdge=${negativeEdge.length} wins=${wins} losses=${losses}`
+      );
+      console.log(
+        `${tag} [VERIFY] ${summary.winRateOnPositiveEdge != null ? `PASS — win rate on positive edge: ${summary.winRateOnPositiveEdge}%` : "PENDING — no outcomes yet"}`
+      );
       return { rows: limited, summary };
     }),
 
@@ -989,10 +1204,12 @@ export const mlbScheduleRouter = router({
    * Used when clicking a cell in the Brier Heatmap.
    */
   getBrierDrilldown: ownerProcedure
-    .input(z.object({
-      date:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-      market: z.enum(['fgMl', 'f5Ml', 'nrfi', 'fgTotal', 'f5Total']),
-    }))
+    .input(
+      z.object({
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
+        market: z.enum(["fgMl", "f5Ml", "nrfi", "fgTotal", "f5Total"]),
+      })
+    )
     .query(async ({ input }) => {
       const tag = `${TAG}[getBrierDrilldown]`;
       console.log(`${tag} [INPUT] date=${input.date} market=${input.market}`);
@@ -1000,39 +1217,39 @@ export const mlbScheduleRouter = router({
 
       const rows = await db
         .select({
-          id:                 gamesTable.id,
-          gameDate:           gamesTable.gameDate,
-          awayTeam:           gamesTable.awayTeam,
-          homeTeam:           gamesTable.homeTeam,
-          startTimeEst:       gamesTable.startTimeEst,
-          brierFgMl:          gamesTable.brierFgMl,
-          brierF5Ml:          gamesTable.brierF5Ml,
-          brierNrfi:          gamesTable.brierNrfi,
-          brierFgTotal:       gamesTable.brierFgTotal,
-          brierF5Total:       gamesTable.brierF5Total,
-          modelAwayWinPct:    gamesTable.modelAwayWinPct,
-          modelHomeWinPct:    gamesTable.modelHomeWinPct,
-          modelF5AwayWinPct:  gamesTable.modelF5AwayWinPct,
-          modelF5HomeWinPct:  gamesTable.modelF5HomeWinPct,
-          awayML:             gamesTable.awayML,
-          homeML:             gamesTable.homeML,
-          f5AwayML:           gamesTable.f5AwayML,
-          f5HomeML:           gamesTable.f5HomeML,
-          actualAwayScore:    gamesTable.actualAwayScore,
-          actualHomeScore:    gamesTable.actualHomeScore,
-          actualF5AwayScore:  gamesTable.actualF5AwayScore,
-          actualF5HomeScore:  gamesTable.actualF5HomeScore,
-          fgMlResult:         gamesTable.fgMlResult,
-          f5MlResult:         gamesTable.f5MlResult,
-          fgMlCorrect:        gamesTable.fgMlCorrect,
-          f5MlCorrect:        gamesTable.f5MlCorrect,
-          nrfiCorrect:        gamesTable.nrfiCorrect,
+          id: gamesTable.id,
+          gameDate: gamesTable.gameDate,
+          awayTeam: gamesTable.awayTeam,
+          homeTeam: gamesTable.homeTeam,
+          startTimeEst: gamesTable.startTimeEst,
+          brierFgMl: gamesTable.brierFgMl,
+          brierF5Ml: gamesTable.brierF5Ml,
+          brierNrfi: gamesTable.brierNrfi,
+          brierFgTotal: gamesTable.brierFgTotal,
+          brierF5Total: gamesTable.brierF5Total,
+          modelAwayWinPct: gamesTable.modelAwayWinPct,
+          modelHomeWinPct: gamesTable.modelHomeWinPct,
+          modelF5AwayWinPct: gamesTable.modelF5AwayWinPct,
+          modelF5HomeWinPct: gamesTable.modelF5HomeWinPct,
+          awayML: gamesTable.awayML,
+          homeML: gamesTable.homeML,
+          f5AwayML: gamesTable.f5AwayML,
+          f5HomeML: gamesTable.f5HomeML,
+          actualAwayScore: gamesTable.actualAwayScore,
+          actualHomeScore: gamesTable.actualHomeScore,
+          actualF5AwayScore: gamesTable.actualF5AwayScore,
+          actualF5HomeScore: gamesTable.actualF5HomeScore,
+          fgMlResult: gamesTable.fgMlResult,
+          f5MlResult: gamesTable.f5MlResult,
+          fgMlCorrect: gamesTable.fgMlCorrect,
+          f5MlCorrect: gamesTable.f5MlCorrect,
+          nrfiCorrect: gamesTable.nrfiCorrect,
         })
         .from(gamesTable)
         .where(
           and(
             eq(gamesTable.gameDate, input.date),
-            isNotNull(gamesTable.outcomeIngestedAt),
+            isNotNull(gamesTable.outcomeIngestedAt)
           )
         )
         .orderBy(asc(gamesTable.id));
@@ -1040,48 +1257,150 @@ export const mlbScheduleRouter = router({
       console.log(`${tag} [STATE] games on ${input.date}: ${rows.length}`);
 
       // Map market field name to brier column
-      const marketToBrierField: Record<string, keyof typeof rows[0]> = {
-        fgMl:    'brierFgMl',
-        f5Ml:    'brierF5Ml',
-        nrfi:    'brierNrfi',
-        fgTotal: 'brierFgTotal',
-        f5Total: 'brierF5Total',
+      const marketToBrierField: Record<string, keyof (typeof rows)[0]> = {
+        fgMl: "brierFgMl",
+        f5Ml: "brierF5Ml",
+        nrfi: "brierNrfi",
+        fgTotal: "brierFgTotal",
+        f5Total: "brierF5Total",
       };
       const brierField = marketToBrierField[input.market];
 
-      type DrillRow = typeof rows[number];
+      type DrillRow = (typeof rows)[number];
       const result = rows.map((r: DrillRow) => ({
-        id:                r.id,
-        awayTeam:          r.awayTeam,
-        homeTeam:          r.homeTeam,
-        startTimeEst:      r.startTimeEst,
-        brierFgMl:         r.brierFgMl != null ? Number(r.brierFgMl) : null,
-        brierF5Ml:         r.brierF5Ml != null ? Number(r.brierF5Ml) : null,
-        brierNrfi:         r.brierNrfi != null ? Number(r.brierNrfi) : null,
-        brierFgTotal:      r.brierFgTotal != null ? Number(r.brierFgTotal) : null,
-        brierF5Total:      r.brierF5Total != null ? Number(r.brierF5Total) : null,
-        focusBrier:        r[brierField] != null ? Number(r[brierField]) : null,
-        modelAwayWinPct:   r.modelAwayWinPct != null ? Number(r.modelAwayWinPct) : null,
-        modelHomeWinPct:   r.modelHomeWinPct != null ? Number(r.modelHomeWinPct) : null,
-        modelF5AwayWinPct: r.modelF5AwayWinPct != null ? Number(r.modelF5AwayWinPct) : null,
-        modelF5HomeWinPct: r.modelF5HomeWinPct != null ? Number(r.modelF5HomeWinPct) : null,
-        awayML:            r.awayML,
-        homeML:            r.homeML,
-        f5AwayML:          r.f5AwayML,
-        f5HomeML:          r.f5HomeML,
-        actualAwayScore:   r.actualAwayScore,
-        actualHomeScore:   r.actualHomeScore,
+        id: r.id,
+        awayTeam: r.awayTeam,
+        homeTeam: r.homeTeam,
+        startTimeEst: r.startTimeEst,
+        brierFgMl: r.brierFgMl != null ? Number(r.brierFgMl) : null,
+        brierF5Ml: r.brierF5Ml != null ? Number(r.brierF5Ml) : null,
+        brierNrfi: r.brierNrfi != null ? Number(r.brierNrfi) : null,
+        brierFgTotal: r.brierFgTotal != null ? Number(r.brierFgTotal) : null,
+        brierF5Total: r.brierF5Total != null ? Number(r.brierF5Total) : null,
+        focusBrier: r[brierField] != null ? Number(r[brierField]) : null,
+        modelAwayWinPct:
+          r.modelAwayWinPct != null ? Number(r.modelAwayWinPct) : null,
+        modelHomeWinPct:
+          r.modelHomeWinPct != null ? Number(r.modelHomeWinPct) : null,
+        modelF5AwayWinPct:
+          r.modelF5AwayWinPct != null ? Number(r.modelF5AwayWinPct) : null,
+        modelF5HomeWinPct:
+          r.modelF5HomeWinPct != null ? Number(r.modelF5HomeWinPct) : null,
+        awayML: r.awayML,
+        homeML: r.homeML,
+        f5AwayML: r.f5AwayML,
+        f5HomeML: r.f5HomeML,
+        actualAwayScore: r.actualAwayScore,
+        actualHomeScore: r.actualHomeScore,
         actualF5AwayScore: r.actualF5AwayScore,
         actualF5HomeScore: r.actualF5HomeScore,
-        fgMlResult:        r.fgMlResult,
-        f5MlResult:        r.f5MlResult,
-        fgMlCorrect:       r.fgMlCorrect,
-        f5MlCorrect:       r.f5MlCorrect,
-        nrfiCorrect:       r.nrfiCorrect,
+        fgMlResult: r.fgMlResult,
+        f5MlResult: r.f5MlResult,
+        fgMlCorrect: r.fgMlCorrect,
+        f5MlCorrect: r.f5MlCorrect,
+        nrfiCorrect: r.nrfiCorrect,
       }));
 
-      console.log(`${tag} [OUTPUT] drilldown rows: ${result.length} for ${input.date} / ${input.market}`);
+      console.log(
+        `${tag} [OUTPUT] drilldown rows: ${result.length} for ${input.date} / ${input.market}`
+      );
       return { date: input.date, market: input.market, games: result };
+    }),
+  /**
+   * Owner-only: the recalibration proposals awaiting a decision.
+   *
+   * ISSUE-012 listed this and `decideRecalibration` as "claimed as implemented
+   * and never written" — and that was the gap that made the gate a queue rather
+   * than a gate. A PROPOSED row nobody can see is not an approval step; it is a
+   * write nobody reads.
+   */
+  listRecalibrationProposals: ownerProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).optional().default(20),
+      })
+    )
+    .query(async ({ input }) => {
+      const tag = `${TAG}[listRecalibrationProposals]`;
+      try {
+        const proposals = await listRecalibrationProposals(input.limit);
+        const pending = proposals.filter(
+          p => p.envelope?.gate.status === "PROPOSED"
+        ).length;
+        console.log(
+          `${tag} [OUTPUT] ${proposals.length} row(s), ${pending} PROPOSED`
+        );
+        return { proposals, pending };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${tag} [ERROR] ${msg}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Could not list recalibration proposals: ${msg}`,
+        });
+      }
+    }),
+
+  /**
+   * Owner-only: approve or reject a PROPOSED recalibration.
+   *
+   * SECURITY. The approver's identity is taken from the authenticated session
+   * (`ctx.appUser`) and NEVER from the request body — `buildApprovalRequest`
+   * has no input field for it. If a caller could name themselves, both the
+   * self-approval check and the owner-only check would be bypassed by lying,
+   * and the proposing agent could promote its own recalibration.
+   *
+   * APPROVED patches the engine through the single existing implementation,
+   * `migrateCalibrationConstants`, which is otherwise unreachable by default.
+   */
+  decideRecalibration: ownerProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        decision: z.enum(["APPROVED", "REJECTED"]),
+        rationale: z.string().min(1).max(2000),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const tag = `${TAG}[decideRecalibration]`;
+      const request = buildApprovalRequest(
+        {
+          id: ctx.appUser.id,
+          email: ctx.appUser.email,
+          role: ctx.appUser.role,
+        },
+        { decision: input.decision, rationale: input.rationale }
+      );
+      console.log(
+        `${tag} [INPUT] proposal=${input.proposalId} decision=${input.decision} by=${request.decidedBy} role=${request.role}`
+      );
+      try {
+        const result = await decideRecalibration(
+          input.proposalId,
+          request,
+          (calibration, reason) =>
+            migrateCalibrationConstants(calibration, reason)
+        );
+        if (!result.ok) {
+          console.warn(`${tag} [VERIFY] REFUSED — ${result.reason}`);
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: result.reason ?? "Decision refused",
+          });
+        }
+        console.log(
+          `${tag} [OUTPUT] ${result.status} constantsPatched=${result.constantsPatched ?? 0}`
+        );
+        return result;
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${tag} [ERROR] ${msg}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Recalibration decision failed: ${msg}`,
+        });
+      }
     }),
 });
 export type MlbScheduleRouter = typeof mlbScheduleRouter;

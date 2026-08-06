@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisportsbettingmodels.com/schemas/production_traffic_distribution_evidence.schema.json",
+  "title": "Dime Production Traffic Distribution Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "evidenceId",
+    "status",
+    "productionDerived",
+    "containsPromptOrResponseText",
+    "sanitizationRevision",
+    "populationWindow",
+    "sampleCount",
+    "requiredDimensions",
+    "report",
+    "unavailableReason"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "dime-production-traffic-evidence-v1"
+    },
+    "evidenceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "status": {
+      "enum": ["available", "unavailable"]
+    },
+    "productionDerived": {
+      "type": "boolean"
+    },
+    "containsPromptOrResponseText": {
+      "const": false
+    },
+    "sanitizationRevision": {
+      "const": "dime-sanitized-traffic-record-v1"
+    },
+    "populationWindow": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startedAt", "endedAt"],
+          "properties": {
+            "startedAt": { "type": "string", "format": "date-time" },
+            "endedAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "sampleCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "requiredDimensions": {
+      "type": "array",
+      "minItems": 11,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "route",
+          "sport",
+          "league",
+          "message_length",
+          "multi_turn_depth",
+          "tool_requirement",
+          "temporal_class",
+          "entity_ambiguity",
+          "missing_information",
+          "live_vs_historical",
+          "subscriber_vs_public",
+          "platform_support"
+        ]
+      }
+    },
+    "report": {
+      "oneOf": [{ "type": "object" }, { "type": "null" }]
+    },
+    "unavailableReason": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 500 },
+        { "type": "null" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "unavailable" } }
+      },
+      "then": {
+        "properties": {
+          "productionDerived": { "const": false },
+          "sampleCount": { "const": 0 },
+          "report": { "type": "null" },
+          "unavailableReason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "available" } }
+      },
+      "then": {
+        "properties": {
+          "productionDerived": { "const": true },
+          "populationWindow": { "type": "object" },
+          "sampleCount": { "type": "integer", "minimum": 1 },
+          "report": { "type": "object" },
+          "unavailableReason": { "type": "null" }
+        }
+      }
+    }
+  ]
+}

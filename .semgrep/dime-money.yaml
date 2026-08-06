@@ -1,0 +1,43 @@
+rules:
+  - id: dime-money-float-arithmetic-on-cents
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      Money is integer cents in this codebase (amountCents / riskUnits at real
+      precision — see PR #348 lineage). Float arithmetic on a *Cents value
+      introduces rounding drift into billing. Use integer math; divide only at
+      the display boundary.
+    patterns:
+      - pattern-either:
+          - pattern: $X.amountCents * $F
+          - pattern: $X.amountCents / $F
+          - pattern: parseFloat(... $C ...)
+      - metavariable-regex:
+          metavariable: $F
+          regex: '.*\.(0|[0-9])+.*'
+      - metavariable-regex:
+          metavariable: $C
+          regex: ".*[Cc]ents.*"
+    paths:
+      include:
+        - server/stripe/
+        - server/routers/stripe.ts
+        - server/betTrackerCore.ts
+        - server/parlayCore.ts
+
+  - id: dime-money-tofixed-in-ledger
+    languages: [typescript]
+    # WARNING at launch: 13 pre-existing sites are the repo's units-display
+    # convention; calibrate which are ledger math vs formatting, then graduate.
+    severity: WARNING
+    message: >
+      .toFixed() on ledger/settlement values silently converts to a rounded
+      string in money paths. Format at the UI edge only; ledger math stays
+      integer.
+    pattern: $AMOUNT.toFixed(...)
+    paths:
+      include:
+        - server/stripe/
+        - server/betTrackerCore.ts
+        - server/parlayCore.ts
+        - server/parlayGrader.ts

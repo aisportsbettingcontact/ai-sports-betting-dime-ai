@@ -7,10 +7,8 @@
  * COMPUTATION MODEL (v3 — P2-B/P2-C fixes):
  * ─────────────────────────────────────────────────────────────────────────────
  *   P2-B: Park factor now uses HR-specific hrFactor instead of overall run
- *         factor (parkFactor3yr). Source unified with the team-level model:
- *         mlb_park_factors.hrFactor is the single live source; neutral 1.0
- *         when null (parkFactor3yr is a run factor, not an HR factor — it is
- *         no longer used as a fallback).
+ *         factor (parkFactor3yr). hrFactor is backfilled from Python PARK_FACTORS
+ *         "hr" key. Falls back to parkFactor3yr if hrFactor is null.
  *
  *   P2-C: wOBA double-count fixed.
  *     OLD: base_rate = (hr9/27) * woba_scale * pitcher_adj * park_adj
@@ -21,7 +19,7 @@
  *          Statcast data is available (woba_adj replaces woba_scale).
  *     Recalibrated HR_CALIBRATION_FACTOR: 0.325 → 0.875
  *
- *   Step 1: Base team HR rate per AB (P2-C: no woba_scale; M-212: per-AB basis)
+ *   Step 1: Base team HR rate per PA (P2-C: no woba_scale)
  *     base_rate = (team_hr9 / 27) * pitcher_adj * park_adj
  *
  *   Step 2: Statcast individual power adjustment (if player has Statcast data)
@@ -33,12 +31,9 @@
  *     Fallback (no Statcast): woba_adj = woba / LEAGUE_WOBA [clamped 0.30–3.00]
  *
  *   Step 3: Poisson P(≥1 HR)
- *     lambda = base_rate * statcast_adj * AB_PER_GAME * hr_calibration_factor
+ *     lambda = base_rate * statcast_adj * PA_PER_GAME * HR_CALIBRATION_FACTOR
  *     p_hr   = 1 - exp(-lambda)
  *     [clamped to 4%–45%]
- *     M-212: hr9/27 is a per-AB rate, so lambda scales by expected AB faced
- *     (not PA). M-207: hr_calibration_factor is read live from
- *     mlb_calibration_constants (fallback: hardcoded P6 value).
  *
  * [INPUT]  gameDate: string (YYYY-MM-DD)
  * [OUTPUT] HrPropsModelResult
@@ -55,7 +50,6 @@ import {
   mlbParkFactors,
   mlbLineups,
   mlbPlayers,
-  mlbCalibrationConstants,
   games,
 } from "../drizzle/schema";
 import { eq, and, inArray, isNotNull } from "drizzle-orm";
@@ -64,32 +58,27 @@ import { getMlbamIdMap, normalizeMlbamName } from "./mlbamIdCache";
 const TAG = "[HrPropsModel]";
 
 // ─── League-average Statcast constants (2025 MLB) ─────────────────────────────
-const LEAGUE_WOBA     = 0.318;    // League wOBA (used only in Statcast fallback block, P2-C)
-const LEAGUE_HR9      = 1.28;    // League HR/9 for pitchers
-const LEAGUE_ISO      = 0.168;   // League ISO (SLG - AVG)
-const LEAGUE_BARREL   = 8.3;     // League barrel rate (%)
-const LEAGUE_HARDHIT  = 37.5;    // League hard-hit rate (%)
+const LEAGUE_WOBA = 0.318; // League wOBA (used only in Statcast fallback block, P2-C)
+const LEAGUE_HR9 = 1.28; // League HR/9 for pitchers
+const LEAGUE_ISO = 0.168; // League ISO (SLG - AVG)
+const LEAGUE_BARREL = 8.3; // League barrel rate (%)
+const LEAGUE_HARDHIT = 37.5; // League hard-hit rate (%)
 const PLAYER_PA_PER_GAME = 4.22; // Average PA per batter per game
-// M-212: hr9 here is HR per 27 AB, so hr9/27 is a rate per AB. Expected HR must
-// be rate_per_ab * expected AB faced — multiplying by PA (4.22) inflated lambda
-// ~10-13%. League AB/PA ≈ 0.885 (walks/HBP/sacrifices are PA but not AB).
-const AB_PER_PA          = 0.885;
-const PLAYER_AB_PER_GAME = PLAYER_PA_PER_GAME * AB_PER_PA; // ≈3.73 expected AB faced per game
 // EDGE_THRESHOLD: minimum edge (modelPHr - anNoVig) to emit OVER verdict.
 // P6 recalibration (2026-05-11, n=2438): EDGE_THRESHOLD unchanged at 0.060.
 // Primary gate remains edge-based; MIN_ABSOLUTE_P_HR updated for new factor scale.
-const EDGE_THRESHOLD  = 0.060;   // Minimum edge to emit OVER verdict (unchanged from P5)
+const EDGE_THRESHOLD = 0.06; // Minimum edge to emit OVER verdict (unchanged from P5)
 // MIN_ABSOLUTE_P_HR: absolute probability floor for OVER bets.
 // P6 recalibration (2026-05-11, n=2438): with new HR_CALIBRATION_FACTOR=0.5317,
 // modelPHr values are ~26% lower than before. Verdict threshold analysis showed:
 //   thresh=0.18 → ACC=18.6% (n=86, best of all thresholds tested 0.08–0.20)
 //   thresh=0.25 (old) → would filter out all bets since new max modelPHr ~0.22
 // Updated from 0.25 → 0.18 to match recalibrated probability scale.
-const MIN_ABSOLUTE_P_HR = 0.18;  // Absolute probability gate — P6 recalibrated 2026-05-11 (was 0.25 for factor 0.720)
-const MIN_P_HR        = 0.04;
-const MAX_P_HR        = 0.45;
-const MIN_STATCAST_ADJ = 0.30;
-const MAX_STATCAST_ADJ = 3.00;
+const MIN_ABSOLUTE_P_HR = 0.18; // Absolute probability gate — P6 recalibrated 2026-05-11 (was 0.25 for factor 0.720)
+const MIN_P_HR = 0.04;
+const MAX_P_HR = 0.45;
+const MIN_STATCAST_ADJ = 0.3;
+const MAX_STATCAST_ADJ = 3.0;
 
 // ─── P2-C: Recalibrated HR calibration factor ─────────────────────────────────
 // OLD: 0.325 — heavy correction needed because woba_scale double-counted HR rate.
@@ -105,31 +94,8 @@ const MAX_STATCAST_ADJ = 3.00;
 //                 old_pHr = 1-exp(-0.0649) = 6.3%  [under-estimated due to heavy calib]
 //                 new_pHr = 1-exp(-0.1748) = 16.0%  [closer to actual ~9-12% HR rate]
 //      Note: HR_CALIBRATION_FACTOR will be re-tuned after 200+ game sample in 2026.
-// M-207: the live value is read from mlb_calibration_constants
-// (paramName='hr_calibration_factor') once per modeling cycle; this constant is
-// the fallback when the row is missing or unreadable.
-// NOTE: this factor was fitted against the old per-PA lambda basis and now
-// absorbs the ~10-13% inflation removed by the M-212 AB-basis fix — it must be
-// re-fitted by walk-forward (Phase 5) before the fix changes live output scale.
-const HR_CALIBRATION_FACTOR_FALLBACK = 0.5317;  // P6 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
-                                                // Factor reduced 0.72→0.5317 (×0.738) to correct systematic over-prediction
-
-// ─── M-207: Per-cycle read of the live HR calibration factor ─────────────────
-type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-async function loadHrCalibrationFactor(db: Db): Promise<number> {
-  try {
-    const rows = await db
-      .select({ currentValue: mlbCalibrationConstants.currentValue })
-      .from(mlbCalibrationConstants)
-      .where(eq(mlbCalibrationConstants.paramName, "hr_calibration_factor"))
-      .limit(1);
-    const value = rows.length > 0 ? Number(rows[0].currentValue) : NaN;
-    if (Number.isFinite(value) && value > 0) return value;
-  } catch (err) {
-    console.warn(`${TAG} [WARN] hr_calibration_factor read failed, using fallback: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  return HR_CALIBRATION_FACTOR_FALLBACK;
-}
+const HR_CALIBRATION_FACTOR = 0.5317; // P6 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
+// Factor reduced 0.72→0.5317 (×0.738) to correct systematic over-prediction
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface HrPropsModelResult {
@@ -144,7 +110,7 @@ export interface HrPropsModelResult {
 
 interface TeamBattingContext {
   hr9: number;
-  woba: number;  // P2-C: kept for Statcast fallback woba_adj only
+  woba: number; // P2-C: kept for Statcast fallback woba_adj only
 }
 
 interface PitcherContext {
@@ -172,42 +138,51 @@ function computePlayerPHr(
   teamBatting: TeamBattingContext,
   pitcher: PitcherContext,
   park: ParkContext,
-  statcast: StatcastContext | null,
-  hrCalibrationFactor: number
+  statcast: StatcastContext | null
 ): number {
-  // ── Step 1: Base team HR rate per AB ─────────────────────────────────────────
+  // ── Step 1: Base team HR rate per PA ─────────────────────────────────────────
   // P2-C: woba_scale REMOVED from base_rate to fix double-counting.
   // wOBA already incorporates HR contribution; multiplying by woba_scale
   // on top of hr9 (which already reflects HR production) double-counts HR.
-  // M-212: hr9 is HR per 27 AB, so hr9/27 is a rate per AB (not per PA).
-  const hr_rate_per_ab = teamBatting.hr9 / 27.0;
-  const pitcher_adj    = Math.sqrt(pitcher.hr9 / LEAGUE_HR9);  // sqrt-dampened
-  const park_adj       = park.hrFactor;  // P2-B: HR-specific park factor
-  const base_rate      = hr_rate_per_ab * pitcher_adj * park_adj;
+  const hr_rate_per_pa = teamBatting.hr9 / 27.0;
+  const pitcher_adj = Math.sqrt(pitcher.hr9 / LEAGUE_HR9); // sqrt-dampened
+  const park_adj = park.hrFactor; // P2-B: HR-specific park factor
+  const base_rate = hr_rate_per_pa * pitcher_adj * park_adj;
 
   // ── Step 2: Power adjustment (Statcast individual or team wOBA fallback) ──────
   // P2-C: woba is used ONLY here as a fallback when no individual Statcast data.
   let statcast_adj = 1.0;
-  if (statcast && (statcast.iso != null || statcast.barrelPct != null || statcast.hardHitPct != null)) {
+  if (
+    statcast &&
+    (statcast.iso != null ||
+      statcast.barrelPct != null ||
+      statcast.hardHitPct != null)
+  ) {
     // Individual Statcast: ISO, barrel%, hard-hit% weighted composite
-    const iso_adj     = statcast.iso       != null ? statcast.iso       / LEAGUE_ISO      : 1.0;
-    const barrel_adj  = statcast.barrelPct != null ? statcast.barrelPct / LEAGUE_BARREL   : 1.0;
-    const hardhit_adj = statcast.hardHitPct != null ? statcast.hardHitPct / LEAGUE_HARDHIT : 1.0;
-    const raw_adj = 0.40 * iso_adj + 0.40 * barrel_adj + 0.20 * hardhit_adj;
-    statcast_adj = Math.max(MIN_STATCAST_ADJ, Math.min(MAX_STATCAST_ADJ, raw_adj));
+    const iso_adj = statcast.iso != null ? statcast.iso / LEAGUE_ISO : 1.0;
+    const barrel_adj =
+      statcast.barrelPct != null ? statcast.barrelPct / LEAGUE_BARREL : 1.0;
+    const hardhit_adj =
+      statcast.hardHitPct != null ? statcast.hardHitPct / LEAGUE_HARDHIT : 1.0;
+    const raw_adj = 0.4 * iso_adj + 0.4 * barrel_adj + 0.2 * hardhit_adj;
+    statcast_adj = Math.max(
+      MIN_STATCAST_ADJ,
+      Math.min(MAX_STATCAST_ADJ, raw_adj)
+    );
   } else {
     // No individual Statcast: use team wOBA as proxy for offensive power quality.
     // This is the ONLY place wOBA enters the formula (P2-C fix).
     const woba_adj = teamBatting.woba / LEAGUE_WOBA;
-    statcast_adj = Math.max(MIN_STATCAST_ADJ, Math.min(MAX_STATCAST_ADJ, woba_adj));
+    statcast_adj = Math.max(
+      MIN_STATCAST_ADJ,
+      Math.min(MAX_STATCAST_ADJ, woba_adj)
+    );
   }
 
   // ── Step 3: Poisson P(≥1 HR) ─────────────────────────────────────────────────
-  // M-212: expected HR = rate_per_ab * expected AB faced. Calibration factor
-  // application unchanged; its value must be re-fitted post-fix (Phase 5).
-  const lambdaRaw = base_rate * statcast_adj * PLAYER_AB_PER_GAME;
-  const lambda    = lambdaRaw * hrCalibrationFactor;
-  const p_hr      = 1 - Math.exp(-lambda);
+  const lambdaRaw = base_rate * statcast_adj * PLAYER_PA_PER_GAME;
+  const lambda = lambdaRaw * HR_CALIBRATION_FACTOR;
+  const p_hr = 1 - Math.exp(-lambda);
 
   return Math.max(MIN_P_HR, Math.min(MAX_P_HR, p_hr));
 }
@@ -220,18 +195,23 @@ function probToAmericanOdds(p: number): number {
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsModelResult> {
-  console.log(`\n${TAG} ============================================================`);
+export async function resolveAndModelHrProps(
+  gameDate: string
+): Promise<HrPropsModelResult> {
+  console.log(
+    `\n${TAG} ============================================================`
+  );
   console.log(`${TAG} [INPUT] date=${gameDate} model=v3-p2bc`);
 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // M-207: fetch once per cycle — every row in this run uses the same factor.
-  const hrCalibrationFactor = await loadHrCalibrationFactor(db);
-  console.log(`${TAG} [STATE] hr_calibration_factor=${hrCalibrationFactor} (fallback=${HR_CALIBRATION_FACTOR_FALLBACK})`);
-
-  let resolved = 0, alreadyHad = 0, unresolved = 0, modeled = 0, edges = 0, errors = 0;
+  let resolved = 0,
+    alreadyHad = 0,
+    unresolved = 0,
+    modeled = 0,
+    edges = 0,
+    errors = 0;
 
   // ── Step 1: Load games for the date ────────────────────────────────────────
   console.log(`${TAG} [STEP 1] Loading games for ${gameDate}`);
@@ -247,11 +227,21 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
     .where(and(eq(games.gameDate, gameDate), eq(games.sport, "MLB")));
 
   const gameIds = gameRows.map((g: { id: number }) => g.id);
-  console.log(`${TAG} [STATE] Found ${gameRows.length} MLB games, ids=[${gameIds.join(",")}]`);
+  console.log(
+    `${TAG} [STATE] Found ${gameRows.length} MLB games, ids=[${gameIds.join(",")}]`
+  );
 
   if (gameIds.length === 0) {
     console.log(`${TAG} [OUTPUT] No games found for ${gameDate}`);
-    return { date: gameDate, resolved, alreadyHad, unresolved, modeled, edges, errors };
+    return {
+      date: gameDate,
+      resolved,
+      alreadyHad,
+      unresolved,
+      modeled,
+      edges,
+      errors,
+    };
   }
 
   // ── Step 2: Load HR prop rows ───────────────────────────────────────────────
@@ -259,22 +249,44 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
   const hrRows = await db
     .select()
     .from(mlbHrProps)
-    .where(gameIds.length === 1 ? eq(mlbHrProps.gameId, gameIds[0]) : inArray(mlbHrProps.gameId, gameIds));
+    .where(
+      gameIds.length === 1
+        ? eq(mlbHrProps.gameId, gameIds[0])
+        : inArray(mlbHrProps.gameId, gameIds)
+    );
 
   console.log(`${TAG} [STATE] HR prop rows: ${hrRows.length}`);
   if (hrRows.length === 0) {
     console.log(`${TAG} [OUTPUT] No HR props found for ${gameDate}`);
-    return { date: gameDate, resolved, alreadyHad, unresolved, modeled, edges, errors };
+    return {
+      date: gameDate,
+      resolved,
+      alreadyHad,
+      unresolved,
+      modeled,
+      edges,
+      errors,
+    };
   }
 
-  type HrRow = typeof hrRows[0] & { id: number; playerName: string; mlbamId: number | null; gameId: number; side: string; teamAbbrev: string; anNoVigOverPct: number | null };
+  type HrRow = (typeof hrRows)[0] & {
+    id: number;
+    playerName: string;
+    mlbamId: number | null;
+    gameId: number;
+    side: string;
+    teamAbbrev: string;
+    anNoVigOverPct: number | null;
+  };
 
   // ── Step 3: Resolve mlbamId for unresolved rows ────────────────────────────
   console.log(`${TAG} [STEP 3] Resolving mlbamId`);
   const needsResolution = (hrRows as HrRow[]).filter(r => r.mlbamId == null);
   const alreadyResolved = (hrRows as HrRow[]).filter(r => r.mlbamId != null);
   alreadyHad = alreadyResolved.length;
-  console.log(`${TAG} [STATE] Already resolved: ${alreadyHad}, needs resolution: ${needsResolution.length}`);
+  console.log(
+    `${TAG} [STATE] Already resolved: ${alreadyHad}, needs resolution: ${needsResolution.length}`
+  );
 
   if (needsResolution.length > 0) {
     const apiMap = await fetchMlbamIdMap();
@@ -283,73 +295,127 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
       const mlbamId = apiMap.get(key) ?? null;
       if (mlbamId != null) {
         try {
-          await db.update(mlbHrProps).set({ mlbamId }).where(eq(mlbHrProps.id, row.id));
+          await db
+            .update(mlbHrProps)
+            .set({ mlbamId })
+            .where(eq(mlbHrProps.id, row.id));
           row.mlbamId = mlbamId;
           resolved++;
         } catch (err) {
-          console.error(`${TAG} [ERROR] mlbamId update failed for ${row.playerName}: ${err instanceof Error ? err.message : String(err)}`);
+          console.error(
+            `${TAG} [ERROR] mlbamId update failed for ${row.playerName}: ${err instanceof Error ? err.message : String(err)}`
+          );
           errors++;
         }
       } else {
-        console.warn(`${TAG} [WARN] Could not resolve mlbamId for "${row.playerName}"`);
+        console.warn(
+          `${TAG} [WARN] Could not resolve mlbamId for "${row.playerName}"`
+        );
         unresolved++;
       }
     }
   }
-  console.log(`${TAG} [STATE] Resolution: resolved=${resolved} alreadyHad=${alreadyHad} unresolved=${unresolved}`);
+  console.log(
+    `${TAG} [STATE] Resolution: resolved=${resolved} alreadyHad=${alreadyHad} unresolved=${unresolved}`
+  );
 
   // ── Step 4: Load context data ───────────────────────────────────────────────
-  console.log(`${TAG} [STEP 4] Loading batting splits, pitcher stats, park factors, lineups, Statcast`);
+  console.log(
+    `${TAG} [STEP 4] Loading batting splits, pitcher stats, park factors, lineups, Statcast`
+  );
 
   // 4a: Team batting splits
   const battingSplits = await db.select().from(mlbTeamBattingSplits);
-  type SplitRow = { teamAbbrev: string; hand: string; hr9: number | null; woba: number | null };
+  type SplitRow = {
+    teamAbbrev: string;
+    hand: string;
+    hr9: number | null;
+    woba: number | null;
+  };
   const splitMap = new Map<string, TeamBattingContext>();
   const teamAvgMap = new Map<string, TeamBattingContext>();
   for (const s of battingSplits as SplitRow[]) {
     if (s.hr9 != null && s.woba != null) {
-      splitMap.set(`${s.teamAbbrev}:${s.hand}`, { hr9: Number(s.hr9), woba: Number(s.woba) });
+      splitMap.set(`${s.teamAbbrev}:${s.hand}`, {
+        hr9: Number(s.hr9),
+        woba: Number(s.woba),
+      });
     }
   }
-  const teamKeys = Array.from(new Set((battingSplits as SplitRow[]).map(s => s.teamAbbrev)));
+  const teamKeys = Array.from(
+    new Set((battingSplits as SplitRow[]).map(s => s.teamAbbrev))
+  );
   for (const team of teamKeys) {
     const lSplit = splitMap.get(`${team}:L`);
     const rSplit = splitMap.get(`${team}:R`);
     if (lSplit && rSplit) {
-      teamAvgMap.set(team, { hr9: (lSplit.hr9 + rSplit.hr9) / 2, woba: (lSplit.woba + rSplit.woba) / 2 });
+      teamAvgMap.set(team, {
+        hr9: (lSplit.hr9 + rSplit.hr9) / 2,
+        woba: (lSplit.woba + rSplit.woba) / 2,
+      });
     } else if (lSplit) teamAvgMap.set(team, lSplit);
     else if (rSplit) teamAvgMap.set(team, rSplit);
   }
-  console.log(`${TAG} [STATE] Batting splits: ${splitMap.size} entries, ${teamAvgMap.size} teams`);
+  console.log(
+    `${TAG} [STATE] Batting splits: ${splitMap.size} entries, ${teamAvgMap.size} teams`
+  );
 
   // 4b: Pitcher stats
-  const pitcherStats = await db.select({ fullName: mlbPitcherStats.fullName, hr9: mlbPitcherStats.hr9 }).from(mlbPitcherStats);
+  const pitcherStats = await db
+    .select({ fullName: mlbPitcherStats.fullName, hr9: mlbPitcherStats.hr9 })
+    .from(mlbPitcherStats);
   const pitcherMap = new Map<string, PitcherContext>();
-  for (const p of pitcherStats as Array<{ fullName: string; hr9: number | null }>) {
-    if (p.hr9 != null) pitcherMap.set(p.fullName.toLowerCase(), { hr9: Number(p.hr9) });
+  for (const p of pitcherStats as Array<{
+    fullName: string;
+    hr9: number | null;
+  }>) {
+    if (p.hr9 != null)
+      pitcherMap.set(p.fullName.toLowerCase(), { hr9: Number(p.hr9) });
   }
   console.log(`${TAG} [STATE] Pitcher stats: ${pitcherMap.size} pitchers`);
 
   // 4c: Park factors — P2-B: Use HR-specific park factor (hrFactor) instead of overall run factor
   // hrFactor is the park's HR-specific adjustment (e.g., Coors=1.19, Petco=0.96)
-  // Source unified with the team-level model: mlb_park_factors.hrFactor is the
-  // single live source. parkFactor3yr is an overall run factor (singles,
-  // doubles, etc.) — not a valid HR proxy, so null hrFactor means neutral 1.0.
-  const parkFactors = await db.select({
-    teamAbbrev: mlbParkFactors.teamAbbrev,
-    hrFactor:   mlbParkFactors.hrFactor,  // HR-specific (P2-B)
-  }).from(mlbParkFactors);
+  // parkFactor3yr is the overall run factor (includes singles, doubles, etc.)
+  // Using hrFactor gives a more precise HR probability adjustment per park.
+  const parkFactors = await db
+    .select({
+      teamAbbrev: mlbParkFactors.teamAbbrev,
+      parkFactor3yr: mlbParkFactors.parkFactor3yr, // fallback
+      hrFactor: mlbParkFactors.hrFactor, // HR-specific (P2-B)
+    })
+    .from(mlbParkFactors);
   const parkMap = new Map<string, ParkContext>();
-  for (const p of parkFactors as Array<{ teamAbbrev: string; hrFactor: number | null }>) {
-    const hrAdj = p.hrFactor != null ? Number(p.hrFactor) : 1.0;
-    parkMap.set(p.teamAbbrev, { hrFactor: hrAdj });
-    console.log(`${TAG} [P2-B] Park ${p.teamAbbrev}: hrFactor=${hrAdj.toFixed(4)} (source=${p.hrFactor != null ? 'hr_specific' : 'neutral_null'})`);
+  for (const p of parkFactors as Array<{
+    teamAbbrev: string;
+    parkFactor3yr: number | null;
+    hrFactor: number | null;
+  }>) {
+    // Priority: hrFactor (HR-specific) > parkFactor3yr (overall run) > 1.0 (neutral)
+    const hrAdj = p.hrFactor ?? p.parkFactor3yr ?? null;
+    if (hrAdj != null) {
+      parkMap.set(p.teamAbbrev, { hrFactor: Number(hrAdj) });
+      console.log(
+        `${TAG} [P2-B] Park ${p.teamAbbrev}: hrFactor=${Number(hrAdj).toFixed(4)} (source=${p.hrFactor != null ? "hr_specific" : "run_factor_fallback"})`
+      );
+    }
   }
-  console.log(`${TAG} [STATE] Park factors: ${parkMap.size} parks (P2-B: HR-specific)`);
+  console.log(
+    `${TAG} [STATE] Park factors: ${parkMap.size} parks (P2-B: HR-specific)`
+  );
 
   // 4d: Lineups
-  const lineupRows = await db.select().from(mlbLineups).where(inArray(mlbLineups.gameId, gameIds));
-  type LineupRow = { gameId: number; awayPitcherName: string | null; awayPitcherHand: string | null; homePitcherName: string | null; homePitcherHand: string | null };
+  const lineupRows = await db
+    .select()
+    .from(mlbLineups)
+    .where(inArray(mlbLineups.gameId, gameIds));
+  type LineupRow = {
+    gameId: number;
+    awayPitcherName: string | null;
+    awayPitcherHand: string | null;
+    homePitcherName: string | null;
+    homePitcherHand: string | null;
+  };
   const lineupMap = new Map<number, LineupRow>();
   for (const l of lineupRows as LineupRow[]) lineupMap.set(l.gameId, l);
   console.log(`${TAG} [STATE] Lineups: ${lineupMap.size} games`);
@@ -375,13 +441,30 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
       });
     }
   }
-  const statcastCoverage = Array.from(statcastMap.values()).filter(s => s.iso != null || s.barrelPct != null).length;
-  console.log(`${TAG} [STATE] Statcast data: ${statcastMap.size} players loaded, ${statcastCoverage} with iso/barrel data`);
+  const statcastCoverage = Array.from(statcastMap.values()).filter(
+    s => s.iso != null || s.barrelPct != null
+  ).length;
+  console.log(
+    `${TAG} [STATE] Statcast data: ${statcastMap.size} players loaded, ${statcastCoverage} with iso/barrel data`
+  );
 
   // Build game context map
-  type GameCtx = { awayTeam: string; homeTeam: string; awayPitcherName: string | null; homePitcherName: string | null; awayPitcherHand: string | null; homePitcherHand: string | null };
+  type GameCtx = {
+    awayTeam: string;
+    homeTeam: string;
+    awayPitcherName: string | null;
+    homePitcherName: string | null;
+    awayPitcherHand: string | null;
+    homePitcherHand: string | null;
+  };
   const gameCtxMap = new Map<number, GameCtx>();
-  for (const g of gameRows as Array<{ id: number; awayTeam: string; homeTeam: string; awayStartingPitcher: string | null; homeStartingPitcher: string | null }>) {
+  for (const g of gameRows as Array<{
+    id: number;
+    awayTeam: string;
+    homeTeam: string;
+    awayStartingPitcher: string | null;
+    homeStartingPitcher: string | null;
+  }>) {
     const lineup = lineupMap.get(g.id);
     gameCtxMap.set(g.id, {
       awayTeam: g.awayTeam,
@@ -394,14 +477,21 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
   }
 
   // ── Step 5: Reload all HR rows (with fresh mlbamId) and compute model values ─
-  console.log(`${TAG} [STEP 5] Computing modelPHr (v3-p2bc), modelOverOdds, edgeOver, evOver, verdict`);
+  console.log(
+    `${TAG} [STEP 5] Computing modelPHr (v3-p2bc), modelOverOdds, edgeOver, evOver, verdict`
+  );
 
   const allRows = await db
     .select()
     .from(mlbHrProps)
-    .where(gameIds.length === 1 ? eq(mlbHrProps.gameId, gameIds[0]) : inArray(mlbHrProps.gameId, gameIds));
+    .where(
+      gameIds.length === 1
+        ? eq(mlbHrProps.gameId, gameIds[0])
+        : inArray(mlbHrProps.gameId, gameIds)
+    );
 
-  let statcastHits = 0, statcastMisses = 0;
+  let statcastHits = 0,
+    statcastMisses = 0;
 
   for (const row of allRows as HrRow[]) {
     try {
@@ -413,20 +503,27 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
 
       const isAway = row.side === "away";
       const battingTeam = isAway ? ctx.awayTeam : ctx.homeTeam;
-      const opposingPitcherName = isAway ? ctx.homePitcherName : ctx.awayPitcherName;
-      const opposingPitcherHand = isAway ? ctx.homePitcherHand : ctx.awayPitcherHand;
+      const opposingPitcherName = isAway
+        ? ctx.homePitcherName
+        : ctx.awayPitcherName;
+      const opposingPitcherHand = isAway
+        ? ctx.homePitcherHand
+        : ctx.awayPitcherHand;
       const homeTeam = ctx.homeTeam;
 
       // Batting context (hand-specific vs pitcher hand, P2-C: woba used only as fallback)
       let batting: TeamBattingContext | undefined;
-      if (opposingPitcherHand) batting = splitMap.get(`${battingTeam}:${opposingPitcherHand}`);
+      if (opposingPitcherHand)
+        batting = splitMap.get(`${battingTeam}:${opposingPitcherHand}`);
       if (!batting) batting = teamAvgMap.get(battingTeam);
       if (!batting) batting = { hr9: 1.0, woba: LEAGUE_WOBA };
 
       // Pitcher context
       let pitcher: PitcherContext = { hr9: LEAGUE_HR9 };
       if (opposingPitcherName) {
-        pitcher = pitcherMap.get(opposingPitcherName.toLowerCase()) ?? { hr9: LEAGUE_HR9 };
+        pitcher = pitcherMap.get(opposingPitcherName.toLowerCase()) ?? {
+          hr9: LEAGUE_HR9,
+        };
       }
 
       // Park context (P2-B: HR-specific park factor)
@@ -447,11 +544,12 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
       }
 
       // Compute P(HR) with P2-B/P2-C enhancements
-      const modelPHr = computePlayerPHr(batting, pitcher, park, statcast, hrCalibrationFactor);
+      const modelPHr = computePlayerPHr(batting, pitcher, park, statcast);
       const modelOverOdds = probToAmericanOdds(modelPHr);
 
       // Edge and EV
-      const anNoVig = row.anNoVigOverPct != null ? Number(row.anNoVigOverPct) : null;
+      const anNoVig =
+        row.anNoVigOverPct != null ? Number(row.anNoVigOverPct) : null;
       let edgeOver: number | null = null;
       let evOver: number | null = null;
       let verdict = "PASS";
@@ -464,39 +562,73 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
           verdict = "OVER";
           edges++;
         } else if (edgeOver >= EDGE_THRESHOLD && modelPHr < MIN_ABSOLUTE_P_HR) {
-          console.log(`${TAG} [FILTER] ${(row as HrRow).playerName}: edge=${edgeOver.toFixed(4)} ≥ threshold but modelPHr=${modelPHr.toFixed(4)} < MIN_ABSOLUTE_P_HR=${MIN_ABSOLUTE_P_HR} → PASS (suppressed)`);
+          console.log(
+            `${TAG} [FILTER] ${(row as HrRow).playerName}: edge=${edgeOver.toFixed(4)} ≥ threshold but modelPHr=${modelPHr.toFixed(4)} < MIN_ABSOLUTE_P_HR=${MIN_ABSOLUTE_P_HR} → PASS (suppressed)`
+          );
         }
       }
 
       // Write to DB
-      await db.update(mlbHrProps)
-        .set({ modelPHr: parseFloat(modelPHr.toFixed(4)), modelOverOdds, edgeOver, evOver, verdict })
+      await db
+        .update(mlbHrProps)
+        .set({
+          modelPHr: parseFloat(modelPHr.toFixed(4)),
+          modelOverOdds,
+          edgeOver,
+          evOver,
+          verdict,
+        })
         .where(eq(mlbHrProps.id, row.id));
 
       modeled++;
 
       const statcastTag = statcast ? "[SC✓]" : "[SC-]";
-      const edgeStr = edgeOver != null ? (edgeOver >= 0 ? `+${edgeOver.toFixed(4)}` : edgeOver.toFixed(4)) : "N/A";
-      const evStr = evOver != null ? (evOver >= 0 ? `+${evOver.toFixed(2)}` : evOver.toFixed(2)) : "N/A";
+      const edgeStr =
+        edgeOver != null
+          ? edgeOver >= 0
+            ? `+${edgeOver.toFixed(4)}`
+            : edgeOver.toFixed(4)
+          : "N/A";
+      const evStr =
+        evOver != null
+          ? evOver >= 0
+            ? `+${evOver.toFixed(2)}`
+            : evOver.toFixed(2)
+          : "N/A";
       const noVigStr = anNoVig != null ? anNoVig.toFixed(4) : "N/A";
       console.log(
         `${TAG} [STATE] ${statcastTag} ${row.playerName} (${battingTeam}): ` +
-        `pHr=${modelPHr.toFixed(4)} odds=${modelOverOdds > 0 ? "+" : ""}${modelOverOdds} ` +
-        `anNoVig=${noVigStr} edge=${edgeStr} ev=${evStr} verdict=${verdict} ` +
-        `[P2-B:park=${park.hrFactor.toFixed(3)} P2-C:pitcher_adj=${Math.sqrt(pitcher.hr9 / LEAGUE_HR9).toFixed(3)}]`
+          `pHr=${modelPHr.toFixed(4)} odds=${modelOverOdds > 0 ? "+" : ""}${modelOverOdds} ` +
+          `anNoVig=${noVigStr} edge=${edgeStr} ev=${evStr} verdict=${verdict} ` +
+          `[P2-B:park=${park.hrFactor.toFixed(3)} P2-C:pitcher_adj=${Math.sqrt(pitcher.hr9 / LEAGUE_HR9).toFixed(3)}]`
       );
-
     } catch (err) {
       errors++;
-      console.error(`${TAG} [ERROR] Failed to model ${(row as HrRow).playerName}: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `${TAG} [ERROR] Failed to model ${(row as HrRow).playerName}: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 
   console.log(`\n${TAG} [OUTPUT] Modeling complete (v3-p2bc):`);
-  console.log(`${TAG}   resolved=${resolved} alreadyHad=${alreadyHad} unresolved=${unresolved}`);
+  console.log(
+    `${TAG}   resolved=${resolved} alreadyHad=${alreadyHad} unresolved=${unresolved}`
+  );
   console.log(`${TAG}   modeled=${modeled} edges=${edges} errors=${errors}`);
-  console.log(`${TAG}   statcastHits=${statcastHits} statcastMisses=${statcastMisses}`);
-  console.log(`${TAG} [VERIFY] ${errors === 0 ? "PASS" : "FAIL"} — ${errors} total errors`);
+  console.log(
+    `${TAG}   statcastHits=${statcastHits} statcastMisses=${statcastMisses}`
+  );
+  console.log(
+    `${TAG} [VERIFY] ${errors === 0 ? "PASS" : "FAIL"} — ${errors} total errors`
+  );
 
-  return { date: gameDate, resolved, alreadyHad, unresolved, modeled, edges, errors };
+  return {
+    date: gameDate,
+    resolved,
+    alreadyHad,
+    unresolved,
+    modeled,
+    edges,
+    errors,
+  };
 }

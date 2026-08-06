@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_execution_context_capsule.schema.json",
+  "title": "Dime Foundation Execution Context Capsule v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "capsule_id",
+    "frozen_at",
+    "repository",
+    "authorization",
+    "governance_bindings",
+    "token_profile",
+    "actors",
+    "pilot",
+    "external_operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-execution-context-capsule-v1"
+    },
+    "capsule_id": {
+      "type": "string",
+      "pattern": "^foundation-execution-[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "frozen_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "commit_sha", "branch", "dirty_at_start"],
+      "properties": {
+        "repository": {
+          "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+        },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dirty_at_start": {
+          "type": "boolean"
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basis", "permitted", "prohibited"],
+      "properties": {
+        "basis": {
+          "const": "pr248_owner_merge_plus_explicit_local_execution_request"
+        },
+        "permitted": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "private_pilot_generation",
+              "independent_critique",
+              "deterministic_validation",
+              "context_and_token_instrumentation"
+            ]
+          },
+          "allOf": [
+            {"contains": {"const": "private_pilot_generation"}},
+            {"contains": {"const": "independent_critique"}},
+            {"contains": {"const": "deterministic_validation"}},
+            {"contains": {"const": "context_and_token_instrumentation"}}
+          ]
+        },
+        "prohibited": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "platform_auth",
+              "hugging_face",
+              "runpod",
+              "model_download",
+              "railway",
+              "production_data",
+              "external_credentials",
+              "model_training",
+              "provider_execution",
+              "publication"
+            ]
+          },
+          "allOf": [
+            {"contains": {"const": "platform_auth"}},
+            {"contains": {"const": "hugging_face"}},
+            {"contains": {"const": "runpod"}},
+            {"contains": {"const": "model_download"}},
+            {"contains": {"const": "railway"}},
+            {"contains": {"const": "production_data"}},
+            {"contains": {"const": "external_credentials"}},
+            {"contains": {"const": "model_training"}},
+            {"contains": {"const": "provider_execution"}},
+            {"contains": {"const": "publication"}}
+          ]
+        }
+      }
+    },
+    "governance_bindings": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    },
+    "token_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "path", "sha256"],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "pattern": "^dime-foundation-[a-z0-9][a-z0-9._-]{7,95}$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "actors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator",
+        "generators",
+        "generator_state",
+        "critic",
+        "critics",
+        "critic_state"
+      ],
+      "properties": {
+        "generator": {
+          "oneOf": [
+            {"$ref": "#/$defs/actor"},
+            {"type": "null"}
+          ]
+        },
+        "generators": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/actor"}
+        },
+        "generator_state": {
+          "enum": [
+            "SINGLE_EXECUTION_BOUND",
+            "EXECUTION_SET_BOUND"
+          ]
+        },
+        "critic": {
+          "oneOf": [
+            {"$ref": "#/$defs/actor"},
+            {"type": "null"}
+          ]
+        },
+        "critics": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/actor"}
+        },
+        "critic_state": {
+          "enum": [
+            "PENDING_INDEPENDENT_EXECUTION",
+            "INDEPENDENT_EXECUTION_BOUND",
+            "INDEPENDENT_EXECUTION_SET_BOUND"
+          ]
+        }
+      }
+    },
+    "pilot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_records", "shard_id", "target_train", "target_validation"],
+      "properties": {
+        "target_records": {"const": 20},
+        "shard_id": {
+          "type": "string",
+          "pattern": "^foundation-v1-[a-z0-9][a-z0-9._-]{3,95}$"
+        },
+        "target_train": {"const": 18},
+        "target_validation": {"const": 2}
+      }
+    },
+    "external_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credential_reads",
+        "network_calls",
+        "provider_invocations",
+        "model_downloads",
+        "railway_mutations",
+        "production_data_reads",
+        "training_runs",
+        "publications"
+      ],
+      "properties": {
+        "credential_reads": {"const": 0},
+        "network_calls": {"const": 0},
+        "provider_invocations": {"const": 0},
+        "model_downloads": {"const": 0},
+        "railway_mutations": {"const": 0},
+        "production_data_reads": {"const": 0},
+        "training_runs": {"const": 0},
+        "publications": {"const": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "model_id",
+        "model_revision",
+        "prompt_revision",
+        "prompt_path",
+        "prompt_sha256",
+        "responsibility"
+      ],
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+        },
+        "model_id": {
+          "const": "gpt-5.6-sol"
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "prompt_revision": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "prompt_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "responsibility": {
+          "enum": ["generation", "independent_critique"]
+        }
+      }
+    }
+  }
+}

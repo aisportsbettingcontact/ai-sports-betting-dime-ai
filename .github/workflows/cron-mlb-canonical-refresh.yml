@@ -1,0 +1,64 @@
+name: Cron — MLB canonical DB nightly refresh
+
+# Nightly delta refresh of the canonical mlb_* tables (drizzle/mlb.schema.ts) in production
+# TiDB. Runs scripts/mlb-etl/refresh_canonical.mts end to end:
+#   rebuild games-2026.json -> diff finals against mlb_games -> crawl only the missing feeds
+#   -> transform -> load.mts --season 2026 --delta -> inline delta verification.
+#
+# This runner ALWAYS starts with an empty docs/mlb-stats-api/data/feeds-2026/ (gitignored,
+# never checked out), so the crawl step here only ever fetches the handful of feeds for games
+# that finished since the last run — never the full ~1,600-feed corpus.
+#
+# Nothing produced on the runner is committed back to the repo: games-2026.json, the crawled
+# feeds, and the transformed NDJSON are all ephemeral to this job. That means the *committed*
+# copy of docs/mlb-stats-api/data/games-2026.json goes stale over time — that's expected and
+# fine, since it exists only as the historical seed corpus. The production database, not the
+# committed dataset file, is the thing this workflow keeps fresh.
+#
+# Schema changes always go through the manual db-push.yml workflow first (repo law) — this
+# workflow only ever writes rows into tables that already exist.
+#
+# Required repo secret:
+#   DATABASE_URL — production TiDB connection string (never printed by refresh_canonical.mts
+#   or load.mts).
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 09:00 UTC nightly
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-mlb-canonical-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh canonical MLB DB (delta)
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      # Version comes from package.json's "packageManager" field — specifying
+      # it here too makes pnpm/action-setup fail with a version conflict.
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run nightly canonical delta refresh
+        run: npx tsx scripts/mlb-etl/refresh_canonical.mts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}

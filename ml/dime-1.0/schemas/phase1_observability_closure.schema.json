@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisportsbettingmodels.com/schemas/phase1_observability_closure.schema.json",
+  "title": "Dime Phase 1 Observability Closure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "closureId",
+    "createdAt",
+    "implementationBoundary",
+    "sourceState",
+    "status",
+    "evidenceGaps",
+    "closureThresholds",
+    "evidence",
+    "independentGate",
+    "authorizations",
+    "knownLimitations",
+    "residualRisks"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "dime-phase1-observability-closure-v1"
+    },
+    "closureId": {
+      "$ref": "#/$defs/label"
+    },
+    "createdAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "implementationBoundary": {
+      "const": "local_non_production_evidence_closure"
+    },
+    "sourceState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "branch", "headCommit", "worktreeState"],
+      "properties": {
+        "repository": {
+          "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+        },
+        "branch": { "$ref": "#/$defs/label" },
+        "headCommit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "worktreeState": {
+          "enum": ["clean_committed", "uncommitted_local_changes"]
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase1LocalImplementation",
+        "syntheticValidation",
+        "productionEvidence",
+        "productionClosure",
+        "shadow"
+      ],
+      "properties": {
+        "phase1LocalImplementation": { "$ref": "#/$defs/passBlocked" },
+        "syntheticValidation": { "$ref": "#/$defs/passBlocked" },
+        "productionEvidence": { "$ref": "#/$defs/passBlocked" },
+        "productionClosure": { "$ref": "#/$defs/passBlocked" },
+        "shadow": { "const": "not_authorized" }
+      }
+    },
+    "evidenceGaps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "providerObservationTimestamps",
+        "ingestionLifecycleTimestamps",
+        "reviewedPricing",
+        "representativeSanitizedTraffic",
+        "independentVerdict"
+      ],
+      "properties": {
+        "providerObservationTimestamps": { "$ref": "#/$defs/gap" },
+        "ingestionLifecycleTimestamps": { "$ref": "#/$defs/gap" },
+        "reviewedPricing": { "$ref": "#/$defs/gap" },
+        "representativeSanitizedTraffic": { "$ref": "#/$defs/gap" },
+        "independentVerdict": { "$ref": "#/$defs/gap" }
+      }
+    },
+    "closureThresholds": {
+      "type": "array",
+      "minItems": 10,
+      "items": { "$ref": "#/$defs/threshold" }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "independentGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowedVerdicts",
+        "verdict",
+        "reviewer",
+        "issuedAt",
+        "decisionArtifactSha256"
+      ],
+      "properties": {
+        "allowedVerdicts": {
+          "const": ["REJECT", "REVISE", "SHADOW"]
+        },
+        "verdict": {
+          "oneOf": [
+            { "enum": ["REJECT", "REVISE", "SHADOW"] },
+            { "type": "null" }
+          ]
+        },
+        "reviewer": {
+          "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+        },
+        "issuedAt": {
+          "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
+        },
+        "decisionArtifactSha256": {
+          "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }]
+        }
+      }
+    },
+    "authorizations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "productionAccess",
+        "productionTraceExport",
+        "providerTimestampAcceptance",
+        "pricingApproval",
+        "deployment",
+        "shadow",
+        "canary",
+        "release",
+        "training"
+      ],
+      "properties": {
+        "productionAccess": { "const": false },
+        "productionTraceExport": { "const": false },
+        "providerTimestampAcceptance": { "const": false },
+        "pricingApproval": { "const": false },
+        "deployment": { "const": false },
+        "shadow": { "const": false },
+        "canary": { "const": false },
+        "release": { "const": false },
+        "training": { "const": false }
+      }
+    },
+    "knownLimitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "residualRisks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "timestamp": { "type": "string", "format": "date-time" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+\\-]*$"
+    },
+    "passBlocked": { "enum": ["pass", "blocked"] },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractStatus", "productionEvidenceStatus", "reason"],
+      "properties": {
+        "contractStatus": { "enum": ["implemented", "not_implemented"] },
+        "productionEvidenceStatus": { "enum": ["available", "blocked"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "threshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "target", "current", "status"],
+      "properties": {
+        "name": { "$ref": "#/$defs/label" },
+        "target": { "type": "string", "minLength": 1 },
+        "current": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["pass", "blocked", "not_measured"] }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact", "sha256", "classification"],
+      "properties": {
+        "artifact": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "classification": {
+          "enum": [
+            "source_contract",
+            "schema",
+            "configuration",
+            "synthetic_benchmark",
+            "production_evidence_unavailable",
+            "production_observation",
+            "verification",
+            "runbook",
+            "database_migration",
+            "rollback",
+            "configuration_proposal"
+          ]
+        }
+      }
+    }
+  }
+}

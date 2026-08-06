@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/model_execution_gates.schema.json",
+  "title": "Dime Model Execution Gates v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_id",
+    "status",
+    "source_commit",
+    "base_vs_instruct",
+    "candidate_ab",
+    "early_stopping_preflight",
+    "runpod_gates",
+    "candidate_c_selection",
+    "authorization_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-model-execution-gates-v1"
+    },
+    "contract_id": {
+      "const": "dime-llm-v1-model-execution"
+    },
+    "status": {
+      "const": "FROZEN_NOT_AUTHORIZED"
+    },
+    "source_commit": {
+      "const": "77caa613ad2c64ff91a5c6fab1839b3d1278f4ba"
+    },
+    "base_vs_instruct": {
+      "const": {
+        "contract_path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
+        "contract_sha256": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+        "semantic_questions_identical": true,
+        "context_identical": true,
+        "tool_descriptions_identical": true,
+        "decoding_controls_identical": true,
+        "scoring_identical": true,
+        "model_native_serialization_allowed": true,
+        "serialization_profiles_declared": false,
+        "tie_preference": "candidate-instruct",
+        "base_requires_material_domain_advantage": true,
+        "base_allows_instruction_tool_calibration_or_conversation_regression": false,
+        "execution_authorized": false
+      }
+    },
+    "candidate_ab": {
+      "const": {
+        "must_execute_before_candidate_c_training": true,
+        "shared_tuple": {
+          "base_model": null,
+          "base_revision": null,
+          "tokenizer_revision": null,
+          "container_digest": null,
+          "prompt_revision": "dime-prompt-v1",
+          "tool_revision": "tools.v1",
+          "retrieval_revision": null,
+          "decoding_revision": "decoding-v1",
+          "evaluation_revisions": null,
+          "random_seed": 1729
+        },
+        "candidates": [
+          {
+            "candidate_id": "candidate-a",
+            "artifact": "selected_unadapted_base",
+            "routing_revision": null
+          },
+          {
+            "candidate_id": "candidate-b",
+            "artifact": "selected_unadapted_base",
+            "routing_revision": "runtime-answer-routing-v1"
+          }
+        ],
+        "only_allowed_difference": "routing_revision",
+        "candidate_a_complete": false,
+        "candidate_b_complete": false,
+        "execution_authorized": false
+      }
+    },
+    "early_stopping_preflight": {
+      "const": {
+        "minimum_validation_events": 6,
+        "evaluation_and_checkpoint_cadence_aligned": true,
+        "best_checkpoint_restoration_required": true,
+        "best_checkpoint_restoration_verified": false,
+        "calculation_inputs": [
+          "post_tokenization_train_sequences",
+          "sequence_packing",
+          "per_device_microbatch_size",
+          "gradient_accumulation_steps",
+          "epochs_or_max_steps",
+          "evaluation_steps"
+        ],
+        "reject_insufficient_validation_events": true
+      }
+    },
+    "runpod_gates": {
+      "const": {
+        "gate_1_baseline_inference": {
+          "authorized": false,
+          "allows": [
+            "exact_base_and_instruct_downloads",
+            "frozen_suitability_evaluation",
+            "candidate_a_baseline",
+            "candidate_b_baseline"
+          ],
+          "prohibits": [
+            "training",
+            "serving",
+            "railway_changes"
+          ],
+          "required_outputs": [
+            "model_download_hashes",
+            "actual_revision_verification",
+            "container_digest",
+            "raw_output_hashes",
+            "evaluation_scores",
+            "latency_and_memory_measurements",
+            "base_model_selection_verdict",
+            "candidate_a_report",
+            "candidate_b_report"
+          ]
+        },
+        "gate_2_smoke_training": {
+          "authorized": false,
+          "records": 64,
+          "maximum_steps": 10,
+          "maximum_gpu_minutes": 30,
+          "checkpoint_required": true,
+          "resume_required": true,
+          "artifact_hash_required": true,
+          "serving_authorized": false,
+          "rehearsal_records_after_smoke_pass": 240
+        },
+        "gate_3_full_candidate_c": {
+          "authorized": false,
+          "prerequisites": {
+            "foundation_release_approved": false,
+            "base_model_selected": false,
+            "development_evaluation_pinned": false,
+            "locked_evaluation_pinned": false,
+            "general_capability_evaluation_pinned": false,
+            "candidate_a_complete": false,
+            "candidate_b_complete": false,
+            "smoke_run_passed": false,
+            "resume_continuity_passed": false,
+            "runpod_budget_approved": false
+          }
+        }
+      }
+    },
+    "candidate_c_selection": {
+      "const": {
+        "paired_by_case": true,
+        "required_analyses": [
+          "paired_factual_correctness_differences",
+          "paired_bootstrap_confidence_intervals",
+          "route_level_results",
+          "hard_gate_counts",
+          "calibration_results",
+          "latency_distributions",
+          "reliability_and_retry_results",
+          "general_capability_regression"
+        ],
+        "thresholds": {
+          "factual_correctness_delta_over_b_minimum": 0.02,
+          "paired_confidence_interval_excludes_material_regression": true,
+          "critical_hard_gate_failures_maximum": 0,
+          "protected_route_regressions_maximum": 0,
+          "general_capability_material_regressions_maximum": 0,
+          "p95_latency_increase_over_b_maximum": 0.15,
+          "adapter_size_bytes_maximum": 104857600
+        },
+        "fallback_if_c_fails": "candidate-b-if-all-production-gates-pass-otherwise-frozen-no-provider",
+        "selection_authorized": false
+      }
+    },
+    "authorization_boundary": {
+      "const": {
+        "runpod_invocation": false,
+        "model_download": false,
+        "baseline_inference": false,
+        "model_training": false,
+        "checkpoint_resume": false,
+        "benchmark_execution": false,
+        "locked_evaluation_execution": false,
+        "model_selection": false,
+        "model_serving": false,
+        "provider_activation": false,
+        "railway_mutation": false,
+        "trace_activation": false,
+        "shadow_traffic": false,
+        "route_activation": false
+      }
+    }
+  }
+}

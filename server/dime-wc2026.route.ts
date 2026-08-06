@@ -27,7 +27,10 @@
  */
 import { Router, type Request, type Response, type Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
+import {
+  createAnthropicClient,
+  hasAnthropicCredentials,
+} from "./_core/anthropicClient";
 import crypto from "crypto";
 import { parse as parseCookieHeader } from "cookie";
 import { jwtVerify } from "jose";
@@ -47,10 +50,14 @@ const MAX_MESSAGE_LENGTH = 4000;
 const MAX_MESSAGES = 20;
 
 // ─── Rate limit store (in-memory, per-user) ──────────────────────────────────
-const rateLimitStore = new Map<number, { count: number; windowStart: number }>();
+const rateLimitStore = new Map<
+  number,
+  { count: number; windowStart: number }
+>();
 
 // ─── Response Modes ──────────────────────────────────────────────────────────
-type ResponseMode = "ANSWER" | "REFUSE" | "CLARIFY" | "PASS_ONLY" | "INTERNAL_ERROR";
+type ResponseMode =
+  "ANSWER" | "REFUSE" | "CLARIFY" | "PASS_ONLY" | "INTERNAL_ERROR";
 
 // ─── Refusal Reasons ─────────────────────────────────────────────────────────
 type RefusalReason =
@@ -74,7 +81,11 @@ type RefusalReason =
   | "DUPLICATE_REQUEST";
 
 // ─── Structured Logging ──────────────────────────────────────────────────────
-function dimeLog(event: string, requestId: string, data: Record<string, unknown> = {}) {
+function dimeLog(
+  event: string,
+  requestId: string,
+  data: Record<string, unknown> = {}
+) {
   const timestamp = new Date().toISOString();
   console.log(
     `[DimeWC2026] [${timestamp}] [${requestId}] ${event}`,
@@ -83,7 +94,9 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 }
 
 // ─── Auth Helper ─────────────────────────────────────────────────────────────
-async function authenticateDimeRequest(req: Request): Promise<{ userId: number; role: string } | null> {
+async function authenticateDimeRequest(
+  req: Request
+): Promise<{ userId: number; role: string } | null> {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");
   const token = cookies["app_session"];
   if (!token) return null;
@@ -98,7 +111,9 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
     if (tv !== null && tv !== undefined) {
       const user = await getAppUserById(userId);
       if (user && user.tokenVersion !== tv) {
-        console.log(`[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
+        console.log(
+          `[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`
+        );
         return null;
       }
     }
@@ -110,19 +125,25 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
 }
 
 // ─── Subscription Check ──────────────────────────────────────────────────────
-async function checkSubscription(userId: number): Promise<{ valid: boolean; reason?: string }> {
+async function checkSubscription(
+  userId: number
+): Promise<{ valid: boolean; reason?: string }> {
   const user = await getAppUserById(userId);
   if (!user) return { valid: false, reason: "USER_NOT_FOUND" };
   if (!user.hasAccess) return { valid: false, reason: "ACCESS_REVOKED" };
-  if (user.expiryDate && Date.now() > user.expiryDate) return { valid: false, reason: "SUBSCRIPTION_EXPIRED" };
+  if (user.expiryDate && Date.now() > user.expiryDate)
+    return { valid: false, reason: "SUBSCRIPTION_EXPIRED" };
   // Must have active Stripe subscription OR be owner/admin
   if (user.role === "owner" || user.role === "admin") return { valid: true };
-  if (!user.stripeSubscriptionId) return { valid: false, reason: "NO_SUBSCRIPTION" };
+  if (!user.stripeSubscriptionId)
+    return { valid: false, reason: "NO_SUBSCRIPTION" };
   return { valid: true };
 }
 
 // ─── Credit Check ────────────────────────────────────────────────────────────
-async function checkCredits(userId: number): Promise<{ sufficient: boolean; balance: number }> {
+async function checkCredits(
+  userId: number
+): Promise<{ sufficient: boolean; balance: number }> {
   const db = await getDb();
   if (!db) return { sufficient: false, balance: 0 };
   const result = await db.execute(
@@ -133,7 +154,10 @@ async function checkCredits(userId: number): Promise<{ sufficient: boolean; bala
   );
   const rows = (result as any)[0];
   const balance = rows?.[0]?.balance ?? 100; // Default 100 credits for new users
-  return { sufficient: balance >= CREDITS_PER_ANSWER, balance: Number(balance) };
+  return {
+    sufficient: balance >= CREDITS_PER_ANSWER,
+    balance: Number(balance),
+  };
 }
 
 // ─── Rate Limit Check ────────────────────────────────────────────────────────
@@ -152,7 +176,11 @@ function checkRateLimit(userId: number): boolean {
 // ─── Credit Deduction (ATOMIC — DB-001 fix) ─────────────────────────────────
 // Uses a transaction with SELECT ... FOR UPDATE to prevent double-spend under
 // concurrent requests. Returns new balance, or -1 if insufficient credits.
-async function deductCredits(userId: number, requestId: string, amount: number): Promise<number> {
+async function deductCredits(
+  userId: number,
+  requestId: string,
+  amount: number
+): Promise<number> {
   const db = await getDb();
   if (!db) return -1;
 
@@ -262,7 +290,7 @@ async function logResponseAudit(data: {
 import { getWC2026DimeContext, type WC2026Context } from "./dime/wc2026Context";
 
 // ─── WC2026 System Prompt (source-grounded) ──────────────────────────────────
-const WC2026_SYSTEM_PROMPT = `You are Dime, the authenticated AI intelligence layer for AI Sports Betting Models.
+const WC2026_SYSTEM_PROMPT = `You are Dime, the authenticated AI intelligence layer for Dime AI.
 
 IDENTITY:
 - You provide WC2026 betting intelligence grounded exclusively in platform data.
@@ -310,7 +338,10 @@ function sanitizeHistory(raw: unknown): ChatMessage[] {
         m.content.trim().length > 0
     )
     .slice(-MAX_HISTORY)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_LENGTH) }));
+    .map(m => ({
+      role: m.role,
+      content: m.content.slice(0, MAX_MESSAGE_LENGTH),
+    }));
 }
 
 // ─── Intent Classification ───────────────────────────────────────────────────
@@ -341,7 +372,10 @@ function classifyIntent(message: string): string {
 }
 
 // ─── Determine if intent requires refusal (unsupported market) ───────────────
-function getRefusalForIntent(intent: string, context: WC2026Context): { refuse: boolean; reason?: RefusalReason } {
+function getRefusalForIntent(
+  intent: string,
+  context: WC2026Context
+): { refuse: boolean; reason?: RefusalReason } {
   const unsupportedIntents: Record<string, RefusalReason> = {
     SPREAD: "MARKET_NOT_SUPPORTED",
     TOTAL: "MARKET_NOT_SUPPORTED",
@@ -381,12 +415,23 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   if (!authResult) {
     dimeLog("step.2.auth_REJECTED", requestId, { reason: "AUTH_REQUIRED" });
     await logRequestAudit({
-      requestId, userId: null, authStatus: "REJECTED", refusalReason: "AUTH_REQUIRED",
+      requestId,
+      userId: null,
+      authStatus: "REJECTED",
+      refusalReason: "AUTH_REQUIRED",
     });
-    res.status(401).json({ error: "Authentication required.", requestId, mode: "REFUSE", reason: "AUTH_REQUIRED" });
+    res.status(401).json({
+      error: "Authentication required.",
+      requestId,
+      mode: "REFUSE",
+      reason: "AUTH_REQUIRED",
+    });
     return;
   }
-  dimeLog("step.2.auth_PASSED", requestId, { userId: authResult.userId, role: authResult.role });
+  dimeLog("step.2.auth_PASSED", requestId, {
+    userId: authResult.userId,
+    role: authResult.role,
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 3: User identity resolved
@@ -400,12 +445,22 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // ═══════════════════════════════════════════════════════════════════════════
   const subCheck = await checkSubscription(userId);
   if (!subCheck.valid) {
-    dimeLog("step.4.subscription_REJECTED", requestId, { reason: subCheck.reason });
-    await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "REJECTED", refusalReason: "SUBSCRIPTION_REQUIRED",
+    dimeLog("step.4.subscription_REJECTED", requestId, {
+      reason: subCheck.reason,
     });
-    res.status(403).json({ error: "Active subscription required.", requestId, mode: "REFUSE", reason: "SUBSCRIPTION_REQUIRED" });
+    await logRequestAudit({
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "REJECTED",
+      refusalReason: "SUBSCRIPTION_REQUIRED",
+    });
+    res.status(403).json({
+      error: "Active subscription required.",
+      requestId,
+      mode: "REFUSE",
+      reason: "SUBSCRIPTION_REQUIRED",
+    });
     return;
   }
   dimeLog("step.4.subscription_PASSED", requestId);
@@ -415,13 +470,24 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // ═══════════════════════════════════════════════════════════════════════════
   const creditCheck = await checkCredits(userId);
   if (!creditCheck.sufficient) {
-    dimeLog("step.5.credit_REJECTED", requestId, { balance: creditCheck.balance });
+    dimeLog("step.5.credit_REJECTED", requestId, {
+      balance: creditCheck.balance,
+    });
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "INSUFFICIENT",
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "INSUFFICIENT",
       refusalReason: "INSUFFICIENT_CREDITS",
     });
-    res.status(402).json({ error: "Insufficient credits.", requestId, mode: "REFUSE", reason: "INSUFFICIENT_CREDITS", balance: creditCheck.balance });
+    res.status(402).json({
+      error: "Insufficient credits.",
+      requestId,
+      mode: "REFUSE",
+      reason: "INSUFFICIENT_CREDITS",
+      balance: creditCheck.balance,
+    });
     return;
   }
   dimeLog("step.5.credit_PASSED", requestId, { balance: creditCheck.balance });
@@ -432,11 +498,19 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   if (!checkRateLimit(userId)) {
     dimeLog("step.6.rate_limit_REJECTED", requestId);
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
       refusalReason: "RATE_LIMITED",
     });
-    res.status(429).json({ error: "Rate limit exceeded. Try again shortly.", requestId, mode: "REFUSE", reason: "RATE_LIMITED" });
+    res.status(429).json({
+      error: "Rate limit exceeded. Try again shortly.",
+      requestId,
+      mode: "REFUSE",
+      reason: "RATE_LIMITED",
+    });
     return;
   }
   dimeLog("step.6.rate_limit_PASSED", requestId);
@@ -446,41 +520,76 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // ═══════════════════════════════════════════════════════════════════════════
   const rawMessages = req.body?.messages;
   if (Array.isArray(rawMessages) && rawMessages.length > MAX_MESSAGES) {
-    dimeLog("step.7.validation_REJECTED", requestId, { reason: "too_many_messages", count: rawMessages.length });
+    dimeLog("step.7.validation_REJECTED", requestId, {
+      reason: "too_many_messages",
+      count: rawMessages.length,
+    });
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
       refusalReason: "REQUEST_TOO_LARGE",
     });
-    res.status(400).json({ error: "Too many messages in history.", requestId, mode: "REFUSE", reason: "REQUEST_TOO_LARGE" });
+    res.status(400).json({
+      error: "Too many messages in history.",
+      requestId,
+      mode: "REFUSE",
+      reason: "REQUEST_TOO_LARGE",
+    });
     return;
   }
   if (Array.isArray(rawMessages) && rawMessages.length > 0) {
     const lastRaw = rawMessages[rawMessages.length - 1];
-    if (lastRaw && typeof lastRaw.content === 'string' && lastRaw.content.length > MAX_MESSAGE_LENGTH) {
-      dimeLog("step.7.validation_REJECTED", requestId, { reason: "message_too_long", length: lastRaw.content.length });
+    if (
+      lastRaw &&
+      typeof lastRaw.content === "string" &&
+      lastRaw.content.length > MAX_MESSAGE_LENGTH
+    ) {
+      dimeLog("step.7.validation_REJECTED", requestId, {
+        reason: "message_too_long",
+        length: lastRaw.content.length,
+      });
       await logRequestAudit({
-        requestId, userId: userIdStr, authStatus: "PASSED",
-        entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
+        requestId,
+        userId: userIdStr,
+        authStatus: "PASSED",
+        entitlementStatus: "PASSED",
+        creditStatus: "SUFFICIENT",
         refusalReason: "REQUEST_TOO_LARGE",
       });
-      res.status(400).json({ error: "Message too long.", requestId, mode: "REFUSE", reason: "REQUEST_TOO_LARGE" });
+      res.status(400).json({
+        error: "Message too long.",
+        requestId,
+        mode: "REFUSE",
+        reason: "REQUEST_TOO_LARGE",
+      });
       return;
     }
   }
   const messages = sanitizeHistory(rawMessages);
   if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
-    dimeLog("step.7.validation_REJECTED", requestId, { reason: "empty_or_no_user_message" });
+    dimeLog("step.7.validation_REJECTED", requestId, {
+      reason: "empty_or_no_user_message",
+    });
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
       refusalReason: "REQUEST_TOO_LARGE",
     });
-    res.status(400).json({ error: "Request must end with a user message.", requestId });
+    res
+      .status(400)
+      .json({ error: "Request must end with a user message.", requestId });
     return;
   }
   const lastMessage = messages[messages.length - 1].content;
-  dimeLog("step.7.validation_PASSED", requestId, { messageCount: messages.length });
+  dimeLog("step.7.validation_PASSED", requestId, {
+    messageCount: messages.length,
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 8: Intent classification
@@ -501,13 +610,24 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
       contextHash: context.contextHash,
     });
   } catch (err) {
-    dimeLog("step.9.context_FAILED", requestId, { error: (err as Error).message });
-    await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
-      intent, contextStatus: "FAILED", refusalReason: "NO_CONTEXT",
+    dimeLog("step.9.context_FAILED", requestId, {
+      error: (err as Error).message,
     });
-    res.status(500).json({ error: "Failed to build context.", requestId, mode: "INTERNAL_ERROR" });
+    await logRequestAudit({
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
+      intent,
+      contextStatus: "FAILED",
+      refusalReason: "NO_CONTEXT",
+    });
+    res.status(500).json({
+      error: "Failed to build context.",
+      requestId,
+      mode: "INTERNAL_ERROR",
+    });
     return;
   }
 
@@ -515,19 +635,33 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // STEP 10: Context validation + intent refusal check
   // ═══════════════════════════════════════════════════════════════════════════
   if (context.matchCount === 0) {
-    dimeLog("step.10.context_validation_REJECTED", requestId, { reason: "NO_CONTEXT" });
+    dimeLog("step.10.context_validation_REJECTED", requestId, {
+      reason: "NO_CONTEXT",
+    });
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
-      intent, contextStatus: "REJECTED", refusalReason: "NO_CONTEXT",
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
+      intent,
+      contextStatus: "REJECTED",
+      refusalReason: "NO_CONTEXT",
     });
     await logResponseAudit({
-      requestId, userId: userIdStr, responseMode: "REFUSE",
-      refusalReason: "NO_CONTEXT", creditsCharged: 0, contextHash: context.contextHash,
+      requestId,
+      userId: userIdStr,
+      responseMode: "REFUSE",
+      refusalReason: "NO_CONTEXT",
+      creditsCharged: 0,
+      contextHash: context.contextHash,
     });
     res.status(200).json({
-      requestId, mode: "REFUSE", reason: "NO_CONTEXT",
-      message: "No WC2026 match context available. Cannot generate intelligence without platform data.",
+      requestId,
+      mode: "REFUSE",
+      reason: "NO_CONTEXT",
+      message:
+        "No WC2026 match context available. Cannot generate intelligence without platform data.",
       creditsCharged: 0,
     });
     return;
@@ -535,16 +669,29 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
 
   const intentRefusal = getRefusalForIntent(intent, context);
   if (intentRefusal.refuse) {
-    dimeLog("step.10.intent_refusal", requestId, { intent, reason: intentRefusal.reason });
+    dimeLog("step.10.intent_refusal", requestId, {
+      intent,
+      reason: intentRefusal.reason,
+    });
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
-      intent, contextStatus: "READY", responseStatus: "REFUSED",
-      refusalReason: intentRefusal.reason, creditsCharged: 0,
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
+      intent,
+      contextStatus: "READY",
+      responseStatus: "REFUSED",
+      refusalReason: intentRefusal.reason,
+      creditsCharged: 0,
     });
     await logResponseAudit({
-      requestId, userId: userIdStr, responseMode: "REFUSE",
-      refusalReason: intentRefusal.reason, creditsCharged: 0, contextHash: context.contextHash,
+      requestId,
+      userId: userIdStr,
+      responseMode: "REFUSE",
+      refusalReason: intentRefusal.reason,
+      creditsCharged: 0,
+      contextHash: context.contextHash,
     });
     const refusalMessages: Record<string, string> = {
       MARKET_NOT_SUPPORTED: `This market is not currently supported for WC2026. Only 1X2 (moneyline/match result) is available. Spreads, totals, BTTS, to-advance, and player props are not modeled.`,
@@ -554,8 +701,12 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
       UNSUPPORTED_PROP: `Confidence bands are not generated for WC2026 model outputs.`,
     };
     res.status(200).json({
-      requestId, mode: "REFUSE", reason: intentRefusal.reason,
-      message: refusalMessages[intentRefusal.reason!] || `Data not available for this request type.`,
+      requestId,
+      mode: "REFUSE",
+      reason: intentRefusal.reason,
+      message:
+        refusalMessages[intentRefusal.reason!] ||
+        `Data not available for this request type.`,
       creditsCharged: 0,
     });
     return;
@@ -572,11 +723,20 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   if (!hasAnthropicCredentials()) {
     dimeLog("step.11.api_key_MISSING", requestId);
     await logRequestAudit({
-      requestId, userId: userIdStr, authStatus: "PASSED",
-      entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
-      intent, contextStatus: "READY", responseStatus: "INTERNAL_ERROR",
+      requestId,
+      userId: userIdStr,
+      authStatus: "PASSED",
+      entitlementStatus: "PASSED",
+      creditStatus: "SUFFICIENT",
+      intent,
+      contextStatus: "READY",
+      responseStatus: "INTERNAL_ERROR",
     });
-    res.status(500).json({ error: "Service configuration error.", requestId, mode: "INTERNAL_ERROR" });
+    res.status(500).json({
+      error: "Service configuration error.",
+      requestId,
+      mode: "INTERNAL_ERROR",
+    });
     return;
   }
 
@@ -587,10 +747,15 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   };
   const contextAck: ChatMessage = {
     role: "assistant",
-    content: "Understood. I will answer exclusively from the injected WC2026 platform context. If any requested data is missing, stale, or unsupported, I will refuse clearly and name the missing field.",
+    content:
+      "Understood. I will answer exclusively from the injected WC2026 platform context. If any requested data is missing, stale, or unsupported, I will refuse clearly and name the missing field.",
   };
 
-  const augmentedMessages: ChatMessage[] = [contextInjection, contextAck, ...messages];
+  const augmentedMessages: ChatMessage[] = [
+    contextInjection,
+    contextAck,
+    ...messages,
+  ];
 
   // SSE headers
   res.setHeader("Content-Type", "text/event-stream");
@@ -611,11 +776,16 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
     if (!res.writableEnded) {
       aborted = true;
       abort.abort();
-      dimeLog("step.11.stream_aborted", requestId, { latencyMs: Date.now() - startTime });
+      dimeLog("step.11.stream_aborted", requestId, {
+        latencyMs: Date.now() - startTime,
+      });
     }
   });
 
-  dimeLog("step.11.claude_call_START", requestId, { model: MODEL, historyLength: augmentedMessages.length });
+  dimeLog("step.11.claude_call_START", requestId, {
+    model: MODEL,
+    historyLength: augmentedMessages.length,
+  });
 
   let outputChars = 0;
   let tokensInput = 0;
@@ -633,7 +803,7 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
       { signal: abort.signal }
     );
 
-    stream.on("text", (delta) => {
+    stream.on("text", delta => {
       outputChars += delta.length;
       send({ type: "delta", text: delta });
     });
@@ -650,28 +820,49 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
       latencyMs: Date.now() - startTime,
     });
 
-    send({ type: "done", stopReason: final.stop_reason, requestId, creditsCharged: CREDITS_PER_ANSWER });
+    send({
+      type: "done",
+      stopReason: final.stop_reason,
+      requestId,
+      creditsCharged: CREDITS_PER_ANSWER,
+    });
   } catch (err: unknown) {
     if (!aborted) {
       responseMode = "INTERNAL_ERROR";
       const isApiError = err instanceof Anthropic.APIError;
       dimeLog("step.11.claude_call_ERROR", requestId, {
-        errorClass: isApiError ? "APIError" : (err as Error)?.constructor?.name ?? "Unknown",
+        errorClass: isApiError
+          ? "APIError"
+          : ((err as Error)?.constructor?.name ?? "Unknown"),
         statusCode: isApiError ? err.status : undefined,
         latencyMs: Date.now() - startTime,
       });
-      send({ type: "error", message: "Dime encountered an error. No credits charged.", requestId });
+      send({
+        type: "error",
+        message: "Dime encountered an error. No credits charged.",
+        requestId,
+      });
       // Log audit with 0 credits
       await logRequestAudit({
-        requestId, userId: userIdStr, authStatus: "PASSED",
-        entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
-        intent, contextStatus: "READY", responseStatus: "INTERNAL_ERROR",
-        tokensUsed: 0, creditsCharged: 0,
+        requestId,
+        userId: userIdStr,
+        authStatus: "PASSED",
+        entitlementStatus: "PASSED",
+        creditStatus: "SUFFICIENT",
+        intent,
+        contextStatus: "READY",
+        responseStatus: "INTERNAL_ERROR",
+        tokensUsed: 0,
+        creditsCharged: 0,
       });
       await logResponseAudit({
-        requestId, userId: userIdStr, responseMode: "INTERNAL_ERROR",
-        creditsCharged: 0, contextHash: context.contextHash,
-        tokensInput: 0, tokensOutput: 0,
+        requestId,
+        userId: userIdStr,
+        responseMode: "INTERNAL_ERROR",
+        creditsCharged: 0,
+        contextHash: context.contextHash,
+        tokensInput: 0,
+        tokensOutput: 0,
       });
       res.end();
       return;
@@ -681,21 +872,34 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 12: Usage log
   // ═══════════════════════════════════════════════════════════════════════════
-  dimeLog("step.12.usage_logged", requestId, { tokensInput, tokensOutput, responseMode });
+  dimeLog("step.12.usage_logged", requestId, {
+    tokensInput,
+    tokensOutput,
+    responseMode,
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 13: Credit deduction (ONLY after successful response)
   // ═══════════════════════════════════════════════════════════════════════════
   let creditsCharged = 0;
   if (responseMode === "ANSWER") {
-    const newBalance = await deductCredits(userId, requestId, CREDITS_PER_ANSWER);
+    const newBalance = await deductCredits(
+      userId,
+      requestId,
+      CREDITS_PER_ANSWER
+    );
     if (newBalance === -1) {
       // Atomic check failed — race condition caught, insufficient credits
-      dimeLog("step.13.credit_RACE_BLOCKED", requestId, { reason: "concurrent deduction drained balance" });
+      dimeLog("step.13.credit_RACE_BLOCKED", requestId, {
+        reason: "concurrent deduction drained balance",
+      });
       creditsCharged = 0;
     } else {
       creditsCharged = CREDITS_PER_ANSWER;
-      dimeLog("step.13.credit_deducted", requestId, { charged: CREDITS_PER_ANSWER, newBalance });
+      dimeLog("step.13.credit_deducted", requestId, {
+        charged: CREDITS_PER_ANSWER,
+        newBalance,
+      });
     }
   } else {
     dimeLog("step.13.credit_NOT_charged", requestId, { reason: responseMode });
@@ -704,39 +908,62 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 14: Response log
   // ═══════════════════════════════════════════════════════════════════════════
-  const answerHash = crypto.createHash("sha256").update(String(outputChars)).digest("hex").slice(0, 32);
+  const answerHash = crypto
+    .createHash("sha256")
+    .update(String(outputChars))
+    .digest("hex")
+    .slice(0, 32);
   await logRequestAudit({
-    requestId, userId: userIdStr, authStatus: "PASSED",
-    entitlementStatus: "PASSED", creditStatus: "SUFFICIENT",
-    intent, contextStatus: "READY", responseStatus: responseMode,
-    tokensUsed: tokensInput + tokensOutput, creditsCharged,
+    requestId,
+    userId: userIdStr,
+    authStatus: "PASSED",
+    entitlementStatus: "PASSED",
+    creditStatus: "SUFFICIENT",
+    intent,
+    contextStatus: "READY",
+    responseStatus: responseMode,
+    tokensUsed: tokensInput + tokensOutput,
+    creditsCharged,
   });
   await logResponseAudit({
-    requestId, userId: userIdStr, responseMode,
-    creditsCharged, contextHash: context.contextHash,
-    tokensInput, tokensOutput, answerHash,
+    requestId,
+    userId: userIdStr,
+    responseMode,
+    creditsCharged,
+    contextHash: context.contextHash,
+    tokensInput,
+    tokensOutput,
+    answerHash,
   });
-  dimeLog("step.14.response_logged", requestId, { totalLatencyMs: Date.now() - startTime });
+  dimeLog("step.14.response_logged", requestId, {
+    totalLatencyMs: Date.now() - startTime,
+  });
 
   res.end();
 });
 
 // ─── Duplicate request_id idempotency endpoint ───────────────────────────────
-dimeWc2026Router.get("/wc2026/audit/:requestId", async (req: Request, res: Response) => {
-  const { requestId } = req.params;
-  const db = await getDb();
-  if (!db) { res.status(500).json({ error: "DB unavailable" }); return; }
-  const result = await db.execute(
-    sql`SELECT request_id, auth_status, response_status, credits_charged, created_at
+dimeWc2026Router.get(
+  "/wc2026/audit/:requestId",
+  async (req: Request, res: Response) => {
+    const { requestId } = req.params;
+    const db = await getDb();
+    if (!db) {
+      res.status(500).json({ error: "DB unavailable" });
+      return;
+    }
+    const result = await db.execute(
+      sql`SELECT request_id, auth_status, response_status, credits_charged, created_at
         FROM dime_request_audit WHERE request_id = ${requestId}`
-  );
-  const rows = (result as any)[0];
-  if (!rows || rows.length === 0) {
-    res.status(404).json({ error: "Request not found" });
-    return;
+    );
+    const rows = (result as any)[0];
+    if (!rows || rows.length === 0) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+    res.json({ audit: rows[0] });
   }
-  res.json({ audit: rows[0] });
-});
+);
 
 /**
  * Mount the Dime WC2026 intelligence route on the Express app.

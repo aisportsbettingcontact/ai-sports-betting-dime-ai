@@ -10,9 +10,45 @@ e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-rotation-verificati
 e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-rotation-verification-worksheet.md:aws-access-token:128
 e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-corrections-1-2-addendum.md:generic-api-key:54
 
-# LiveLab redaction unit test (commit 501f9645): a synthetic, hand-typed JWT
-# fixture used to verify that redactText() scrubs JWT shapes — not a credential
-# (header/payload decode to {"alg":"HS256"}/{"sub":"1234567890"}, signature is
-# junk). The test now builds the token at runtime so the literal is gone from
-# the working tree; this fingerprint covers the immutable history.
-501f9645ba9ac39acf53cb74699bc1a9158fcd00:livelab/packages/protocol/test/protocol.unit.test.ts:jwt:133
+# Local ephemeral test-database DSN in the PR #198 plan document (commit e0a4e44).
+# Not a credential: password "test", loopback host 127.0.0.1, throwaway dime_test
+# schema created and dropped by the Task 1 runtime harness. Nothing reachable, and
+# nothing that exists outside a developer's own machine. The working-tree copy is
+# sanitized; these fingerprints cover the immutable history.
+e0a4e44c405385fe78aa9ca8971e592eb45eee4b:docs/superpowers/plans/2026-07-24-deferred-defects-pr198.md:connection-string-password:75
+e0a4e44c405385fe78aa9ca8971e592eb45eee4b:docs/superpowers/plans/2026-07-24-deferred-defects-pr198.md:connection-string-password:243
+
+# Example drizzle-kit command in the CFB 2026 plan document (commit da062b38,
+# PR #202). Not a credential: user, password, and database are all literally the
+# word "placeholder" on localhost — the doc's own text explains that
+# `drizzle-kit generate` never connects and only needs a non-empty env var. The
+# working-tree copy now uses DATABASE_URL="placeholder" (no URL shape); this
+# fingerprint covers the immutable history.
+da062b383ccf3b11924dc6e60746523b800f53dc:docs/superpowers/plans/2026-07-25-cfb-2026-database.md:connection-string-password:237
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/configs/dime_training_contract_v1.json:generic-api-key:43
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/configs/dime_training_contract_v1.json:generic-api-key:49
+f20c968af422131eb6a6e075fefad77f42511d28:ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json:generic-api-key:89
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json:generic-api-key:22
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json:generic-api-key:32
+
+# PR #252 immutable SHA-256 artifact identities. The generic-api-key detector
+# matched six content checksums in the sanitized governance evidence manifest.
+# These exact commit/path/rule/line fingerprints do not suppress either the
+# checksum values elsewhere or future findings.
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:20
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:21
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:23
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:26
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:27
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:28
+# The reconciled allowlist intentionally keeps both exact evidence families.
+# PR #253 exact Hugging Face model/tokenizer revision identities. The
+# generic-api-key detector matched the two pinned public commit revisions in
+# the config, schema constants, and tests. These exact fingerprints do not
+# suppress the revisions elsewhere or future findings.
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/tests/test_runpod_gate_1_authorization_v1.py:generic-api-key:52
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/tests/test_runpod_gate_1_authorization_v1.py:generic-api-key:58
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/schemas/runpod_gate_1_authorization.schema.json:generic-api-key:69
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/schemas/runpod_gate_1_authorization.schema.json:generic-api-key:75
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/configs/runpod_gate_1_authorization_v1.json:generic-api-key:30
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/configs/runpod_gate_1_authorization_v1.json:generic-api-key:36

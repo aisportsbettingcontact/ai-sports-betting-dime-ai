@@ -25,9 +25,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { getDb, getAppUserById, updateAppUser, updateAppUserLastSignedIn } from "./db";
-import { discordInviteTokens } from "../drizzle/schema";
+import { appUsers, discordInviteTokens } from "../drizzle/schema";
+import { syncDiscordRole } from "./discord/discordRoleSync";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
+import { logSafe } from "./_core/logSafe";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ROUTE_PREFIX   = "/api/auth/discord-invite";
@@ -112,14 +114,14 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     const origin = `${proto}://${fwdHost}`;
     console.warn(
       `[DiscordInvite][ORIGIN][WARN] requestId=${requestId}` +
-      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${origin}"`
+      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${logSafe(origin)}"`
     );
     return origin;
   }
   const fallback = `${req.protocol}://${req.get("host") ?? "localhost"}`;
   console.warn(
     `[DiscordInvite][ORIGIN][WARN] requestId=${requestId}` +
-    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${fallback}"`
+    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${logSafe(fallback)}"`
   );
   return fallback;
 }
@@ -160,7 +162,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
     const rawToken  = typeof req.query.token === "string" ? req.query.token.trim() : "";
 
     console.log(
-      `[DiscordInvite][CONNECT] requestId=${requestId} tokenPrefix="${rawToken.slice(0,8)}…"`
+      `[DiscordInvite][CONNECT] requestId=${requestId} tokenPrefix="${logSafe(rawToken.slice(0, 8))}…"`
     );
 
     // [VALIDATE] Discord client credentials must be set
@@ -249,8 +251,8 @@ export function registerDiscordInviteRoutes(app: Express): void {
 
       console.log(
         `[DiscordInvite][CONNECT][OK] requestId=${requestId}` +
-        ` targetUserId=${row.targetUserId} username=${user.username}` +
-        ` redirectUri="${redirectUri}" totalMs=${Date.now() - t0}`
+        ` targetUserId=${row.targetUserId} username=${logSafe(user.username)}` +
+        ` redirectUri="${logSafe(redirectUri)}" totalMs=${Date.now() - t0}`
       );
       res.redirect(302, authorizeUrl);
     } catch (err) {
@@ -297,7 +299,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][DISCORD_ERROR] requestId=${requestId}` +
-          ` discordError="${discordError}"`
+          ` discordError="${logSafe(discordError)}"`
         );
         res.redirect(302, `/?discord_error=${discordError === "access_denied" ? "discord_cancelled" : "discord_error"}`);
         return;
@@ -474,6 +476,19 @@ export function registerDiscordInviteRoutes(app: Express): void {
         ` targetUserId=${targetUserId} username=${user.username}`
       );
 
+      // [STEP] Reject a Discord account already linked to another user.
+      const existingLinks = await db
+        .select({ id: appUsers.id })
+        .from(appUsers)
+        .where(eq(appUsers.discordId, discordId))
+        .limit(1);
+      if (existingLinks[0] && existingLinks[0].id !== targetUserId) {
+        clearTimeout(deadlineTimer);
+        console.warn(`[DiscordInvite][CALLBACK][CONFLICT] requestId=${requestId} discordId=${discordId} linkedUserId=${existingLinks[0].id}`);
+        res.redirect(302, `/?discord_error=already_linked`);
+        return;
+      }
+
       // [STEP] Link Discord account to the target user row
       try {
         await updateAppUser(targetUserId, {
@@ -494,6 +509,11 @@ export function registerDiscordInviteRoutes(app: Express): void {
         res.redirect(302, `/?discord_error=db_unavailable`);
         return;
       }
+
+      // Sync the subscriber role after the link has been persisted. Failure is non-blocking.
+      void syncDiscordRole(targetUserId, user.hasAccess).catch((syncErr: unknown) =>
+        console.warn(`[DiscordInvite][CALLBACK][ROLE_SYNC_WARN] requestId=${requestId} userId=${targetUserId}`, syncErr)
+      );
 
       // [STEP] Mark invite token as used (single-use enforcement)
       // Fire-and-forget — do not block the session cookie on this

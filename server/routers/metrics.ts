@@ -2,8 +2,8 @@
  * metrics.ts — tRPC router for platform metrics
  *
  * Procedures:
- *   metrics.getSessionMetrics  — DAU / WAU / MAU / avg session duration
- *   metrics.getMemberMetrics   — total paying / lifetime / non-paying / discord connected
+ *   metrics.getSessionMetrics  — DAU / WAU / MAU / avg session duration (each as {state,value,reason})
+ *   metrics.getMemberMetrics   — reconciled membership (lifetime + recurring + no-access = total; discord cross-cuts)
  *   metrics.sessionHeartbeat   — client heartbeat ping (every 5 min while logged in)
  *   metrics.openSession        — create session row on login
  *   metrics.closeSession       — close session rows on logout
@@ -23,9 +23,13 @@ export const metricsRouter = router({
   /** Owner-only: DAU / WAU / MAU / avg session duration */
   getSessionMetrics: ownerProcedure.query(async () => {
     const tag = "[tRPC][metrics.getSessionMetrics]";
-    console.log(`${tag} [STEP] Fetching session metrics (DAU/WAU/MAU/avgDuration)`);
+    console.log(
+      `${tag} [STEP] Fetching session metrics (DAU/WAU/MAU/avgDuration)`
+    );
     const result = await getSessionMetrics();
-    console.log(`${tag} [OUTPUT] dau=${result.dau} wau=${result.wau} mau=${result.mau} avgDurMs=${Math.round(result.avgSessionDurationMs)}`);
+    console.log(
+      `${tag} [OUTPUT] dau=${result.dau.state}:${result.dau.value} wau=${result.wau.state}:${result.wau.value} mau=${result.mau.state}:${result.mau.value} avgDur=${result.avgSessionDurationMs.state}:${result.avgSessionDurationMs.value}`
+    );
     return result;
   }),
 
@@ -34,7 +38,9 @@ export const metricsRouter = router({
     const tag = "[tRPC][metrics.getDurationHistogram]";
     console.log(`${tag} [STEP] Fetching session duration histogram`);
     const result = await getDurationHistogram();
-    console.log(`${tag} [OUTPUT] under5m=${result.under5m} m5to30=${result.m5to30} m30to120=${result.m30to120} h2to4=${result.h2to4} total=${result.total}`);
+    console.log(
+      `${tag} [OUTPUT] under5m=${result.under5m} m5to30=${result.m5to30} m30to120=${result.m30to120} h2to4=${result.h2to4} total=${result.total}`
+    );
     return result;
   }),
 
@@ -43,7 +49,9 @@ export const metricsRouter = router({
     const tag = "[tRPC][metrics.getMemberMetrics]";
     console.log(`${tag} [STEP] Fetching member metrics`);
     const result = await getMemberMetrics();
-    console.log(`${tag} [OUTPUT] totalPaying=${result.totalPaying} lifetime=${result.lifetimeMembers} nonPaying=${result.nonPaying} discord=${result.discordConnected} total=${result.totalUsers}`);
+    console.log(
+      `${tag} [OUTPUT] total=${result.totalMembers} lifetime=${result.lifetime} recurring=${result.recurringPaid} noAccess=${result.noAccess} discord=${result.discordConnected}`
+    );
     return result;
   }),
 

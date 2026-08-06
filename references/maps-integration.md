@@ -1,6 +1,6 @@
 ## 🗺️ Maps Integration
 
-**CRITICAL: The Manus proxy provides FULL access to ALL Google Maps features** - including advanced drawing, heatmaps, Street View, all layers, Places API, etc. Do NOT ask users for Google Map API keys - authentication is automatic.
+**CRITICAL: The maps helper routes through the legacy `BUILT_IN_FORGE_*` gateway.** On Railway those variables are unset, so maps calls throw. If maps features are needed, supply your own `GOOGLE_MAPS_API_KEY` integration instead of relying on the legacy proxy.
 
 **Default: Use Frontend SDK** - Import MapView from `client/src/components/Map.tsx` and initialize ANY Google Maps service (geocoding, directions, places, drawing, visualization, geometry, etc.) in the onMapReady callback. 
 
@@ -13,4 +13,4 @@
 - Frontend: See `client/src/components/Map.tsx` for component usage - ALL Google Maps JavaScript API features work
 - Backend: Create tRPC procedures using `makeRequest` from `server/_core/map.ts`
 
-NEVER use external map libraries or request API keys from users - the Manus proxy handles everything automatically with no feature limitations.
+The helpers above depend on the legacy `BUILT_IN_FORGE_*` gateway, which is not provisioned on Railway — bring your own `GOOGLE_MAPS_API_KEY` (or an external map library) if maps are needed in production.

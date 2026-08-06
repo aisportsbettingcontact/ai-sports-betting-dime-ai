@@ -58,8 +58,12 @@ describe("mlbModelRunner DB write block — run line odds field mapping", () => 
     const setBlock = getMainSetBlock(source);
     expect(setBlock).not.toBe("");
     // Both fields must use fmtMl(r.*_rl_odds)
-    expect(setBlock).toMatch(/modelAwaySpreadOdds\s*:\s*fmtMl\(r\.away_rl_odds\)/);
-    expect(setBlock).toMatch(/modelHomeSpreadOdds\s*:\s*fmtMl\(r\.home_rl_odds\)/);
+    expect(setBlock).toMatch(
+      /modelAwaySpreadOdds\s*:\s*fmtMl\(r\.away_rl_odds\)/
+    );
+    expect(setBlock).toMatch(
+      /modelHomeSpreadOdds\s*:\s*fmtMl\(r\.home_rl_odds\)/
+    );
   });
 
   it("does NOT write awayRunLineOdds/homeRunLineOdds (book fields owned by scraper, not model runner)", () => {
@@ -72,7 +76,9 @@ describe("mlbModelRunner DB write block — run line odds field mapping", () => 
     expect(setBlock).toContain("modelAwaySpreadOdds:");
     expect(setBlock).toContain("modelHomeSpreadOdds:");
     // Verify the comment documents that book fields are intentionally excluded
-    expect(source).toMatch(/awayRunLine.*intentionally NOT|intentionally NOT.*awayRunLine/i);
+    expect(source).toMatch(
+      /awayRunLine.*intentionally NOT|intentionally NOT.*awayRunLine/i
+    );
   });
 
   it("writes awayModelSpread and homeModelSpread as signed RL labels", () => {
@@ -82,8 +88,12 @@ describe("mlbModelRunner DB write block — run line odds field mapping", () => 
     expect(setBlock).toContain("homeModelSpread:");
     // Uses safeAwayRunLine / safeHomeRunLine (sign-enforced wrappers around r.away_run_line / r.home_run_line)
     // These wrappers enforce sign constraints to prevent feedback loop corruption
-    expect(setBlock).toMatch(/awayModelSpread\s*:\s*safe(?:Away|Home)RunLine|awayModelSpread\s*:\s*r\.away_run_line/);
-    expect(setBlock).toMatch(/homeModelSpread\s*:\s*safe(?:Home|Away)RunLine|homeModelSpread\s*:\s*r\.home_run_line/);
+    expect(setBlock).toMatch(
+      /awayModelSpread\s*:\s*safe(?:Away|Home)RunLine|awayModelSpread\s*:\s*r\.away_run_line/
+    );
+    expect(setBlock).toMatch(
+      /homeModelSpread\s*:\s*safe(?:Home|Away)RunLine|homeModelSpread\s*:\s*r\.home_run_line/
+    );
   });
 
   it("has RL sign flip / invariant violation guard that invalidates modelRunAt instead of writing bad odds", () => {
@@ -94,7 +104,9 @@ describe("mlbModelRunner DB write block — run line odds field mapping", () => 
     expect(source).toContain("rlSignFlipDetected");
     expect(source).toContain("INVALIDATING modelRunAt");
     // The invalidation write block must set modelRunAt to null
-    const invalidationMatch = source.match(/rlSignFlipDetected[\s\S]*?\.set\(\{[\s\S]*?modelRunAt\s*:\s*null[\s\S]*?\}\)/);
+    const invalidationMatch = source.match(
+      /rlSignFlipDetected[\s\S]*?\.set\(\{[\s\S]*?modelRunAt\s*:\s*null[\s\S]*?\}\)/
+    );
     expect(invalidationMatch).not.toBeNull();
     // The invalidation block must be followed by continue to skip the main write
     expect(source).toMatch(/rlSignFlipDetected[\s\S]*?continue/);
@@ -122,7 +134,9 @@ describe("fmtMl odds formatter", () => {
   const source = fs.readFileSync(runnerPath, "utf-8");
 
   // Extract the fmtMl function body
-  const fmtMlMatch = source.match(/function fmtMl\(([^)]*)\)[^{]*\{([\s\S]*?)^}/m);
+  const fmtMlMatch = source.match(
+    /function fmtMl\(([^)]*)\)[^{]*\{([\s\S]*?)^}/m
+  );
 
   // Build a testable version using the extracted logic
   function fmtMl(n: number): string {
@@ -163,7 +177,10 @@ describe("fmtMl odds formatter", () => {
 //            is the correct gate for displaying RL odds
 // ─────────────────────────────────────────────────────────────────────────────
 describe("GameCard MLB spread odds rendering gate", () => {
-  const gameCardPath = path.join(__dirname, "../client/src/components/GameCard.tsx");
+  const gameCardPath = path.join(
+    __dirname,
+    "../client/src/components/GameCard.tsx"
+  );
   let source: string;
 
   beforeEach(() => {
@@ -172,7 +189,11 @@ describe("GameCard MLB spread odds rendering gate", () => {
 
   it("uses isMlbGame && modelAwaySpreadOdds to gate RL odds display", () => {
     // GameCard checks (isNcaamGame || isMlbGame) && game.modelAwaySpreadOdds
-    expect(source).toMatch(/isMlbGame.*modelAwaySpreadOdds|modelAwaySpreadOdds.*isMlbGame/);
+    // Newline-tolerant within a short window — prettier may wrap the gate
+    // expression across lines.
+    expect(source).toMatch(
+      /isMlbGame[\s\S]{0,200}modelAwaySpreadOdds|modelAwaySpreadOdds[\s\S]{0,200}isMlbGame/
+    );
   });
 
   it("renders mdlAwaySpreadStr with odds when modelAwaySpreadOdds is present", () => {
@@ -233,8 +254,12 @@ describe("Run line spread label format", () => {
   // The runner stores these directly in awayModelSpread / homeModelSpread
 
   function makeRlLabels(rlSpread: number): { away: string; home: string } {
-    const awayLabel = rlSpread >= 0 ? `+${rlSpread.toFixed(1)}` : `${rlSpread.toFixed(1)}`;
-    const homeLabel = (-rlSpread) >= 0 ? `+${(-rlSpread).toFixed(1)}` : `${(-rlSpread).toFixed(1)}`;
+    const awayLabel =
+      rlSpread >= 0 ? `+${rlSpread.toFixed(1)}` : `${rlSpread.toFixed(1)}`;
+    const homeLabel =
+      -rlSpread >= 0
+        ? `+${(-rlSpread).toFixed(1)}`
+        : `${(-rlSpread).toFixed(1)}`;
     return { away: awayLabel, home: homeLabel };
   }
 

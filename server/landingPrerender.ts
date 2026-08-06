@@ -17,30 +17,67 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { logSafe } from "./_core/logSafe";
 
 // Bot / crawler UA patterns (used for landing page only)
 const BOT_PATTERNS = [
-  /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
-  /yandexbot/i, /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
-  /whatsapp/i, /telegrambot/i, /discordbot/i, /slackbot/i, /applebot/i,
-  /semrushbot/i, /ahrefsbot/i, /mj12bot/i, /dotbot/i, /rogerbot/i,
-  /curl\//i, /wget\//i, /python-requests/i, /python-urllib/i,
-  /node-fetch/i, /axios\//i, /go-http-client/i, /java\//i, /okhttp/i,
-  /httpie/i, /insomnia/i, /postman/i,
-  /claude-web/i, /anthropic/i, /gpt-crawler/i, /openai/i,
-  /perplexitybot/i, /claudebot/i, /chatgpt/i, /cohere-ai/i,
-  /ia_archiver/i, /archive\.org/i, /scrapy/i, /heritrix/i, /nutch/i,
-  /spider/i, /crawler/i, /bot\b/i,
+  /googlebot/i,
+  /bingbot/i,
+  /slurp/i,
+  /duckduckbot/i,
+  /baiduspider/i,
+  /yandexbot/i,
+  /facebookexternalhit/i,
+  /twitterbot/i,
+  /linkedinbot/i,
+  /whatsapp/i,
+  /telegrambot/i,
+  /discordbot/i,
+  /slackbot/i,
+  /applebot/i,
+  /semrushbot/i,
+  /ahrefsbot/i,
+  /mj12bot/i,
+  /dotbot/i,
+  /rogerbot/i,
+  /curl\//i,
+  /wget\//i,
+  /python-requests/i,
+  /python-urllib/i,
+  /node-fetch/i,
+  /axios\//i,
+  /go-http-client/i,
+  /java\//i,
+  /okhttp/i,
+  /httpie/i,
+  /insomnia/i,
+  /postman/i,
+  /claude-web/i,
+  /anthropic/i,
+  /gpt-crawler/i,
+  /openai/i,
+  /perplexitybot/i,
+  /claudebot/i,
+  /chatgpt/i,
+  /cohere-ai/i,
+  /ia_archiver/i,
+  /archive\.org/i,
+  /scrapy/i,
+  /heritrix/i,
+  /nutch/i,
+  /spider/i,
+  /crawler/i,
+  /bot\b/i,
 ];
 
 function isBot(ua: string): boolean {
-  return BOT_PATTERNS.some((p) => p.test(ua));
+  return BOT_PATTERNS.some(p => p.test(ua));
 }
 
 // ─── Legal page builders (served to ALL user agents) ───────────────────────
 
 function buildPrivacyHtml(): string {
-  const title = "Privacy Policy | AI Sports Betting Models";
+  const title = "Privacy Policy — dıme";
   const canonical = "https://aisportsbettingmodels.com/privacy";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -48,7 +85,7 @@ function buildPrivacyHtml(): string {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>${title}</title>
-<meta name="description" content="Privacy Policy for AI Sports Betting Models — how we collect, use, and protect your data."/>
+<meta name="description" content="Privacy Policy for Dime AI — how we collect, use, and protect your data."/>
 <link rel="canonical" href="${canonical}"/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="${canonical}"/>
@@ -64,14 +101,18 @@ p{margin-bottom:12px;font-size:14px;color:#FFFFFF}
 ul{padding-left:24px;margin-bottom:12px}
 li{font-size:14px;color:#FFFFFF;margin-bottom:6px}
 a{color:#45E0A8;text-decoration:underline}
-.updated{color:#FFFFFF;font-size:13px;margin-bottom:32px}
-.footer{margin-top:48px;padding-top:24px;border-top:1px solid #FFFFFF;text-align:center;color:#FFFFFF;font-size:12px}
+a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-offset:2px}
+.updated{color:#A6A6A6;font-size:13px;margin-bottom:32px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #262626;text-align:center;color:#A6A6A6;font-size:12px}
+.site-header{max-width:720px;margin:0 auto 24px}
+.site-header a{color:#FFFFFF;text-decoration:none;font-weight:700;letter-spacing:-0.05em;font-size:22px}
 </style>
 </head>
 <body>
-<div class="container">
+<header class="site-header"><a href="/" aria-label="Back to dime home">dıme</a></header>
+<main class="container">
 <h1>Privacy Policy</h1>
-<p class="updated">Last updated: July 7, 2026</p>
+<p class="updated">Last updated: July 28, 2026</p>
 
 <h2>1. Information We Collect</h2>
 <p>When you create an account or use our sports intelligence software, we may collect:</p>
@@ -96,13 +137,14 @@ a{color:#45E0A8;text-decoration:underline}
 <p>Our platform uses artificial intelligence models to generate sports analysis, probability distributions, and market projections. Specifically:</p>
 <ul>
 <li>AI models process publicly available sports data (match statistics, odds, team performance metrics) to generate analytical outputs.</li>
-<li>Your queries to our AI intelligence system may be logged for quality assurance and model improvement purposes.</li>
+<li>Your AI queries, generated responses, bounded platform-context snapshots, and technical generation metadata may be logged for quality assurance, safety review, debugging, and model-improvement evaluation.</li>
+<li>Raw conversation logs are not automatically added to model-training datasets. Any future use of deidentified conversation-derived examples for training requires a separate consent, redaction, human-review, and dataset-approval process.</li>
 <li>AI-generated outputs are probabilistic in nature and do not constitute financial advice, guaranteed outcomes, or endorsements of any wagering activity.</li>
 <li>We do not sell or share your AI interaction data with third parties for advertising purposes.</li>
 </ul>
 
 <h2>4. Data Retention</h2>
-<p>We retain your account data for as long as your account is active. AI query logs are retained for up to 90 days for quality assurance, then anonymized or deleted. Payment records are retained as required by applicable law.</p>
+<p>We retain your account data and user-visible chat history for as long as your account is active or as needed to provide the service. Restricted AI generation traces&mdash;including raw provider output and bounded context snapshots&mdash;are retained for up to 90 days for quality assurance, then anonymized or deleted. Payment records are retained as required by applicable law.</p>
 
 <h2>5. Data Security</h2>
 <p>We implement industry-standard security measures including encrypted connections (TLS), secure authentication (OAuth 2.0), and access controls to protect your personal information.</p>
@@ -111,8 +153,10 @@ a{color:#45E0A8;text-decoration:underline}
 <p>We use the following third-party services that may process your data:</p>
 <ul>
 <li>Stripe &mdash; payment processing</li>
-<li>Anthropic (Claude) &mdash; AI model inference</li>
-<li>Manus Platform &mdash; authentication and hosting</li>
+<li>RunPod &mdash; private AI model inference infrastructure</li>
+<li>Anthropic (Claude) &mdash; AI model inference when that provider is enabled</li>
+<li>Railway &mdash; application hosting</li>
+<li>Discord &mdash; account authentication</li>
 </ul>
 
 <h2>7. Your Rights</h2>
@@ -129,14 +173,14 @@ a{color:#45E0A8;text-decoration:underline}
 <h2>10. Contact</h2>
 <p>For privacy-related inquiries, contact us at the email associated with your account or through the platform's support channels.</p>
 
-<div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
-</div>
+<div class="footer">&copy; ${new Date().getFullYear()} Tailered Sports, Inc. All rights reserved.</div>
+</main>
 </body>
 </html>`;
 }
 
 function buildTermsHtml(): string {
-  const title = "Terms of Service | AI Sports Betting Models";
+  const title = "Terms of Service — dıme";
   const canonical = "https://aisportsbettingmodels.com/terms";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -144,7 +188,7 @@ function buildTermsHtml(): string {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>${title}</title>
-<meta name="description" content="Terms of Service for AI Sports Betting Models — subscription terms, acceptable use, and disclaimers."/>
+<meta name="description" content="Terms of Service for Dime AI — subscription terms, acceptable use, and disclaimers."/>
 <link rel="canonical" href="${canonical}"/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="${canonical}"/>
@@ -160,18 +204,22 @@ p{margin-bottom:12px;font-size:14px;color:#FFFFFF}
 ul{padding-left:24px;margin-bottom:12px}
 li{font-size:14px;color:#FFFFFF;margin-bottom:6px}
 a{color:#45E0A8;text-decoration:underline}
-.updated{color:#FFFFFF;font-size:13px;margin-bottom:32px}
+a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-offset:2px}
+.updated{color:#A6A6A6;font-size:13px;margin-bottom:32px}
 .caps{text-transform:uppercase;font-size:13px}
-.footer{margin-top:48px;padding-top:24px;border-top:1px solid #FFFFFF;text-align:center;color:#FFFFFF;font-size:12px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #262626;text-align:center;color:#A6A6A6;font-size:12px}
+.site-header{max-width:720px;margin:0 auto 24px}
+.site-header a{color:#FFFFFF;text-decoration:none;font-weight:700;letter-spacing:-0.05em;font-size:22px}
 </style>
 </head>
 <body>
-<div class="container">
+<header class="site-header"><a href="/" aria-label="Back to dime home">dıme</a></header>
+<main class="container">
 <h1>Terms of Service</h1>
-<p class="updated">Last updated: July 7, 2026</p>
+<p class="updated">Last updated: August 5, 2026</p>
 
 <h2>1. Acceptance of Terms</h2>
-<p>By accessing or using AI Sports Betting Models ("the Platform"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.</p>
+<p>By accessing or using Dime AI ("the Platform"), operated by Tailered Sports, Inc., you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.</p>
 
 <h2>2. Description of Service</h2>
 <p>The Platform provides sports intelligence software that generates AI-powered analytical outputs including probability distributions, no-vig pricing, Monte Carlo simulations, and market edge analysis. The Platform covers multiple sports including soccer (matches), baseball, basketball, and hockey.</p>
@@ -183,7 +231,6 @@ a{color:#45E0A8;text-decoration:underline}
 <li>Your subscription renews automatically unless cancelled before the renewal date.</li>
 <li>Cancellation takes effect at the end of the current billing period. No prorated refunds are issued for partial periods.</li>
 <li>We reserve the right to modify pricing with 30 days advance notice. Existing subscribers retain their current rate until the next renewal cycle after the notice period.</li>
-<li>AI credit allocations (DIME credits) are included with your subscription tier. Unused credits do not roll over between billing periods.</li>
 </ul>
 
 <h2>4. Acceptable Use</h2>
@@ -198,7 +245,7 @@ a{color:#45E0A8;text-decoration:underline}
 </ul>
 
 <h2>5. Intellectual Property</h2>
-<p>All models, algorithms, analytical frameworks, and software comprising the Platform are the intellectual property of AI Sports Betting Models. Your subscription grants a limited, non-transferable license to use Platform outputs for personal analytical purposes only.</p>
+<p>All models, algorithms, analytical frameworks, and software comprising the Platform are the intellectual property of Tailered Sports, Inc. Your subscription grants a limited, non-transferable license to use Platform outputs for personal analytical purposes only.</p>
 
 <h2>6. Disclaimers</h2>
 <p class="caps"><strong>THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE THE ACCURACY, COMPLETENESS, OR RELIABILITY OF ANY ANALYTICAL OUTPUT. PAST PERFORMANCE OF OUR MODELS DOES NOT GUARANTEE FUTURE RESULTS.</strong></p>
@@ -225,8 +272,8 @@ a{color:#45E0A8;text-decoration:underline}
 <h2>12. Contact</h2>
 <p>For questions about these Terms, contact us through the Platform's support channels or at the email associated with your account.</p>
 
-<div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
-</div>
+<div class="footer">&copy; ${new Date().getFullYear()} Tailered Sports, Inc. All rights reserved.</div>
+</main>
 </body>
 </html>`;
 }
@@ -236,14 +283,16 @@ a{color:#45E0A8;text-decoration:underline}
 // CONTENT PARITY: this is a static snapshot of Dime landing v2
 // (client/src/pages/dime/landing/ — copy source: landing-content.ts).
 // Brand law: design-system/dime-ai/MASTER.md — mint #45E0A8 only, grey PASS
-// states, Familjen Grotesk / IBM Plex Mono stacks, no gradients, no #39FF14.
+// states, Familjen Grotesk (single-font mandate — Plex Mono retired), no gradients, no #39FF14.
 // Guarded by server/landingPrerender.test.ts — update both together.
 
 function buildLandingHtml(): string {
-  const title = "dıme — See where price and probability disagree | Sports Betting Intelligence Software";
-  const desc  = "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.";
-  const url   = "https://aisportsbettingmodels.com/";
-  const year  = new Date().getFullYear();
+  const title =
+    "dıme — See where price and probability disagree | Sports Betting Intelligence Software";
+  const desc =
+    "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.";
+  const url = "https://aisportsbettingmodels.com/";
+  const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -299,7 +348,7 @@ td b{color:var(--text);font-weight:700}
 .footer{border-top:1px solid var(--line);padding:32px 24px;text-align:center;color:var(--text-muted);font-size:12px}
 .disclaimer{max-width:720px;margin:0 auto 12px;line-height:1.7}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI (AI Sports Betting Models)","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99","priceCurrency":"USD"},{"@type":"Offer","name":"Sharp Monthly","price":"249","priceCurrency":"USD"},{"@type":"Offer","name":"Operator Monthly","price":"499","priceCurrency":"USD"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99","priceCurrency":"USD"},{"@type":"Offer","name":"Sharp Monthly","price":"249","priceCurrency":"USD"},{"@type":"Offer","name":"Operator Monthly","price":"499","priceCurrency":"USD"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this a picks service?","acceptedAnswer":{"@type":"Answer","text":"No. Dime AI is analytical software. It compares sportsbook prices against projected probability and classifies every market as Pass, Monitor, or Edge Detected. You make your own decisions."}},{"@type":"Question","name":"How does the model work?","acceptedAnswer":{"@type":"Answer","text":"400,000 simulations per game generate probability distributions, which are compared against the book's implied probability along with movement, volatility, and matchup context. Outputs are Brier-scored against closing prices."}},{"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $99/month, Sharp is $249/month and Operator is $499/month. On-page demos are free to preview, and founder access is by application."}}]}</script>
 </head>
 <body>
@@ -312,7 +361,7 @@ td b{color:var(--text);font-weight:700}
   <h1>See where price and probability <em>disagree</em>.</h1>
   <p class="sub">Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.</p>
   <a href="/checkout?plan=pro" class="cta">Get Access</a>
-  <p class="micro">Analytical software. No guaranteed outcomes. Built for disciplined market evaluation.</p>
+  <p class="micro">Analytical software for disciplined market evaluation. No guaranteed outcomes.</p>
 </section>
 <section class="section" id="console">
   <div class="mono">Demo &mdash; sample markets</div>
@@ -343,9 +392,9 @@ td b{color:var(--text);font-weight:700}
   <p class="lead">No picks packages. No units sold. Software pricing for disciplined market evaluation.</p>
   <div class="grid">
     <div class="card"><div class="mono">Free Preview</div><div class="price">$0</div><div class="per">On-page demos</div><p>Explore the Market Console and Dime Chat demos on this page.</p></div>
-    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Standard + Pro Analyst chat, 1,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
-    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, MAX Analyst access (monthly cap), 3,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
-    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, full MAX Analyst access (no cap), 8,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
+    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Dime Chat on every game priced.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
+    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, plus priority access to new model markets.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
+    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, plus early access to new markets and model releases.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
   </div>
   <div class="grid" style="margin-top:20px">
     <div class="card"><div class="mono">Founder</div><div class="price">By application</div><div class="per">Limited</div><p>Controlled access for serious operators. Application reviewed manually.</p></div>
@@ -359,9 +408,9 @@ td b{color:var(--text);font-weight:700}
   <div class="faq-item"><div class="faq-q">Can I cancel at any time?</div><div class="faq-a">Yes. No long-term commitments &mdash; cancel from your account settings and access runs to the end of the billing period.</div></div>
 </section>
 <footer class="footer">
-  <p class="disclaimer">Dime AI (AI Sports Betting Models) is sports betting intelligence software. All projections, probabilities, and classifications are generated by mathematical models for informational purposes only. No guaranteed outcomes. Past model performance does not guarantee future results. Sports betting involves financial risk &mdash; bet responsibly and within your means.</p>
+  <p class="disclaimer">Dime AI is sports betting intelligence software. All projections, probabilities, and classifications are generated by mathematical models for informational purposes only. No guaranteed outcomes. Past model performance does not guarantee future results. Sports betting involves financial risk &mdash; bet responsibly and within your means.</p>
   <p class="disclaimer"><b>21+ only.</b> If you or someone you know has a gambling problem, call <a href="tel:1-800-426-2537" style="color:var(--mint)">1-800-GAMBLER</a> for free, confidential help.</p>
-  <p>&copy; ${year} AI Sports Betting Models. All rights reserved.</p>
+  <p>&copy; ${year} Tailered Sports, Inc. All rights reserved.</p>
 </footer>
 </body>
 </html>`;
@@ -384,7 +433,9 @@ export function landingPrerenderMiddleware(
   // /privacy and /terms: serve legal content to ALL user agents unconditionally.
   // There is no correct reason for these routes to ever serve homepage HTML.
   if (path === "/privacy") {
-    console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 80)}"`);
+    console.log(
+      `[Prerender][INPUT] path=${logSafe(path)} ua="${logSafe(ua.slice(0, 80))}"`
+    );
     console.log("[Prerender][STEP] Legal page — serving to ALL user agents");
     const html = buildPrivacyHtml();
     console.log(`[Prerender][OUTPUT] /privacy bytes=${html.length}`);
@@ -397,7 +448,9 @@ export function landingPrerenderMiddleware(
   }
 
   if (path === "/terms") {
-    console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 80)}"`);
+    console.log(
+      `[Prerender][INPUT] path=${logSafe(path)} ua="${logSafe(ua.slice(0, 80))}"`
+    );
     console.log("[Prerender][STEP] Legal page — serving to ALL user agents");
     const html = buildTermsHtml();
     console.log(`[Prerender][OUTPUT] /terms bytes=${html.length}`);
@@ -414,7 +467,9 @@ export function landingPrerenderMiddleware(
     return next();
   }
 
-  console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 120)}"`);
+  console.log(
+    `[Prerender][INPUT] path=${logSafe(path)} ua="${logSafe(ua.slice(0, 120))}"`
+  );
 
   const botDetected = isBot(ua);
 
@@ -427,8 +482,12 @@ export function landingPrerenderMiddleware(
 
   const html = buildLandingHtml();
 
-  console.log(`[Prerender][OUTPUT] serving static HTML -- bytes=${html.length}`);
-  console.log("[Prerender][VERIFY] PASS -- static landing HTML sent to crawler");
+  console.log(
+    `[Prerender][OUTPUT] serving static HTML -- bytes=${html.length}`
+  );
+  console.log(
+    "[Prerender][VERIFY] PASS -- static landing HTML sent to crawler"
+  );
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=300, s-maxage=600");

@@ -20,13 +20,17 @@
  * without booting the server env, mirroring dimeChatRateLimit.ts.
  */
 
-export type DimeModelAccessUser = {
-  role: string;
-  hasAccess: boolean;
-} | null | undefined;
+export type DimeModelAccessUser =
+  | {
+      role: string;
+      hasAccess: boolean;
+    }
+  | null
+  | undefined;
 
 /** Hardcoded copy shown to (and returned to) every non-owner send attempt. */
-export const DIME_MODEL_ACCESS_MESSAGE = "AI Model access will be available soon";
+export const DIME_MODEL_ACCESS_MESSAGE =
+  "AI Model access will be available soon";
 
 /**
  * True only for enabled owner accounts. Everyone else — subscribers, admins,
@@ -36,4 +40,14 @@ export function canAccessDimeModel(user: DimeModelAccessUser): boolean {
   if (!user) return false;
   if (!user.hasAccess) return false;
   return user.role === "owner";
+}
+
+/**
+ * Temporary Research Alpha access is limited to enabled owner/admin accounts.
+ * It never changes the stricter production Dime model policy above.
+ */
+export function canAccessDimeResearchAlpha(user: DimeModelAccessUser): boolean {
+  if (!user) return false;
+  if (!user.hasAccess) return false;
+  return user.role === "owner" || user.role === "admin";
 }

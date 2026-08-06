@@ -1,0 +1,920 @@
+{
+ "typography": [
+  {
+   "key": "Familjen Grotesk|10.4px|600|10.4px|0.416px",
+   "count": 90,
+   "sample": "Model edge",
+   "cls": "ds-label"
+  },
+  {
+   "key": "Familjen Grotesk|14.56px|400|17.472px|normal",
+   "count": 60,
+   "sample": "-103",
+   "cls": "odds-value"
+  },
+  {
+   "key": "Familjen Grotesk|10.4px|600|10.4px|0.832px",
+   "count": 30,
+   "sample": "Expected",
+   "cls": "pregame-pitcher__status pregame-pitcher__status--e"
+  },
+  {
+   "key": "Familjen Grotesk|12.898px|700|15.4776px|normal",
+   "count": 30,
+   "sample": "Will Warren",
+   "cls": "pregame-pitcher__name"
+  },
+  {
+   "key": "Familjen Grotesk|10.4px|400|13.52px|normal",
+   "count": 30,
+   "sample": "7-5 · 4.41 ERA",
+   "cls": "pregame-pitcher__stats"
+  },
+  {
+   "key": "Familjen Grotesk|10.4px|700|12.48px|normal",
+   "count": 30,
+   "sample": "Under 9",
+   "cls": "summary__pick"
+  },
+  {
+   "key": "Familjen Grotesk|10.4px|600|normal|0.832px",
+   "count": 27,
+   "sample": "Edge",
+   "cls": "edge-indicator__label"
+  },
+  {
+   "key": "Familjen Grotesk|12.48px|700|normal|-0.1248px",
+   "count": 27,
+   "sample": "+5.6%",
+   "cls": "edge-indicator__value"
+  },
+  {
+   "key": "Familjen Grotesk|19.2256px|700|normal|-0.192256px",
+   "count": 15,
+   "sample": "Yankees @ Cubs",
+   "cls": "matchup__line"
+  },
+  {
+   "key": "Familjen Grotesk|19.2256px|400|normal|-0.192256px",
+   "count": 15,
+   "sample": "@",
+   "cls": "matchup__at"
+  },
+  {
+   "key": "Familjen Grotesk|15.0272px|400|normal|normal",
+   "count": 15,
+   "sample": "Wrigley Field",
+   "cls": "matchup__context ds-truncate"
+  },
+  {
+   "key": "Familjen Grotesk|13.5168px|600|normal|0.811008px",
+   "count": 15,
+   "sample": "2:20 PM ET",
+   "cls": "matchup__time"
+  },
+  {
+   "key": "Familjen Grotesk|12.48px|800|normal|0.9984px",
+   "count": 15,
+   "sample": "Lineups",
+   "cls": "pregame-pitchers__lineups"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|400|normal|1.3312px",
+   "count": 15,
+   "sample": "View full AI model projectio",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|400|normal|normal",
+   "count": 5,
+   "sample": "New Chat",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|400|normal|normal",
+   "count": 4,
+   "sample": "Dime Chat",
+   "cls": "dc-shell-sr-only"
+  },
+  {
+   "key": "Familjen Grotesk|64px|700|64px|-3.2px",
+   "count": 3,
+   "sample": "d",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|normal|normal",
+   "count": 3,
+   "sample": "World Cup Model Simulations",
+   "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusable dc-press"
+  },
+  {
+   "key": "Familjen Grotesk|11.44px|700|normal|normal",
+   "count": 3,
+   "sample": "ROI +6.0%",
+   "cls": "edge-indicator__roi"
+  },
+  {
+   "key": "Familjen Grotesk|50px|700|50px|-2.5px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "dime-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|600|normal|normal",
+   "count": 1,
+   "sample": "AI Model Projections",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|18px|500|normal|normal",
+   "count": 1,
+   "sample": "＋",
+   "cls": "dc-composer-plus"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|15.4px|normal",
+   "count": 1,
+   "sample": "Model estimates, not guarant",
+   "cls": "dc-chat-footer"
+  },
+  {
+   "key": "Familjen Grotesk|70px|600|70px|-1.4px",
+   "count": 1,
+   "sample": "AI Model Projections",
+   "cls": "dmf-toptitle"
+  },
+  {
+   "key": "Familjen Grotesk|17px|700|normal|-0.085px",
+   "count": 1,
+   "sample": "Friday, July 31",
+   "cls": "dmf-datelbl"
+  },
+  {
+   "key": "Familjen Grotesk|15px|600|normal|1.2px",
+   "count": 1,
+   "sample": "Major League Baseball (MLB)",
+   "cls": "dmf-lgname"
+  }
+ ],
+ "distinctFontSizes": [
+  "10.4px",
+  "11px",
+  "11.44px",
+  "12.48px",
+  "12.898px",
+  "13px",
+  "13.5168px",
+  "14.56px",
+  "15px",
+  "15.0272px",
+  "16.64px",
+  "17px",
+  "18px",
+  "19.2256px",
+  "22.75px",
+  "50px",
+  "64px",
+  "70px"
+ ],
+ "distinctFamilies": [
+  "Familjen Grotesk"
+ ],
+ "numericSample": [
+  {
+   "text": "-103",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-129",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+5.6%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "+133",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+114",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+3.8%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "+128",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+125",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-118",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-115",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+112",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+117",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+159",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+142",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+2.7%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-115",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-124",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+1.9%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-110",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-143",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+6.5%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "+142",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+108",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+6.8%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-156",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-180",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+3.3%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-105",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-112",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+1.6%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "+144",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+101",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+8.8%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-136",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-192",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+8.1%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-103",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "-117",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  },
+  {
+   "text": "+3.2%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "12.48px",
+   "weight": "700"
+  },
+  {
+   "text": "-107",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14.56px",
+   "weight": "400"
+  }
+ ],
+ "radii": [
+  [
+   "10px",
+   71
+  ],
+  [
+   "50%",
+   36
+  ],
+  [
+   "12px",
+   30
+  ],
+  [
+   "8px",
+   20
+  ],
+  [
+   "16px",
+   15
+  ],
+  [
+   "20px",
+   3
+  ],
+  [
+   "0px 0px 8px 8px",
+   1
+  ],
+  [
+   "26px",
+   1
+  ]
+ ],
+ "shadows": [
+  [
+   "rgba(0, 0, 0, 0.06) 0px 1px 2px 0px",
+   27
+  ],
+  [
+   "rgba(255, 255, 255, 0.12) 0px 1px 0px 0px inset",
+   22
+  ],
+  [
+   "rgba(0, 0, 0, 0.05) 0px 1px 1px 0px, rgba(0, 0, 0, 0.07) 0px 8px 24px 0px, rgba(255, 255, ",
+   15
+  ],
+  [
+   "rgba(255, 255, 255, 0.28) 0px 1px 0px 0px inset",
+   15
+  ],
+  [
+   "rgb(0, 0, 0) 0px 0px 0px 1px",
+   1
+  ]
+ ],
+ "mint": {
+  "text": 71,
+  "bg": 18,
+  "border": 0,
+  "samples": [
+   {
+    "tag": "SPAN",
+    "cls": "dime-coindot",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "dc-hero-dot",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+    "text": "World Cup Model Simu"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups"
+   }
+  ]
+ },
+ "contrastFails": [],
+ "contrastFailTotal": 0,
+ "smallTargets": [
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Search chats"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Collapse sidebar"
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Dime Chat"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input",
+   "w": 606,
+   "h": 17,
+   "text": ""
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-send dc-hv3 dc-focusable dc-pressable",
+   "w": 36,
+   "h": 36,
+   "text": "Submit prompt"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+   "w": 225,
+   "h": 36,
+   "text": "World Cup Model Simu"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--outline dc-hv1 dc-focus",
+   "w": 243,
+   "h": 36,
+   "text": "Player Props with th"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focu",
+   "w": 240,
+   "h": 36,
+   "text": "Best Trends for MLB "
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "AI Model Projections"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dmf-sq",
+   "w": 28,
+   "h": 28,
+   "text": "‹"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dmf-sq",
+   "w": 28,
+   "h": 28,
+   "text": "›"
+  }
+ ],
+ "clickableCount": 113,
+ "cardGeometry": [
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 257
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 210
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 257
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 224
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 684
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 210
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 684
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 234
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 1110
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 210
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 1110
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 234
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 1537
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 215
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  },
+  {
+   "card": {
+    "w": 401,
+    "h": 415,
+    "top": 1537
+   },
+   "badge": {
+    "top": 290,
+    "h": 44,
+    "left": 234
+   },
+   "cta": {
+    "top": 355,
+    "h": 46,
+    "left": 26
+   },
+   "pregame": {
+    "top": 120,
+    "h": 139,
+    "left": 26
+   }
+  }
+ ],
+ "unnamedIconButtons": [
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input"
+  }
+ ],
+ "animations": []
+}

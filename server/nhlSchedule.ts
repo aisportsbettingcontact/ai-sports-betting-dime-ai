@@ -149,7 +149,10 @@ function mapGameState(nhlState: string): "upcoming" | "live" | "final" {
  *   easternUTCOffset = "-05:00"
  *   → 2026-03-12T19:00:00 ET → gameDateEst = "2026-03-12"
  */
-function getGameDateEst(startTimeUTC: string, easternUTCOffset: string): string {
+function getGameDateEst(
+  startTimeUTC: string,
+  easternUTCOffset: string
+): string {
   try {
     const utcMs = new Date(startTimeUTC).getTime();
     if (isNaN(utcMs)) return startTimeUTC.slice(0, 10);
@@ -182,7 +185,9 @@ function getGameDateEst(startTimeUTC: string, easternUTCOffset: string): string 
  *
  * @param dateStr - "YYYY-MM-DD" or "now" (default)
  */
-async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlScheduleGame[]> {
+async function fetchNhlScheduleForDate(
+  dateStr: string = "now"
+): Promise<NhlScheduleGame[]> {
   const cacheKey = dateStr;
   const now = Date.now();
 
@@ -191,7 +196,9 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
     cachedSchedule.dateKey === cacheKey &&
     now - cachedSchedule.fetchedAt < CACHE_TTL_MS
   ) {
-    console.log(`[NHLSchedule] Using cached schedule for "${dateStr}" (${cachedSchedule.data.length} games)`);
+    console.log(
+      `[NHLSchedule] Using cached schedule for "${dateStr}" (${cachedSchedule.data.length} games)`
+    );
     return cachedSchedule.data;
   }
 
@@ -200,7 +207,7 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
 
   const resp = await fetch(url, {
     redirect: "follow",
-    signal: AbortSignal.timeout(12_000),  // 12s hard timeout — prevents indefinite hang on slow NHL API
+    signal: AbortSignal.timeout(12_000), // 12s hard timeout — prevents indefinite hang on slow NHL API
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -210,7 +217,9 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
   });
 
   if (!resp.ok) {
-    throw new Error(`[NHLSchedule] API returned HTTP ${resp.status} for ${url}`);
+    throw new Error(
+      `[NHLSchedule] API returned HTTP ${resp.status} for ${url}`
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -265,8 +274,8 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
 
       console.log(
         `[NHLSchedule]   ${awayAbbrev} (${awayTeam.dbSlug}) @ ${homeAbbrev} (${homeTeam.dbSlug}) ` +
-        `| ${gameDateEst} ${startTimeEst} ET | state=${nhlState}→${gameState} ` +
-        `| score=${awayScore ?? "?"}-${homeScore ?? "?"}`
+          `| ${gameDateEst} ${startTimeEst} ET | state=${nhlState}→${gameState} ` +
+          `| score=${awayScore ?? "?"}-${homeScore ?? "?"}`
       );
 
       games.push({
@@ -287,7 +296,7 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
 
   console.log(
     `[NHLSchedule] Parsed ${games.length} games from ${totalRows} rows ` +
-    `(${skipped} skipped) for "${dateStr}"`
+      `(${skipped} skipped) for "${dateStr}"`
   );
 
   cachedSchedule = { data: games, fetchedAt: now, dateKey: cacheKey };
@@ -301,9 +310,11 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
  * Filters to only regular season and playoff games.
  */
 // Dead export — no active callers in pipeline
-async function fetchNhlGamesForDate(dateStr: string): Promise<NhlScheduleGame[]> {
+async function fetchNhlGamesForDate(
+  dateStr: string
+): Promise<NhlScheduleGame[]> {
   const all = await fetchNhlScheduleForDate(dateStr);
-  return all.filter((g) => g.gameDateEst === dateStr && g.gameType >= 2);
+  return all.filter(g => g.gameDateEst === dateStr && g.gameType >= 2);
 }
 
 /**
@@ -317,14 +328,18 @@ export async function fetchNhlGamesForRange(
 ): Promise<NhlScheduleGame[]> {
   const all = await fetchNhlScheduleForDate("now");
   const inRange = all.filter(
-    (g) => g.gameDateEst >= fromDate && g.gameDateEst <= toDate && g.gameType >= 2
+    g => g.gameDateEst >= fromDate && g.gameDateEst <= toDate && g.gameType >= 2
   );
 
   // If the range is outside the current 7-day window, fetch the specific date
   if (inRange.length === 0 && fromDate === toDate) {
-    console.log(`[NHLSchedule] Date ${fromDate} not in current week — fetching directly`);
+    console.log(
+      `[NHLSchedule] Date ${fromDate} not in current week — fetching directly`
+    );
     const direct = await fetchNhlScheduleForDate(fromDate);
-    return direct.filter((g) => g.gameDateEst >= fromDate && g.gameDateEst <= toDate);
+    return direct.filter(
+      g => g.gameDateEst >= fromDate && g.gameDateEst <= toDate
+    );
   }
 
   return inRange;
@@ -334,7 +349,9 @@ export async function fetchNhlGamesForRange(
  * Builds a lookup map: "awayDbSlug@homeDbSlug" → startTimeEst
  * Used by the NHL refresh job to enrich VSiN scraped data with start times.
  */
-export function buildNhlStartTimeMap(games: NhlScheduleGame[]): Map<string, string> {
+export function buildNhlStartTimeMap(
+  games: NhlScheduleGame[]
+): Map<string, string> {
   const map = new Map<string, string>();
   for (const g of games) {
     const key = `${g.awayDbSlug}@${g.homeDbSlug}`;
@@ -348,7 +365,9 @@ export function buildNhlStartTimeMap(games: NhlScheduleGame[]): Map<string, stri
  * Builds a lookup map: "awayDbSlug@homeDbSlug" → NhlScheduleGame
  * Used by the NHL refresh job to enrich VSiN scraped data with scores and state.
  */
-export function buildNhlGameMap(games: NhlScheduleGame[]): Map<string, NhlScheduleGame> {
+export function buildNhlGameMap(
+  games: NhlScheduleGame[]
+): Map<string, NhlScheduleGame> {
   const map = new Map<string, NhlScheduleGame>();
   for (const g of games) {
     map.set(`${g.awayDbSlug}@${g.homeDbSlug}`, g);
@@ -425,27 +444,32 @@ export async function fetchNhlLiveScores(): Promise<NhlLiveGame[]> {
 
   const url = "https://api-web.nhle.com/v1/scoreboard/now";
   const resp = await fetch(url, {
-    signal: AbortSignal.timeout(10_000),  // 10s hard timeout
+    signal: AbortSignal.timeout(10_000), // 10s hard timeout
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       Accept: "application/json",
       Referer: "https://www.nhl.com/",
     },
   });
   if (!resp.ok) {
-    throw new Error(`[NHLSchedule] scoreboard/now returned HTTP ${resp.status}`);
+    throw new Error(
+      `[NHLSchedule] scoreboard/now returned HTTP ${resp.status}`
+    );
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const json = (await resp.json()) as any;
 
   // Get today's date in ET
-  const todayEt = new Date().toLocaleDateString("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).replace(/(\d+)\/(\d+)\/(\d+)/, "$3-$1-$2"); // MM/DD/YYYY → YYYY-MM-DD
+  const todayEt = new Date()
+    .toLocaleDateString("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .replace(/(\d+)\/(\d+)\/(\d+)/, "$3-$1-$2"); // MM/DD/YYYY → YYYY-MM-DD
 
   const result: NhlLiveGame[] = [];
 
@@ -487,7 +511,12 @@ export async function fetchNhlLiveScores(): Promise<NhlLiveGame[]> {
         const timeRemaining: string | null = clock.timeRemaining ?? null;
         const inIntermission: boolean = clock.inIntermission === true;
         const periodType: string = g.periodDescriptor?.periodType ?? "REG";
-        gameClock = parseNhlGameClock(period, timeRemaining, inIntermission, periodType);
+        gameClock = parseNhlGameClock(
+          period,
+          timeRemaining,
+          inIntermission,
+          periodType
+        );
       }
 
       result.push({
@@ -502,8 +531,8 @@ export async function fetchNhlLiveScores(): Promise<NhlLiveGame[]> {
   }
 
   console.log(
-    `[NHLSchedule] Live scores: ${result.length} games today (${result.filter((g) => g.gameState === "live").length} live, ` +
-    `${result.filter((g) => g.gameState === "final").length} final) in ${Date.now() - startTime}ms`
+    `[NHLSchedule] Live scores: ${result.length} games today (${result.filter(g => g.gameState === "live").length} live, ` +
+      `${result.filter(g => g.gameState === "final").length} final) in ${Date.now() - startTime}ms`
   );
 
   return result;

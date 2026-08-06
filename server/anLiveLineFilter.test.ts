@@ -40,7 +40,8 @@ function findOutcome(
 
   const searchIn = (pool: TestOutcome[]) => {
     if (matcher.side) return pool.find(o => o.side === matcher.side);
-    if (matcher.teamId != null) return pool.find(o => o.team_id === matcher.teamId);
+    if (matcher.teamId != null)
+      return pool.find(o => o.team_id === matcher.teamId);
     return undefined;
   };
 
@@ -87,14 +88,14 @@ describe("AN v2 is_live filtering — findOutcome()", () => {
   it("returns pre-game total line (not live total)", () => {
     const outcomes: TestOutcome[] = [
       // Live total (game in 2nd half, total has moved down)
-      { side: "over",  value: 126.5, odds: -125, is_live: true },
+      { side: "over", value: 126.5, odds: -125, is_live: true },
       { side: "under", value: 126.5, odds: -105, is_live: true },
       // Pre-game total
-      { side: "over",  value: 139.5, odds: -108, is_live: false },
+      { side: "over", value: 139.5, odds: -108, is_live: false },
       { side: "under", value: 139.5, odds: -112, is_live: false },
     ];
 
-    const overResult  = findOutcome(outcomes, { side: "over" });
+    const overResult = findOutcome(outcomes, { side: "over" });
     const underResult = findOutcome(outcomes, { side: "under" });
 
     expect(overResult!.value).toBe(139.5);
@@ -146,7 +147,7 @@ describe("AN v2 is_live filtering — findOutcome()", () => {
     const awayML = findOutcome(outcomes, { teamId: 1077 });
     const homeML = findOutcome(outcomes, { teamId: 1083 });
 
-    expect(awayML!.odds).toBe(140);   // pre-game, not +1400 live
-    expect(homeML!.odds).toBe(-166);  // pre-game, not -3500 live
+    expect(awayML!.odds).toBe(140); // pre-game, not +1400 live
+    expect(homeML!.odds).toBe(-166); // pre-game, not -3500 live
   });
 });

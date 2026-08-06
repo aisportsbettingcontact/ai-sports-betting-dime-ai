@@ -792,6 +792,153 @@
       "when": 1783864285270,
       "tag": "0112_graceful_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "5",
+      "when": 1784296797624,
+      "tag": "0113_secure_discord_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "5",
+      "when": 1784305826958,
+      "tag": "0114_mlb_doubleheader_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "5",
+      "when": 1784818108333,
+      "tag": "0115_condemned_warhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "5",
+      "when": 1784885837505,
+      "tag": "0116_plan_catalog_baseline",
+      "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "5",
+      "when": 1785010768964,
+      "tag": "0117_old_living_lightning",
+      "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "5",
+      "when": 1785014031497,
+      "tag": "0118_dark_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "5",
+      "when": 1785269809881,
+      "tag": "0119_superb_the_call",
+      "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "5",
+      "when": 1785280058944,
+      "tag": "0120_fresh_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 121,
+      "version": "5",
+      "when": 1785292771387,
+      "tag": "0121_dime_conversation_trace_v1",
+      "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "5",
+      "when": 1785329270345,
+      "tag": "0122_dime_evidence_lifecycle_v1",
+      "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "5",
+      "when": 1785329270346,
+      "tag": "0123_stripe_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "5",
+      "when": 1785329270347,
+      "tag": "0124_plan_features",
+      "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "5",
+      "when": 1785329270348,
+      "tag": "0125_plan_slug_sync",
+      "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "5",
+      "when": 1785329271348,
+      "tag": "0126_checkout_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 127,
+      "version": "5",
+      "when": 1785329272348,
+      "tag": "0127_payment_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "5",
+      "when": 1785415672348,
+      "tag": "0128_subscription_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 129,
+      "version": "5",
+      "when": 1785825233944,
+      "tag": "0129_bitter_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "5",
+      "when": 1785830496120,
+      "tag": "0130_far_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "5",
+      "when": 1785833784597,
+      "tag": "0131_parlay_legs",
+      "breakpoints": true
+    },
+    {
+      "idx": 132,
+      "version": "5",
+      "when": 1785880504994,
+      "tag": "0132_widen_unit_precision",
+      "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "5",
+      "when": 1785935823034,
+      "tag": "0133_account_lockout",
+      "breakpoints": true
     }
   ]
 }

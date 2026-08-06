@@ -33,6 +33,7 @@
 
 import { EmbedBuilder, TextChannel } from "discord.js";
 import { getDiscordClient } from "./bot";
+import { logSafe } from "../_core/logSafe";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ function isDeduplicated(eventType: SecurityEventType, ip: string): boolean {
   if (now - lastSent < DISCORD_ALERT_DEDUP_MS) {
     const remaining = Math.ceil((DISCORD_ALERT_DEDUP_MS - (now - lastSent)) / 1000);
     console.log(
-      `[DiscordSecurity][DEDUP] Skipping ${eventType} alert for IP=${ip}` +
+      `[DiscordSecurity][DEDUP] Skipping ${logSafe(eventType)} alert for IP=${logSafe(ip)}` +
       ` — cooldown active (${remaining}s remaining)`
     );
     return true;
@@ -179,7 +180,7 @@ export function trackAuthFailForBruteForce(ip: string, occurredAt: number): {
   const windowSecs = Math.round(BRUTE_FORCE_WINDOW_MS / 1000 / 60);
 
   console.log(
-    `${tag} AUTH_FAIL recorded | IP=${ip}` +
+    `${tag} AUTH_FAIL recorded | IP=${logSafe(ip)}` +
     ` | count=${count} in last ${windowSecs} min` +
     ` | threshold=${BRUTE_FORCE_THRESHOLD}` +
     (count >= BRUTE_FORCE_THRESHOLD ? " | ⚠️ THRESHOLD CROSSED" : "")
@@ -195,7 +196,7 @@ export function trackAuthFailForBruteForce(ip: string, occurredAt: number): {
   if (now - lastEscalated < BRUTE_FORCE_COOLDOWN_MS) {
     const cooldownRemaining = Math.ceil((BRUTE_FORCE_COOLDOWN_MS - (now - lastEscalated)) / 1000 / 60);
     console.log(
-      `${tag} Threshold crossed but escalation cooldown active for IP=${ip}` +
+      `${tag} Threshold crossed but escalation cooldown active for IP=${logSafe(ip)}` +
       ` | cooldown=${cooldownRemaining} min remaining` +
       ` | count=${count}`
     );
@@ -205,7 +206,7 @@ export function trackAuthFailForBruteForce(ip: string, occurredAt: number): {
   // Mark escalation timestamp
   bruteForceLastAlerted.set(ip, now);
   console.log(
-    `${tag} 🚨 ESCALATING | IP=${ip}` +
+    `${tag} 🚨 ESCALATING | IP=${logSafe(ip)}` +
     ` | ${count} AUTH_FAIL events in last ${windowSecs} min` +
     ` | posting @here alert to security channel`
   );
@@ -262,8 +263,8 @@ function classifyCsrfOrigin(origin: string | null | undefined, path: string): {
     };
   }
 
-  // Vercel / Netlify / other serverless
-  if (o.includes(".vercel.app") || o.includes(".netlify.app")) {
+  // Netlify / other serverless free-hosting platforms
+  if (o.includes(".netlify.app")) {
     return {
       label: "🤖 AUTOMATED PROBE — Serverless Platform",
       classification: "Request originated from a serverless deployment platform. Likely an automated probe or misconfigured integration.",
@@ -524,11 +525,15 @@ async function fetchSecurityChannel(tag: string): Promise<TextChannel | null> {
       console.error(`${tag} Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`);
       return null;
     }
-    console.log(`${tag} Channel resolved: #${rawChannel.name} in ${rawChannel.guild?.name ?? "unknown"}`);
+    console.log(
+      `${tag} Channel resolved: #${logSafe(rawChannel.name)} in ${logSafe(rawChannel.guild?.name ?? "unknown")}`
+    );
     return rawChannel;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Failed to fetch channel ${SECURITY_CHANNEL_ID}: ${msg}`);
+    console.error(
+      `${tag} Failed to fetch channel ${SECURITY_CHANNEL_ID}: ${logSafe(msg)}`
+    );
     return null;
   }
 }
@@ -550,7 +555,7 @@ async function postBruteForceAlert(
 
   console.log(
     `${tag} 🚨 Posting brute-force escalation alert` +
-    ` | IP=${ip} count=${count} window=${Math.round(windowMs / 1000 / 60)}min`
+    ` | IP=${logSafe(ip)} count=${count} window=${Math.round(windowMs / 1000 / 60)}min`
   );
 
   const channel = await fetchSecurityChannel(tag);
@@ -566,11 +571,11 @@ async function postBruteForceAlert(
     });
     console.log(
       `${tag} [OUTPUT] Brute-force escalation posted successfully` +
-      ` | IP=${ip} count=${count} channel=#${channel.name}`
+      ` | IP=${logSafe(ip)} count=${count} channel=#${logSafe(channel.name)}`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Failed to send brute-force embed: ${msg} | IP=${ip}`);
+    console.error(`${tag} Failed to send brute-force embed: ${logSafe(msg)} | IP=${logSafe(ip)}`);
   }
 }
 
@@ -592,11 +597,11 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
   // ── Step 1: Validate bot client is available ───────────────────────────────
   const client = getDiscordClient();
   if (!client) {
-    console.log(`${tag} Bot client not available — skipping Discord alert | IP=${payload.ip}`);
+    console.log(`${tag} Bot client not available — skipping Discord alert | IP=${logSafe(payload.ip)}`);
     return;
   }
   if (!client.isReady()) {
-    console.log(`${tag} Bot client not ready — skipping Discord alert | IP=${payload.ip}`);
+    console.log(`${tag} Bot client not ready — skipping Discord alert | IP=${logSafe(payload.ip)}`);
     return;
   }
 
@@ -627,11 +632,11 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
   // ── Step 4: Log the alert attempt ─────────────────────────────────────────
   console.log(
     `${tag} Posting security alert to channel ${SECURITY_CHANNEL_ID}` +
-    ` | IP=${payload.ip}` +
-    ` path="${payload.path}"` +
-    ` method=${payload.method}` +
-    (payload.blockedOrigin ? ` blockedOrigin="${payload.blockedOrigin}"` : "") +
-    (payload.context ? ` context="${payload.context}"` : "") +
+    ` | IP=${logSafe(payload.ip)}` +
+    ` path="${logSafe(payload.path)}"` +
+    ` method=${logSafe(payload.method)}` +
+    (payload.blockedOrigin ? ` blockedOrigin="${logSafe(payload.blockedOrigin)}"` : "") +
+    (payload.context ? ` context="${logSafe(payload.context)}"` : "") +
     ` occurredAt=${formatTimestamp(payload.occurredAt)}`
   );
 
@@ -645,15 +650,15 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
     await channel.send({ embeds: [embed] });
     console.log(
       `${tag} [OUTPUT] Alert posted successfully` +
-      ` | IP=${payload.ip}` +
-      ` channel=#${channel.name}` +
+      ` | IP=${logSafe(payload.ip)}` +
+      ` channel=#${logSafe(channel.name)}` +
       ` eventType=${payload.eventType}`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(
-      `${tag} Failed to send embed to channel ${SECURITY_CHANNEL_ID}: ${msg}` +
-      ` | IP=${payload.ip}`
+      `${tag} Failed to send embed to channel ${SECURITY_CHANNEL_ID}: ${logSafe(msg)}` +
+      ` | IP=${logSafe(payload.ip)}`
     );
   }
 }

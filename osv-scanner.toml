@@ -42,6 +42,15 @@ reason = "lodash@4.17.21 code injection via _.template — patched:>=4.18.0 does
 id = "GHSA-fx2h-pf6j-xcff"
 reason = "vite server.fs.deny bypass — dev-server-only attack surface, not shipped to production. Affects both the top-level vite@^7.1.7 devDependency and a vite@5.x pulled in transitively by vitest; no non-breaking fix available for either."
 
-[[IgnoredVulns]]
-id = "GHSA-5xrq-8626-4rwp"
-reason = "vitest: arbitrary file read/execute when the Vitest UI dev server is listening — dev-tool-only; the UI server is never run in CI or production. Tracked for a future vitest 4.x migration (semver-major)."
+# RESOLVED 2026-08-03 — GHSA-5xrq-8626-4rwp (vitest UI dev-server file read/execute)
+# entry removed: the tracked "future vitest 4.x migration" landed (vitest 2.1.9 ->
+# 4.1.10), which is outside the advisory's affected range. Real fix installed beats
+# allowlisting; ignore list shrinks by one.
+
+# RESOLVED 2026-08-03 — GHSA-mh99-v99m-4gvg (brace-expansion ReDoS) entry removed.
+# The 2026-07-24 rationale ("1.1.16 is the newest 1.x ever published; every working
+# version is vulnerable") became obsolete when upstream shipped patched 1.x releases:
+# 1.1.17 fixes GHSA-mh99-v99m-4gvg and 1.1.18 fixes its bypass GHSA-rgw5-rvv9-x895.
+# The lockfile now pins brace-expansion@1.1.18 (same 1.x line, bare-callable API —
+# the minimatch@3 -> glob@7 -> rimraf@3 chain is unaffected, unlike the 5.x jump the
+# old entry documented). The package.json override floor moved >=1.1.16 -> >=1.1.18.

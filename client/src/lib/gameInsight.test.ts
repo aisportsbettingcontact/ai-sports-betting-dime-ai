@@ -14,12 +14,40 @@ import {
 // Run line: MIL +1.5 book −198 / model −179 ; PIT −1.5 book +163 / model +179  → NO EDGE
 // Total:    O 8.5 book −102 / model −109 ; U 8.5 book −117 / model +109
 const RUN_LINE: MarketSideInput[] = [
-  { marketKey: "runline", marketLabel: "Run line", sideLabel: "MIL +1.5", bookPrice: -198, bookOppPrice: 163, modelPrice: -179 },
-  { marketKey: "runline", marketLabel: "Run line", sideLabel: "PIT -1.5", bookPrice: 163, bookOppPrice: -198, modelPrice: 179 },
+  {
+    marketKey: "runline",
+    marketLabel: "Run line",
+    sideLabel: "MIL +1.5",
+    bookPrice: -198,
+    bookOppPrice: 163,
+    modelPrice: -179,
+  },
+  {
+    marketKey: "runline",
+    marketLabel: "Run line",
+    sideLabel: "PIT -1.5",
+    bookPrice: 163,
+    bookOppPrice: -198,
+    modelPrice: 179,
+  },
 ];
 const TOTAL: MarketSideInput[] = [
-  { marketKey: "total", marketLabel: "Total", sideLabel: "Over 8.5", bookPrice: -102, bookOppPrice: -117, modelPrice: -109 },
-  { marketKey: "total", marketLabel: "Total", sideLabel: "Under 8.5", bookPrice: -117, bookOppPrice: -102, modelPrice: 109 },
+  {
+    marketKey: "total",
+    marketLabel: "Total",
+    sideLabel: "Over 8.5",
+    bookPrice: -102,
+    bookOppPrice: -117,
+    modelPrice: -109,
+  },
+  {
+    marketKey: "total",
+    marketLabel: "Total",
+    sideLabel: "Under 8.5",
+    bookPrice: -117,
+    bookOppPrice: -102,
+    modelPrice: 109,
+  },
 ];
 
 describe("classifyEdge", () => {
@@ -72,6 +100,7 @@ describe("scoreMarketSide — reproduces the directive's worked example", () => 
     expect(over.modelProbPct).toBeCloseTo(52.15, 1);
     expect(over.bookNoVigPct).toBeCloseTo(48.36, 1); // sportsbook margin removed
     expect(over.noVigEdgePP).toBeCloseTo(3.79, 1);
+    expect(over.roiPct).toBeCloseTo(7.84, 1); // canonical no-vig display ROI
   });
   it("returns null for unavailable data (missing price), never a guess", () => {
     expect(scoreMarketSide({ ...TOTAL[0], bookPrice: null })).toBeNull();
@@ -100,7 +129,9 @@ describe("rankMarkets / primaryInsight — strongest opportunity, not by positio
     const ranked = rankMarkets(all);
     expect(ranked[0].sideLabel).toBe("Over 8.5"); // +1.66
     // everything after the single positive edge is a fade
-    expect(ranked.slice(1).every((m) => m.recommendation === "NO_EDGE")).toBe(true);
+    expect(ranked.slice(1).every(m => m.recommendation === "NO_EDGE")).toBe(
+      true
+    );
   });
   it("returns null when no market clears the WATCH threshold (fades never promoted)", () => {
     expect(primaryInsight(RUN_LINE)).toBeNull(); // run line only → all NO_EDGE
@@ -108,7 +139,13 @@ describe("rankMarkets / primaryInsight — strongest opportunity, not by positio
   it("skips unavailable sides but still ranks the rest", () => {
     const withHole: MarketSideInput[] = [
       { ...TOTAL[0] },
-      { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "MIL ML", bookPrice: null, modelPrice: -140 },
+      {
+        marketKey: "moneyline",
+        marketLabel: "Moneyline",
+        sideLabel: "MIL ML",
+        bookPrice: null,
+        modelPrice: -140,
+      },
     ];
     const ranked = rankMarkets(withHole);
     expect(ranked).toHaveLength(1);

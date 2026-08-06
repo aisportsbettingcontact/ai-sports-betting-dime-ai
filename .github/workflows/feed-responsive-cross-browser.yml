@@ -1,0 +1,83 @@
+name: Feed Responsive Cross-Browser
+
+# Push-scoped by design: the path filter limits execution to responsive-feed
+# changes, while branch pushes let a newly introduced workflow validate itself
+# before it exists on the default branch. Avoiding a simultaneous pull_request
+# trigger also prevents duplicate engine matrices for same-repository PRs.
+on:
+  push:
+    paths:
+      - "client/src/pages/DimeModelFeed.tsx"
+      - "client/src/pages/dimeModelFeed.css"
+      - "client/src/components/projections/**"
+      - "client/src/features/mobileNav/**"
+      - "client/src/styles/dime-mobile.css"
+      - "client/src/index.css"
+      - "e2e/feed-responsive.spec.ts"
+      - "playwright.feed-responsive.config.ts"
+      - "design-system/dime-ai/pages/ai-model-projections.md"
+      - "design-system/dime-ai/MASTER.md"
+      - "dime-ai/THREE-COLOR-LAW.md"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/feed-responsive-cross-browser.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: feed-responsive-cross-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser-engine:
+    name: Feed responsive — ${{ matrix.browser }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: "[VERIFY] Enforce GitHub Actions security contract"
+        run: node scripts/check-github-actions-security.mjs
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies from frozen lockfile"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Install Playwright browser and system dependencies"
+        run: pnpm exec playwright install --with-deps "${{ matrix.browser }}"
+
+      - name: "[STEP] Build production artifact"
+        run: pnpm run build
+
+      - name: "[VERIFY] Run responsive feed contracts"
+        run: >-
+          pnpm exec playwright test e2e/feed-responsive.spec.ts
+          --config=playwright.feed-responsive.config.ts
+          --project="${{ matrix.browser }}"
+
+      - name: "[OUTPUT] Upload failure evidence and HTML report"
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: feed-responsive-${{ matrix.browser }}-${{ github.run_id }}
+          path: |
+            test-results/feed-responsive-cross-browser
+            playwright-report/feed-responsive-cross-browser
+          if-no-files-found: warn
+          retention-days: 30

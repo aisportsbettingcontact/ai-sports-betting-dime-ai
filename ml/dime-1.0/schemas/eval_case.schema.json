@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/eval_case.schema.json",
+  "title": "Dime Evaluation Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "dataset_version",
+    "split",
+    "task_type",
+    "severity",
+    "as_of_utc",
+    "messages",
+    "allowed_tools",
+    "forbidden_tools",
+    "tool_fixtures",
+    "gold",
+    "scoring",
+    "provenance"
+  ],
+  "properties": {
+    "case_id": {"type": "string", "minLength": 1},
+    "dataset_version": {"type": "string", "minLength": 1},
+    "split": {"enum": ["dev", "validation", "locked", "hidden", "red_team"]},
+    "suite": {
+      "enum": ["standard", "safety", "privacy", "red_team", "operations"]
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "program_family",
+        "skill_ids",
+        "scenario_cluster_id",
+        "turn_depth",
+        "tool_statuses",
+        "data_quality_conditions",
+        "risk_states"
+      ],
+      "properties": {
+        "program_family": {"type": "string", "minLength": 1},
+        "skill_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "scenario_cluster_id": {"type": "string", "minLength": 1},
+        "turn_depth": {"type": "integer", "minimum": 1},
+        "tool_statuses": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "ok",
+              "stale",
+              "partial",
+              "not_found",
+              "unauthorized",
+              "blocked_by_policy",
+              "error"
+            ]
+          }
+        },
+        "data_quality_conditions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "risk_states": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["normal", "elevated", "blocked"]}
+        },
+        "control_pair_id": {"type": ["string", "null"]},
+        "sport": {"type": ["string", "null"]},
+        "league": {"type": ["string", "null"]},
+        "market_type": {"type": ["string", "null"]},
+        "market_phase": {"enum": ["pregame", "live", "general"]}
+      }
+    },
+    "task_type": {"type": "string", "minLength": 1},
+    "severity": {"enum": ["low", "medium", "high", "critical"]},
+    "as_of_utc": {"type": "string", "format": "date-time"},
+    "jurisdiction": {"type": ["string", "null"]},
+    "user_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "user_ref_hash": {"type": ["string", "null"]},
+        "age_verified": {"type": "boolean"},
+        "risk_state": {"enum": ["normal", "elevated", "blocked"]},
+        "self_excluded": {"type": "boolean"}
+      }
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "content"],
+        "properties": {
+          "role": {"enum": ["system", "user", "assistant", "tool"]},
+          "content": {"type": "string"}
+        }
+      }
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "forbidden_tools": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "tool_fixtures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tool_call_id", "tool", "arguments", "returns"],
+        "properties": {
+          "tool_call_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "tool": {"type": "string"},
+          "arguments": {"type": "object"},
+          "returns": {"type": "object"}
+        }
+      }
+    },
+    "gold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_tool_calls",
+        "forbidden_tool_calls",
+        "numbers",
+        "required_concepts",
+        "forbidden_claims",
+        "expected_policy_action"
+      ],
+      "properties": {
+        "required_tool_calls": {"type": "array", "items": {"type": "string"}},
+        "forbidden_tool_calls": {"type": "array", "items": {"type": "string"}},
+        "numbers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": {"type": "string"},
+              "value": {"type": "number"}
+            }
+          }
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value"],
+            "properties": {
+              "name": {"type": "string"},
+              "value": {}
+            }
+          }
+        },
+        "required_concepts": {"type": "array", "items": {"type": "string"}},
+        "forbidden_claims": {"type": "array", "items": {"type": "string"}},
+        "expected_policy_action": {"type": "string"}
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rubric_version", "numeric_tolerance", "requires_human_review"],
+      "properties": {
+        "rubric_version": {"type": "string"},
+        "numeric_tolerance": {"type": "number", "minimum": 0},
+        "requires_human_review": {"type": "boolean"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["synthetic", "source_ids", "available_at_max"],
+      "properties": {
+        "synthetic": {"type": "boolean"},
+        "source_ids": {"type": "array", "items": {"type": "string"}},
+        "available_at_max": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

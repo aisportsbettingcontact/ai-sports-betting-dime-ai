@@ -25,7 +25,6 @@ Implements the full 12-step MAX SPEC blueprint:
 
 import importlib
 import math
-import os
 import subprocess
 import sys
 import time
@@ -134,34 +133,6 @@ LEAGUE_RPG = 8.895  # 2025: 8.895   (was 8.760 from 2024)
 # Verified: qm=0.9762 → exp_total=8.895 (Delta=0.000)
 LEAGUE_CALIBRATION_MULT = 0.9762  # 2025 calibrated (verified)
 
-
-def _env_float(name: str, default: float) -> float:
-    """Read a float from the environment; unset/blank/unparseable → default."""
-    raw = os.environ.get(name)
-    if raw is None or raw.strip() == "":
-        return default
-    try:
-        return float(raw)
-    except ValueError:
-        return default
-
-
-# ─── WALK-FORWARD-FITTABLE CALIBRATION OVERRIDES (M-202/M-207) ───────────────
-# mlbModelRunner.ts injects these from mlb_calibration_constants; the defaults
-# preserve current behavior until Phase 5 walk-forward re-fits them.
-# FG_ML_HOME_EDGE: +pp added to p_home before no-vig FG ML pricing.
-#   Source of 0.03 default: mlb_calibration_constants.fg_ml_home_edge
-#   (LIVE_2026_N554_BACKTEST — away sides systematically over-valued).
-FG_ML_HOME_EDGE = _env_float("DIME_FG_ML_HOME_EDGE", 0.03)
-# LEAGUE_ENV_MULT: symmetric multiplier on both teams' final adjusted run mu
-# (C-001 root cause: 2026 actual mean total 9.13 vs model 8.61 on 2025-frozen
-# baselines). Applied once in GameStateBuilder.build so FG and F5 sims scale
-# together; symmetric scaling leaves ML probabilities approximately unchanged.
-LEAGUE_ENV_MULT = _env_float("DIME_LEAGUE_ENV_MULT", 1.0)
-if LEAGUE_ENV_MULT <= 0:
-    # A non-positive mu would degenerate the NB fit — treat as "no override".
-    LEAGUE_ENV_MULT = 1.0
-
 STARTER_IP_MEAN = 5.2
 STARTER_IP_MIN = 1.0
 STARTER_IP_MAX = 9.0
@@ -248,8 +219,8 @@ DB_TO_RETRO = {
     "MIA": "MIA",
 }
 
-# PARK_FACTORS: 2024 Fangraphs empirical values (5-year park factors, 2024 season)
-# Updated 2025-05-10. HR factors updated to 2024 actuals from Fangraphs Park Factor table.
+# PARK_FACTORS: 2024 league empirical values (5-year park factors, 2024 season)
+# Updated 2025-05-10. HR factors updated to 2024 actuals from the 2024 park-factor table.
 # "r" = runs factor, "hr" = HR factor, "h" = hits factor (all normalized to 100 = league avg)
 PARK_FACTORS = {
     "COL": {"r": 115, "hr": 122, "h": 109},  # Coors — highest HR environment in MLB
@@ -429,7 +400,7 @@ EMPIRICAL_PRIORS = {
     "i1_share_2026": 0.1181,  # 2026 I1 share
 }
 
-# RE_MATRIX: 2024 Fangraphs RE24 empirical values (4.38 R/G environment — lowest since 2014)
+# RE_MATRIX: 2024 RE24 matrix empirical values (4.38 R/G environment — lowest since 2014)
 # Updated 2025-05-10. Key: (outs, base_state) bitmask: 1=1B, 2=2B, 4=3B (0=empty, 7=loaded)
 # Previous values were 2015-2019 era (4.50 R/G avg) — now updated to 2024 actuals.
 RE_MATRIX = {
@@ -460,7 +431,7 @@ RE_MATRIX = {
 }
 
 RUN_VALUES = {
-    # 2024 Fangraphs linear weights (4.38 R/G environment)
+    # 2024 linear weights (4.38 R/G environment)
     "K": -0.261,
     "OUT": -0.261,
     "BB": 0.301,
@@ -757,10 +728,6 @@ class GameStateBuilder:
             exp_runs = self.run_model.expected_runs_per_inning(pa_probs, run_factor)
             total_runs += exp_runs * bp_quality.get(inning, 1.0)
         total_runs *= quality_mult
-        # C-001: league run-environment multiplier — the single choke point after
-        # park/weather/pitcher adjustments. state["mu"] feeds the FG, F5, and
-        # inning simulations, so the scale applies once and flows everywhere.
-        total_runs *= LEAGUE_ENV_MULT
         var_feats = self.var_model.compute(lineup, opp_pitcher, env)
         return {
             "mu": round(total_runs, 4),
@@ -1335,30 +1302,23 @@ class MonteCarloEngine:
         p_f5_away_win = p_f5_away_raw * f5_scale  # P(away wins F5) — push-adjusted
         # Verify three-way sum
         _f5_3way_sum = p_f5_home_win + p_f5_away_win + p_f5_push_adj
-        # F5 run line cover (home -0.5 / away +0.5)
-        # M-205 fix: on the half-run line the away +0.5 side covers ties
-        # (margin 0), so away covers when margin < +0.5, not margin < -0.5.
-        # The old condition dropped the entire tie mass from the away side.
-        # Integer margins → the two sides partition all outcomes (no push).
+        # F5 run line cover (default -0.5 for favorite)
+        # Positive rl_spread = home is dog, negative = home is fav
+        # For F5, standard RL is -0.5 / +0.5
         F5_RL = -0.5
-        p_f5_home_rl = float((f5_margins > abs(F5_RL)).mean())  # home -0.5 covers: margin >= 1
-        p_f5_away_rl = float((f5_margins < abs(F5_RL)).mean())  # away +0.5 covers: margin <= 0 (ties cover)
+        p_f5_home_rl = float((f5_margins > abs(F5_RL)).mean())  # home covers -0.5
+        p_f5_away_rl = float((f5_margins < -abs(F5_RL)).mean())  # away covers -0.5
         if logger:
             logger.state(
                 f"F5: home_mu={home_mu_f5:.4f} away_mu={away_mu_f5:.4f} | "
                 f"exp_home={exp_f5_home:.3f} exp_away={exp_f5_away:.3f} exp_total={exp_f5_total:.3f} | "
                 f"P(home win)={p_f5_home_win:.4f} P(away win)={p_f5_away_win:.4f} P(push)={p_f5_push_adj:.4f} | "
                 f"[sim_push={p_f5_push_raw:.4f} empirical={EMPIRICAL_F5_PUSH:.4f} 3way_sum={_f5_3way_sum:.6f}] | "
-                f"P(home RL -0.5)={p_f5_home_rl:.4f} P(away RL +0.5)={p_f5_away_rl:.4f}"
+                f"P(home RL -0.5)={p_f5_home_rl:.4f} P(away RL -0.5)={p_f5_away_rl:.4f}"
             )
             logger.verify(
                 abs(_f5_3way_sum - 1.0) < 0.001,
                 f"F5 three-way sum={_f5_3way_sum:.6f} (must be 1.000±0.001)",
-            )
-            logger.verify(
-                abs((p_f5_home_rl + p_f5_away_rl) - 1.0) < 1e-9,
-                f"F5 RL partition sum={p_f5_home_rl + p_f5_away_rl:.6f} "
-                f"(half-run line: home/away must cover all outcomes, no push)",
             )
 
         # ── SPEC: Inning-by-Inning Simulation (I1-I9) ─────────────────────────
@@ -1576,7 +1536,7 @@ class MonteCarloEngine:
             "exp_f5_away_runs": round(exp_f5_away, 3),
             "exp_f5_total": round(exp_f5_total, 3),
             "p_f5_home_rl": round(p_f5_home_rl, 6),  # P(home covers -0.5 F5 RL)
-            "p_f5_away_rl": round(p_f5_away_rl, 6),  # P(away covers +0.5 F5 RL, ties cover)
+            "p_f5_away_rl": round(p_f5_away_rl, 6),  # P(away covers -0.5 F5 RL)
             # SPEC: Inning-by-Inning projections (I1-I9, backtest-calibrated 2026-04-13)
             "inning_home_exp": inning_home_exp,  # [I1..I9] expected home runs per inning
             "inning_away_exp": inning_away_exp,  # [I1..I9] expected away runs per inning
@@ -1650,11 +1610,11 @@ class MarketDerivation:
         # SPEC: Backtest (n=554, 2026-05-10) identified systematic away over-valuation:
         #   FG ML Home accuracy: 51.5% (below 70% target)
         #   FG ML Away accuracy: 48.5% (over-valued by model)
-        # Correction: add FG_ML_HOME_EDGE to home win probability before no-vig
-        # pricing (module constant, DIME_FG_ML_HOME_EDGE env override; default
-        # +0.03 from mlb_calibration_constants.fg_ml_home_edge,
-        # LIVE_2026_N554_BACKTEST). M-202/M-207: walk-forward re-fits the value;
-        # the runner injects the live constant via the spawn env.
+        # Correction: add +0.03 to home win probability before no-vig pricing.
+        # This shifts the model toward home teams by ~3 percentage points,
+        # correcting the systematic away bias identified in live 2026 data.
+        # Source: mlb_calibration_constants.fg_ml_home_edge = 0.03 (LIVE_2026_N554_BACKTEST)
+        FG_ML_HOME_EDGE = 0.03  # +3pp home win probability correction
         p_home_raw = p_home
         p_away_raw = p_away
         p_home = float(np.clip(p_home + FG_ML_HOME_EDGE, 0.001, 0.999))
@@ -1975,8 +1935,6 @@ class MarketDerivation:
         f5_over_odds = prob_to_ml(p_f5_over_nv)
         f5_under_odds = prob_to_ml(p_f5_under_nv)
         # F5 Run Line pricing (-0.5 / +0.5)
-        # M-205: home/away now partition all outcomes (away +0.5 covers ties),
-        # so the pair sums to 1.0 and remove_vig is a pure normalization.
         p_f5_hrl = sim["p_f5_home_rl"]
         p_f5_arl = sim["p_f5_away_rl"]
         p_f5_hrl_nv, p_f5_arl_nv = remove_vig(p_f5_hrl, p_f5_arl)
@@ -2835,8 +2793,7 @@ def project_game(
         f"park_hr_factor={park_hr_factor:.4f}"
     )
     logger.state(
-        f"[CALIBRATION] quality_mult={LEAGUE_CALIBRATION_MULT:.4f} (2025 RPG={LEAGUE_RPG:.3f}) "
-        f"league_env_mult={LEAGUE_ENV_MULT:.4f} fg_ml_home_edge={FG_ML_HOME_EDGE:+.4f}"
+        f"[CALIBRATION] quality_mult={LEAGUE_CALIBRATION_MULT:.4f} (2025 RPG={LEAGUE_RPG:.3f})"
     )
     logger.state(
         f"Home state: mu={home_state['mu']:.4f} var={home_state['variance']:.4f} "

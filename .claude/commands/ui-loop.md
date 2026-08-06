@@ -1,0 +1,3 @@
+Use the design-federation skill to route and run the full design loop for: $ARGUMENTS
+
+Fill the brief (references/brief-template.yaml) and declare exactly ONE Lead before any aesthetic decision — every other design skill advises read-only. Brand law reading order: design-system/dime-ai/pages/[page].md → MASTER.md, with dime-ai/THREE-COLOR-LAW.md winning wherever they disagree (including v3's owner-approved motion rules). Finish with the evidence bundle (references/evidence-bundle.md): rendered proof via the verify skill + screenshots, impeccable detector JSON, and the review-animations Block/Approve verdict whenever the diff touches motion — typecheck output alone never closes the loop.

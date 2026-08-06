@@ -52,7 +52,9 @@ function vulnSeverity(vuln, groupMaxSeverity) {
 
 export function evaluateScan(report) {
   if (!Array.isArray(report.results)) {
-    throw new Error('Malformed osv-scanner report: missing or non-array "results" field');
+    throw new Error(
+      'Malformed osv-scanner report: missing or non-array "results" field'
+    );
   }
 
   const flagged = [];
@@ -64,7 +66,8 @@ export function evaluateScan(report) {
       const version = pkg.package?.version ?? "<unknown>";
       const maxSeverityById = new Map();
       for (const group of pkg.groups ?? []) {
-        for (const id of group.ids ?? []) maxSeverityById.set(id, group.max_severity);
+        for (const id of group.ids ?? [])
+          maxSeverityById.set(id, group.max_severity);
       }
       for (const vuln of pkg.vulnerabilities ?? []) {
         const severity = vulnSeverity(vuln, maxSeverityById.get(vuln.id));
@@ -84,7 +87,9 @@ export function evaluateScan(report) {
 function main() {
   const { input } = parseArgs(process.argv);
   if (!input) {
-    console.error("[USAGE] node scripts/check-osv-scan.mjs --input=<osv-report.json>");
+    console.error(
+      "[USAGE] node scripts/check-osv-scan.mjs --input=<osv-report.json>"
+    );
     process.exit(2);
   }
 
@@ -93,7 +98,9 @@ function main() {
     report = JSON.parse(readFileSync(input, "utf8"));
   } catch (err) {
     console.error(`[ERROR] Failed to read/parse ${input}: ${err.message}`);
-    console.error("[VERIFY] A missing or unparseable report means the scan itself failed — this must not be treated as a pass.");
+    console.error(
+      "[VERIFY] A missing or unparseable report means the scan itself failed — this must not be treated as a pass."
+    );
     process.exit(2);
   }
 
@@ -105,14 +112,20 @@ function main() {
     process.exit(2);
   }
 
-  console.log(`[STATE] ${other.length} non-blocking finding(s) (MODERATE/LOW, or below the severity threshold), ${flagged.length} HIGH/CRITICAL.`);
+  console.log(
+    `[STATE] ${other.length} non-blocking finding(s) (MODERATE/LOW, or below the severity threshold), ${flagged.length} HIGH/CRITICAL.`
+  );
 
   if (flagged.length > 0) {
-    console.error("[OUTPUT] FAIL — new HIGH or CRITICAL vulnerability not covered by osv-scanner.toml's ignore list:");
+    console.error(
+      "[OUTPUT] FAIL — new HIGH or CRITICAL vulnerability not covered by osv-scanner.toml's ignore list:"
+    );
     for (const { pkg, version, id, severity } of flagged) {
       console.error(`  [FLAGGED] ${pkg}@${version} (${severity}) — ${id}`);
     }
-    console.error("[VERIFY] Review the finding — add an [[IgnoredVulns]] entry in osv-scanner.toml only after confirming no fix exists, with a documented reason.");
+    console.error(
+      "[VERIFY] Review the finding — add an [[IgnoredVulns]] entry in osv-scanner.toml only after confirming no fix exists, with a documented reason."
+    );
     process.exit(1);
   }
 

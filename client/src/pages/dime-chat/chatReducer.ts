@@ -42,7 +42,10 @@ export type ChatAction =
   | { type: "stream_abort"; id: string }
   | { type: "reset" }
   /** Replace the conversation with a stored thread's history (resume a chat). */
-  | { type: "hydrate"; messages: Array<{ role: "user" | "assistant"; content: string }> };
+  | {
+      type: "hydrate";
+      messages: Array<{ role: "user" | "assistant"; content: string }>;
+    };
 
 export const initialChatState: ChatState = {
   messages: [],
@@ -55,23 +58,26 @@ function closeRow(
   state: ChatState,
   id: string,
   status: MessageStatus,
-  error: string | null,
+  error: string | null
 ): ChatState {
-  const row = state.messages.find((m) => m.id === id);
+  const row = state.messages.find(m => m.id === id);
   if (!row) return { ...state, streaming: false };
-  if (row.content === "" && (status === "interrupted" || status === "stopped")) {
+  if (
+    row.content === "" &&
+    (status === "interrupted" || status === "stopped")
+  ) {
     // Pre-delta failure/stop: remove the empty assistant row
     // (previous DimeChat.tsx lines 134-137 behavior, extended to abort).
     return {
       ...state,
-      messages: state.messages.filter((m) => m.id !== id),
+      messages: state.messages.filter(m => m.id !== id),
       streaming: false,
       error: status === "interrupted" ? error : null,
     };
   }
   return {
     ...state,
-    messages: state.messages.map((m) => (m.id === id ? { ...m, status } : m)),
+    messages: state.messages.map(m => (m.id === id ? { ...m, status } : m)),
     streaming: false,
     // Mid-stream failure keeps the partial answer; the footnote (not the
     // error card) communicates the interruption.
@@ -105,8 +111,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "stream_delta":
       return {
         ...state,
-        messages: state.messages.map((m) =>
-          m.id === action.id ? { ...m, content: m.content + action.text } : m,
+        messages: state.messages.map(m =>
+          m.id === action.id ? { ...m, content: m.content + action.text } : m
         ),
       };
 
@@ -117,8 +123,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return {
         ...state,
         streaming: false,
-        messages: state.messages.map((m) =>
-          m.id === action.id ? { ...m, status: "done" } : m,
+        messages: state.messages.map(m =>
+          m.id === action.id ? { ...m, status: "done" } : m
         ),
       };
 

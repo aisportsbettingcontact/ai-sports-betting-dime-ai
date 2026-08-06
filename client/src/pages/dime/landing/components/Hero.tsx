@@ -1,12 +1,12 @@
 /**
  * Hero — five-second comprehension: eyebrow states the category, headline
- * states the promise, sub states the mechanism, console shows the product.
- * The Dime Market Console renders directly below (above the fold on desktop,
- * immediately after the copy on mobile — same DOM order).
+ * states the promise, sub states the mechanism, CTAs carry the visitor on.
+ * (The scripted Dime Market Console was removed 2026-07-31 by owner
+ * directive — the live chat embed and the real odds-history panel further
+ * down the page are the product proof now.)
  */
 
 import { HERO, STATS } from "../landing-content";
-import MarketConsole from "./MarketConsole";
 
 export default function Hero() {
   return (
@@ -40,16 +40,13 @@ export default function Hero() {
               {HERO.secondaryCta}
             </a>
           </div>
-          <span className="mono hero-micro">{HERO.trustMicrocopy}</span>
-
-          <MarketConsole />
         </div>
       </header>
 
       {/* Instrument strip — whitelisted numbers only */}
       <section className="strip" aria-label="Key numbers">
         <div className="wrap strip-grid">
-          {STATS.map((s) => (
+          {STATS.map(s => (
             <div className="readout" key={s.label}>
               <div className="row">
                 <b className="num">{s.value}</b>

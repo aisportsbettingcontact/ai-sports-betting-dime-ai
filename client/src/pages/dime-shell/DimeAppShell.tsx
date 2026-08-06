@@ -1,5 +1,6 @@
 import {
   lazy,
+  Suspense,
   startTransition,
   useCallback,
   useDeferredValue,
@@ -23,11 +24,17 @@ import "./shell.css";
 const DimeModelFeed = lazy(() => import("../DimeModelFeed"));
 const BettingSplits = lazy(() => import("../BettingSplits"));
 const BetTracker = lazy(() => import("../BetTracker"));
+const TrendsPage = lazy(() => import("../TrendsPage"));
+// Background engagement-session tracking, lazy-loaded so it never weighs down
+// chat's critical-path bundle (it is not needed for first paint).
+const SessionTracker = lazy(() => import("@/components/SessionTracker"));
+const ScreenViewTracker = lazy(() => import("@/components/ScreenViewTracker"));
 
 const PANE_HEADINGS: Record<DimeProductPane, string> = {
   chat: "Dime Chat",
   feed: "AI Model Projections",
   splits: "Betting Splits and Odds History",
+  trends: "Trends",
   tracker: "Bet Tracker",
 };
 
@@ -161,10 +168,13 @@ export default function DimeAppShell({
           initialDate={state.isoDate}
           initialDateSource={parsed?.isoDate ? "url-explicit" : "app-default"}
           resolveRouteHref={resolveRouteHref}
+          embeddedInShell
         />
       );
+    } else if (renderedRoute.pane === "trends") {
+      paneContent = <TrendsPage />;
     } else if (renderedRoute.pane === "tracker") {
-      paneContent = <BetTracker previewMode={previewMode} />;
+      paneContent = <BetTracker previewMode={previewMode} embeddedInShell />;
     }
   }
 
@@ -174,23 +184,33 @@ export default function DimeAppShell({
   // an 768px viewport crossing: React reconciles by element type + position,
   // never by `mode`.
   return (
-    <DimeChatPage
-      previewMode={previewMode}
-      shell={
-        mode !== "shell"
-          ? undefined
-          : {
-              renderedPane: renderedRoute.pane,
-              navigationPane: actualRoute.pane,
-              paneContent,
-              paneHeading: PANE_HEADINGS[renderedRoute.pane],
-              onNavigate,
-              externalScrollRef,
-              chatHeadingRef,
-              externalHeadingRef,
-              onExternalScroll,
-            }
-      }
-    />
+    <>
+      {/* Background engagement-session tracking. A lazy, render-null island (no
+          layout impact) so it stays off chat's critical-path bundle. Kept as a
+          STABLE first sibling so <DimeChatPage> never changes position across a
+          768px mode switch — preserving its mount (see the note above). */}
+      <Suspense fallback={null}>
+        <SessionTracker />
+        <ScreenViewTracker />
+      </Suspense>
+      <DimeChatPage
+        previewMode={previewMode}
+        shell={
+          mode !== "shell"
+            ? undefined
+            : {
+                renderedPane: renderedRoute.pane,
+                navigationPane: actualRoute.pane,
+                paneContent,
+                paneHeading: PANE_HEADINGS[renderedRoute.pane],
+                onNavigate,
+                externalScrollRef,
+                chatHeadingRef,
+                externalHeadingRef,
+                onExternalScroll,
+              }
+        }
+      />
+    </>
   );
 }

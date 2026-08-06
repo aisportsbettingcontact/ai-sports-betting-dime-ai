@@ -1,103 +1,112 @@
-# Dime 1.0 training data
+# Public data boundary
 
-Chat-format JSONL — one object per line:
+This directory contains synthetic development fixtures and templates for the
+Dime 1.0 post-training and evaluation contracts. It is not an approved
+production training dataset.
 
-```json
-{"messages": [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
+GitHub is public. A record may be committed here only when it is explicitly
+approved for public publication, redistribution-cleared, synthetic or properly
+de-identified, free of direct and indirect identifiers, free of provider
+restrictions, supported by provenance and rights records, and reviewed through
+a pull request.
+
+Never commit user betting histories, chat transcripts, account or device
+identifiers, payment information, raw Bet Tracker exports, private retrieval
+context, hidden evaluations, raw provider exports, or licensed odds/splits data
+without public redistribution rights. Hashing a direct identifier does not make
+raw personal data publishable.
+
+## Tracked fixture classes
+
+- `sft/*.sample.jsonl` contains small, synthetic, public development fixtures.
+- `eval/*.sample.jsonl` contains visible, synthetic development evaluation
+  cases. These are not locked or hidden release evaluations.
+- `templates/` contains record-shape examples only.
+
+The sample files are deliberately too small for production training and may
+truthfully fail curriculum or evaluation-program quotas.
+
+## Private Foundation v1 boundary
+
+The current Foundation v1 curriculum is still `proposed`, and no approved
+Foundation v1 dataset exists. The schemas, templates, configuration, and
+synthetic fixtures tracked here define a candidate-to-freeze workflow; they do
+not constitute approved data and do not authorize Hugging Face publication,
+training, evaluation, or serving.
+
+Actual private candidates and their source registry, review ledger, candidate
+audit, external audit reports, and approval record remain outside this public
+GitHub repository in an authorized private review system. They must never be
+copied into a public branch or pull request. RunPod may process an authorized
+working copy, but it must never hold the only copy.
+
+After independent record review, external audit, and dataset approval, the
+freezer may create only this exact version-directory inventory:
+
+```text
+foundation-v1/
+├── train.jsonl
+├── validation.jsonl
+├── dataset_manifest.json
+├── dataset_card.md
+└── checksums.json
 ```
 
-- `system` is the v1 role prompt (keep in sync with `DIME1_SYSTEM_PROMPT` in
-  `server/_core/dime1Model.ts`). Training with the production prompt in place
-  makes the deployed behavior match the trained behavior.
-- Platform context appears exactly as the backend injects it: a `user` turn
-  containing the `Dime platform context generated_at=...` block, followed by the
-  fixed assistant acknowledgment, then the real user turn (mirror
-  `getDimeChatContext()` / `dime-chat.route.ts` framing).
-- Multi-turn examples are allowed and encouraged for the chat categories.
+That private manifest must conform to
+`schemas/dataset_manifest.v4.schema.json` and bind the source registry, review
+ledger, candidate audit, approval record, canonical system prompt, Foundation
+build configuration, six independent external audit reports, development
+evaluation identity, and locked-evaluation reference. A separate,
+owner-authorized workflow may later publish those exact bytes to
+`taileredsports/dime-foundation-sft` and must record the returned full
+40-character Hugging Face commit SHA.
 
-## Required category mix (v1 target: 3,000–10,000 examples)
+See
+[`docs/FOUNDATION_V1_DATASET_WORKFLOW.md`](../docs/FOUNDATION_V1_DATASET_WORKFLOW.md).
 
-| Category | Share | What it teaches |
-|---|---|---|
-| Grounded analysis (context present, answer uses only context + user numbers) | ~30% | Core value: odds/projection/splits/line-movement interpretation |
-| Missing-data refusal (context lacks the requested market/game/field) | ~15% | Names exactly what's missing; never fills the gap |
-| User-supplied-numbers analysis (no platform context) | ~10% | Distinguishes user data from platform data |
-| Off-topic refusal (non-betting requests) | ~10% | One-sentence refusal + redirect |
-| Utility tasks: route / extract / classify / tag / summarize (JSON-only) | ~20% | The `dime1Tasks.ts` scopes; extraction uses null for absent fields |
-| Responsible gambling (distress → support, no analysis) | ~5% | Safety posture; 1-800-GAMBLER for US |
-| No-certainty phrasing (asks for "locks"/"guarantees" → probabilistic answer, pass allowed) | ~5% | Never emits prohibited certainty language |
-| Injection resistance (instructions embedded in context rows or user text) | ~5% | Context/user text is data, not instructions |
+## Publication manifest
 
-## Quality rules
+Any non-sample SFT JSONL proposed for this public repository must use the exact
+approved paths `data/sft/train.APPROVED.jsonl` and
+`data/sft/validation.APPROVED.jsonl` and must be bound to
+`configs/dataset_manifest_APPROVED.json`.
 
-- Every number in an assistant answer must appear in the context or the user
-  turn, or be derivable by arithmetic that the answer shows. No exceptions —
-  this is the dataset-level enforcement of "strict refusal to invent missing data".
-- Refusal examples must name the missing element ("no line for CHC-STL total in
-  the platform context"), not give generic apologies.
-- No "lock", "guaranteed", "risk-free", "can't lose", "sure thing", "free money"
-  in any assistant turn — those literally trip the server's post-generation
-  certainty filter (`dimeSafety.ts`).
-- Task examples output a single JSON object and nothing else.
-- Real platform exports only for context blocks; scrub anything user-identifying.
+The approved manifest must conform to
+`schemas/dataset_manifest.v3.schema.json` and bind:
 
-`sample.train.jsonl` in this directory shows one example per category. Real
-training data is built from platform exports and is **never committed** here.
+- visibility, publication classification, provenance/source class, source
+  owner, rights basis, restrictions, synthetic status, and user/provider-data
+  declarations;
+- train and validation record counts and whole-file SHA-256 values;
+- curriculum, tool-catalog, and chat-template hashes;
+- named reviewers, approval timestamp, privacy/rights/consent review;
+- partition, future-data, semantic-deduplication, and evaluation-contamination
+  audits; and
+- a deletion-policy identifier and limitations.
 
-Split ~95/5 into `train.jsonl` / `val.jsonl` stratified by category.
+`scripts/validate_data.py` fails closed if non-sample public JSONL appears
+without that complete v3 contract. The v2 schema remains tracked for historical
+compatibility; it is not sufficient for new public publication.
 
-## Generating the dataset
+Approved private foundation training data belongs only in
+`taileredsports/dime-foundation-sft`. Visible private development evaluations
+belong only in `taileredsports/dime-eval-development`. Locked and hidden
+release evaluations belong only in `taileredsports/dime-eval-locked`, which is
+inaccessible to the training credential and must never be copied into this
+public repository or a training workspace.
 
-`build_dataset.py` does all of the above from real `games` rows: context blocks
-formatted byte-for-byte like `dimeChatContext.ts`, the system prompt extracted
-from `dime1Model.ts` at build time, grounded answers computed deterministically
-from row numbers, the category mix enforced, exact-duplicate examples dropped,
-and a hard abort if any generated answer trips the certainty filter.
+The private development-evaluation working copy is admissible only when
+`foundation_development_eval_identity_TEMPLATE.json`, completed under schema
+`dime-foundation-development-eval-identity-v2`, binds the exact private
+`taileredsports/dime-eval-development` commit, `evaluation_manifest.json`, and
+the path-sorted exhaustive inventory of every recursive `cases/**/*.jsonl`
+file. Candidate audit and freeze require an explicit `HF_TOKEN`, enumerate the
+live remote inventory at that exact commit, and compare the manifest and every
+case byte-for-byte. Local files, a branch, a tag, a prior dry run, or a cached
+hash cannot replace that remote proof, and remote failure has no local
+fallback.
 
-```bash
-# from a JSON export of the games table:
-python build_dataset.py --games games.json --target 4000 --seed 42
-
-# or straight from the platform DB (pip install pymysql first):
-DATABASE_URL='mysql://...' python build_dataset.py --from-db \
-    --start 2026-04-01 --end 2026-07-12 --target 4000
-```
-
-Outputs `train.jsonl`, `val.jsonl` (stratified split), and
-`dataset_manifest.json` (seed, counts, system-prompt hash — upload it next to
-the eval report so every checkpoint's data is reproducible). All three are
-git-ignored. If a category prints a "capped" warning, widen `--start/--end` to
-feed it more game rows. Hand-written examples can be appended to `train.jsonl`
-afterward — the format is identical.
-
-## Auditing — the ship gate (required before every training run)
-
-`audit_dataset.py` is the deterministic post-generation gate. It reads FULL
-records (never previews — a `[:400]` terminal slice hides context rows and
-produces false fabrication findings) and enforces the hard gates: **temporal
-integrity** (`modelRunAt <= generated_at < event_start` for every context
-entry — a model run postdating the snapshot is hindsight leakage), grounding
-(any team a verdict cites must be in that row's own context; a NO DATA answer
-may never deny a matchup sitting in its own context), math recompute
-(implied% from the stated price, stated gap vs model−implied), verdict-sign
-coherence (PLAY needs ≥2.0pp positive gap; "edge"/"deficit"/"short of
-break-even" wording must match the gap's sign; quoted entry prices must carry
-≥1.5pp of edge — fair odds are never a bet trigger; board-wide superlatives
-are banned), extraction fidelity (non-null fields must be evidenced in the
-INPUT text), certainty language, RG safety (helpline once, no picks), and a
-template-duplication census (>10% verbatim reuse per category; the off-topic
-product constant and the context acknowledgment are exempt by design).
-
-The generator enforces the same temporal invariant at load time (invalid
-source rows are dropped and counted in the manifest), context peers come from
-the same slate date only, and the train/val split is chronological for dated
-categories — validation always holds the latest dates.
-
-```bash
-python audit_dataset.py train.jsonl val.jsonl
-# optional: write an untruncated dump for human/LLM row audits
-python audit_dataset.py train.jsonl --dump-full full_dump.txt
-```
-
-Exit 1 = a SEV-1 gate failure = **DO-NOT-TRAIN**. Never start a training run
-on a dataset that hasn't printed `VERDICT: TRAIN`.
+Every training or evaluation run must pin the applicable Hugging Face dataset
+by its full 40-character commit SHA. A branch or tag is a readable alias, not
+release authority. See
+[`docs/HUGGING_FACE_REGISTRY.md`](../docs/HUGGING_FACE_REGISTRY.md).

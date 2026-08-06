@@ -19,19 +19,47 @@ import { NCAAM_TEAMS } from "../shared/ncaamTeams";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const EXPECTED_CONFERENCES = [
-  "ACC", "Big 12", "Big East", "Big Ten", "SEC",
-  "American", "Atlantic 10", "Mountain West", "WCC", "MVC",
-  "MAC", "CUSA", "Sun Belt", "CAA", "Horizon",
-  "Big West", "MAAC", "SoCon", "Big Sky", "ASUN",
-  "OVC", "Summit League", "Patriot", "Big South", "America East",
-  "NEC", "SWAC", "MEAC", "Southland", "Ivy League", "WAC",
+  "ACC",
+  "Big 12",
+  "Big East",
+  "Big Ten",
+  "SEC",
+  "American",
+  "Atlantic 10",
+  "Mountain West",
+  "WCC",
+  "MVC",
+  "MAC",
+  "CUSA",
+  "Sun Belt",
+  "CAA",
+  "Horizon",
+  "Big West",
+  "MAAC",
+  "SoCon",
+  "Big Sky",
+  "ASUN",
+  "OVC",
+  "Summit League",
+  "Patriot",
+  "Big South",
+  "America East",
+  "NEC",
+  "SWAC",
+  "MEAC",
+  "Southland",
+  "Ivy League",
+  "WAC",
 ];
 
 describe("Model v9 Conference Calibration", () => {
   it("should have all 30+ D-I conferences in the ncaamTeams registry", () => {
-    const conferencesInRegistry = new Set(NCAAM_TEAMS.map((t) => t.conference));
+    const conferencesInRegistry = new Set(NCAAM_TEAMS.map(t => t.conference));
     for (const conf of EXPECTED_CONFERENCES) {
-      expect(conferencesInRegistry.has(conf), `Missing conference: ${conf}`).toBe(true);
+      expect(
+        conferencesInRegistry.has(conf),
+        `Missing conference: ${conf}`
+      ).toBe(true);
     }
   });
 
@@ -40,17 +68,23 @@ describe("Model v9 Conference Calibration", () => {
   });
 
   it("every team should have a kenpomSlug", () => {
-    const missing = NCAAM_TEAMS.filter((t) => !t.kenpomSlug || t.kenpomSlug.trim() === "");
+    const missing = NCAAM_TEAMS.filter(
+      t => !t.kenpomSlug || t.kenpomSlug.trim() === ""
+    );
     expect(missing.length).toBe(0);
   });
 
   it("every team should have a dbSlug", () => {
-    const missing = NCAAM_TEAMS.filter((t) => !t.dbSlug || t.dbSlug.trim() === "");
+    const missing = NCAAM_TEAMS.filter(
+      t => !t.dbSlug || t.dbSlug.trim() === ""
+    );
     expect(missing.length).toBe(0);
   });
 
   it("every team should have a conference", () => {
-    const missing = NCAAM_TEAMS.filter((t) => !t.conference || t.conference.trim() === "");
+    const missing = NCAAM_TEAMS.filter(
+      t => !t.conference || t.conference.trim() === ""
+    );
     expect(missing.length).toBe(0);
   });
 });
@@ -60,7 +94,7 @@ describe("Model v9 Conference Calibration", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("Model v9 Team Lookup", () => {
-  const TEAM_MAP = new Map(NCAAM_TEAMS.map((t) => [t.dbSlug, t]));
+  const TEAM_MAP = new Map(NCAAM_TEAMS.map(t => [t.dbSlug, t]));
 
   it("should find Iowa St. by dbSlug", () => {
     const team = TEAM_MAP.get("iowa_st");
@@ -112,19 +146,19 @@ describe("Model v9 Result Shape", () => {
       orig_home_score: 70.09,
       orig_away_sp: -2.32,
       orig_home_sp: 2.32,
-      orig_total: 142.50,
+      orig_total: 142.5,
       raw_away_score: 72.41,
       raw_home_score: 70.09,
       raw_away_sp: -2.32,
       raw_home_sp: 2.32,
-      raw_total: 142.50,
-      mkt_away_score: 74.50,
-      mkt_home_score: 69.00,
-      mkt_total: 143.50,
+      raw_total: 142.5,
+      mkt_away_score: 74.5,
+      mkt_home_score: 69.0,
+      mkt_total: 143.5,
       ml_away_pct: 55.12,
       ml_home_pct: 44.88,
-      away_ml_fair: -122.80,
-      home_ml_fair: 122.80,
+      away_ml_fair: -122.8,
+      home_ml_fair: 122.8,
       over_rate: 47.3,
       under_rate: 52.7,
       spread_clamped: false,

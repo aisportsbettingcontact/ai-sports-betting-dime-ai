@@ -1,3 +1,7 @@
+import {
+  isStaleChunkError,
+  attemptStaleChunkReload,
+} from "../_core/staleChunkReload";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Component, ReactNode } from "react";
 
@@ -22,9 +26,15 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
-    console.error('[ErrorBoundary] Caught error:', error);
-    console.error('[ErrorBoundary] Error message:', error.message);
-    console.error('[ErrorBoundary] Component stack:', info.componentStack);
+    // A stale build chunk is not an application fault — the client is simply a
+    // version behind after a deploy. Reload once to pick up the current build
+    // rather than showing a dead screen; the guard inside attemptStaleChunkReload
+    // stops this becoming a loop when the asset is genuinely missing.
+    if (isStaleChunkError(error) && attemptStaleChunkReload()) return;
+
+    console.error("[ErrorBoundary] Caught error:", error);
+    console.error("[ErrorBoundary] Error message:", error.message);
+    console.error("[ErrorBoundary] Component stack:", info.componentStack);
   }
 
   render() {
@@ -40,13 +50,17 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-white mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4 text-white font-bold">Something broke on this screen.</h2>
+            <h2 className="text-xl mb-4 text-white font-bold">
+              Something broke on this screen.
+            </h2>
 
             {/* Stack trace is never rendered by default — kept behind an explicit toggle */}
             <div className="w-full mb-6">
               <button
                 type="button"
-                onClick={() => this.setState({ showDetails: !this.state.showDetails })}
+                onClick={() =>
+                  this.setState({ showDetails: !this.state.showDetails })
+                }
                 className="text-sm text-white underline mb-2 cursor-pointer"
                 aria-expanded={this.state.showDetails}
               >
@@ -67,7 +81,13 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => this.setState({ hasError: false, error: null, showDetails: false })}
+                onClick={() =>
+                  this.setState({
+                    hasError: false,
+                    error: null,
+                    showDetails: false,
+                  })
+                }
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white border border-white transition-colors cursor-pointer"
               >
                 <RotateCcw size={16} />

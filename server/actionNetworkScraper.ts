@@ -202,7 +202,8 @@ function findOutcome(
 
   const searchIn = (pool: AnV2Outcome[]) => {
     if (matcher.side) return pool.find(o => o.side === matcher.side);
-    if (matcher.teamId != null) return pool.find(o => o.team_id === matcher.teamId);
+    if (matcher.teamId != null)
+      return pool.find(o => o.team_id === matcher.teamId);
     return undefined;
   };
 
@@ -212,10 +213,12 @@ function findOutcome(
   // Debug log when a live line is being used as fallback (indicates game is in-progress
   // but DK has not yet posted a pre-game line — should be rare)
   if (result?.is_live === true) {
-    debugLog("ANApiOdds", "warn",
+    debugLog(
+      "ANApiOdds",
+      "warn",
       `[ActionNetwork][findOutcome] WARNING: Using live in-game line as fallback ` +
-      `(no pre-game line found) — side=${matcher.side ?? 'teamId=' + matcher.teamId} ` +
-      `value=${result.value} odds=${result.odds} is_live=true`
+        `(no pre-game line found) — side=${matcher.side ?? "teamId=" + matcher.teamId} ` +
+        `value=${result.value} odds=${result.odds} is_live=true`
     );
   }
 
@@ -282,19 +285,22 @@ export async function fetchActionNetworkOdds(
 
   // Build URL — NCAAB needs division=D1 to get all D1 games
   // MLB uses the same v2 endpoint with no extra params
-  const extraParams =
-    sport === "ncaab" ? "&division=D1&tournament=0" : "";
+  const extraParams = sport === "ncaab" ? "&division=D1&tournament=0" : "";
   const url = `${AN_V2_BASE}/${sport}?bookIds=${BOOK_IDS}&date=${dateParam}&periods=event${extraParams}`;
 
   // Log MLB specifically since it's a new integration
   if (sport === "mlb") {
-    debugLog("ANApiOdds", "info",
+    debugLog(
+      "ANApiOdds",
+      "info",
       `[ActionNetwork][v2][MLB] Fetching MLB run line + total + ML odds for ${date}` +
-      ` | bookIds=${BOOK_IDS} (30=Open, 68=DK NJ, 69=FD NJ)`
+        ` | bookIds=${BOOK_IDS} (30=Open, 68=DK NJ, 69=FD NJ)`
     );
   }
 
-  debugLog("ANApiOdds", "info",
+  debugLog(
+    "ANApiOdds",
+    "info",
     `[ActionNetwork][v2] Fetching ${sport.toUpperCase()} Open + DK NJ odds for ${date} | URL: ${url}`
   );
 
@@ -305,7 +311,9 @@ export async function fetchActionNetworkOdds(
   let resp: Response | null = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      debugLog("ANApiOdds", "info",
+      debugLog(
+        "ANApiOdds",
+        "info",
         `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: fetch attempt ${attempt}/${MAX_ATTEMPTS}`
       );
       const r = await fetch(url, { headers: AN_HEADERS });
@@ -314,7 +322,9 @@ export async function fetchActionNetworkOdds(
           `[ActionNetwork][v2] HTTP ${r.status} for ${sport} ${date}`
         );
       }
-      debugLog("ANApiOdds", "info",
+      debugLog(
+        "ANApiOdds",
+        "info",
         `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: fetch OK on attempt ${attempt}/${MAX_ATTEMPTS} (status=${r.status})`
       );
       resp = r;
@@ -323,9 +333,11 @@ export async function fetchActionNetworkOdds(
       const errMsg = err instanceof Error ? err.message : String(err);
       if (attempt < MAX_ATTEMPTS) {
         const delayMs = RETRY_DELAYS_MS[attempt - 1];
-        debugLog("ANApiOdds", "warn",
+        debugLog(
+          "ANApiOdds",
+          "warn",
           `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: attempt ${attempt}/${MAX_ATTEMPTS} FAILED — ` +
-          `retrying in ${delayMs}ms | error: ${errMsg}`
+            `retrying in ${delayMs}ms | error: ${errMsg}`
         );
         await new Promise(resolve => setTimeout(resolve, delayMs));
       } else {
@@ -336,12 +348,17 @@ export async function fetchActionNetworkOdds(
       }
     }
   }
-  if (!resp) throw new Error(`[ActionNetwork][v2] No response after ${MAX_ATTEMPTS} attempts for ${sport} ${date}`);
+  if (!resp)
+    throw new Error(
+      `[ActionNetwork][v2] No response after ${MAX_ATTEMPTS} attempts for ${sport} ${date}`
+    );
 
   const data = (await resp.json()) as AnV2ApiResponse;
   const games = data?.games ?? [];
 
-  debugLog("ANApiOdds", "info",
+  debugLog(
+    "ANApiOdds",
+    "info",
     `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: ${games.length} total games from API`
   );
 
@@ -358,9 +375,11 @@ export async function fetchActionNetworkOdds(
     const homeTeam = teamMap.get(game.home_team_id);
 
     if (!awayTeam || !homeTeam) {
-      debugLog("ANApiOdds", "warn",
+      debugLog(
+        "ANApiOdds",
+        "warn",
         `[ActionNetwork][v2] SKIP game ${game.id}: missing team data ` +
-        `(awayId=${game.away_team_id}, homeId=${game.home_team_id})`
+          `(awayId=${game.away_team_id}, homeId=${game.home_team_id})`
       );
       skippedNoTeam++;
       continue;
@@ -380,10 +399,14 @@ export async function fetchActionNetworkOdds(
     // ── Open line extraction ────────────────────────────────────────────────
     const openSpreadAway = findOutcome(openEvent?.spread, { side: "away" });
     const openSpreadHome = findOutcome(openEvent?.spread, { side: "home" });
-    const openTotalOver  = findOutcome(openEvent?.total,  { side: "over" });
-    const openTotalUnder = findOutcome(openEvent?.total,  { side: "under" });
-    const openMlAway     = findOutcome(openEvent?.moneyline, { teamId: game.away_team_id });
-    const openMlHome     = findOutcome(openEvent?.moneyline, { teamId: game.home_team_id });
+    const openTotalOver = findOutcome(openEvent?.total, { side: "over" });
+    const openTotalUnder = findOutcome(openEvent?.total, { side: "under" });
+    const openMlAway = findOutcome(openEvent?.moneyline, {
+      teamId: game.away_team_id,
+    });
+    const openMlHome = findOutcome(openEvent?.moneyline, {
+      teamId: game.home_team_id,
+    });
 
     // ── DK NJ line extraction ───────────────────────────────────────────────
     const dkSpreadAway = findOutcome(dkEvent?.spread, { side: "away" });
@@ -392,24 +415,30 @@ export async function fetchActionNetworkOdds(
     // ── FanDuel NJ spread extraction (for NHL puck line fallback) ───────────
     const fdSpreadAway = findOutcome(fdEvent?.spread, { side: "away" });
     const fdSpreadHome = findOutcome(fdEvent?.spread, { side: "home" });
-    const dkTotalOver  = findOutcome(dkEvent?.total,  { side: "over" });
-    const dkTotalUnder = findOutcome(dkEvent?.total,  { side: "under" });
-    const dkMlAway     = findOutcome(dkEvent?.moneyline, { teamId: game.away_team_id });
-    const dkMlHome     = findOutcome(dkEvent?.moneyline, { teamId: game.home_team_id });
+    const dkTotalOver = findOutcome(dkEvent?.total, { side: "over" });
+    const dkTotalUnder = findOutcome(dkEvent?.total, { side: "under" });
+    const dkMlAway = findOutcome(dkEvent?.moneyline, {
+      teamId: game.away_team_id,
+    });
+    const dkMlHome = findOutcome(dkEvent?.moneyline, {
+      teamId: game.home_team_id,
+    });
 
     // Log every game with full detail — redirected to DB to avoid stdout noise
     const hasDk = !!(dkSpreadAway || dkTotalOver || dkMlAway);
     const hasOpen = !!(openSpreadAway || openTotalOver || openMlAway);
 
-    debugLog("ANApiOdds", "info",
+    debugLog(
+      "ANApiOdds",
+      "info",
       `[ActionNetwork][v2] ${sport.toUpperCase()} ${hasDk ? "✓DK" : "✗DK"} ${hasOpen ? "✓OPEN" : "✗OPEN"} | ` +
-      `${gameLabel} | ` +
-      `Open: spread=${openSpreadAway?.value ?? "null"}(${openSpreadAway?.odds ?? "null"}) ` +
-      `total=o${openTotalOver?.value ?? "null"}(${openTotalOver?.odds ?? "null"}) ` +
-      `ml=${openMlAway?.odds ?? "null"}/${openMlHome?.odds ?? "null"} | ` +
-      `DK: spread=${dkSpreadAway?.value ?? "null"}(${dkSpreadAway?.odds ?? "null"}) ` +
-      `total=o${dkTotalOver?.value ?? "null"}(${dkTotalOver?.odds ?? "null"}) ` +
-      `ml=${dkMlAway?.odds ?? "null"}/${dkMlHome?.odds ?? "null"}`
+        `${gameLabel} | ` +
+        `Open: spread=${openSpreadAway?.value ?? "null"}(${openSpreadAway?.odds ?? "null"}) ` +
+        `total=o${openTotalOver?.value ?? "null"}(${openTotalOver?.odds ?? "null"}) ` +
+        `ml=${openMlAway?.odds ?? "null"}/${openMlHome?.odds ?? "null"} | ` +
+        `DK: spread=${dkSpreadAway?.value ?? "null"}(${dkSpreadAway?.odds ?? "null"}) ` +
+        `total=o${dkTotalOver?.value ?? "null"}(${dkTotalOver?.odds ?? "null"}) ` +
+        `ml=${dkMlAway?.odds ?? "null"}/${dkMlHome?.odds ?? "null"}`
     );
 
     if (!hasDk) {
@@ -430,42 +459,44 @@ export async function fetchActionNetworkOdds(
       status: game.status,
 
       // Opening line (book_id=30)
-      openAwaySpread:     roundHalf(openSpreadAway?.value),
+      openAwaySpread: roundHalf(openSpreadAway?.value),
       openAwaySpreadOdds: fmtOdds(openSpreadAway?.odds),
-      openHomeSpread:     roundHalf(openSpreadHome?.value),
+      openHomeSpread: roundHalf(openSpreadHome?.value),
       openHomeSpreadOdds: fmtOdds(openSpreadHome?.odds),
-      openTotal:          roundHalf(openTotalOver?.value),
-      openOverOdds:       fmtOdds(openTotalOver?.odds),
-      openUnderOdds:      fmtOdds(openTotalUnder?.odds),
-      openAwayML:         fmtOdds(openMlAway?.odds),
-      openHomeML:         fmtOdds(openMlHome?.odds),
+      openTotal: roundHalf(openTotalOver?.value),
+      openOverOdds: fmtOdds(openTotalOver?.odds),
+      openUnderOdds: fmtOdds(openTotalUnder?.odds),
+      openAwayML: fmtOdds(openMlAway?.odds),
+      openHomeML: fmtOdds(openMlHome?.odds),
 
       // DraftKings NJ current line (book_id=68)
-      dkAwaySpread:     roundHalf(dkSpreadAway?.value),
+      dkAwaySpread: roundHalf(dkSpreadAway?.value),
       dkAwaySpreadOdds: fmtOdds(dkSpreadAway?.odds),
-      dkHomeSpread:     roundHalf(dkSpreadHome?.value),
+      dkHomeSpread: roundHalf(dkSpreadHome?.value),
       dkHomeSpreadOdds: fmtOdds(dkSpreadHome?.odds),
-      dkTotal:          roundHalf(dkTotalOver?.value),
-      dkOverOdds:       fmtOdds(dkTotalOver?.odds),
-      dkUnderOdds:      fmtOdds(dkTotalUnder?.odds),
-      dkAwayML:         fmtOdds(dkMlAway?.odds),
-      dkHomeML:         fmtOdds(dkMlHome?.odds),
+      dkTotal: roundHalf(dkTotalOver?.value),
+      dkOverOdds: fmtOdds(dkTotalOver?.odds),
+      dkUnderOdds: fmtOdds(dkTotalUnder?.odds),
+      dkAwayML: fmtOdds(dkMlAway?.odds),
+      dkHomeML: fmtOdds(dkMlHome?.odds),
 
       // FanDuel NJ spread (NHL puck line fallback)
-      fdAwaySpread:     roundHalf(fdSpreadAway?.value),
+      fdAwaySpread: roundHalf(fdSpreadAway?.value),
       fdAwaySpreadOdds: fmtOdds(fdSpreadAway?.odds),
-      fdHomeSpread:     roundHalf(fdSpreadHome?.value),
+      fdHomeSpread: roundHalf(fdSpreadHome?.value),
       fdHomeSpreadOdds: fmtOdds(fdSpreadHome?.odds),
     });
   }
 
-  debugLog("ANApiOdds", "info",
+  debugLog(
+    "ANApiOdds",
+    "info",
     `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: ` +
-    `${results.length} games returned | ` +
-    `${results.filter(g => g.dkAwaySpread != null || g.dkTotal != null || g.dkAwayML != null).length} with DK NJ odds | ` +
-    `${results.filter(g => g.openAwaySpread != null || g.openTotal != null || g.openAwayML != null).length} with Open odds | ` +
-    `${skippedNoDk} without DK (included for Open) | ` +
-    `${skippedNoTeam} skipped (no team data)`
+      `${results.length} games returned | ` +
+      `${results.filter(g => g.dkAwaySpread != null || g.dkTotal != null || g.dkAwayML != null).length} with DK NJ odds | ` +
+      `${results.filter(g => g.openAwaySpread != null || g.openTotal != null || g.openAwayML != null).length} with Open odds | ` +
+      `${skippedNoDk} without DK (included for Open) | ` +
+      `${skippedNoTeam} skipped (no team data)`
   );
 
   return results;

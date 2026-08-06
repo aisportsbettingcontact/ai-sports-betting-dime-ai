@@ -1,0 +1,129 @@
+schema_version: dime-foundation-separation-of-duties-v1
+contract_version: dime-foundation-separation-of-duties-v1.3.0
+status: proposed
+dataset_version: dime-sft-foundation-v1
+unresolved_decisions: []
+authorization_effect:
+  scope: governance_validation_only
+  creates_data: false
+  approves_data: false
+  authorizes_gpu_execution: false
+  authorizes_training: false
+  authorizes_locked_evaluation: false
+  authorizes_publication: false
+  authorizes_release: false
+  authorizes_serving: false
+  authorizes_provider_activation: false
+purpose: governance_and_validation_metadata_only
+reviewer_authority:
+  registry_path: configs/foundation_reviewer_registry.json
+  registry_schema_path: schemas/foundation_reviewer_registry.schema.json
+  registry_schema_validation_required: true
+  active_registry_required_for_real_approval: true
+  active_reviewer_entries_required: true
+  opaque_stable_reviewer_ids_required: true
+  reviewer_id_reassignment_allowed: false
+  approval_files_may_self_grant_roles: false
+record_review:
+  allowed_reviewer_principal_types:
+    - human
+    - ai_agent
+  human_review_required: false
+  human_reviewer_may_approve: true
+  automated_agent_may_approve: true
+  agent_profile_binding_required: true
+  agent_decision_receipt_required: true
+  agent_decision_receipt_signature_verification_required: true
+  agent_may_review_own_output: false
+  author_may_review_own_record: false
+  standard_minimum_approvals: 1
+  elevated_minimum_approvals: 2
+independence:
+  distinct_reviewer_ids_required: true
+  distinct_independence_groups_required: true
+  same_group_aliases_count_once: true
+  active_specialist_required: true
+  review_within_effective_authority_period_required: true
+  exact_registry_sha256_binding_required: true
+  same_agent_model_or_policy_lineage_counts_as_one_group: true
+elevated_review:
+  task_families:
+    - market_math
+    - bet_tracker_coaching
+    - simulation_analysis
+    - safety_privacy_security
+  policy_actions:
+    - privacy_block
+    - age_block
+    - jurisdiction_block
+    - self_exclusion_block
+    - protective_block
+    - acute_distress_block
+  required_specialists:
+    market_math: numeric
+    bet_tracker_coaching: coaching
+    simulation_analysis: simulation
+    safety_privacy_security: safety
+dataset_approval:
+  minimum_dataset_approvals: 2
+  required_role: dataset-approver
+  distinct_reviewer_ids: true
+  distinct_independence_groups: true
+  candidate_author_may_approve: false
+external_audits:
+  semantic_deduplication:
+    required_role: semantic-audit
+    tool_id: dime-semantic-audit
+    tool_version: 1.0.0
+  privacy_and_identifiers:
+    required_role: privacy
+    tool_id: dime-privacy-audit
+    tool_version: 1.0.0
+  rights:
+    required_role: rights
+    tool_id: dime-rights-audit
+    tool_version: 1.0.0
+  development_evaluation_contamination:
+    required_role: evaluation-audit
+    tool_id: dime-development-contamination-audit
+    tool_version: 1.0.0
+  locked_evaluation_contamination:
+    required_role: locked-evaluation
+    tool_id: dime-locked-contamination-audit
+    tool_version: 1.0.0
+  numeric_traceability:
+    required_role: numeric
+    tool_id: dime-numeric-audit
+    tool_version: 1.0.0
+effective_authority:
+  authority_period_required: true
+  effective_start_required: true
+  effective_end_or_open_ended_required: true
+  active_at_decision_time_required: true
+  registry_version_binding_required: true
+  registry_sha256_binding_required: true
+  author_reviewer_recusal_required: true
+  same_independence_group_never_counts_twice: true
+registry_migration:
+  required: false
+  status: cryptographic_receipt_verifier_implemented_activation_blocked
+  implemented_fields:
+    - principal_type
+    - agent_profile
+    - independence_group_id
+    - effective_start
+    - effective_end_or_open_ended
+    - decision_receipt_sha256
+    - receipt_verification_key
+    - signed_decision_receipt
+prohibited_content:
+  - personal_names
+  - email_addresses
+  - credentials
+  - secret_values
+  - token_names_or_values
+  - real_reviewer_roster
+  - active_placeholder_reviewers
+  - self_granted_authority
+  - unpinned_active_agent_profiles
+  - shared_agent_decision_receipts

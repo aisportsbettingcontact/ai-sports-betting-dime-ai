@@ -38,6 +38,7 @@ import { scrapeAndIngest } from "./espnDbIngester";
 import { spawn } from "child_process";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { logSafe } from "../_core/logSafe";
 
 // The production server is bundled by esbuild with --format=esm, where the
 // CommonJS `__dirname` global does not exist. Deriving it from import.meta.url
@@ -124,7 +125,7 @@ async function handleWc2026Engine(req: Request, res: Response): Promise<void> {
   const dryRun = req.body?.dryRun === true || req.body?.dryRun === "1";
   console.log(`[WC2026HB] [INPUT] /wc2026-engine triggered dryRun=${dryRun} at ${new Date().toISOString()}`);
   try {
-    const result = await spawnMjs("v26_jul15_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
+    const result = await spawnMjs("v27_jul18_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
     const ok = result.exitCode === 0 && !result.timedOut;
     const tail = result.output.slice(-8000);
     console.log(`[WC2026HB] [OUTPUT] wc2026-engine exit=${result.exitCode} timedOut=${result.timedOut}`);
@@ -258,7 +259,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
   const dateStr = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
   const forceReingest = req.body?.forceReingest ?? false;
 
-  console.log(`[WC2026HB] [INPUT] /wc2026-espn-results triggered at ${now.toISOString()} dateStr=${dateStr} forceReingest=${forceReingest}`);
+  console.log(`[WC2026HB] [INPUT] /wc2026-espn-results triggered at ${now.toISOString()} dateStr=${logSafe(dateStr)} forceReingest=${logSafe(forceReingest)}`);
 
   try {
     const result = await ingestWc2026EspnResults({ dateStr, forceReingest });
@@ -322,7 +323,7 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
 
   console.log(
     `[WC2026HB] [INPUT] /wc2026-live-scores triggered at ${now.toISOString()}` +
-    ` | datesToQuery=${datesToQuery.join(",")}` +
+    ` | datesToQuery=${logSafe(datesToQuery.join(","))}` +
     ` | [VERIFY] Querying both today+yesterday to catch games spanning midnight UTC boundary`
   );
 
@@ -354,7 +355,7 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
     console.log(
       `[WC2026HB] [OUTPUT] live-scores: matchesUpdated=${merged.matchesUpdated}` +
       ` live=${liveCount} ft=${ftCount} errors=${merged.errors.length}` +
-      ` | dates=${datesToQuery.join(",")}`
+      ` | dates=${logSafe(datesToQuery.join(","))}`
     );
     const pass = merged.errors.length === 0;
     console.log(`[WC2026HB] [VERIFY] ${pass ? "PASS" : "PARTIAL"} — /wc2026-live-scores`);
@@ -435,7 +436,7 @@ async function handleWc2026BracketSync(req: Request, res: Response): Promise<voi
 }
 
 export function registerWc2026Heartbeats(app: Express): void {
-  // Manus Heartbeat requires /api/scheduled/* paths
+  // Legacy heartbeat paths retained — now driven by GitHub Actions cron (CRON_SECRET)
   app.post("/api/scheduled/wc2026-lineups", handleWc2026Lineups);
   app.post("/api/scheduled/wc2026-espn-results", handleWc2026EspnResults);
   app.post("/api/scheduled/wc2026-live-scores", handleWc2026LiveScores);

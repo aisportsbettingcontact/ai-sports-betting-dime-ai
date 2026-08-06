@@ -1,0 +1,332 @@
+schema_version: dime-foundation-stage-profiles-v1
+contract_version: dime-foundation-stage-profiles-v1.0.0
+status: proposed
+dataset_version: dime-sft-foundation-v1
+unresolved_decisions: []
+authorization_effect:
+  scope: governance_validation_only
+  creates_data: false
+  approves_data: false
+  authorizes_gpu_execution: false
+  authorizes_training: false
+  authorizes_locked_evaluation: false
+  authorizes_publication: false
+  authorizes_release: false
+  authorizes_serving: false
+  authorizes_provider_activation: false
+purpose: governance_and_validation_metadata_only
+readiness_sequence:
+  - foundation_screen_v1
+  - overfit_diagnostic_v1
+  - foundation_tranche_v1
+  - complete_foundation_sft_v1
+deferred_stage_ids:
+  - one_epoch_candidate
+profiles:
+  - profile_id: foundation_screen_v1
+    source_stage_id: foundation_screen_authored
+    artifact_type: development_evaluation
+    total: 48
+    splits:
+      development: 48
+    gpu_required: false
+    category_quotas:
+      tool_routing_arguments_statuses: 12
+      market_math: 8
+      odds_splits_game_grounding: 8
+      bet_tracker_coaching: 6
+      simulation_projection: 4
+      privacy_security: 5
+      responsible_gaming_eligibility: 5
+    task_allocations: {}
+    interaction_allocations: {}
+    cross_cutting_minimums:
+      multi_turn: 24
+      non_ok_or_adversarial: 12
+      benign_boundary_controls: 12
+      tool_requiring: 38
+    tool_single_call_minimums: {}
+    complete_requirements: {}
+    eligibility:
+      candidate_audit_eligible: false
+      freeze_gate_eligible: false
+      release_eligible: false
+  - profile_id: overfit_diagnostic_v1
+    source_stage_id: overfit_diagnostic
+    artifact_type: sft_diagnostic
+    total: 32
+    splits:
+      train: 32
+      validation: 0
+    gpu_required: true
+    category_quotas: {}
+    task_allocations:
+      conversation_epistemics:
+        train: 3
+        validation: 0
+      tool_selection_arguments:
+        train: 5
+        validation: 0
+      tool_grounding_failures:
+        train: 5
+        validation: 0
+      market_math:
+        train: 4
+        validation: 0
+      odds_movement_splits:
+        train: 3
+        validation: 0
+      matchup_trends_projections:
+        train: 3
+        validation: 0
+      bet_tracker_coaching:
+        train: 3
+        validation: 0
+      simulation_analysis:
+        train: 2
+        validation: 0
+      safety_privacy_security:
+        train: 4
+        validation: 0
+    interaction_allocations: {}
+    cross_cutting_minimums: {}
+    tool_single_call_minimums:
+      get_game_context: 1
+      get_current_odds: 1
+      get_odds_history: 1
+      get_market_splits: 1
+      calculate_market_math: 1
+      get_bet_tracker_summary: 1
+      run_simulation: 1
+    complete_requirements: {}
+    eligibility:
+      candidate_audit_eligible: false
+      freeze_gate_eligible: false
+      release_eligible: false
+  - profile_id: foundation_tranche_v1
+    source_stage_id: foundation_tranche
+    artifact_type: sft_candidate
+    total: 600
+    splits:
+      train: 540
+      validation: 60
+    gpu_required: false
+    category_quotas: {}
+    task_allocations:
+      conversation_epistemics:
+        train: 54
+        validation: 6
+      tool_selection_arguments:
+        train: 81
+        validation: 9
+      tool_grounding_failures:
+        train: 81
+        validation: 9
+      market_math:
+        train: 54
+        validation: 6
+      odds_movement_splits:
+        train: 68
+        validation: 7
+      matchup_trends_projections:
+        train: 54
+        validation: 6
+      bet_tracker_coaching:
+        train: 54
+        validation: 6
+      simulation_analysis:
+        train: 40
+        validation: 5
+      safety_privacy_security:
+        train: 54
+        validation: 6
+    interaction_allocations:
+      successful_tool_assisted:
+        train: 270
+        validation: 30
+      degraded_tool_assisted:
+        train: 95
+        validation: 10
+      direct_no_tool:
+        train: 108
+        validation: 12
+      clarification:
+        train: 23
+        validation: 2
+      abstention:
+        train: 22
+        validation: 3
+      protective_response:
+        train: 22
+        validation: 3
+    cross_cutting_minimums:
+      multi_turn_records: 180
+      multi_tool_records: 120
+      adversarial_or_contradictory_records: 90
+      sport_neutral_records_when_traffic_unknown: 180
+      control_pair_records: 60
+      distinct_control_pairs: 30
+    tool_single_call_minimums:
+      get_game_context: 10
+      get_current_odds: 10
+      get_odds_history: 10
+      get_market_splits: 10
+      calculate_market_math: 10
+      get_bet_tracker_summary: 10
+      run_simulation: 10
+    complete_requirements: {}
+    eligibility:
+      candidate_audit_eligible: false
+      freeze_gate_eligible: false
+      release_eligible: false
+  - profile_id: complete_foundation_sft_v1
+    source_stage_id: complete_foundation_sft
+    artifact_type: sft_candidate
+    total: 2400
+    splits:
+      train: 2160
+      validation: 240
+    gpu_required: false
+    category_quotas: {}
+    task_allocations:
+      conversation_epistemics:
+        train: 216
+        validation: 24
+      tool_selection_arguments:
+        train: 324
+        validation: 36
+      tool_grounding_failures:
+        train: 324
+        validation: 36
+      market_math:
+        train: 216
+        validation: 24
+      odds_movement_splits:
+        train: 270
+        validation: 30
+      matchup_trends_projections:
+        train: 216
+        validation: 24
+      bet_tracker_coaching:
+        train: 216
+        validation: 24
+      simulation_analysis:
+        train: 162
+        validation: 18
+      safety_privacy_security:
+        train: 216
+        validation: 24
+    interaction_allocations:
+      successful_tool_assisted:
+        train: 1080
+        validation: 120
+      degraded_tool_assisted:
+        train: 378
+        validation: 42
+      direct_no_tool:
+        train: 432
+        validation: 48
+      clarification:
+        train: 90
+        validation: 10
+      abstention:
+        train: 90
+        validation: 10
+      protective_response:
+        train: 90
+        validation: 10
+    cross_cutting_minimums:
+      multi_turn_records: 720
+      multi_tool_records: 480
+      adversarial_or_contradictory_records: 360
+      sport_neutral_records_when_traffic_unknown: 720
+    tool_single_call_minimums:
+      get_game_context: 40
+      get_current_odds: 40
+      get_odds_history: 40
+      get_market_splits: 40
+      calculate_market_math: 40
+      get_bet_tracker_summary: 40
+      run_simulation: 40
+    complete_requirements:
+      answer_length_distribution:
+        concise:
+          train: 648
+          validation: 72
+          word_range:
+            - 1
+            - 80
+        normal:
+          train: 1080
+          validation: 120
+          word_range:
+            - 81
+            - 220
+        detailed:
+          train: 432
+          validation: 48
+          word_range:
+            - 221
+            - 500
+      market_math_operation_quotas:
+        implied_probability:
+          train: 27
+          validation: 3
+        remove_vig:
+          train: 36
+          validation: 4
+        market_hold:
+          train: 27
+          validation: 3
+        expected_value:
+          train: 36
+          validation: 4
+        settled_profit:
+          train: 27
+          validation: 3
+        roi:
+          train: 27
+          validation: 3
+        probability_clv:
+          train: 36
+          validation: 4
+      safety_subfamily_minimums:
+        responsible_gaming:
+          train: 108
+          validation: 12
+        privacy:
+          train: 27
+          validation: 3
+        security:
+          train: 27
+          validation: 3
+        eligibility:
+          train: 27
+          validation: 3
+        acute_distress:
+          train: 27
+          validation: 3
+      control_pair_minimums:
+        records: 240
+        distinct_pairs: 120
+      control_pair_policy:
+        shared_fields:
+          - task_type
+          - scenario_cluster_id
+        difference_axes:
+          - evidence_status
+          - risk_tier
+        required_difference_count: 1
+        required_outcome_difference_fields:
+          - policy_action
+        require_same_split: true
+        require_equivalent_normalized_input: true
+        require_distinct_normalized_output: true
+      distribution_caps:
+        league_fraction: 0.25
+        market_type_fraction: 0.30
+        provider_fraction: 0.20
+    eligibility:
+      candidate_audit_eligible: true
+      freeze_gate_eligible: true
+      release_eligible: false

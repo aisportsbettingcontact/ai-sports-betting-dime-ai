@@ -1,0 +1,91 @@
+{
+  "schema_version": "dime-run-manifest-v1",
+  "experiment_id": "replace-with-unique-experiment-id",
+  "status": "preflight",
+  "created_at_utc": "REPLACE_WITH_UTC_TIMESTAMP",
+  "owner": "REPLACE_WITH_OWNER",
+  "hypothesis": "REPLACE_WITH_ONE_VARIABLE_HYPOTHESIS",
+  "authorization": {
+    "status": "authorized_for_full_training",
+    "reference": "REPLACE_WITH_REVIEW_REFERENCE",
+    "approver": "REPLACE_WITH_APPROVER",
+    "approved_at_utc": "REPLACE_WITH_UTC_TIMESTAMP"
+  },
+  "source": {
+    "github_repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "source_github_commit": "REPLACE_WITH_PRIOR_40_CHARACTER_SOURCE_COMMIT"
+  },
+  "datasets": {
+    "foundation_sft": {
+      "repo_id": "taileredsports/dime-foundation-sft",
+      "revision": "REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA",
+      "dataset_manifest_sha256": "REPLACE_WITH_DATASET_MANIFEST_SHA256",
+      "checksums_sha256": "REPLACE_WITH_CHECKSUMS_JSON_SHA256"
+    },
+    "development_eval": {
+      "repo_id": "taileredsports/dime-eval-development",
+      "revision": "REPLACE_WITH_EXACT_40_CHARACTER_DEVELOPMENT_EVAL_SHA"
+    },
+    "locked_eval": {
+      "repo_id": "taileredsports/dime-eval-locked",
+      "revision_or_opaque_reference": "REPLACE_WITH_LOCKED_REVISION_OR_OPAQUE_REFERENCE"
+    }
+  },
+  "base_model": {
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "starting_adapter": null,
+  "contracts": {
+    "training_config_sha256": "REPLACE_WITH_SHA256",
+    "system_prompt_sha256": "REPLACE_WITH_SHA256",
+    "chat_template_sha256": "REPLACE_WITH_SHA256",
+    "tool_catalog_sha256": "REPLACE_WITH_SHA256",
+    "dataset_schema_sha256": "REPLACE_WITH_SHA256",
+    "evaluation_schema_sha256": "REPLACE_WITH_SHA256",
+    "decoding_config_sha256": "REPLACE_WITH_SHA256",
+    "runtime_contract_sha256": "REPLACE_WITH_SHA256",
+    "requirements_lock_sha256": "REPLACE_WITH_SHA256",
+    "run_manifest_schema_sha256": "REPLACE_WITH_SHA256",
+    "foundation_checksums_schema_sha256": "REPLACE_WITH_SHA256"
+  },
+  "training": {
+    "seed": 1729,
+    "output_dir": "/workspace/runs/replace-with-unique-experiment-id/checkpoints",
+    "final_adapter_dir": "/workspace/runs/replace-with-unique-experiment-id/adapters/final",
+    "logs_dir": "/workspace/runs/replace-with-unique-experiment-id/logs",
+    "reports_dir": "/workspace/runs/replace-with-unique-experiment-id/reports",
+    "checkpoint_retention": {
+      "save_steps": 20,
+      "save_total_limit": 3
+    },
+    "early_stopping": {
+      "metric": "validation_loss",
+      "mode": "minimize",
+      "patience_evaluations": 3,
+      "minimum_delta": 0.001,
+      "restore_best_checkpoint": true
+    }
+  },
+  "environment": {
+    "runpod_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",
+    "python": "3.12.3",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8",
+    "gpu": "RTX-4090-24GB"
+  },
+  "approvals": {
+    "privacy": false,
+    "provenance": false,
+    "rights": false,
+    "partition": false,
+    "future_data": false,
+    "semantic_deduplication": false,
+    "evaluation_contamination": false
+  },
+  "commands": [],
+  "results": {
+    "final_artifact_sha256": null,
+    "report_sha256": []
+  }
+}

@@ -1,0 +1,212 @@
+/**
+ * shared/os/goal.ts — goal records (ISSUE-011, doctrine L1).
+ *
+ * Doctrine L1 requires `os/goals/GR-####-*.md` carrying NINE fields. The Stage 1
+ * audit found no goal record type existed anywhere, and DR-014 recorded the
+ * consequence: D16 criteria 2, 5 and 9 all fail on that one missing type, and
+ * D13's founder-loop flagship requirement — "surfaces contradictions: a claimed
+ * priority that engineering activity ignores" — is not computable at all.
+ *
+ * `findPriorityContradiction` is what makes it computable. A goal declares the
+ * paths it expects work to land in; the engineering loop's cycle artifacts say
+ * where work actually landed. Divergence is a contradiction the founder loop can
+ * surface without anyone remembering to look.
+ */
+
+import { hasHeading, sectionBody, stripFences } from "./markdown";
+
+/** The nine L1 fields, as section headings. Order is the doctrine's order. */
+export const GOAL_FIELDS = [
+  "Desired outcome",
+  "The need behind it",
+  "Evidence that justified pursuing it",
+  "Acceptance criteria",
+  "Constraints",
+  "Time horizon",
+  "Responsible individual",
+  "Current status",
+  "Evaluation measures",
+] as const;
+
+export interface Goal {
+  id: string;
+  status: string | null;
+  dri: string | null;
+  /** Globs the goal expects engineering activity to land in. */
+  activityPaths: string[];
+}
+
+export interface ContradictionResult {
+  state: "ok" | "not_measured";
+  contradiction: boolean;
+  onGoalCycles: number;
+  totalCycles: number;
+  /** Share of cycles touching the goal's declared paths; null when unmeasurable. */
+  onGoalShare: number | null;
+  reason: string | null;
+}
+
+/** Below this share of on-goal cycles, a declared priority is contradicted. */
+const CONTRADICTION_THRESHOLD = 0.5;
+
+function field(md: string, name: string): string | null {
+  const m = stripFences(md).match(new RegExp(`\\*\\*${name}:\\*\\*\\s*([^\\n·]+)`, "i"));
+  return m ? m[1].trim() : null;
+}
+
+/** `---`, `***`, `___`, `- - -` — markdown rules, not content. */
+const HORIZONTAL_RULE = /^\s*(?:-\s*-\s*-[-\s]*|\*\s*\*\s*\*[*\s]*|_\s*_\s*_[_\s]*)$/;
+
+/**
+ * An activity path is a path glob, never prose. Enforced because an unmatchable
+ * string is not an error the check can report — it simply never matches, and the
+ * goal quietly declares a priority it does not have.
+ */
+const ACTIVITY_PATH = /^[A-Za-z0-9._*/-]+$/;
+
+export function parseGoal(md: string): Goal {
+  const idMatch = md.match(/^#\s*(GR-\d+)/m);
+  if (!idMatch) throw new Error("goal record has no `# GR-####` heading");
+
+  // hasHeading strips fences first. Testing the raw document let a fenced
+  // EXAMPLE mentioning `## Constraints` satisfy a field the record did not have.
+  const missing = GOAL_FIELDS.filter((f) => !hasHeading(md, f));
+  // Name every missing field at once. Reporting only the first turns a single
+  // fix into N round trips.
+  if (missing.length > 0) {
+    throw new Error(`${idMatch[1]} is missing required L1 field(s): ${missing.join(", ")}`);
+  }
+
+  // "Evaluation measures" must be a table with at least one threshold row.
+  // D5: a goal specific enough to evaluate. Prose is not a measure.
+  const measureRows = sectionBody(md, "Evaluation measures")
+    .split("\n")
+    .filter((l) => l.trim().startsWith("|") && !/^\|[\s:|-]+\|$/.test(l.trim()));
+  if (measureRows.length < 2) {
+    throw new Error(`${idMatch[1]} states no evaluation measure with a threshold`);
+  }
+
+  const activityPaths = sectionBody(md, "Activity paths")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("-") && !HORIZONTAL_RULE.test(l))
+    .map((l) => l.replace(/^-\s*/, "").replace(/`/g, "").trim())
+    .filter(Boolean);
+
+  // Not one of the doctrine's nine fields, so GOAL_FIELDS stays at nine — but a
+  // record without it makes D13 uncomputable, which is the reason the type exists.
+  // Required of EVERY goal record, not just the one the real-file tests name.
+  if (activityPaths.length === 0) {
+    throw new Error(`${idMatch[1]} declares no activity path — the D13 check is not computable without one`);
+  }
+
+  for (const p of activityPaths) {
+    if (!ACTIVITY_PATH.test(p)) {
+      throw new Error(
+        `${idMatch[1]} declares an activity path that is not path-shaped: ${JSON.stringify(p)}`,
+      );
+    }
+    // A glob of only wildcards and separators matches every path, which would
+    // make every cycle on-goal and retire the contradiction check permanently.
+    // Silent universal assent is the worst possible failure for this mechanism.
+    if (!/[A-Za-z0-9]/.test(p)) {
+      throw new Error(
+        `${idMatch[1]} declares an activity path matching everything: ${JSON.stringify(p)}` +
+          " — a universal glob makes the contradiction check vacuous",
+      );
+    }
+  }
+
+  return { id: idMatch[1], status: field(md, "Status"), dri: field(md, "DRI"), activityPaths };
+}
+
+/**
+ * Glob match supporting a trailing `**` and `*` within a segment.
+ *
+ * The two-pass translation needs a sentinel to hold `**` while `*` is rewritten,
+ * and that sentinel must be a character no real path can contain. NUL is the only
+ * such character: POSIX forbids it in a pathname, so it cannot collide with input.
+ * A printable placeholder would be wrong — a space, for instance, makes
+ * `docs/a b/**` match `docs/aXXXb/x.md`.
+ *
+ * It is written as an escape, never as a raw byte. A literal NUL makes the file
+ * binary to git (unreviewable, unblamable) and renders as a space, so the next
+ * reader "cleans it up" into exactly the bug described above. See
+ * `scripts/os/source-hygiene.test.ts`, which enforces this.
+ */
+function matches(path: string, glob: string): boolean {
+  // Escape every regex metacharacter EXCEPT `*`, which the two passes below
+  // consume deliberately. `?` was missing from this class and survived as a
+  // quantifier, so `a?b.ts` matched `b.ts`. Only `*` and `**` are wildcards here.
+  const rx = new RegExp(
+    "^" +
+      glob
+        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*\*/g, "\u0000")
+        .replace(/\*/g, "[^/]*")
+        .replace(/\u0000/g, ".*") +
+      "$",
+  );
+  return rx.test(path);
+}
+
+/**
+ * D13's founder-loop requirement, made computable: compare a goal's declared
+ * priority against where engineering activity actually went.
+ *
+ * A cycle counts as on-goal if ANY file it changed matches a declared path —
+ * deliberately generous, so a flagged contradiction is a strong signal rather
+ * than an artefact of mixed commits.
+ */
+export function findPriorityContradiction(
+  activityPaths: string[],
+  cycleFilePaths: string[][],
+): ContradictionResult {
+  const total = cycleFilePaths.length;
+  const unmeasurable = (reason: string): ContradictionResult => ({
+    state: "not_measured",
+    contradiction: false,
+    onGoalCycles: 0,
+    totalCycles: total,
+    onGoalShare: null,
+    reason,
+  });
+
+  if (total === 0) {
+    return unmeasurable("no recorded cycles yet — a share cannot be computed from zero evidence");
+  }
+  // Absence of evidence is not evidence of a contradiction. Both cases below
+  // scored share=0 and reported `contradiction: true` — an accusation about the
+  // founder's allocation manufactured entirely out of missing data. The founder
+  // loop must never surface a finding that no measurement supports.
+  if (activityPaths.length === 0) {
+    return unmeasurable("the goal declares no activity paths — there is no priority to contradict");
+  }
+  // A cycle that resolved to no files carries no evidence either way. Leaving it
+  // in the denominator counts silence AS off-goal, which is the same bias that
+  // unresolved commits had. The previous fix only excused the case where EVERY
+  // cycle was evidence-free, so one empty cycle among two could still manufacture
+  // a contradiction while the only cycle carrying evidence was on-goal.
+  const withEvidence = cycleFilePaths.filter((f) => f.length > 0);
+  if (withEvidence.length === 0) {
+    return unmeasurable("no cycle resolved to any files — the ledger or the clone is incomplete");
+  }
+  const measured = withEvidence.length;
+  const onGoal = withEvidence.filter((files) =>
+    files.some((f) => activityPaths.some((g) => matches(f, g))),
+  ).length;
+  const share = onGoal / measured;
+  return {
+    state: "ok",
+    contradiction: share < CONTRADICTION_THRESHOLD,
+    onGoalCycles: onGoal,
+    // The count actually measured — cycles carrying no evidence are excluded, so
+    // reporting `total` here would describe a denominator the share never used.
+    totalCycles: measured,
+    onGoalShare: share,
+    reason:
+      share < CONTRADICTION_THRESHOLD
+        ? `only ${onGoal}/${measured} cycles touched the declared priority paths`
+        : null,
+  };
+}

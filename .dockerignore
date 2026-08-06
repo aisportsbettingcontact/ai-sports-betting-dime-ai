@@ -1,15 +1,71 @@
 node_modules
 dist
 .git
+.github
 .env
 .env.*
 !.env.example
-# Manus sandbox artifacts — .manus/db/ holds thousands of raw DB query dumps, never bake into the image
-.manus*
+# Legacy sandbox artifacts and local scraper logs — keep out of the image
+.scraper-logs/
 # Personal reference material — never ship to production bundles (CLAUDE.md)
-dime-ai/design-bundle/uploads
+dime-ai/design-bundle/project/uploads
+# Governed LLM development sources, fixtures, and evidence are never part of
+# the Railway production image. The one explicitly allow-listed pricing
+# registry is a bounded runtime configuration artifact; its own review status
+# remains fail-closed and is validated by the application.
+ml/dime-1.0/*
+!ml/dime-1.0/configs
+ml/dime-1.0/configs/*
+!ml/dime-1.0/configs/dime_observability_pricing_v1.json
 # Local tooling / scratch
 .claude
 .agents
+.pi
 *.log
 ui-ux_log.txt
+.tmp-*
+vitest-results*.json
+
+# Agent/credential/ops tooling never ships. The image build needs exactly:
+# the preview-production gate that `pnpm run build` calls, and the two team
+# datasets server/_core/dimeAnswerRouting.ts imports at bundle time (esbuild
+# resolves them from the build context — excluding them breaks build:server,
+# which is how the 2026-08-05 Railway deploy failed). Widen this allowlist
+# only for a file the build provably resolves; never re-open all of scripts/.
+scripts/**
+!scripts/verify-preview-production.mjs
+!scripts/data/cfb-2026/teams.json
+!scripts/data/nfl-2026/teams.json
+
+# Access/incident/session logs and root one-off strays — must not ship
+USERS.md
+INCIDENTS.md
+todo.md
+wc2026modeling.txt
+T4_EXECUTION_NOTES.md
+dime-ai-sol-iteration.md
+dime-mlb-doubleheader-20260717-*
+llm-blueprint
+llm-blueprint.md
+prez-ai-skills-directory.md
+audit_espn_vs_db*.mjs
+wc_correct_dk_june19.mjs
+wc_rescrape_june19.mjs
+wc_sim_router.cjs
+analyze_bundle.py
+find_inline.py
+
+# Root markdown is docs/ops, never build input (CLAUDE.md, AGENTS.md, LLM.md, …).
+# dockerignore globs don't cross "/" so this matches root-level .md only.
+*.md
+
+# Doc/evidence/dev-only trees not needed at build or runtime
+docs
+audits
+audit-notes
+references
+e2e
+perf
+analytics-backend
+archive
+os

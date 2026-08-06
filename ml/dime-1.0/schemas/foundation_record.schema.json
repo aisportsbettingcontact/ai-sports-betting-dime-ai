@@ -1,0 +1,671 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_record.schema.json",
+  "title": "Dime Foundation v1 Authoring Record",
+  "description": "Canonical private Data Factory record. This is an authoring boundary, not the trainer-ready SFT release schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_id",
+    "route",
+    "task_type",
+    "conversation",
+    "source_type",
+    "source_reference",
+    "source_timestamp",
+    "provenance",
+    "independent_review",
+    "partition_identity",
+    "rights_status",
+    "tool_requirement",
+    "tool_schema_revision",
+    "expected_tool_trace",
+    "freshness_class",
+    "expected_behavior",
+    "trainer_labels",
+    "numeric_assertions",
+    "expected_response",
+    "expected_final_response",
+    "critical_constraints",
+    "uncertainty_behavior",
+    "split"
+  ],
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "pattern": "^dime-foundation-v1-[a-z0-9][a-z0-9._-]{7,95}$"
+    },
+    "route": {
+      "$ref": "#/$defs/route"
+    },
+    "task_type": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+    },
+    "conversation": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/message"
+      }
+    },
+    "source_type": {
+      "enum": [
+        "source_packet",
+        "synthetic_behavioral"
+      ]
+    },
+    "source_reference": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/source_packet_reference"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source_timestamp": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "independent_review": {
+      "$ref": "#/$defs/independent_review"
+    },
+    "partition_identity": {
+      "$ref": "#/$defs/partition_identity"
+    },
+    "rights_status": {
+      "enum": [
+        "approved_internal",
+        "licensed",
+        "public_domain",
+        "synthetic_behavioral",
+        "pending"
+      ]
+    },
+    "tool_requirement": {
+      "enum": [
+        "required",
+        "optional",
+        "prohibited"
+      ]
+    },
+    "tool_schema_revision": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "expected_tool_trace": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/tool_trace_step"
+      }
+    },
+    "freshness_class": {
+      "enum": [
+        "static",
+        "historical_as_of",
+        "temporal",
+        "live"
+      ]
+    },
+    "expected_behavior": {
+      "$ref": "#/$defs/expected_behavior"
+    },
+    "trainer_labels": {
+      "$ref": "#/$defs/trainer_labels"
+    },
+    "numeric_assertions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/numeric_assertion"
+      }
+    },
+    "expected_response": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 12000
+    },
+    "expected_final_response": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 12000
+    },
+    "critical_constraints": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 240
+      }
+    },
+    "uncertainty_behavior": {
+      "enum": [
+        "state_material_uncertainty",
+        "clarify",
+        "abstain",
+        "correct_false_premise",
+        "not_applicable"
+      ]
+    },
+    "split": {
+      "enum": [
+        "train",
+        "validation"
+      ]
+    }
+  },
+  "$defs": {
+    "route": {
+      "enum": [
+        "platform",
+        "account",
+        "educational",
+        "bet_explanation",
+        "matchup",
+        "full_slate",
+        "historical",
+        "live_data",
+        "general_sports"
+      ]
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "content"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ]
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 12000
+        }
+      }
+    },
+    "source_packet_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packet_id",
+        "snapshot_sha256",
+        "locator"
+      ],
+      "properties": {
+        "packet_id": {
+          "type": "string",
+          "pattern": "^packet-[a-z0-9][a-z0-9._-]{5,95}$"
+        },
+        "snapshot_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "model_id",
+        "model_revision",
+        "prompt_revision",
+        "prompt_sha256",
+        "execution_receipt_sha256",
+        "context_sha256",
+        "responsibility"
+      ],
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+        },
+        "model_id": {
+          "const": "gpt-5.6-sol"
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "prompt_revision": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "execution_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "context_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "responsibility": {
+          "enum": ["generation", "independent_critique"]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shard_id",
+        "created_at",
+        "generator",
+        "critic"
+      ],
+      "properties": {
+        "shard_id": {
+          "type": "string",
+          "pattern": "^foundation-v1-[a-z0-9][a-z0-9._-]{3,95}$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator": {
+          "$ref": "#/$defs/actor"
+        },
+        "critic": {
+          "$ref": "#/$defs/actor"
+        }
+      }
+    },
+    "independent_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "rubric_version",
+        "reviewed_at",
+        "unresolved_material_findings",
+        "deterministic_validation_passed"
+      ],
+      "properties": {
+        "decision": {
+          "enum": ["approved", "changes_requested", "rejected"]
+        },
+        "rubric_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "unresolved_material_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deterministic_validation_passed": {
+          "type": "boolean"
+        },
+        "review_receipts": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reviewer_id", "decision_receipt_sha256"],
+            "properties": {
+              "reviewer_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+              },
+              "decision_receipt_sha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      }
+    },
+    "partition_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_family_id",
+        "template_family_id",
+        "source_event_id",
+        "conversation_family_id",
+        "quantitative_scenario_id",
+        "entity_set_sha256",
+        "temporal_bucket",
+        "split_assignment_basis",
+        "split_assignment_revision",
+        "split_assignment_seed"
+      ],
+      "properties": {
+        "scenario_family_id": {"type": "string", "minLength": 3},
+        "template_family_id": {"type": ["string", "null"], "minLength": 3},
+        "source_event_id": {"type": ["string", "null"], "minLength": 3},
+        "conversation_family_id": {"type": "string", "minLength": 3},
+        "quantitative_scenario_id": {"type": ["string", "null"], "minLength": 3},
+        "entity_set_sha256": {"$ref": "#/$defs/sha256"},
+        "temporal_bucket": {"type": "string", "minLength": 3},
+        "split_assignment_basis": {"const": "scenario_family_sha256_mod_10"},
+        "split_assignment_revision": {"const": "dime-foundation-partition-v1"},
+        "split_assignment_seed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "tool_trace_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "tool_name",
+        "tool_revision",
+        "normalized_arguments",
+        "expected_execution_state",
+        "expected_result_constraints",
+        "expected_tool_response",
+        "source_authority",
+        "source_observed_at",
+        "freshness_requirement",
+        "validation_requirement"
+      ],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1},
+        "tool_name": {"type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$"},
+        "tool_revision": {"type": "string", "minLength": 3},
+        "normalized_arguments": {"type": "object"},
+        "expected_execution_state": {
+          "enum": ["skipped", "success", "empty", "failure", "timeout", "stale", "malformed", "conflicting", "rejected"]
+        },
+        "expected_result_constraints": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "expected_tool_response": {
+          "oneOf": [
+            {"type": "object"},
+            {"type": "null"}
+          ]
+        },
+        "source_authority": {"type": ["string", "null"]},
+        "source_observed_at": {"type": ["string", "null"], "format": "date-time"},
+        "freshness_requirement": {"type": "string", "minLength": 1},
+        "validation_requirement": {"type": "string", "minLength": 1}
+      }
+    },
+    "expected_behavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "coverage"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 1000
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tool_required",
+            "temporal_or_freshness_sensitive",
+            "missing_or_ambiguous_information",
+            "abstention_or_error_correction",
+            "multi_turn",
+            "adversarial_or_false_premise"
+          ],
+          "properties": {
+            "tool_required": {
+              "type": "boolean"
+            },
+            "temporal_or_freshness_sensitive": {
+              "type": "boolean"
+            },
+            "missing_or_ambiguous_information": {
+              "type": "boolean"
+            },
+            "abstention_or_error_correction": {
+              "type": "boolean"
+            },
+            "multi_turn": {
+              "type": "boolean"
+            },
+            "adversarial_or_false_premise": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "trainer_labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skill_ids",
+        "difficulty",
+        "interaction_mode",
+        "evidence_status",
+        "policy_action",
+        "risk_tier",
+        "answer_length"
+      ],
+      "properties": {
+        "skill_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "difficulty": {
+          "enum": ["foundation", "intermediate", "hard", "adversarial"]
+        },
+        "interaction_mode": {
+          "enum": [
+            "successful_tool_assisted",
+            "degraded_tool_assisted",
+            "direct_no_tool",
+            "clarification",
+            "abstention",
+            "protective_response"
+          ]
+        },
+        "evidence_status": {
+          "enum": [
+            "complete",
+            "partial",
+            "stale",
+            "conflicting",
+            "missing",
+            "unauthorized",
+            "blocked",
+            "error",
+            "not_applicable"
+          ]
+        },
+        "policy_action": {
+          "enum": [
+            "allow",
+            "clarify",
+            "abstain",
+            "partial",
+            "privacy_block",
+            "age_block",
+            "jurisdiction_block",
+            "self_exclusion_block",
+            "protective_block",
+            "acute_distress_block",
+            "not_applicable"
+          ]
+        },
+        "risk_tier": {"enum": ["standard", "high", "critical"]},
+        "answer_length": {"enum": ["concise", "normal", "detailed"]}
+      }
+    },
+    "numeric_assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_path",
+        "value",
+        "unit",
+        "comparator",
+        "tolerance",
+        "assistant_message_index",
+        "claim_text",
+        "formatted_value"
+      ],
+      "properties": {
+        "source_path": {"type": "string", "minLength": 1},
+        "value": {"type": "number"},
+        "unit": {
+          "enum": [
+            "probability",
+            "percentage_points",
+            "decimal_odds",
+            "american_odds",
+            "units",
+            "roi",
+            "count"
+          ]
+        },
+        "comparator": {"enum": ["exact", "approximate"]},
+        "tolerance": {"type": "number", "minimum": 0},
+        "assistant_message_index": {"type": "integer", "minimum": 0},
+        "claim_text": {"type": "string", "minLength": 1},
+        "formatted_value": {"type": "string", "minLength": 1}
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source_type": {
+            "const": "source_packet"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_reference": {
+            "$ref": "#/$defs/source_packet_reference"
+          },
+          "rights_status": {
+            "enum": [
+              "approved_internal",
+              "licensed",
+              "public_domain",
+              "pending"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tool_requirement": {
+            "const": "prohibited"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tool_schema_revision": {
+            "type": "null"
+          },
+          "expected_tool_trace": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source_type": {
+            "const": "synthetic_behavioral"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_reference": {
+            "type": "null"
+          },
+          "rights_status": {
+            "const": "synthetic_behavioral"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "tool_requirement": {
+            "const": "required"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tool_schema_revision": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "freshness_class": {
+            "enum": [
+              "historical_as_of",
+              "temporal",
+              "live"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  ]
+}

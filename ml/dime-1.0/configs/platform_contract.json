@@ -1,0 +1,391 @@
+{
+  "schema_version": "dime-platform-contract-v1",
+  "status": "foundation_only",
+  "lifecycle": {
+    "allowed_statuses": [
+      "foundation_only",
+      "training_authorized",
+      "evaluation_authorized",
+      "release_authorized",
+      "serving_authorized"
+    ],
+    "repository_states": [
+      "governance_scaffold_only",
+      "release_authorized",
+      "approved_release"
+    ]
+  },
+  "authorization": {
+    "full_training": false,
+    "locked_evaluation": false,
+    "adapter_publication": false,
+    "serving": false,
+    "provider_activation": false,
+    "training_candidate": null,
+    "release_candidate": null
+  },
+  "dime_llm_architecture": {
+    "decision_revision": "dime-model-artifact-decision-v1",
+    "training_orchestrator": {
+      "platform": "Codex",
+      "agent": "5.6 Sol",
+      "role": "engineering_and_training_control"
+    },
+    "model_compute": {
+      "platform": "RunPod",
+      "role": "training_and_inference_compute"
+    },
+    "excluded_providers": [
+      "anthropic"
+    ],
+    "production_candidate": {
+      "provider": "runpod",
+      "model": null,
+      "model_revision": null,
+      "adapter_revision": null,
+      "status": "pending_training_and_evaluation"
+    },
+    "deterministic_control": {
+      "provider": "frozen",
+      "model": "no-provider",
+      "role": "fallback_and_non_generative_control"
+    },
+    "base_model_selection": {
+      "status": "blocked_pending_suitability_evaluation",
+      "selected_candidate": null,
+      "evaluation_revision": "base-model-suitability-v1",
+      "required_before_dataset_approval": true,
+      "required_before_training_authorization": true
+    },
+    "candidate_evaluation": {
+      "candidate_a": "base_model_without_runtime_answer_routing_v1",
+      "candidate_b": "base_model_with_runtime_answer_routing_v1",
+      "candidate_c": "dime_adapter_with_runtime_answer_routing_v1",
+      "external_api_comparison_authorized": false
+    }
+  },
+  "github": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "project_path": "ml/dime-1.0"
+  },
+  "foundation_v1_owner_decision": {
+    "decision_version": "dime-foundation-v1-owner-decision-v1",
+    "status": "owner_approved",
+    "workbench": {
+      "provider": "hugging_face",
+      "repo_type": "dataset",
+      "repo_id": "taileredsports/dime-foundation-workbench",
+      "visibility": "private",
+      "lifecycle_state": "provisioned_access_verification_pending",
+      "repository_provisioning": {
+        "provisioned": true,
+        "private_visibility_verified": true,
+        "current_governance_head": "ace82f0ccef7313b39f66ecbd46cfb3784999dcd",
+        "root_inventory": [
+          ".gitattributes",
+          "README.md"
+        ],
+        "credential_provisioning_complete": false,
+        "live_access_verification_complete": false
+      },
+      "private_data_admission_authorized": false,
+      "authoritative_for": [
+        "candidate_records",
+        "source_artifacts",
+        "source_registry",
+        "review_ledger",
+        "raw_external_audits",
+        "foundation_approval"
+      ],
+      "never_authoritative_for": [
+        "approved_foundation_release",
+        "training_authorization",
+        "adapter_release",
+        "serving"
+      ],
+      "runpod_is_authoritative": false
+    },
+    "authorship_policy": {
+      "allowed_source_classes": [
+        "human-authored",
+        "synthetic",
+        "teacher-generated"
+      ],
+      "substantive_ai_drafting_allowed": true,
+      "retained_ai_supplied_prose_allowed": true,
+      "synthetic_may_relabel_ai_authored_prose": false,
+      "teacher_generated_records_require_governance_contract": true,
+      "governance_contract_path": "configs/foundation_data_factory_governance_v1.json",
+      "generator_may_approve_own_record": false,
+      "non_substantive_ai_assistance": [
+        "spelling",
+        "formatting",
+        "critique",
+        "checklist_validation"
+      ],
+      "automated_agent_may_approve": true
+    },
+    "credential_boundary": {
+      "individual_human_accounts_required": true,
+      "mfa_required": true,
+      "shared_human_credentials_allowed": false,
+      "agent_workload_identity_required": true,
+      "shared_agent_credentials_allowed": false,
+      "planned_service_credentials": {
+        "dime-foundation-workbench-read-v1": {
+          "read": [
+            "foundation_workbench"
+          ],
+          "write": [],
+          "gated_public_read": false
+        },
+        "dime-foundation-workbench-write-v1": {
+          "read": [
+            "foundation_workbench"
+          ],
+          "write": [
+            "foundation_workbench"
+          ],
+          "gated_public_read": false
+        }
+      },
+      "prohibited_existing_credentials": [
+        "dime-training-read-v1",
+        "dime-serving-read-v1",
+        "dime-release-publisher-v1",
+        "dime-locked-evaluator-read-v1",
+        "dime-locked-publisher-v1"
+      ],
+      "service_credentials_may_establish_reviewer_identity": false,
+      "live_positive_and_negative_tests_required_before_private_data": true
+    },
+    "reviewer_authority": {
+      "registry_path": "configs/foundation_reviewer_registry.json",
+      "registry_status": "proposed",
+      "roster_status": "proposed_inactive_ai_agent_assignments",
+      "activation_authorized": false,
+      "ai_agent_activation_authorized": false,
+      "agent_receipt_verifier_status": "implemented_fail_closed_activation_blocked",
+      "agent_receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+      "agent_receipt_verifier_id": "dime-ed25519-decision-receipt-verifier",
+      "agent_receipt_verifier_version": "1.0.0",
+      "agent_receipt_canonicalization": "dime-canonical-json-v1",
+      "agent_receipt_signature_algorithm": "ed25519",
+      "private_receipt_store_required_for_ai": true,
+      "agent_profile_provisioning_status": "tooling_ready_public_inputs_pending",
+      "agent_profile_provisioning_schema_path": "schemas/foundation_ai_reviewer_provisioning_input.schema.json",
+      "agent_profile_provisioning_script_path": "scripts/prepare_ai_reviewer_profiles.py",
+      "agent_profile_provisioning_candidate_only": true,
+      "agent_profile_provisioning_private_keys_allowed": false,
+      "allowed_principal_types": [
+        "human",
+        "ai_agent"
+      ],
+      "private_identity_mapping_required_for_humans": true,
+      "immutable_agent_profile_binding_required": true,
+      "identity_bound_decision_receipts_required": true,
+      "agent_decision_receipt_sha256_required": true,
+      "agent_decision_receipt_signature_verification_required": true,
+      "shared_service_tokens_may_sign_decisions": false,
+      "same_agent_model_or_policy_lineage_counts_as_one_group": true,
+      "minimum_dataset_approver_independence_groups": 2
+    },
+    "authorization_effect": {
+      "creates_repository": false,
+      "provisions_credentials": false,
+      "admits_private_data": false,
+      "activates_reviewers": false,
+      "approves_data": false,
+      "authorizes_gpu_execution": false,
+      "authorizes_training": false,
+      "authorizes_locked_evaluation": false,
+      "authorizes_publication": false,
+      "authorizes_release": false,
+      "authorizes_serving": false,
+      "authorizes_provider_activation": false
+    }
+  },
+  "base_model": {
+    "repo_type": "model",
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "hugging_face": {
+    "repositories": {
+      "foundation_sft": {
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-foundation-sft",
+        "current_governance_head": "af9a45fb7835df01585c859c628e1dbc9e372356",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      },
+      "development_eval": {
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-eval-development",
+        "current_governance_head": "5b75491b4fc3d3b22e270510f7cba767d01ec363",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      },
+      "locked_eval": {
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-eval-locked",
+        "current_governance_head": "4ad747fd76d3f54b54ef7d3b5ebc36ccbe7fd8d1",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      },
+      "promoted_adapter": {
+        "repo_type": "model",
+        "repo_id": "taileredsports/Llama-3-Dime-1.0",
+        "current_governance_head": "298c735fa2b32e3f63b19a1b18c4f4f901933e3e",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      }
+    },
+    "credentials": {
+      "dime-training-read-v1": {
+        "read": [
+          "foundation_sft",
+          "development_eval",
+          "promoted_adapter"
+        ],
+        "write": [],
+        "gated_public_read": true
+      },
+      "dime-serving-read-v1": {
+        "read": [
+          "promoted_adapter"
+        ],
+        "write": [],
+        "gated_public_read": true
+      },
+      "dime-release-publisher-v1": {
+        "read": [
+          "foundation_sft",
+          "development_eval",
+          "promoted_adapter"
+        ],
+        "write": [
+          "foundation_sft",
+          "development_eval",
+          "promoted_adapter"
+        ],
+        "gated_public_read": false
+      },
+      "dime-locked-evaluator-read-v1": {
+        "read": [
+          "locked_eval",
+          "promoted_adapter"
+        ],
+        "write": [],
+        "gated_public_read": true
+      },
+      "dime-locked-publisher-v1": {
+        "read": [
+          "locked_eval"
+        ],
+        "write": [
+          "locked_eval"
+        ],
+        "gated_public_read": false
+      }
+    },
+    "adapter_publication": {
+      "publisher_credential": "dime-release-publisher-v1",
+      "post_upload_verifier_credential": "dime-serving-read-v1",
+      "separate_token_values_required": true,
+      "verification_revision": "returned_full_commit_sha"
+    }
+  },
+  "reviewer_runtime": {
+    "schema_path": "schemas/foundation_reviewer_runtime.schema.json",
+    "config_path": "configs/foundation_reviewer_runtime_v1.json",
+    "status": "aws_control_plane_deployed_locked",
+    "reviewer_count": 2,
+    "candidate_registry_version": "dime-foundation-reviewers-v0.5.2",
+    "runpod_endpoint_state": "not_created",
+    "aws_resource_state": "create_complete_locked",
+    "aws_region": "us-west-2",
+    "aws_stack_name": "dime-foundation-reviewer-signers",
+    "aws_stack_mode": "LOCKED",
+    "aws_resource_count": 31,
+    "reviewer_profile_hashes_populated": false,
+    "signing_available": false,
+    "aws_control_plane_template": "infrastructure/aws/reviewer-signers/template.yaml",
+    "credentials_provisioned": false,
+    "gpu_execution_authorized": false,
+    "activation_authorized": false
+  },
+  "runpod": {
+    "template_name": "dime-llama31-8b-training-v1",
+    "container_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",
+    "minimum_gpu": "NVIDIA GeForce RTX 4090 24GB",
+    "persistent_root": "/workspace",
+    "repository_checkout": "/workspace/repos/ai-sports-betting-dime-ai",
+    "foundation_dataset_root": "/workspace/datasets/foundation-sft",
+    "development_eval_root": "/workspace/datasets/eval-development",
+    "runs_root": "/workspace/runs",
+    "archive_root": "/workspace/archive",
+    "hugging_face_cache": "/workspace/.cache/huggingface",
+    "pip_cache": "/workspace/.cache/pip",
+    "disposable_venv": "/opt/dime-venv",
+    "required_run_entries": [
+      "checkpoints",
+      "adapters",
+      "logs",
+      "reports",
+      "run_manifest.json"
+    ],
+    "credential": "dime-training-read-v1",
+    "prohibited_credentials": [
+      "dime-serving-read-v1",
+      "dime-release-publisher-v1",
+      "dime-locked-evaluator-read-v1",
+      "dime-locked-publisher-v1"
+    ],
+    "locked_evaluation_path": null
+  },
+  "release_identity": {
+    "authoritative_revision": "full_40_character_commit_sha",
+    "tags_are": "human_readable_aliases_only",
+    "movable_revisions_prohibited": [
+      "main",
+      "latest"
+    ]
+  },
+  "model_repository": {
+    "policy": "promoted_peft_adapter_releases_only",
+    "rehearsal_status": "REHEARSAL — NOT APPROVED FOR SERVING",
+    "required_files": [
+      "LICENSE",
+      "NOTICE",
+      "README.md",
+      "adapter_config.json",
+      "adapter_model.safetensors",
+      "chat_template.jinja",
+      "checksums.sha256",
+      "evaluation_summary.json",
+      "generation_config.json",
+      "release_attestation.json",
+      "training_manifest.json"
+    ],
+    "optional_files": [
+      "added_tokens.json",
+      "special_tokens_map.json",
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "remote_metadata_files": [
+      ".gitattributes"
+    ],
+    "prohibited_artifacts": [
+      "meta_base_model_weights",
+      "merged_full_model_weights",
+      "quantized_full_model_weights",
+      "training_checkpoints",
+      "optimizer_or_scheduler_state",
+      "raw_training_or_evaluation_data",
+      "whole_workspaces",
+      "deployment_bundles"
+    ]
+  }
+}

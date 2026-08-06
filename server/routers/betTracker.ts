@@ -1,23 +1,29 @@
 /**
  * betTracker.ts — tRPC router for the Bet Tracker feature.
  *
- * Role-based access model (v4):
- *   OWNER (prez)     — can see/edit/delete own bets; can see sippi bets (sippi is also owner);
- *                      can see all handicapper bets via targetUserId
- *   ADMIN            — can see all bets; can edit/delete porter & hank bets; cannot touch owner bets
- *   HANDICAPPER      — can only see own bets; porter & hank bets are IMMUTABLE after creation
- *                      (must submit edit/delete request; owner/admin reviews)
+ * Role-based access model (v5 — 2026-07-31):
+ *   USER         — every authenticated subscriber. Sees and manages ONLY their own
+ *                  bets. `targetUserId` is rejected for this role.
+ *   HANDICAPPER  — own bets only; bets are IMMUTABLE after creation (must submit
+ *                  an edit/delete request for owner/admin review).
+ *   ADMIN        — own bets, plus read/edit/delete of any non-owner user's bets.
+ *   OWNER        — own bets, plus read of any user's bets. Owner bets are
+ *                  protected from admin edit/delete.
  *
- * Immutability rule for handicappers (porter/hank):
- *   - create: allowed
- *   - update/delete: FORBIDDEN — must use submitEditRequest instead
+ * v5 changed the base procedure from `handicapperProcedure` to
+ * `appUserProcedure`. Before, role=user was rejected outright, so a regular
+ * subscriber could not read even their OWN bets. Two properties come with the
+ * swap and are load-bearing:
+ *   1. `appUserProcedure` enforces account expiry; `handicapperProcedure` did not.
+ *   2. Widening the door does NOT widen visibility. Every read resolves its
+ *      scope through `resolveScope`, which only ever returns a different userId
+ *      for owner/admin. See betTrackerCore.resolveViewUserId + its test matrix.
  *
- * Owner bets (role=owner) are protected from admin edit/delete.
+ * Owner/admin-only procedures: listHandicappers, getLogs, reviewEditRequest,
+ * autoGradeAll.
  *
- * New procedures (v4):
- *   submitEditRequest — handicapper submits EDIT or DELETE request for own bet
- *   getLogs           — owner/admin/sippi: full audit log (all bets created + all edit requests)
- *   reviewEditRequest — owner/admin: approve or deny a pending edit request
+ * Grading is NOT implemented here. Every settle path (interactive, scheduled,
+ * cron) calls the single engine in ../betAutoGradeScheduler.
  *
  * Logging convention:
  *   [BetTracker][INPUT]  — raw input received
@@ -30,13 +36,57 @@
 
 import { z } from "zod";
 import { router } from "../_core/trpc";
-import { handicapperProcedure } from "./appUsers";
+import { appUserProcedure } from "./appUsers";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { trackedBets, appUsers, betEditRequests, type TrackedBet } from "../../drizzle/schema";
+import { trackedBetLegs,
+  trackedBets, appUsers, betEditRequests } from "../../drizzle/schema";
 import { eq, and, desc, inArray, asc, gte, lte, lt, or, sql } from "drizzle-orm";
 import { fetchAnSlate, resolveLogoUrl } from "../actionNetwork";
-import { gradeTrackedBet, fetchScores, type Sport as GraderSport, type Timeframe as GraderTimeframe, type Market as GraderMarket, type PickSide as GraderPickSide } from "../scoreGrader";
+import { gradePendingForUser, gradeAllPendingForDate } from "../betAutoGradeScheduler";
+import { gradeParlaysForUser } from "../parlayGrader";
+import {
+  buildStatsCacheKey,
+  buildStatsFingerprint,
+  getStatsCache,
+  setStatsCache,
+  invalidateStatsCacheForUser,
+} from "../betTrackerStatsCache";
+import {
+  aggregateStats,
+  downsampleEquityCurve,
+  calcToWin,
+  decideBetMutation,
+  decidePrivilegedAccess,
+  decideResultOverride,
+  decideStakeDenomination,
+  decodeCursor,
+  derivePickLabel,
+  effectiveLine,
+  encodeCursor,
+  marketRequiresLine,
+  resolveLineForUpdate,
+  resolveStakePatch,
+  resolveViewUserId,
+  toUnits as coreToUnits,
+  type BetStats,
+  type Market as CoreMarket,
+  type PickSide as CorePickSide,
+  type StatRow,
+  type Timeframe as CoreTimeframe,
+} from "../betTrackerCore";
+import { checkGradingSupport } from "@shared/gradingSupport";
+import {
+  MIN_PARLAY_LEGS,
+  MAX_PARLAY_LEGS,
+  americanToDecimal,
+  calcParlayToWin,
+  validateParlayLegs,
+} from "../parlayCore";
+
+// Re-exported for the scheduler's historical import path and for tests that
+// assert cache behaviour through the router's public surface.
+export { invalidateStatsCacheForUser } from "../betTrackerStatsCache";
 
 // ─── Shared Zod enums ─────────────────────────────────────────────────────────
 
@@ -57,142 +107,123 @@ const MARKETS    = ["ML", "RL", "TOTAL"] as const;
 const PICK_SIDES = ["AWAY", "HOME", "OVER", "UNDER"] as const;
 const WAGER_TYPES = ["PREGAME", "LIVE"] as const;
 
-// ─── Server-side stats cache ─────────────────────────────────────────────────
-// Caches full-set stats aggregation results keyed by userId+filters+unitSize.
-// TTL = 30s for live ranges (TODAY/SEASON), 5 minutes for historical ranges.
-// Invalidated on create/update/delete mutations.
-// This eliminates repeated full-table aggregation scans for identical filter combos.
+// ─── Shared plumbing ──────────────────────────────────────────────────────────
+//
+// The stats cache lives in ../betTrackerStatsCache and the domain rules
+// (permissions, stake math, line invariants, cursor codec, aggregation) live in
+// ../betTrackerCore. Both are pure/dependency-light so they are unit-testable
+// without a database — see server/betTrackerCore.test.ts.
 
-interface StatsCacheEntry {
-  stats: unknown;
-  expiresAt: number;
-}
-const statsCache = new Map<string, StatsCacheEntry>();
+/** Columns the stats aggregation actually reads. See StatRow in betTrackerCore. */
+const STAT_COLUMNS = {
+  id:         trackedBets.id,
+  gameDate:   trackedBets.gameDate,
+  result:     trackedBets.result,
+  sport:      trackedBets.sport,
+  market:     trackedBets.market,
+  betType:    trackedBets.betType,
+  timeframe:  trackedBets.timeframe,
+  wagerType:  trackedBets.wagerType,
+  pick:       trackedBets.pick,
+  odds:       trackedBets.odds,
+  risk:       trackedBets.risk,
+  toWin:      trackedBets.toWin,
+  riskUnits:  trackedBets.riskUnits,
+  toWinUnits: trackedBets.toWinUnits,
+  /** Distinguishes a parlay ticket from a straight bet in the byType breakdown. */
+  legCount:   trackedBets.legCount,
+} as const;
 
-function buildStatsCacheKey(userId: number, input: {
-  sport?: string; gameDate?: string; dateFrom?: string; dateTo?: string;
-  result?: string; unitSize?: number; isHistorical?: boolean;
-} | undefined): string {
-  return JSON.stringify({
-    u: userId,
-    s: input?.sport ?? null,
-    gd: input?.gameDate ?? null,
-    df: input?.dateFrom ?? null,
-    dt: input?.dateTo ?? null,
-    r: input?.result ?? null,
-    us: input?.unitSize ?? 100,
-    ih: input?.isHistorical ?? false,
-  });
-}
-
-function getStatsCache(key: string): unknown | null {
-  const entry = statsCache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) { statsCache.delete(key); return null; }
-  return entry.stats;
-}
-
-function setStatsCache(key: string, stats: unknown, isHistorical: boolean): void {
-  // Historical data: 5 minute TTL (immutable graded bets)
-  // Live data: 30 second TTL (pending bets may update)
-  const ttl = isHistorical ? 5 * 60_000 : 30_000;
-  statsCache.set(key, { stats, expiresAt: Date.now() + ttl });
-  // Evict stale entries when cache grows large (>500 entries)
-  if (statsCache.size > 500) {
-    const now = Date.now();
-    for (const [k, v] of Array.from(statsCache.entries())) { if (now > v.expiresAt) statsCache.delete(k); }
-  }
-}
-
-/** Invalidate all cache entries for a given userId (called on create/update/delete) */
-export function invalidateStatsCacheForUser(userId: number): void {
-  for (const key of Array.from(statsCache.keys())) {
-    try {
-      const parsed = JSON.parse(key) as { u: number };
-      if (parsed.u === userId) statsCache.delete(key);
-    } catch { /* skip malformed keys */ }
-  }
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Compute toWin from American odds + risk (units) */
-function calcToWin(odds: number, risk: number): number {
-  if (odds >= 100) {
-    return parseFloat((risk * (odds / 100)).toFixed(2));
-  } else {
-    return parseFloat((risk * (100 / Math.abs(odds))).toFixed(2));
-  }
-}
 
 /**
- * Derive a human-readable pick string from structured inputs.
- * Examples:
- *   AWAY + ML        → "HOU ML"
- *   HOME + RL        → "SEA RL"
- *   OVER + TOTAL     → "OVER"
- *   UNDER + TOTAL    → "UNDER"
- *   NRFI timeframe   → "NRFI"
- *   YRFI timeframe   → "YRFI"
- */
-function derivePickLabel(
-  pickSide: typeof PICK_SIDES[number],
-  market: typeof MARKETS[number],
-  awayTeam: string,
-  homeTeam: string,
-  timeframe?: typeof TIMEFRAMES[number],
-): string {
-  if (timeframe === "NRFI") return "NRFI";
-  if (timeframe === "YRFI") return "YRFI";
-  if (market === "TOTAL") {
-    return pickSide === "OVER" ? "OVER" : "UNDER";
-  }
-  const team = pickSide === "AWAY" ? awayTeam : homeTeam;
-  const suffix = market === "ML" ? "ML" : "RL";
-  return `${team} ${suffix}`;
-}
-
-/**
- * Determine the unit-size bucket label for a bet.
+ * The unit-denominated payout to store alongside `riskUnits`.
  *
- * Unit-size logic (v4):
- *   - Plus-money bets (+odds): the RISK amount IS the unit count.
- *     e.g. ARI ML +155 at 3U risk → 3U play.
- *   - Minus-money bets (-odds): the TO-WIN amount IS the unit count.
- *     e.g. NYM ML -153 at ~5U risk to win 5U → 5U play.
- *
- * Buckets: 10U, 5U, 4U, 3U, 2U, 1U (exact integer matching).
- * Any non-integer or out-of-range value maps to the nearest bucket.
+ * Explicit input wins. Otherwise it is derived from the unit size the caller
+ * implied (risk ÷ riskUnits) so the stored pair always agrees with the price.
+ * Null only when there is no unit basis at all — `aggregateStats` then falls
+ * back to dollars ÷ the viewer's unit size for BOTH figures, which is
+ * consistent even if it is not authoritative.
  */
-function calcUnitBucket(
-  odds: number,
+function resolveToWinUnits(
+  riskUnits: number | undefined,
+  toWinUnits: number | undefined,
   risk: number,
   toWin: number,
-  riskUnits?: number | null,
-  toWinUnits?: number | null,
-): string {
-  // Prefer stored unit-denominated values (accurate regardless of user's unit size setting).
-  // Fall back to raw dollar amounts only if unit values were not stored (legacy bets).
-  let unitCount: number;
-  if (odds > 0) {
-    // Plus money (+odds): the RISK amount IS the unit count
-    // e.g. ARI ML +155 at 3U risk → 3U play
-    unitCount = riskUnits != null ? riskUnits : risk;
-  } else {
-    // Minus money (-odds): the TO WIN amount IS the unit count
-    // e.g. NYM ML -153 to win 5U → 5U play
-    unitCount = toWinUnits != null ? toWinUnits : toWin;
+): string | null {
+  if (toWinUnits != null) return String(toWinUnits);
+  if (riskUnits == null || riskUnits <= 0) return null;
+  const unitSize = risk / riskUnits;
+  if (!Number.isFinite(unitSize) || unitSize <= 0) return null;
+  return (toWin / unitSize).toFixed(4);
+}
+
+/**
+ * Enforce the unit-only rule at the write boundary.
+ *
+ * The UI hides dollar entry for subscribers, but a UI restriction is cosmetic:
+ * this procedure is reachable by any authenticated subscriber. A bet that
+ * arrives with no riskUnits is dollar-denominated by definition — there is no
+ * unit basis to render it in — so it is refused here.
+ */
+function assertUnitDenomination(role: string, riskUnits: number | undefined, what: string): void {
+  const rule = decideStakeDenomination(role);
+  if (!rule.unitsOnly) return;
+  if (riskUnits != null && riskUnits > 0) return;
+  console.log(`[BetTracker][ERROR] ${what}: role=${role} submitted no riskUnits — units are required`);
+  throw new TRPCError({ code: "BAD_REQUEST", message: rule.reason });
+}
+
+/** Throw the tRPC error a core decision describes, or fall through. */
+function assertDecision(d: { allowed: boolean; code?: string; message?: string }): void {
+  if (d.allowed) return;
+  throw new TRPCError({ code: "FORBIDDEN", message: d.message ?? "Forbidden" });
+}
+
+/**
+ * Resolve which user's rows a read may touch, throwing FORBIDDEN when a
+ * non-privileged caller asks for someone else's. Every read procedure funnels
+ * through this so the visibility rule has exactly one implementation.
+ */
+function resolveScope(ctx: { appUser: { id: number; role: string } }, targetUserId?: number): number {
+  const res = resolveViewUserId({ role: ctx.appUser.role, viewerId: ctx.appUser.id, targetUserId });
+  if (!res.ok) {
+    console.log(`[BetTracker][ERROR] scope: FORBIDDEN — role=${ctx.appUser.role} viewer=${ctx.appUser.id} target=${targetUserId}`);
+    throw new TRPCError({ code: "FORBIDDEN", message: res.message });
   }
+  return res.userId;
+}
 
-  // Round to nearest integer for bucket assignment
-  const u = Math.round(unitCount);
+/**
+ * Same as resolveScope, but additionally proves the target account exists.
+ *
+ * `resolveViewUserId` answers "may this caller read that id?", not "is that id
+ * real". An owner/admin could therefore query any integer and receive a
+ * confident, well-formed empty tracker — indistinguishable from a real user who
+ * has never placed a bet. That is a silent-wrong-answer shape: it turns a typo
+ * into plausible data, and it read as "this user has no bets" for the whole
+ * period account 60002 existed only as orphaned rows.
+ *
+ * Self-scoped reads skip the lookup entirely — the caller is authenticated, so
+ * their own existence is not in question and this costs nothing on the hot path.
+ */
+async function resolveScopeChecked(
+  ctx: { appUser: { id: number; role: string } },
+  targetUserId?: number,
+): Promise<number> {
+  const userId = resolveScope(ctx, targetUserId);
+  if (userId === ctx.appUser.id) return userId;
 
-  if (u >= 10) return "10U";
-  if (u >= 5)  return "5U";
-  if (u >= 4)  return "4U";
-  if (u >= 3)  return "3U";
-  if (u >= 2)  return "2U";
-  return "1U";
+  const db = await getDb();
+  const [target] = await db
+    .select({ id: appUsers.id })
+    .from(appUsers)
+    .where(eq(appUsers.id, userId))
+    .limit(1);
+  if (!target) {
+    console.log(`[BetTracker][ERROR] scope: NOT_FOUND — viewer=${ctx.appUser.id} target=${userId} does not exist`);
+    throw new TRPCError({ code: "NOT_FOUND", message: `No account with id ${userId}` });
+  }
+  return userId;
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
@@ -200,136 +231,49 @@ function calcUnitBucket(
 export const betTrackerRouter = router({
 
   /**
-   * listHandicappers — OWNER/ADMIN only: list all handicapper accounts.
-   * Used by the BetTracker handicapper selector dropdown.
-   * Returns all users with role owner/admin/handicapper so the selector
-   * can show all accounts including prez (owner) and sippi (owner).
+   * listHandicappers — OWNER/ADMIN only: the accounts the tracker selector can
+   * switch to.
+   *
+   * Scoped to accounts that ACTUALLY HAVE BETS, across every role.
+   *
+   * It used to filter `role IN (owner, admin, handicapper)`, which made sense
+   * when the tracker was staff-only. Once the page opened to subscribers the
+   * filter became the thing standing between an admin and the people using the
+   * feature: on 2026-08-03 four `role=user` accounts held 17 bets and not one
+   * was reachable, so admins could see 39% of tracked bets and none belonging to
+   * a real user. The server already permitted the read (resolveViewUserId lets
+   * owner/admin target anyone) — only the picker was blind.
+   *
+   * Driving the list off bet ownership rather than role also keeps it short and
+   * self-maintaining: a new subscriber shows up the moment they log a bet, and
+   * accounts that never use the tracker never clutter it.
    */
-  listHandicappers: handicapperProcedure
+  listHandicappers: appUserProcedure
     .query(async ({ ctx }) => {
-      const role = ctx.appUser.role;
-      if (role !== "owner" && role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required" });
-      }
+      assertDecision(decidePrivilegedAccess(ctx.appUser.role, "list other users"));
       const db = await getDb();
       const rows = await db
-        .select({ id: appUsers.id, username: appUsers.username, role: appUsers.role })
+        .selectDistinct({ id: appUsers.id, username: appUsers.username, role: appUsers.role })
         .from(appUsers)
-        .where(inArray(appUsers.role, ["owner", "admin", "handicapper"]))
+        .innerJoin(trackedBets, eq(trackedBets.userId, appUsers.id))
         .orderBy(appUsers.id);
-      console.log(`[BetTracker][OUTPUT] listHandicappers: ${rows.length} handicappers returned`);
+      console.log(`[BetTracker][OUTPUT] listHandicappers: ${rows.length} accounts with bets returned`);
       return rows;
     }),
 
   /**
-   * list — fetch all bets for the authenticated user.
-   * Optional filters: sport, gameDate, result.
+   * create — add a new tracked bet for the calling user.
    *
-   * Visibility rules:
-   *   OWNER (prez/sippi)  — can view own bets + any other user via targetUserId
-   *   ADMIN               — can view any user via targetUserId
-   *   HANDICAPPER         — can only view own bets (targetUserId ignored)
+   * Always self-scoped: there is no targetUserId. `pick` is derived from
+   * pickSide + market + team abbreviations, `toWin` from odds + risk.
+   *
+   * INVARIANT (enforced by the .superRefine below): an RL or TOTAL bet must
+   * carry a line. There is no safe default — guessing -1.5 inverts every
+   * underdog run line on a one-run margin, and guessing 0 grades a spread as a
+   * moneyline. Rejecting at write time is the only way the grader can be
+   * trusted later.
    */
-  list: handicapperProcedure
-    .input(z.object({
-      sport:         z.enum(SPORTS).optional(),
-      gameDate:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      dateFrom:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      dateTo:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      result:        z.enum(RESULTS).optional(),
-      targetUserId:  z.number().int().positive().optional(),
-    }).optional())
-    .query(async ({ ctx, input }) => {
-      const role = ctx.appUser.role;
-      // Visibility enforcement
-      let userId = ctx.appUser.id;
-      if (input?.targetUserId && input.targetUserId !== userId) {
-        if (role !== "owner" && role !== "admin") {
-          console.log(`[BetTracker][ERROR] list: FORBIDDEN — role=${role} cannot view targetUserId=${input.targetUserId}`);
-          throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view other handicappers" });
-        }
-        userId = input.targetUserId;
-      }
-
-      const conditions = [eq(trackedBets.userId, userId)];
-      if (input?.sport)    conditions.push(eq(trackedBets.sport, input.sport));
-      if (input?.gameDate) conditions.push(eq(trackedBets.gameDate, input.gameDate));
-      if (input?.dateFrom) conditions.push(gte(trackedBets.gameDate, input.dateFrom));
-      if (input?.dateTo)   conditions.push(lte(trackedBets.gameDate, input.dateTo));
-      if (input?.result)   conditions.push(eq(trackedBets.result, input.result));
-
-      const db = await getDb();
-      const rows = await db
-        .select()
-        .from(trackedBets)
-        .where(and(...conditions))
-        .orderBy(desc(trackedBets.gameDate), desc(trackedBets.createdAt));
-
-
-      // ── Enrich with SlateGame data (logos, full names, gameTime, status, live scores) ──
-      // PERFORMANCE OPTIMIZATION: Only call fetchAnSlate for TODAY and FUTURE dates.
-      // Historical dates (gameDate < today) have final results — logos are resolved
-      // from the in-memory MLB_BY_ABBREV map via resolveLogoUrl() which is O(1) and
-      // requires zero HTTP calls. This eliminates up to 32 concurrent HTTP calls on
-      // All-Time / Season page loads, reducing cold-start latency from ~3s to <100ms.
-      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); // YYYY-MM-DD in PT
-      const pairs = new Map<string, { sport: string; gameDate: string }>();
-      for (const row of rows) {
-        const key = `${row.sport}:${row.gameDate}`;
-        // Only fetch slate for today and future dates where live status/scores matter
-        if (!pairs.has(key) && row.gameDate >= todayStr) {
-          pairs.set(key, { sport: row.sport, gameDate: row.gameDate });
-        }
-      }
-
-      const slateMap = new Map<number, import('../actionNetwork').SlateGame>();
-      if (pairs.size > 0) {
-        await Promise.all(
-          Array.from(pairs.values()).map(async ({ sport, gameDate }) => {
-            try {
-              const games = await fetchAnSlate(sport, gameDate);
-              for (const g of games) slateMap.set(g.id, g);
-            } catch (e) {
-              console.warn(`[BetTracker][WARN] list: fetchAnSlate failed for ${sport}/${gameDate}:`, e);
-            }
-          })
-        );
-      }
-
-      type RawBet = typeof rows[0];
-      const enriched = rows.map((row: RawBet) => {
-        const slate = row.anGameId ? slateMap.get(row.anGameId) : undefined;
-        // Past dates: logos from in-memory team map (O(1), no HTTP)
-        const awayLogo = slate?.awayLogo
-          ?? (row.awayTeam ? resolveLogoUrl(row.sport, row.awayTeam, "") || null : null);
-        const homeLogo = slate?.homeLogo
-          ?? (row.homeTeam ? resolveLogoUrl(row.sport, row.homeTeam, "") || null : null);
-        return {
-          ...row,
-          awayLogo,
-          homeLogo,
-          awayFull:     slate?.awayFull     ?? null,
-          homeFull:     slate?.homeFull     ?? null,
-          awayNickname: slate?.awayNickname ?? null,
-          homeNickname: slate?.homeNickname ?? null,
-          awayColor:    slate?.awayColor    ?? null,
-          homeColor:    slate?.homeColor    ?? null,
-          gameTime:     slate?.gameTime     ?? null,
-          startUtc:     slate?.startUtc     ?? null,
-          gameStatus:   slate?.status       ?? null,
-        };
-      });
-
-      return enriched;
-    }),
-
-  /**
-   * create — add a new tracked bet.
-   * Structured inputs: anGameId, timeframe, market, pickSide, wagerType, customLine.
-   * pick is auto-derived from pickSide + market + team abbreviations.
-   * toWin is auto-calculated from odds + risk (or provided explicitly).
-   */
-  create: handicapperProcedure
+  create: appUserProcedure
     .input(z.object({
       // Game identification
       anGameId:   z.number().int().positive(),
@@ -359,9 +303,30 @@ export const betTrackerRouter = router({
       // Unit-denominated amounts for accurate analytics bucketing
       riskUnits:  z.number().positive().optional(),  // e.g. 3.0 for a 3U play
       toWinUnits: z.number().positive().optional(),  // e.g. 5.0 for a 5U to-win play
+    }).superRefine((val, ctx) => {
+      if (marketRequiresLine(val.market as CoreMarket) && effectiveLine(val.line, val.customLine) === null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["line"],
+          message: `${val.market} bets require a line (send line or customLine)`,
+        });
+      }
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
+
+      assertUnitDenomination(ctx.appUser.role, input.riskUnits, "create");
+
+      // Refuse a combination the grader cannot settle, for the same reason the
+      // RL/TOTAL line invariant is enforced here: a bet with no code path does
+      // not fail loudly, it sits PENDING until the 36h stuck alarm. NFL was
+      // accepted by this form and absent from the grader entirely.
+      const support = checkGradingSupport(input.sport, input.timeframe);
+      if (!support.ok) {
+        console.log(`[BetTracker][ERROR] create: userId=${userId} ungradeable ${input.sport}/${input.timeframe} — ${support.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: support.message });
+      }
+
       const toWin  = input.toWin ?? calcToWin(input.odds, input.risk);
       const pick   = derivePickLabel(input.pickSide, input.market, input.awayTeam, input.homeTeam, input.timeframe);
 
@@ -373,7 +338,25 @@ export const betTrackerRouter = router({
       // ── Idempotency guard: prevent duplicate bets from double-tap / network retry ──
       // If an identical bet (same user, game, market, pickSide, odds) was inserted in
       // the last 30 seconds, return the existing bet ID instead of creating a new row.
-      const thirtySecondsAgo = new Date(Date.now() - 30_000);
+      //
+      // The 30-second bound is computed BY THE DATABASE, not in Node.
+      //
+      // It used to be `new Date(Date.now() - 30_000)`, which mysql2 serialises
+      // using the Node process's local timezone and the server then compares
+      // against a column stored in the DB's timezone. Both are "SYSTEM", so the
+      // guard was only correct while those two happened to agree. Measured on a
+      // PDT workstation against the UTC production DB, that same predicate
+      // matched rows up to SEVEN HOURS old — a 30-second duplicate guard
+      // silently becomes a multi-hour one, swallowing legitimate re-entries
+      // (exactly the correction pattern seen in bets 390003/390004 and
+      // 420001/420002). Nothing in the container pins TZ, so the agreement was
+      // luck rather than design.
+      //
+      // `UTC_TIMESTAMP() - INTERVAL 30 SECOND` is evaluated server-side against
+      // the same clock that wrote `createdAt`, so no timezone conversion happens
+      // anywhere and the window is exactly 30 seconds regardless of where the
+      // Node process runs.
+      const idempotencyWindow = sql`${trackedBets.createdAt} >= UTC_TIMESTAMP() - INTERVAL 30 SECOND`;
       const [existing] = await db
         .select({ id: trackedBets.id })
         .from(trackedBets)
@@ -385,7 +368,7 @@ export const betTrackerRouter = router({
             eq(trackedBets.market,    input.market),
             eq(trackedBets.pickSide,  input.pickSide),
             eq(trackedBets.odds,      input.odds),
-            gte(trackedBets.createdAt, thirtySecondsAgo),
+            idempotencyWindow,
           )
         )
         .limit(1);
@@ -414,7 +397,10 @@ export const betTrackerRouter = router({
         risk:       String(input.risk),
         toWin:      String(toWin),
         riskUnits:  input.riskUnits !== undefined ? String(input.riskUnits) : null,
-        toWinUnits: input.toWinUnits !== undefined ? String(input.toWinUnits) : null,
+        // Derived when the client omits it, exactly as createParlay does. A row
+        // with riskUnits but NULL toWinUnits reads back mixed-basis: risk in
+        // stored units, toWin in dollars ÷ the viewer's CURRENT unit size.
+        toWinUnits: resolveToWinUnits(input.riskUnits, input.toWinUnits, input.risk, toWin),
         book:       null,
         line:       input.line !== undefined ? String(input.line) : null,
         customLine: input.customLine !== undefined ? String(input.customLine) : null,
@@ -428,58 +414,23 @@ export const betTrackerRouter = router({
       console.log(`[BetTracker][VERIFY] create: PASS — bet inserted with id=${insertId}`);
 
       // ── Auto-grade-on-create ──────────────────────────────────────────────────
-      const todayUtc = new Date().toISOString().slice(0, 10);
-      const isPastDate = input.gameDate < todayUtc;
-      console.log(`[BetTracker][STEP] create: autoGradeOnCreate check — gameDate=${input.gameDate} todayUtc=${todayUtc} isPastDate=${isPastDate}`);
-
-      if (isPastDate) {
+      // A bet logged for a past date can usually settle immediately. Delegated to
+      // the shared engine rather than reimplemented here: the old inline copy had
+      // already drifted from the scheduler's (it overwrote team abbreviations
+      // whenever they differed, while the scheduler only filled blanks).
+      const todayPt = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      if (input.gameDate < todayPt) {
         try {
-          console.log(`[BetTracker][STEP] create: autoGradeOnCreate — attempting to grade betId=${insertId} (past date)`);
-          // Use customLine if provided, otherwise fall back to line
-          const gradeLineValue = input.customLine ?? input.line ?? null;
-          const gradeOut = await gradeTrackedBet({
-            sport:      input.sport as GraderSport,
-            gameDate:   input.gameDate,
-            awayTeam:   input.awayTeam,
-            homeTeam:   input.homeTeam,
-            timeframe:  input.timeframe as GraderTimeframe,
-            market:     input.market as GraderMarket,
-            pickSide:   input.pickSide as GraderPickSide,
-            odds:       input.odds,
-            line:       gradeLineValue,
-            anGameId:   input.anGameId,
-            gameNumber: (input.gameNumber ?? 1) as 1 | 2,
-          });
-
-          console.log(`[BetTracker][STATE] create: autoGradeOnCreate result=${gradeOut.result} reason=${gradeOut.reason}`);
-
-          if (gradeOut.result !== "PENDING") {
-            const teamUpdates: Record<string, string | null> = {
-              result:    gradeOut.result,
-              awayScore: gradeOut.awayScore !== null ? String(gradeOut.awayScore) : null,
-              homeScore: gradeOut.homeScore !== null ? String(gradeOut.homeScore) : null,
-            };
-            if (gradeOut.awayAbbrev && gradeOut.awayAbbrev !== input.awayTeam) {
-              teamUpdates.awayTeam = gradeOut.awayAbbrev;
-              console.log(`[BetTracker][STATE] create: autoGradeOnCreate — updating awayTeam from "${input.awayTeam}" to "${gradeOut.awayAbbrev}"`);
-            }
-            if (gradeOut.homeAbbrev && gradeOut.homeAbbrev !== input.homeTeam) {
-              teamUpdates.homeTeam = gradeOut.homeAbbrev;
-              console.log(`[BetTracker][STATE] create: autoGradeOnCreate — updating homeTeam from "${input.homeTeam}" to "${gradeOut.homeAbbrev}"`);
-            }
-            await db.update(trackedBets).set(teamUpdates).where(eq(trackedBets.id, insertId));
-            console.log(`[BetTracker][OUTPUT] create: autoGradeOnCreate COMPLETE — betId=${insertId} result=${gradeOut.result} score=${gradeOut.awayScore}-${gradeOut.homeScore}`);
-            console.log(`[BetTracker][VERIFY] create: autoGradeOnCreate PASS — betId=${insertId} graded=${gradeOut.result}`);
-          } else {
-            console.log(`[BetTracker][STATE] create: autoGradeOnCreate — betId=${insertId} still PENDING: ${gradeOut.reason}`);
-          }
+          const summary = await gradePendingForUser(userId, { gameDate: input.gameDate }, "create");
+          console.log(`[BetTracker][STATE] create: autoGradeOnCreate — graded=${summary.graded} stillPending=${summary.stillPending} for date=${input.gameDate}`);
         } catch (gradeErr) {
+          // Never fail the create because grading failed; the scheduler retries.
           console.error(`[BetTracker][ERROR] create: autoGradeOnCreate FAILED for betId=${insertId} — ${String(gradeErr)}`);
         }
       }
 
       const [created] = await db.select().from(trackedBets).where(eq(trackedBets.id, insertId));
-      // Invalidate stats cache so next listWithStatsPaginated reflects the new bet immediately
+      // Reflect the new bet in the next paginated read immediately.
       invalidateStatsCacheForUser(userId);
       return created;
     }),
@@ -487,12 +438,17 @@ export const betTrackerRouter = router({
   /**
    * update — update an existing bet.
    *
-   * Access rules:
-   *   OWNER (prez/sippi) — can update own bets only
-   *   ADMIN              — can update porter/hank bets (handicapper role); CANNOT update owner bets
-   *   HANDICAPPER        — FORBIDDEN (must use submitEditRequest)
+   * Access: see betTrackerCore.decideBetMutation (owner/user self-only, admin
+   * may touch any non-owner bet, handicapper must use submitEditRequest).
+   *
+   * INVARIANT: the stored `line` is a SIGNED spread for RL and an UNSIGNED total
+   * for TOTAL. Changing pickSide flips the spread's sign; changing market
+   * invalidates the stored line entirely. Both are resolved here by
+   * `resolveLineForUpdate` — previously neither was, so flipping AWAY↔HOME on a
+   * run line silently inverted the grade on every one-run margin, and switching
+   * RL→TOTAL reused "-1.5" as a total so every OVER won.
    */
-  update: handicapperProcedure
+  update: appUserProcedure
     .input(z.object({
       id:         z.number().int().positive(),
       timeframe:  z.enum(TIMEFRAMES).optional(),
@@ -501,6 +457,10 @@ export const betTrackerRouter = router({
       odds:       z.number().int().min(-10000).max(10000).optional(),
       risk:       z.number().positive().max(1_000_000).optional(),
       toWin:      z.number().positive().optional(),
+      // Unit restatements — the only stake denomination units-only roles may
+      // send. Dollars follow at the row's held unit size (betTrackerCore).
+      riskUnits:  z.number().positive().optional(),
+      toWinUnits: z.number().positive().optional(),
       notes:      z.string().max(2000).optional(),
       result:     z.enum(RESULTS).optional(),
       wagerType:  z.enum(WAGER_TYPES).optional(),
@@ -520,35 +480,19 @@ export const betTrackerRouter = router({
       }
 
       // ── Access control ────────────────────────────────────────────────────────
-      // Fetch the bet owner's role to determine immutability
       const [betOwner] = await db
         .select({ id: appUsers.id, role: appUsers.role })
         .from(appUsers)
         .where(eq(appUsers.id, existing.userId));
-
       const betOwnerRole = betOwner?.role ?? "user";
 
-      if (role === "handicapper") {
-        // Handicappers cannot directly update any bet — must use submitEditRequest
-        console.log(`[BetTracker][ERROR] update: FORBIDDEN — handicapper role must use submitEditRequest`);
-        throw new TRPCError({ code: "FORBIDDEN", message: "Handicappers cannot directly edit bets. Use the edit request system." });
-      }
-
-      if (role === "admin") {
-        // Admin can only edit handicapper bets, not owner bets
-        if (betOwnerRole === "owner") {
-          console.log(`[BetTracker][ERROR] update: FORBIDDEN — admin cannot edit owner bet (betId=${input.id} ownedBy=${existing.userId} ownerRole=${betOwnerRole})`);
-          throw new TRPCError({ code: "FORBIDDEN", message: "Admins cannot edit owner bets" });
-        }
-        // Admin can edit handicapper bets even if they don't own them
-        console.log(`[BetTracker][STATE] update: admin editing handicapper bet betId=${input.id} ownedBy=${existing.userId}`);
-      } else if (role === "owner") {
-        // Owner can only edit their own bets
-        if (existing.userId !== userId) {
-          console.log(`[BetTracker][ERROR] update: FORBIDDEN — owner can only edit own bets (betId=${input.id} ownedBy=${existing.userId} requester=${userId})`);
-          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot modify another user's bet" });
-        }
-      }
+      assertDecision(decideBetMutation({
+        actorRole: role,
+        actorId: userId,
+        betOwnerId: existing.userId,
+        betOwnerRole,
+        action: "update",
+      }));
 
       // ── Build update payload ──────────────────────────────────────────────────
       const patch: Record<string, unknown> = {};
@@ -556,35 +500,109 @@ export const betTrackerRouter = router({
       if (input.market     !== undefined) patch.market     = input.market;
       if (input.pickSide   !== undefined) patch.pickSide   = input.pickSide;
       if (input.notes      !== undefined) patch.notes      = input.notes;
-      if (input.result     !== undefined) patch.result     = input.result;
+      // Hand-written results are owner/admin only — see decideResultOverride.
+      // A no-op "change" (same value resent by a form that round-trips every
+      // field) is not an override and must not be rejected.
+      if (input.result !== undefined && input.result !== existing.result) {
+        assertDecision(decideResultOverride(role));
+        // Structured, greppable audit line. The engine always persists scores
+        // alongside a result, so a manual override is the only way a row ends up
+        // graded with none — this is the record of who did it and when.
+        console.log(
+          `[BetTracker][RESULT_OVERRIDE] betId=${input.id} ownedBy=${existing.userId} ` +
+          `by=${userId}(${role}) ${existing.result} -> ${input.result} ` +
+          `storedScore=${existing.awayScore ?? "null"}-${existing.homeScore ?? "null"} ` +
+          `at=${new Date().toISOString()}`
+        );
+        patch.result = input.result;
+      }
       if (input.wagerType  !== undefined) patch.wagerType  = input.wagerType;
-      if (input.customLine !== undefined) patch.customLine = String(input.customLine);
-      if (input.line       !== undefined) patch.line       = String(input.line);
 
-      // Re-derive pick label if market or pickSide changed
       const newMarket   = (input.market   ?? existing.market)   as typeof MARKETS[number];
       const newPickSide = (input.pickSide ?? existing.pickSide) as typeof PICK_SIDES[number];
-      if (input.market !== undefined || input.pickSide !== undefined) {
+
+      // ── Line resolution (the RL/TOTAL invariant) ──────────────────────────────
+      const lineRes = resolveLineForUpdate({
+        prevMarket:     existing.market as CoreMarket,
+        nextMarket:     newMarket as CoreMarket,
+        prevPickSide:   existing.pickSide as CorePickSide,
+        nextPickSide:   newPickSide as CorePickSide,
+        prevLine:       existing.line,
+        prevCustomLine: existing.customLine,
+        nextLine:       input.line,
+        nextCustomLine: input.customLine,
+      });
+      if (!lineRes.ok) {
+        console.log(`[BetTracker][ERROR] update: betId=${input.id} ${lineRes.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: lineRes.message });
+      }
+      // Only patch the line columns when they actually change, so an unrelated
+      // edit (a note, say) stays a no-op instead of rewriting the row.
+      const nextLineStr   = lineRes.line === null ? null : String(lineRes.line);
+      const nextCustomStr = lineRes.customLine === null ? null : String(lineRes.customLine);
+      const sameDecimal = (a: string | null, b: string | null): boolean => {
+        if (a === null || b === null) return a === b;
+        return Math.abs(parseFloat(a) - parseFloat(b)) < 1e-9;
+      };
+      if (!sameDecimal(nextLineStr, existing.line ?? null)) patch.line = nextLineStr;
+      if (!sameDecimal(nextCustomStr, existing.customLine ?? null)) patch.customLine = nextCustomStr;
+      if (lineRes.flipped) {
+        console.log(`[BetTracker][STATE] update: betId=${input.id} RL side flip ${existing.pickSide}→${newPickSide} — line sign inverted to ${lineRes.line}`);
+      }
+
+      // Re-derive pick label if market, pickSide or timeframe changed.
+      // Timeframe matters: an NRFI/YRFI bet's label is the timeframe, not the
+      // team, and the previous version dropped it so editing an NRFI bet
+      // relabelled it "<TEAM> ML".
+      const newTimeframe = (input.timeframe ?? existing.timeframe) as CoreTimeframe;
+      if (input.market !== undefined || input.pickSide !== undefined || input.timeframe !== undefined) {
         const awayTeam = existing.awayTeam ?? "";
         const homeTeam = existing.homeTeam ?? "";
-        patch.pick    = derivePickLabel(newPickSide, newMarket, awayTeam, homeTeam);
+        patch.pick    = derivePickLabel(newPickSide as CorePickSide, newMarket as CoreMarket, awayTeam, homeTeam, newTimeframe);
         patch.betType = newMarket === "TOTAL"
           ? (newPickSide === "OVER" ? "OVER" : "UNDER")
           : newMarket;
         console.log(`[BetTracker][STATE] update: re-derived pick="${patch.pick}" betType="${patch.betType}"`);
       }
 
-      // Recalculate toWin if odds or risk changed
+      // ── Stake reconciliation — ONE implementation, in betTrackerCore ────────
+      // The gate (units-only roles may not state dollars), the size law (the
+      // row's implied unit size holds constant) and the pair law (toWinUnits
+      // tracks toWin proportionally) all live in resolveStakePatch, shared
+      // with reviewEditRequest so the two write paths cannot drift.
       const newOdds = input.odds ?? existing.odds;
-      const newRisk = input.risk !== undefined ? input.risk : parseFloat(existing.risk);
-      if (input.risk !== undefined) patch.risk = String(input.risk);
-      if (input.toWin !== undefined) {
-        patch.toWin = String(input.toWin);
-      } else if (input.odds !== undefined || input.risk !== undefined) {
-        patch.toWin = String(calcToWin(newOdds, newRisk));
-        console.log(`[BetTracker][STATE] update: recalculated toWin=${patch.toWin} (odds=${newOdds} risk=${newRisk})`);
+      const stake = resolveStakePatch({
+        actorRole: role,
+        existing: {
+          risk:       existing.risk,
+          toWin:      existing.toWin,
+          riskUnits:  existing.riskUnits,
+          toWinUnits: existing.toWinUnits,
+        },
+        odds: newOdds,
+        oddsChanged: input.odds !== undefined && input.odds !== existing.odds,
+        risk:       input.risk,
+        toWin:      input.toWin,
+        riskUnits:  input.riskUnits,
+        toWinUnits: input.toWinUnits,
+      });
+      if (!stake.ok) {
+        console.log(`[BetTracker][ERROR] update: betId=${input.id} role=${role} stake refused — ${stake.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: stake.message });
       }
-      if (input.odds !== undefined) patch.odds = input.odds;
+      if (Object.keys(stake.fields).length > 0) {
+        Object.assign(patch, stake.fields);
+        console.log(`[BetTracker][STATE] update: stake reconciled — ${JSON.stringify(stake.fields)}`);
+      }
+      if (input.odds !== undefined) {
+        patch.odds = input.odds;
+        // On a parlay, originalOdds is the basis every reprice divides from.
+        // Moving `odds` alone would leave the grader dividing from the OLD
+        // price, so the next sweep would silently revert the correction and
+        // pay the wrong number. A user editing the ticket price is restating
+        // what the book gave them, so the basis moves with it.
+        if (existing.legCount > 0) patch.originalOdds = input.odds;
+      }
 
       if (Object.keys(patch).length === 0) {
         console.log(`[BetTracker][OUTPUT] update: no-op — no fields changed for betId=${input.id}`);
@@ -594,21 +612,261 @@ export const betTrackerRouter = router({
       await db.update(trackedBets).set(patch).where(eq(trackedBets.id, input.id));
       const [updated] = await db.select().from(trackedBets).where(eq(trackedBets.id, input.id));
       console.log(`[BetTracker][OUTPUT] update: SUCCESS — betId=${input.id} result=${updated?.result} pick="${updated?.pick}"`);
-      console.log(`[BetTracker][VERIFY] update: PASS — betId=${input.id} updated`);
-      // Invalidate stats cache so updated result is reflected immediately
-      invalidateStatsCacheForUser(userId);
+      // Invalidate the cache of the bet's OWNER, not the actor. An admin editing
+      // a handicapper's bet used to clear its own (empty) entries and leave the
+      // handicapper staring at stale W/L and ROI for the full TTL.
+      invalidateStatsCacheForUser(existing.userId);
+      if (existing.userId !== userId) invalidateStatsCacheForUser(userId);
       return updated;
     }),
 
   /**
    * delete — remove a bet by id.
-   *
-   * Access rules:
-   *   OWNER (prez/sippi) — can delete own bets only
-   *   ADMIN              — can delete handicapper bets; CANNOT delete owner bets
-   *   HANDICAPPER        — FORBIDDEN (must use submitEditRequest with requestType=DELETE)
+   * Access: see betTrackerCore.decideBetMutation.
    */
-  delete: handicapperProcedure
+  /**
+   * createParlay — add a parlay ticket and its legs.
+   *
+   * Deliberately NOT folded into `create`. That mutation is built around a
+   * single game: it requires one anGameId, derives one pick label from one
+   * pair of teams, and guards duplicates on (user, game, market, pickSide,
+   * odds). A ticket has none of those things, so overloading it would mean
+   * making every one of those fields conditional on a mode flag — on the write
+   * path that 205 live straight bets depend on. A separate procedure keeps
+   * that path byte-for-byte unchanged.
+   *
+   * THE TICKET PRICE IS WHAT THE USER ENTERED. It is stored twice: `odds` is
+   * the live price and moves when a leg pushes, `originalOdds` never moves.
+   * Repricing always divides from `originalOdds`, so settlement is idempotent
+   * under a grading loop that re-runs every 30 minutes, and a correlated (SGP)
+   * or boosted price is preserved rather than rebuilt from its legs.
+   */
+  createParlay: appUserProcedure
+    .input(z.object({
+      legs: z.array(z.object({
+        anGameId:   z.number().int().positive(),
+        gameNumber: z.number().int().min(1).max(2).default(1),
+        sport:      z.enum(SPORTS).default("MLB"),
+        gameDate:   z.string()
+          .transform(v => (v || "").slice(0, 10))
+          .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "gameDate must be YYYY-MM-DD")),
+        awayTeam:   z.string().min(1).max(128),
+        homeTeam:   z.string().min(1).max(128),
+        market:     z.enum(MARKETS),
+        pickSide:   z.enum(PICK_SIDES),
+        timeframe:  z.enum(TIMEFRAMES).default("FULL_GAME"),
+        line:       z.number().nullable().optional(),
+        odds:       z.number().int(),
+      })).min(MIN_PARLAY_LEGS).max(MAX_PARLAY_LEGS),
+      /** The ticket price as the book quoted it. */
+      odds:       z.number().int(),
+      risk:       z.number().positive(),
+      toWin:      z.number().optional(),
+      riskUnits:  z.number().positive().optional(),
+      toWinUnits: z.number().positive().optional(),
+      wagerType:  z.enum(WAGER_TYPES).default("PREGAME"),
+      book:       z.string().max(64).optional(),
+      notes:      z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.appUser.id;
+
+      assertUnitDenomination(ctx.appUser.role, input.riskUnits, "createParlay");
+
+      // Every leg, before anything is written. A ticket is all-or-nothing, so a
+      // single ungradeable leg holds the whole thing open indefinitely.
+      for (let i = 0; i < input.legs.length; i++) {
+        const leg = input.legs[i];
+        const legSupport = checkGradingSupport(leg.sport, leg.timeframe);
+        if (!legSupport.ok) {
+          console.log(`[BetTracker][ERROR] createParlay: userId=${userId} leg ${i + 1} ungradeable ${leg.sport}/${leg.timeframe}`);
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Leg ${i + 1}: ${legSupport.message}` });
+        }
+      }
+
+      const validation = validateParlayLegs(
+        input.legs.map(l => ({ odds: l.odds, market: l.market, line: l.line ?? null })),
+      );
+      if (!validation.ok) {
+        console.log(`[BetTracker][ERROR] createParlay: userId=${userId} ${validation.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: validation.message });
+      }
+      try {
+        americanToDecimal(input.odds);
+      } catch {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.odds} is not a valid American price` });
+      }
+
+      const toWin = input.toWin ?? calcParlayToWin(input.risk, input.odds);
+
+      // The ticket cannot settle before its LAST leg does. Dating the parent
+      // any earlier would make the stuck-bet alarm fire on a ticket that is
+      // simply waiting for a game that has not been played yet.
+      const gameDate = input.legs.reduce((max, l) => (l.gameDate > max ? l.gameDate : max), input.legs[0].gameDate);
+
+      // Sport is display/filter metadata on the parent; grading is driven by
+      // each leg's own sport. A mixed-sport ticket files under its first leg.
+      const sports = new Set(input.legs.map(l => l.sport));
+      const sport = sports.size === 1 ? input.legs[0].sport : input.legs[0].sport;
+
+      const pick = `${input.legs.length}-leg parlay`;
+
+      console.log(
+        `[BetTracker][INPUT] createParlay: userId=${userId} legs=${input.legs.length} odds=${input.odds} ` +
+        `risk=${input.risk} toWin=${toWin} gameDate=${gameDate} sport=${sport} mixedSport=${sports.size > 1}`,
+      );
+
+      const db = await getDb();
+
+      // Idempotency guard, same 30-second DB-side window the straight-bet path
+      // uses and for the same reason (double-tap, network retry). Keyed on the
+      // ticket's own shape since there is no single game to key on.
+      const [dupe] = await db
+        .select({ id: trackedBets.id })
+        .from(trackedBets)
+        .where(and(
+          eq(trackedBets.userId, userId),
+          eq(trackedBets.legCount, input.legs.length),
+          eq(trackedBets.odds, input.odds),
+          eq(trackedBets.risk, String(input.risk)),
+          sql`${trackedBets.createdAt} >= UTC_TIMESTAMP() - INTERVAL 30 SECOND`,
+        ))
+        .limit(1);
+
+      // Shape alone is not identity. Two genuinely different tickets can share
+      // (legCount, odds, risk) — the same stake on the same price across a
+      // different set of games is an ordinary thing to do, and a shape-only
+      // guard would silently discard the second one and hand back the first.
+      // Compare the actual selections before calling it a duplicate.
+      if (dupe) {
+        const existingLegs = await db
+          .select({
+            anGameId: trackedBetLegs.anGameId,
+            market:   trackedBetLegs.market,
+            pickSide: trackedBetLegs.pickSide,
+            odds:     trackedBetLegs.odds,
+          })
+          .from(trackedBetLegs)
+          .where(eq(trackedBetLegs.betId, dupe.id))
+          .orderBy(asc(trackedBetLegs.legIndex));
+
+        const fingerprint = (ls: Array<{ anGameId: number | null; market: string | null; pickSide: string | null; odds: number }>) =>
+          ls.map(l => `${l.anGameId}:${l.market}:${l.pickSide}:${l.odds}`).sort().join("|");
+
+        if (fingerprint(existingLegs) === fingerprint(input.legs)) {
+          console.log(`[BetTracker][OUTPUT] createParlay: duplicate within 30s — returning existing ticket ${dupe.id}`);
+          return { id: dupe.id, duplicate: true as const };
+        }
+        console.log(`[BetTracker][STATE] createParlay: same shape as ticket ${dupe.id} but different legs — creating a new ticket`);
+      }
+
+      const [inserted] = await db.insert(trackedBets).values({
+        userId,
+        sport,
+        gameDate,
+        betType:    "PARLAY",
+        market:     "ML",       // column is NOT NULL; byType keys off legCount
+        timeframe:  "FULL_GAME",
+        pick,
+        odds:         input.odds,
+        originalOdds: input.odds,
+        legCount:     input.legs.length,
+        risk:       String(input.risk),
+        toWin:      toWin.toFixed(2),
+        riskUnits:  input.riskUnits  != null ? String(input.riskUnits)  : null,
+        // Derive toWinUnits when the caller gives riskUnits but not this.
+        //
+        // The two are a pair: riskUnits is authoritative regardless of the
+        // viewer's current unit size, so storing one without the other leaves
+        // risk reading from the stored value while to-win falls back to
+        // dollars ÷ today's unit size. The first real parlay landed exactly
+        // that way — correct at a $100 unit, and at any other unit showing a
+        // payout ratio the odds never implied.
+        //
+        // Fixed on the client too, but derived here as well: this procedure is
+        // reachable by any subscriber, and a defect that depends on the caller
+        // sending the right field will come back the moment another caller
+        // appears.
+        toWinUnits: resolveToWinUnits(input.riskUnits, input.toWinUnits, input.risk, toWin),
+        wagerType:  input.wagerType,
+        book:       input.book,
+        notes:      input.notes,
+        result:     "PENDING",
+      }).$returningId();
+
+      const betId = inserted.id;
+
+      // If the legs fail to insert, the ticket must not survive. A parent with
+      // legCount=N and zero leg rows can never settle: the grader finds no legs,
+      // logs an error, and leaves it PENDING forever — a bet the user can see,
+      // that counts as open risk, and that nothing can ever resolve.
+      //
+      // MySQL DDL-free inserts here are two statements rather than one
+      // transaction because the surrounding code path is not transactional and
+      // drizzle's mysql2 driver would need a dedicated connection; compensating
+      // is equivalent for this shape and does not change the connection model.
+      try {
+        await db.insert(trackedBetLegs).values(
+          input.legs.map((l, i) => ({
+            betId,
+            legIndex:   i,
+            sport:      l.sport,
+            gameDate:   l.gameDate,
+            awayTeam:   l.awayTeam,
+            homeTeam:   l.homeTeam,
+            anGameId:   l.anGameId,
+            gameNumber: l.gameNumber,
+            market:     l.market,
+            pickSide:   l.pickSide,
+            timeframe:  l.timeframe,
+            line:       l.line != null ? String(l.line) : null,
+            odds:       l.odds,
+            pick:       derivePickLabel(l.pickSide, l.market, l.awayTeam, l.homeTeam, l.timeframe),
+            result:     "PENDING" as const,
+          })),
+        );
+      } catch (err) {
+        await db.delete(trackedBetLegs).where(eq(trackedBetLegs.betId, betId));
+        await db.delete(trackedBets).where(eq(trackedBets.id, betId));
+        console.log(`[BetTracker][ERROR] createParlay: leg insert failed for ticket ${betId} — rolled back: ${(err as Error).message}`);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not save the parlay legs. Nothing was saved." });
+      }
+
+      // ── Auto-grade-on-create ──────────────────────────────────────────────────
+      // Parity with `create`, which settles a backdated bet immediately rather
+      // than leaving it for the next sweep. Without this a ticket logged for
+      // games already played sat PENDING until the sweep reached it — the
+      // straight-bet path resolved instantly while the parlay path did not,
+      // for no reason a user could see.
+      //
+      // Keyed on the EARLIEST leg, not the ticket's gameDate: the ticket is
+      // dated by its LAST leg (so the stuck alarm does not fire early), so a
+      // ticket with one played game and one tomorrow would otherwise look
+      // entirely in the future and skip grading its settleable leg.
+      const earliestLeg = input.legs.reduce(
+        (min, l) => (l.gameDate < min ? l.gameDate : min),
+        input.legs[0].gameDate,
+      );
+      const todayPtParlay = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      if (earliestLeg < todayPtParlay) {
+        try {
+          const summary = await gradeParlaysForUser(userId, "createParlay");
+          console.log(
+            `[BetTracker][STATE] createParlay: autoGradeOnCreate — legsSettled=${summary.legsSettled} ` +
+            `ticketsSettled=${summary.ticketsSettled} earliestLeg=${earliestLeg}`,
+          );
+        } catch (gradeErr) {
+          // Never fail the create because grading failed; the sweep retries.
+          console.error(`[BetTracker][ERROR] createParlay: autoGradeOnCreate FAILED for ticket ${betId} — ${String(gradeErr)}`);
+        }
+      }
+
+      invalidateStatsCacheForUser(userId);
+      console.log(`[BetTracker][OUTPUT] createParlay: SUCCESS — ticket ${betId} with ${input.legs.length} legs for userId=${userId}`);
+      return { id: betId, duplicate: false as const };
+    }),
+
+  delete: appUserProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
@@ -629,29 +887,28 @@ export const betTrackerRouter = router({
         .where(eq(appUsers.id, existing.userId));
       const betOwnerRole = betOwner?.role ?? "user";
 
-      if (role === "handicapper") {
-        console.log(`[BetTracker][ERROR] delete: FORBIDDEN — handicapper must use submitEditRequest for deletion`);
-        throw new TRPCError({ code: "FORBIDDEN", message: "Handicappers cannot directly delete bets. Submit a delete request instead." });
-      }
+      assertDecision(decideBetMutation({
+        actorRole: role,
+        actorId: userId,
+        betOwnerId: existing.userId,
+        betOwnerRole,
+        action: "delete",
+      }));
 
-      if (role === "admin") {
-        if (betOwnerRole === "owner") {
-          console.log(`[BetTracker][ERROR] delete: FORBIDDEN — admin cannot delete owner bet (betId=${input.id} ownedBy=${existing.userId})`);
-          throw new TRPCError({ code: "FORBIDDEN", message: "Admins cannot delete owner bets" });
-        }
-        console.log(`[BetTracker][STATE] delete: admin deleting handicapper bet betId=${input.id} ownedBy=${existing.userId}`);
-      } else if (role === "owner") {
-        if (existing.userId !== userId) {
-          console.log(`[BetTracker][ERROR] delete: FORBIDDEN — owner can only delete own bets (betId=${input.id} ownedBy=${existing.userId} requester=${userId})`);
-          throw new TRPCError({ code: "FORBIDDEN", message: "Cannot delete another user's bet" });
-        }
+      // Legs first. There is no FK between the two tables (the schema uses none
+      // anywhere), so nothing at the database level would stop a deleted ticket
+      // from leaving its legs behind — and an orphaned leg is still PENDING, so
+      // the parlay sweep would keep grading it and re-folding a ticket that no
+      // longer exists.
+      if (existing.legCount > 0) {
+        await db.delete(trackedBetLegs).where(eq(trackedBetLegs.betId, input.id));
+        console.log(`[BetTracker][STATE] delete: removed ${existing.legCount} leg(s) for ticket ${input.id}`);
       }
-
       await db.delete(trackedBets).where(eq(trackedBets.id, input.id));
-      console.log(`[BetTracker][OUTPUT] delete: SUCCESS — betId=${input.id} deleted by userId=${userId} role=${role}`);
-      console.log(`[BetTracker][VERIFY] delete: PASS — betId=${input.id} removed`);
-      // Invalidate stats cache so deletion is reflected immediately
-      invalidateStatsCacheForUser(userId);
+      console.log(`[BetTracker][OUTPUT] delete: SUCCESS — betId=${input.id} ownedBy=${existing.userId} deletedBy=${userId} role=${role} legs=${existing.legCount}`);
+      // Invalidate the OWNER's cache (see the same note on update).
+      invalidateStatsCacheForUser(existing.userId);
+      if (existing.userId !== userId) invalidateStatsCacheForUser(userId);
       return { success: true, deletedId: input.id };
     }),
 
@@ -659,7 +916,7 @@ export const betTrackerRouter = router({
    * submitEditRequest — handicapper submits an EDIT or DELETE request for their own bet.
    * The bet itself is NOT modified. Owner/Admin reviews via reviewEditRequest.
    */
-  submitEditRequest: handicapperProcedure
+  submitEditRequest: appUserProcedure
     .input(z.object({
       betId:           z.number().int().positive(),
       requestType:     z.enum(["EDIT", "DELETE"]),
@@ -712,7 +969,7 @@ export const betTrackerRouter = router({
    *   - EDIT request: applies proposedChanges to the bet
    * On DENY: marks request as DENIED with optional note.
    */
-  reviewEditRequest: handicapperProcedure
+  reviewEditRequest: appUserProcedure
     .input(z.object({
       requestId:  z.number().int().positive(),
       action:     z.enum(["APPROVE", "DENY"]),
@@ -723,10 +980,7 @@ export const betTrackerRouter = router({
       const role   = ctx.appUser.role;
       console.log(`[BetTracker][INPUT] reviewEditRequest: reviewerId=${userId} role=${role} requestId=${input.requestId} action=${input.action}`);
 
-      if (role !== "owner" && role !== "admin") {
-        console.log(`[BetTracker][ERROR] reviewEditRequest: FORBIDDEN — role=${role}`);
-        throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to review edit requests" });
-      }
+      assertDecision(decidePrivilegedAccess(role, "review edit requests"));
 
       const db = await getDb();
       const [req] = await db.select().from(betEditRequests).where(eq(betEditRequests.id, input.requestId));
@@ -762,8 +1016,14 @@ export const betTrackerRouter = router({
 
       if (input.action === "APPROVE") {
         if (req.requestType === "DELETE") {
+          // Cascade legs here as well. The `delete` mutation cascades, but this
+          // is a SECOND path to the same outcome and it did not — a ticket
+          // removed through the handicapper request queue left its legs behind,
+          // still PENDING, so the sweep kept grading them and re-folding a
+          // ticket that no longer existed.
+          await db.delete(trackedBetLegs).where(eq(trackedBetLegs.betId, req.betId));
           await db.delete(trackedBets).where(eq(trackedBets.id, req.betId));
-          console.log(`[BetTracker][STATE] reviewEditRequest: APPROVED DELETE — betId=${req.betId} deleted`);
+          console.log(`[BetTracker][STATE] reviewEditRequest: APPROVED DELETE — betId=${req.betId} deleted (legs cascaded)`);
         } else if (req.requestType === "EDIT" && req.proposedChanges) {
           // Apply proposed changes
           let changes: Record<string, unknown> = {};
@@ -773,12 +1033,48 @@ export const betTrackerRouter = router({
             console.warn(`[BetTracker][WARN] reviewEditRequest: could not parse proposedChanges for requestId=${input.requestId}`);
           }
           if (Object.keys(changes).length > 0) {
-            // Sanitize: only allow safe fields
-            const allowed = ["odds", "risk", "toWin", "notes", "result", "wagerType", "customLine", "line", "timeframe", "market", "pickSide"];
+            // Sanitize: non-stake fields pass through as before. Stake fields go
+            // through the SAME reconciliation as betTracker.update — an approved
+            // request is still a write, and odds/risk/toWin used to be spread
+            // into the SQL update untyped, unreconciled, with no gate.
+            const passthrough = ["notes", "result", "wagerType", "customLine", "line", "timeframe", "market", "pickSide"];
             const safe: Record<string, unknown> = {};
-            for (const k of allowed) {
+            for (const k of passthrough) {
               if (k in changes) safe[k] = changes[k];
             }
+
+            // Stake fields: parse defensively (proposedChanges is caller-supplied
+            // JSON), then resolve the final quad through the core.
+            const num = (v: unknown): number | undefined => {
+              if (v === undefined || v === null) return undefined;
+              const n = typeof v === "number" ? v : parseFloat(String(v));
+              return Number.isFinite(n) && n > 0 ? n : undefined;
+            };
+            const reqOddsRaw = changes["odds"];
+            const reqOddsNum = typeof reqOddsRaw === "number" ? reqOddsRaw : reqOddsRaw != null ? parseFloat(String(reqOddsRaw)) : NaN;
+            const reqOdds = Number.isFinite(reqOddsNum) ? Math.trunc(reqOddsNum) : undefined;
+            const stake = resolveStakePatch({
+              actorRole: role, // the reviewer is owner/admin — dollar fields permitted
+              existing: { risk: bet.risk, toWin: bet.toWin, riskUnits: bet.riskUnits, toWinUnits: bet.toWinUnits },
+              odds: reqOdds ?? bet.odds,
+              oddsChanged: reqOdds !== undefined && reqOdds !== bet.odds,
+              risk:       num(changes["risk"]),
+              toWin:      num(changes["toWin"]),
+              riskUnits:  num(changes["riskUnits"]),
+              toWinUnits: num(changes["toWinUnits"]),
+            });
+            if (!stake.ok) {
+              console.log(`[BetTracker][ERROR] reviewEditRequest: stake changes refused for betId=${req.betId} — ${stake.message}`);
+              throw new TRPCError({ code: "BAD_REQUEST", message: stake.message });
+            }
+            Object.assign(safe, stake.fields);
+            if (reqOdds !== undefined && reqOdds !== bet.odds) {
+              safe["odds"] = reqOdds;
+              // Same basis rule as update: a parlay's reprice divides from
+              // originalOdds, so a restated ticket price moves the basis too.
+              if ((bet.legCount ?? 0) > 0) safe["originalOdds"] = reqOdds;
+            }
+
             if (Object.keys(safe).length > 0) {
               await db.update(trackedBets).set(safe).where(eq(trackedBets.id, req.betId));
               console.log(`[BetTracker][STATE] reviewEditRequest: APPROVED EDIT — betId=${req.betId} fields=${Object.keys(safe).join(",")}`);
@@ -813,17 +1109,14 @@ export const betTrackerRouter = router({
    *   - bets: all tracked_bets with user info (username, role)
    *   - editRequests: all bet_edit_requests with requester + reviewer info
    */
-  getLogs: handicapperProcedure
+  getLogs: appUserProcedure
     .input(z.object({
       limit:  z.number().int().positive().max(500).default(200),
       offset: z.number().int().min(0).default(0),
     }).optional())
     .query(async ({ ctx, input }) => {
       const role = ctx.appUser.role;
-      if (role !== "owner" && role !== "admin") {
-        console.log(`[BetTracker][ERROR] getLogs: FORBIDDEN — role=${role}`);
-        throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view logs" });
-      }
+      assertDecision(decidePrivilegedAccess(role, "view audit logs"));
 
       const limit  = input?.limit  ?? 200;
       const offset = input?.offset ?? 0;
@@ -888,7 +1181,7 @@ export const betTrackerRouter = router({
    * Served from in-memory cache (5-min TTL) after server pre-warm.
    * Returns normalized SlateGame[] sorted by start time ASC.
    */
-  getSlate: handicapperProcedure
+  getSlate: appUserProcedure
     .input(z.object({
       sport:    z.enum(["MLB", "NBA", "NHL", "NCAAM"]),
       gameDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -922,746 +1215,73 @@ export const betTrackerRouter = router({
     }),
 
   /**
-   * autoGrade — grade all PENDING bets for the current user.
-   * Fetches official league scores and deterministically grades each bet.
-   * Returns a summary of how many bets were graded and their results.
+   * autoGrade — settle the calling user's PENDING bets.
+   *
+   * Thin delegate to the ONE grading engine in ../betAutoGradeScheduler. The
+   * previous inline copy of the loop had drifted from the scheduler's, so the
+   * same bet could settle differently depending on which path reached it first.
+   *
+   * Always self-scoped. Grading another user's bets is autoGradeAll (owner/admin).
    */
-  autoGrade: handicapperProcedure
+  autoGrade: appUserProcedure
     .input(z.object({
       sport:    z.enum(SPORTS).optional(),
       gameDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     }).optional())
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
-      console.log(`[BetTracker][INPUT] autoGrade: userId=${userId} sport=${input?.sport ?? "ALL"} date=${input?.gameDate ?? "ALL"}`);
-
-      const db = await getDb();
-      const conditions = [
-        eq(trackedBets.userId, userId),
-        eq(trackedBets.result, "PENDING"),
-      ];
-      if (input?.sport)    conditions.push(eq(trackedBets.sport, input.sport));
-      if (input?.gameDate) conditions.push(eq(trackedBets.gameDate, input.gameDate));
-
-      const pending = await db.select().from(trackedBets).where(and(...conditions));
-      console.log(`[BetTracker][STATE] autoGrade: ${pending.length} PENDING bets to grade for userId=${userId}`);
-
-      let graded = 0, wins = 0, losses = 0, pushes = 0, stillPending = 0;
-      const details: Array<{ betId: number; result: string; reason: string }> = [];
-
-      for (const bet of pending) {
-        console.log(`[BetTracker][STEP] autoGrade: grading betId=${bet.id} sport=${bet.sport} date=${bet.gameDate} ${bet.awayTeam}@${bet.homeTeam} timeframe=${bet.timeframe} market=${bet.market} pickSide=${bet.pickSide}`);
-
-        // Use customLine if set, otherwise fall back to line
-        const gradeLineValue = bet.customLine != null
-          ? parseFloat(String(bet.customLine))
-          : (bet.line != null ? parseFloat(String(bet.line)) : null);
-
-        const gradeOut = await gradeTrackedBet({
-          sport:      bet.sport as GraderSport,
-          gameDate:   bet.gameDate,
-          awayTeam:   bet.awayTeam ?? "",
-          homeTeam:   bet.homeTeam ?? "",
-          timeframe:  (bet.timeframe ?? "FULL_GAME") as GraderTimeframe,
-          market:     (bet.market ?? "ML") as GraderMarket,
-          pickSide:   (bet.pickSide ?? "AWAY") as GraderPickSide,
-          odds:       bet.odds,
-          line:       gradeLineValue,
-          anGameId:   bet.anGameId,
-          gameNumber: (bet.gameNumber ?? 1) as 1 | 2,
-        });
-
-        details.push({ betId: bet.id, result: gradeOut.result, reason: gradeOut.reason });
-
-        if (gradeOut.result === "PENDING") {
-          stillPending++;
-          console.log(`[BetTracker][STATE] autoGrade: betId=${bet.id} still PENDING — ${gradeOut.reason}`);
-          continue;
-        }
-
-        const teamUpdates: Record<string, string | null> = {
-          result:    gradeOut.result,
-          awayScore: gradeOut.awayScore !== null ? String(gradeOut.awayScore) : null,
-          homeScore: gradeOut.homeScore !== null ? String(gradeOut.homeScore) : null,
-        };
-        if (gradeOut.awayAbbrev && (!bet.awayTeam || bet.awayTeam === 'OPP' || bet.awayTeam.trim() === '')) {
-          teamUpdates.awayTeam = gradeOut.awayAbbrev;
-          console.log(`[BetTracker][STATE] autoGrade: betId=${bet.id} — fixing awayTeam from "${bet.awayTeam}" to "${gradeOut.awayAbbrev}"`);
-        }
-        if (gradeOut.homeAbbrev && (!bet.homeTeam || bet.homeTeam === 'OPP' || bet.homeTeam.trim() === '')) {
-          teamUpdates.homeTeam = gradeOut.homeAbbrev;
-          console.log(`[BetTracker][STATE] autoGrade: betId=${bet.id} — fixing homeTeam from "${bet.homeTeam}" to "${gradeOut.homeAbbrev}"`);
-        }
-        await db.update(trackedBets).set(teamUpdates).where(eq(trackedBets.id, bet.id));
-
-        graded++;
-        if (gradeOut.result === "WIN")  wins++;
-        if (gradeOut.result === "LOSS") losses++;
-        if (gradeOut.result === "PUSH") pushes++;
-
-        console.log(`[BetTracker][OUTPUT] autoGrade: betId=${bet.id} → ${gradeOut.result} | ${gradeOut.reason}`);
-        console.log(`[BetTracker][VERIFY] autoGrade: PASS — betId=${bet.id} graded=${gradeOut.result}`);
-      }
-
-      const summary = { graded, wins, losses, pushes, stillPending, total: pending.length, details };
-      console.log(`[BetTracker][OUTPUT] autoGrade: COMPLETE userId=${userId} — graded=${graded} wins=${wins} losses=${losses} pushes=${pushes} stillPending=${stillPending}`);
-      // Invalidate stats cache so graded results are reflected immediately
-      if (graded > 0) invalidateStatsCacheForUser(userId);
-      return summary;
+      const summary = await gradePendingForUser(
+        userId,
+        { sport: input?.sport, gameDate: input?.gameDate },
+        "trpc_autoGrade",
+      );
+      return {
+        graded:       summary.graded,
+        wins:         summary.wins,
+        losses:       summary.losses,
+        pushes:       summary.pushes,
+        voids:        summary.voids,
+        stillPending: summary.stillPending,
+        total:        summary.total,
+        details:      summary.details,
+      };
     }),
 
   /**
-   * autoGradeAll — OWNER/ADMIN only: grade ALL users' PENDING bets for a given date.
-   * Used by the scheduled background job.
+   * autoGradeAll — OWNER/ADMIN only: settle every user's PENDING bets for a date.
+   * Same engine as autoGrade and as the background scheduler.
    */
-  autoGradeAll: handicapperProcedure
+  autoGradeAll: appUserProcedure
     .input(z.object({
       gameDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     }))
     .mutation(async ({ ctx, input }) => {
-      const role = ctx.appUser.role;
-      if (role !== "owner" && role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required" });
-      }
+      assertDecision(decidePrivilegedAccess(ctx.appUser.role, "grade every user's bets"));
       console.log(`[BetTracker][INPUT] autoGradeAll: triggeredBy=${ctx.appUser.username} date=${input.gameDate}`);
-
-      const db = await getDb();
-      const pending = await db.select().from(trackedBets).where(
-        and(
-          eq(trackedBets.result, "PENDING"),
-          eq(trackedBets.gameDate, input.gameDate),
-        )
-      );
-      console.log(`[BetTracker][STATE] autoGradeAll: ${pending.length} PENDING bets across all users for date=${input.gameDate}`);
-
-      const sportsNeeded: GraderSport[] = Array.from(new Set(pending.map((b: { sport: string }) => b.sport))) as GraderSport[];
-      console.log(`[BetTracker][STEP] autoGradeAll: pre-fetching scores for sports=${sportsNeeded.join(",")}`);
-      await Promise.all(sportsNeeded.map(s => fetchScores(s, input.gameDate)));
-      console.log(`[BetTracker][STATE] autoGradeAll: scores pre-fetched for ${sportsNeeded.length} sports`);
-
-      let graded = 0, wins = 0, losses = 0, pushes = 0, stillPending = 0;
-
-      for (const bet of pending) {
-        const gradeLineValue = bet.customLine != null
-          ? parseFloat(String(bet.customLine))
-          : (bet.line != null ? parseFloat(String(bet.line)) : null);
-
-        const gradeOut = await gradeTrackedBet({
-          sport:      bet.sport as GraderSport,
-          gameDate:   bet.gameDate,
-          awayTeam:   bet.awayTeam ?? "",
-          homeTeam:   bet.homeTeam ?? "",
-          timeframe:  (bet.timeframe ?? "FULL_GAME") as GraderTimeframe,
-          market:     (bet.market ?? "ML") as GraderMarket,
-          pickSide:   (bet.pickSide ?? "AWAY") as GraderPickSide,
-          odds:       bet.odds,
-          line:       gradeLineValue,
-          anGameId:   bet.anGameId,
-          gameNumber: (bet.gameNumber ?? 1) as 1 | 2,
-        });
-
-        if (gradeOut.result === "PENDING") { stillPending++; continue; }
-
-        const allUpdates: Record<string, string | null> = {
-          result:    gradeOut.result,
-          awayScore: gradeOut.awayScore !== null ? String(gradeOut.awayScore) : null,
-          homeScore: gradeOut.homeScore !== null ? String(gradeOut.homeScore) : null,
-        };
-        if (gradeOut.awayAbbrev && (!bet.awayTeam || bet.awayTeam === 'OPP' || bet.awayTeam.trim() === '')) {
-          allUpdates.awayTeam = gradeOut.awayAbbrev;
-        }
-        if (gradeOut.homeAbbrev && (!bet.homeTeam || bet.homeTeam === 'OPP' || bet.homeTeam.trim() === '')) {
-          allUpdates.homeTeam = gradeOut.homeAbbrev;
-        }
-        await db.update(trackedBets).set(allUpdates).where(eq(trackedBets.id, bet.id));
-
-        graded++;
-        if (gradeOut.result === "WIN")  wins++;
-        if (gradeOut.result === "LOSS") losses++;
-        if (gradeOut.result === "PUSH") pushes++;
-
-        console.log(`[BetTracker][OUTPUT] autoGradeAll: betId=${bet.id} userId=${bet.userId} → ${gradeOut.result} score=${gradeOut.awayScore}-${gradeOut.homeScore}`);
-      }
-
-      const summary = { graded, wins, losses, pushes, stillPending, total: pending.length };
-      console.log(`[BetTracker][OUTPUT] autoGradeAll: COMPLETE date=${input.gameDate} graded=${graded} wins=${wins} losses=${losses} pushes=${pushes} stillPending=${stillPending}`);
-      // Invalidate stats cache for all users whose bets were graded
-      if (graded > 0) {
-        const affectedUserIds: number[] = Array.from(new Set(pending.map((b: TrackedBet) => b.userId as number)));
-        for (const uid of affectedUserIds) invalidateStatsCacheForUser(uid);
-      }
-      return summary;
+      const summary = await gradeAllPendingForDate(input.gameDate, "trpc_autoGradeAll");
+      return {
+        graded:       summary.graded,
+        wins:         summary.wins,
+        losses:       summary.losses,
+        pushes:       summary.pushes,
+        voids:        summary.voids,
+        stillPending: summary.stillPending,
+        total:        summary.total,
+      };
     }),
 
-  /**
-   * getStats — full aggregate stats with all breakdown dimensions.
-   * Owner/Admin can pass targetUserId to view another handicapper's stats.
-   *
-   * bySize breakdown (v4 — exact unit buckets):
-   *   Plus-money bets: risk = unit count
-   *   Minus-money bets: toWin = unit count
-   *   Buckets: 10U, 5U, 4U, 3U, 2U, 1U
-   */
-  getStats: handicapperProcedure
-    .input(z.object({
-      sport:         z.enum(SPORTS).optional(),
-      gameDate:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      dateFrom:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      dateTo:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      targetUserId:  z.number().int().positive().optional(),
-      /** Client-side unit size (e.g. 100 = $100/unit). Used to normalize legacy bets lacking riskUnits/toWinUnits. */
-      unitSize:      z.number().positive().optional(),
-    }).optional())
-    .query(async ({ ctx, input }) => {
-      const role = ctx.appUser.role;
-      let userId = ctx.appUser.id;
-      if (input?.targetUserId && input.targetUserId !== userId) {
-        if (role !== "owner" && role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view other handicappers" });
-        }
-        userId = input.targetUserId;
-      }
-      // Unit size for normalizing legacy dollar amounts to unit counts
-      const unitSize = input?.unitSize ?? 100;
-      // [PERF] Boundary log only — verbose per-field logs removed from hot path
-
-      const conditions = [eq(trackedBets.userId, userId)];
-      if (input?.sport)    conditions.push(eq(trackedBets.sport, input.sport));
-      if (input?.gameDate) conditions.push(eq(trackedBets.gameDate, input.gameDate));
-      if (input?.dateFrom) conditions.push(gte(trackedBets.gameDate, input.dateFrom));
-      if (input?.dateTo)   conditions.push(lte(trackedBets.gameDate, input.dateTo));
-
-      const db = await getDb();
-      const rows = await db
-        .select()
-        .from(trackedBets)
-        .where(and(...conditions))
-        .orderBy(asc(trackedBets.gameDate), asc(trackedBets.createdAt));
-
-      /**
-       * Normalize a dollar amount to unit count.
-       * Prefer stored riskUnits/toWinUnits (set at bet creation time).
-       * Fall back to dividing by unitSize for legacy bets.
-       */
-      function toUnits(dollarAmt: number, storedUnits: string | null | undefined): number {
-        if (storedUnits != null && storedUnits !== "") {
-          const v = parseFloat(storedUnits);
-          if (!isNaN(v) && v > 0) return v;
-        }
-        return dollarAmt / unitSize;
-      }
-
-      // ── Overall aggregation (unit-denominated) ───────────────────────────────
-      let wins = 0, losses = 0, pushes = 0, pending = 0, voids = 0;
-      let totalRisk = 0, totalWon = 0, totalLost = 0;
-      let bestWin = 0, worstLoss = 0;
-
-      for (const bet of rows) {
-        const riskU  = toUnits(parseFloat(bet.risk),  bet.riskUnits);
-        const toWinU = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
-        switch (bet.result) {
-          case "WIN":
-            wins++; totalRisk += riskU; totalWon += toWinU;
-            if (toWinU > bestWin) bestWin = toWinU;
-            break;
-          case "LOSS":
-            losses++; totalRisk += riskU; totalLost += riskU;
-            if (riskU > worstLoss) worstLoss = riskU;
-            break;
-          case "PUSH":    pushes++;  break;
-          case "PENDING": pending++; break;
-          case "VOID":    voids++;   break;
-        }
-      }
-      const netProfit = totalWon - totalLost;
-      const roi       = totalRisk > 0 ? parseFloat(((netProfit / totalRisk) * 100).toFixed(2)) : 0;
-
-      // ── Breakdown helper (unit-denominated) ──────────────────────────────────
-      type BreakdownEntry = {
-        key: string;
-        wins: number; losses: number; pushes: number;
-        totalRisk: number; netProfit: number; roi: number;
-      };
-      function buildBreakdown(keyFn: (bet: typeof rows[0]) => string): BreakdownEntry[] {
-        const map = new Map<string, { wins: number; losses: number; pushes: number; risk: number; won: number; lost: number }>();
-        for (const bet of rows) {
-          const key = keyFn(bet);
-          if (!map.has(key)) map.set(key, { wins: 0, losses: 0, pushes: 0, risk: 0, won: 0, lost: 0 });
-          const e = map.get(key)!;
-          const riskU  = toUnits(parseFloat(bet.risk),  bet.riskUnits);
-          const toWinU = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
-          if (bet.result === "WIN")  { e.wins++;   e.risk += riskU; e.won  += toWinU; }
-          if (bet.result === "LOSS") { e.losses++; e.risk += riskU; e.lost += riskU;  }
-          if (bet.result === "PUSH") { e.pushes++; }
-        }
-        return Array.from(map.entries()).map(([key, e]) => {
-          const np = e.won - e.lost;
-          return {
-            key,
-            wins:       e.wins,
-            losses:     e.losses,
-            pushes:     e.pushes,
-            totalRisk:  parseFloat(e.risk.toFixed(2)),
-            netProfit:  parseFloat(np.toFixed(2)),
-            roi:        e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0,
-          };
-        }).sort((a, b) => a.key.localeCompare(b.key));
-      }
-
-      // ── By Bet Type (market) ─────────────────────────────────────────────────
-      const byType = buildBreakdown(bet => bet.market ?? bet.betType ?? "ML");
-
-      // ── By Unit Size (v4 — exact buckets with plus/minus money logic) ─────────
-      // Plus-money: risk IS the unit count (amount risked = unit size)
-      // Minus-money: toWin IS the unit count (amount to win = unit size)
-      // Buckets: 10U, 5U, 4U, 3U, 2U, 1U
-      const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U"];
-      const bySize = buildBreakdown(bet => {
-        const risk       = parseFloat(bet.risk);
-        const toWin      = parseFloat(bet.toWin);
-        const riskUnits  = bet.riskUnits  != null ? parseFloat(bet.riskUnits)  : null;
-        const toWinUnits = bet.toWinUnits != null ? parseFloat(bet.toWinUnits) : null;
-        return calcUnitBucket(bet.odds, risk, toWin, riskUnits, toWinUnits);
-      }).sort((a, b) => {
-        const ai = UNIT_BUCKET_ORDER.indexOf(a.key);
-        const bi = UNIT_BUCKET_ORDER.indexOf(b.key);
-        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-      });
-
-      // ── By Month ─────────────────────────────────────────────────────────────
-      const byMonth = buildBreakdown(bet => bet.gameDate.substring(0, 7));
-
-      // ── By Sport ─────────────────────────────────────────────────────────────
-      const bySport = buildBreakdown(bet => bet.sport);
-
-      // ── By Result ────────────────────────────────────────────────────────────
-      const byResult = buildBreakdown(bet => bet.result);
-
-      // ── By Timeframe ─────────────────────────────────────────────────────────
-      const byTimeframe = buildBreakdown(bet => bet.timeframe ?? "FULL_GAME");
-
-      // ── By Wager Type (PREGAME / LIVE) ───────────────────────────────────────
-      const byWagerType = buildBreakdown(bet => bet.wagerType ?? "PREGAME");
-      // ── Equity Curve (unit-denominated) ───────────────────────────────────────────────
-      let cumPL = 0;
-      const equityCurve: { date: string; cumPL: number; betId: number; pick: string; result: string; pl: number }[] = [];
-      for (const bet of rows) {
-        if (bet.result === "WIN") {
-          const pl = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
-          cumPL += pl;
-          equityCurve.push({ date: bet.gameDate, cumPL: parseFloat(cumPL.toFixed(2)), betId: bet.id, pick: bet.pick, result: "WIN", pl: parseFloat(pl.toFixed(2)) });
-        } else if (bet.result === "LOSS") {
-          const pl = -toUnits(parseFloat(bet.risk), bet.riskUnits);
-          cumPL += pl;
-          equityCurve.push({ date: bet.gameDate, cumPL: parseFloat(cumPL.toFixed(2)), betId: bet.id, pick: bet.pick, result: "LOSS", pl: parseFloat(pl.toFixed(2)) });
-        }
-      }
-      // ── Biggest Day (date with highest single-day net P/L) ────────────────────
-      const dayPLMap = new Map<string, number>();
-      for (const bet of rows) {
-        if (bet.result === "WIN") {
-          const pl = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
-          dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) + pl);
-        } else if (bet.result === "LOSS") {
-          const pl = -toUnits(parseFloat(bet.risk), bet.riskUnits);
-          dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) + pl);
-        }
-      }
-      let biggestDayDate = "";
-      let biggestDayUnits = 0;
-      dayPLMap.forEach((pl, date) => {
-        if (pl > biggestDayUnits) { biggestDayUnits = pl; biggestDayDate = date; }
-      });
-      // ── Longest Win Streak (consecutive WIN results in chronological order) ────
-      let longestWinStreak = 0;
-      let currentWinStreak = 0;
-      for (const bet of rows) {
-        if (bet.result === "WIN") {
-          currentWinStreak++;
-          if (currentWinStreak > longestWinStreak) longestWinStreak = currentWinStreak;
-        } else if (bet.result === "LOSS") {
-          currentWinStreak = 0;
-        }
-        // PUSH/PENDING/VOID do not break or extend the streak
-      }
-      const stats = {
-        totalBets:  rows.length,
-        wins, losses, pushes, pending, voids,
-        gradedBets: wins + losses + pushes,
-        totalRisk:  parseFloat(totalRisk.toFixed(2)),
-        totalWon:   parseFloat(totalWon.toFixed(2)),
-        totalLost:  parseFloat(totalLost.toFixed(2)),
-        netProfit:  parseFloat(netProfit.toFixed(2)),
-        roi,
-        bestWin:    parseFloat(bestWin.toFixed(2)),
-        worstLoss:  parseFloat(worstLoss.toFixed(2)),
-        byType,
-        bySize,
-        byMonth,
-        bySport,
-        byResult,
-        byTimeframe,
-        byWagerType,
-        equityCurve,
-        biggestDayDate,
-        biggestDayUnits: parseFloat(biggestDayUnits.toFixed(2)),
-        longestWinStreak,
-      };
-
-      console.log(`[BetTracker][OUTPUT] getStats: userId=${userId} → totalBets=${stats.totalBets} wins=${stats.wins} losses=${stats.losses} roi=${stats.roi}% equityCurve=${equityCurve.length} points bySize=${JSON.stringify(bySize.map(s => s.key))}`);
-      return stats;
-    }),
-
-  /**
-   * listWithStats — COMBINED procedure: returns enriched bet list + full stats in a single DB round-trip.
-   * Eliminates the separate list + getStats calls (2 queries → 1 query + in-memory aggregation).
-   * The client should prefer this over calling list + getStats separately.
-   *
-   * Performance profile:
-   *   - 1 DB SELECT (vs 2 previously)
-   *   - 1 AN slate fetch pass (shared between list enrichment + stats)
-   *   - In-memory aggregation over the same row set (no second scan)
-   *   - Compression reduces payload 70-85% over the wire
-   */
-  listWithStats: handicapperProcedure
-    .input(z.object({
-      sport:         z.enum(SPORTS).optional(),
-      gameDate:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      dateFrom:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      dateTo:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      result:        z.enum(RESULTS).optional(),
-      targetUserId:  z.number().int().positive().optional(),
-      unitSize:      z.number().positive().optional(),
-    }).optional())
-    .query(async ({ ctx, input }) => {
-      const role = ctx.appUser.role;
-      let userId = ctx.appUser.id;
-      if (input?.targetUserId && input.targetUserId !== userId) {
-        if (role !== "owner" && role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view other handicappers" });
-        }
-        userId = input.targetUserId;
-      }
-      const unitSize = input?.unitSize ?? 100;
-
-      // ── Single DB query for both list and stats ──────────────────────────────
-      const conditions = [eq(trackedBets.userId, userId)];
-      if (input?.sport)    conditions.push(eq(trackedBets.sport, input.sport));
-      if (input?.gameDate) conditions.push(eq(trackedBets.gameDate, input.gameDate));
-      if (input?.dateFrom) conditions.push(gte(trackedBets.gameDate, input.dateFrom));
-      if (input?.dateTo)   conditions.push(lte(trackedBets.gameDate, input.dateTo));
-      // result filter only for list display — stats always use full set
-      const listConditions = [...conditions];
-      if (input?.result)   listConditions.push(eq(trackedBets.result, input.result));
-
-      const db = await getDb();
-
-      // Run list query (with result filter) and stats query (without result filter) in parallel
-      const [listRows, statsRows] = await Promise.all([
-        db.select().from(trackedBets)
-          .where(and(...listConditions))
-          .orderBy(desc(trackedBets.gameDate), desc(trackedBets.createdAt)),
-        // If no result filter, statsRows === listRows (same data) — avoid second query
-        input?.result
-          ? db.select().from(trackedBets)
-              .where(and(...conditions))
-              .orderBy(asc(trackedBets.gameDate), asc(trackedBets.createdAt))
-          : db.select().from(trackedBets)
-              .where(and(...conditions))
-              .orderBy(asc(trackedBets.gameDate), asc(trackedBets.createdAt)),
-      ]);
-
-      // ── Enrich list rows with logos/slate data ───────────────────────────────
-      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-      const pairs = new Map<string, { sport: string; gameDate: string }>();
-      for (const row of listRows) {
-        const key = `${row.sport}:${row.gameDate}`;
-        if (!pairs.has(key) && row.gameDate >= todayStr) {
-          pairs.set(key, { sport: row.sport, gameDate: row.gameDate });
-        }
-      }
-      const slateMap = new Map<number, import('../actionNetwork').SlateGame>();
-      if (pairs.size > 0) {
-        await Promise.all(
-          Array.from(pairs.values()).map(async ({ sport, gameDate }) => {
-            try {
-              const games = await fetchAnSlate(sport, gameDate);
-              for (const g of games) slateMap.set(g.id, g);
-            } catch (e) {
-              console.warn(`[BetTracker][WARN] listWithStats: fetchAnSlate failed for ${sport}/${gameDate}:`, e);
-            }
-          })
-        );
-      }
-      type RawBet = typeof listRows[0];
-      const enriched = listRows.map((row: RawBet) => {
-        const slate = row.anGameId ? slateMap.get(row.anGameId) : undefined;
-        const awayLogo = slate?.awayLogo ?? (row.awayTeam ? resolveLogoUrl(row.sport, row.awayTeam, "") || null : null);
-        const homeLogo = slate?.homeLogo ?? (row.homeTeam ? resolveLogoUrl(row.sport, row.homeTeam, "") || null : null);
-        return {
-          ...row,
-          awayLogo,
-          homeLogo,
-          awayFull:     slate?.awayFull     ?? null,
-          homeFull:     slate?.homeFull     ?? null,
-          awayNickname: slate?.awayNickname ?? null,
-          homeNickname: slate?.homeNickname ?? null,
-          awayColor:    slate?.awayColor    ?? null,
-          homeColor:    slate?.homeColor    ?? null,
-          gameTime:     slate?.gameTime     ?? null,
-          startUtc:     slate?.startUtc     ?? null,
-          gameStatus:   slate?.status       ?? null,
-        };
-      });
-
-      // ── Stats aggregation over statsRows (single pass) ───────────────────────
-      function toUnits(dollarAmt: number, storedUnits: string | null | undefined): number {
-        if (storedUnits != null && storedUnits !== "") {
-          const v = parseFloat(storedUnits);
-          if (!isNaN(v) && v > 0) return v;
-        }
-        return dollarAmt / unitSize;
-      }
-
-      let wins = 0, losses = 0, pushes = 0, pending = 0, voids = 0;
-      let totalRisk = 0, totalWon = 0, totalLost = 0;
-      let bestWin = 0, worstLoss = 0;
-      // Day P/L tracking for worst day (per-day aggregated P/L + worst single bet)
-      const dayPLTrack = new Map<string, { pl: number; worstBetId: number; worstBetPl: number }>();
-      // Breakdown maps (single pass — all dimensions simultaneously)
-      type BkEntry = { wins: number; losses: number; pushes: number; risk: number; won: number; lost: number };
-      const byTypeMap      = new Map<string, BkEntry>();
-      const bySizeMap      = new Map<string, BkEntry>();
-      const byMonthMap     = new Map<string, BkEntry>();
-      const bySportMap     = new Map<string, BkEntry>();
-      const byResultMap    = new Map<string, BkEntry>();
-      const byTimeframeMap = new Map<string, BkEntry>();
-      const byWagerTypeMap = new Map<string, BkEntry>();
-      const dayPLMap       = new Map<string, number>();
-      // Equity curve (chronological — statsRows ordered ASC)
-      let cumPL = 0;
-      const equityCurve: { date: string; cumPL: number; betId: number; label: string; result: string; pl: number; odds: number; units: number; isSpecial?: boolean }[] = [];
-      let longestWinStreak = 0, currentWinStreak = 0;
-      // ATH / drawdown / current run tracking
-      let ath = 0;                   // all-time high cumPL
-      let peakForDD = 0;             // peak used for current drawdown measurement
-      let maxDrawdown = 0;           // maximum drawdown (positive = how far below peak)
-      let maxDrawdownBetId = -1;     // betId at the bottom of the max drawdown
-      let currentRunStart = "";      // date when current winning run started (last time cumPL was at a trough)
-      let currentRunStartPL = 0;     // cumPL at start of current run
-
-      function bkGet(map: Map<string, BkEntry>, key: string): BkEntry {
-        if (!map.has(key)) map.set(key, { wins: 0, losses: 0, pushes: 0, risk: 0, won: 0, lost: 0 });
-        return map.get(key)!;
-      }
-      function bkApply(map: Map<string, BkEntry>, key: string, result: string, riskU: number, toWinU: number) {
-        const e = bkGet(map, key);
-        if (result === "WIN")  { e.wins++;   e.risk += riskU; e.won  += toWinU; }
-        if (result === "LOSS") { e.losses++; e.risk += riskU; e.lost += riskU;  }
-        if (result === "PUSH") { e.pushes++; }
-      }
-
-      const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U"];
-
-      for (const bet of statsRows) {
-        const riskU  = toUnits(parseFloat(bet.risk),  bet.riskUnits);
-        const toWinU = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
-        const res    = bet.result;
-
-        // Overall counters
-        switch (res) {
-          case "WIN":     wins++;   totalRisk += riskU; totalWon  += toWinU; if (toWinU > bestWin)   bestWin   = toWinU; break;
-          case "LOSS":   losses++; totalRisk += riskU; totalLost += riskU;  if (riskU  > worstLoss) worstLoss = riskU;  break;
-          case "PUSH":   pushes++;  break;
-          case "PENDING": pending++; break;
-          case "VOID":   voids++;   break;
-        }
-
-        // All breakdowns in one pass
-        const typeKey      = bet.market ?? bet.betType ?? "ML";
-        const riskDollar   = parseFloat(bet.risk);
-        const toWinDollar  = parseFloat(bet.toWin);
-        const riskUnitsRaw = bet.riskUnits  != null ? parseFloat(bet.riskUnits)  : null;
-        const toWinUnitsRaw= bet.toWinUnits != null ? parseFloat(bet.toWinUnits) : null;
-        const sizeKey      = calcUnitBucket(bet.odds, riskDollar, toWinDollar, riskUnitsRaw, toWinUnitsRaw);
-        const monthKey     = bet.gameDate.substring(0, 7);
-        const sportKey     = bet.sport;
-        const resultKey    = res;
-        const tfKey        = bet.timeframe ?? "FULL_GAME";
-        const wtKey        = bet.wagerType ?? "PREGAME";
-
-        bkApply(byTypeMap,      typeKey,   res, riskU, toWinU);
-        bkApply(bySizeMap,      sizeKey,   res, riskU, toWinU);
-        bkApply(byMonthMap,     monthKey,  res, riskU, toWinU);
-        bkApply(bySportMap,     sportKey,  res, riskU, toWinU);
-        bkApply(byResultMap,    resultKey, res, riskU, toWinU);
-        bkApply(byTimeframeMap, tfKey,     res, riskU, toWinU);
-        bkApply(byWagerTypeMap, wtKey,     res, riskU, toWinU);
-
-        // Day P/L
-        if (res === "WIN")  dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) + toWinU);
-        if (res === "LOSS") dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) - riskU);
-
-        // Day P/L tracking for worst day
-        if (res === "WIN" || res === "LOSS") {
-          const dayPL = res === "WIN" ? toWinU : -riskU;
-          const existing = dayPLTrack.get(bet.gameDate);
-          if (!existing) {
-            dayPLTrack.set(bet.gameDate, { pl: dayPL, worstBetId: bet.id, worstBetPl: dayPL });
-          } else {
-            existing.pl += dayPL;
-            if (dayPL < existing.worstBetPl) { existing.worstBetPl = dayPL; existing.worstBetId = bet.id; }
-          }
-        }
-
-        // Equity curve + ATH/drawdown/currentRun tracking
-        if (res === "WIN") {
-          cumPL += toWinU;
-          const cp = parseFloat(cumPL.toFixed(2));
-          equityCurve.push({ date: bet.gameDate, cumPL: cp, betId: bet.id, label: bet.pick, result: "WIN", pl: parseFloat(toWinU.toFixed(2)), odds: bet.odds, units: riskUnitsRaw ?? riskU });
-          // ATH tracking
-          if (cp > ath) {
-            ath = cp;
-            peakForDD = cp;
-            // When we set a new ATH, the current run started at the last trough before this
-            // We'll finalize currentRunStart after the loop
-          }
-        } else if (res === "LOSS") {
-          cumPL -= riskU;
-          const cp = parseFloat(cumPL.toFixed(2));
-          equityCurve.push({ date: bet.gameDate, cumPL: cp, betId: bet.id, label: bet.pick, result: "LOSS", pl: parseFloat((-riskU).toFixed(2)), odds: bet.odds, units: riskUnitsRaw ?? riskU });
-          // Drawdown tracking
-          const dd = peakForDD - cp;
-          if (dd > maxDrawdown) { maxDrawdown = dd; maxDrawdownBetId = bet.id; }
-          // Track current run trough: if we're below the previous run start PL, reset
-          if (cp < currentRunStartPL) { currentRunStart = bet.gameDate; currentRunStartPL = cp; }
-        }
-
-        // Win streak
-        if (res === "WIN")  { currentWinStreak++; if (currentWinStreak > longestWinStreak) longestWinStreak = currentWinStreak; }
-        else if (res === "LOSS") currentWinStreak = 0;
-      }
-
-      // Finalize breakdowns
-      function finalizeBreakdown(map: Map<string, BkEntry>) {
-        return Array.from(map.entries()).map(([key, e]) => {
-          const np = e.won - e.lost;
-          return {
-            key,
-            wins:            e.wins,
-            losses:          e.losses,
-            pushes:          e.pushes,
-            totalRisk:       parseFloat(e.risk.toFixed(2)),
-            netProfit:       parseFloat(np.toFixed(2)),
-            roi:             e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0,
-            // Dollar P&L: netProfit (units) × unitSize ($/unit)
-            dollarNetProfit: parseFloat((np * unitSize).toFixed(2)),
-          };
-        }).sort((a, b) => a.key.localeCompare(b.key));
-      }
-
-      const byType      = finalizeBreakdown(byTypeMap);
-      const bySize      = finalizeBreakdown(bySizeMap).sort((a, b) => {
-        const ai = UNIT_BUCKET_ORDER.indexOf(a.key); const bi = UNIT_BUCKET_ORDER.indexOf(b.key);
-        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-      });
-      const byMonth     = finalizeBreakdown(byMonthMap);
-      const bySport     = finalizeBreakdown(bySportMap);
-      const byResult    = finalizeBreakdown(byResultMap);
-      const byTimeframe = finalizeBreakdown(byTimeframeMap);
-      const byWagerType = finalizeBreakdown(byWagerTypeMap);
-
-      const netProfit = totalWon - totalLost;
-      const roi       = totalRisk > 0 ? parseFloat(((netProfit / totalRisk) * 100).toFixed(2)) : 0;
-
-      let biggestDayDate = "", biggestDayUnits = 0;
-      dayPLMap.forEach((pl, date) => { if (pl > biggestDayUnits) { biggestDayUnits = pl; biggestDayDate = date; } });
-
-      // ── Worst day computation ─────────────────────────────────────────────────
-      let worstDayDate = "", worstDayUnits = 0, worstDayBetId = -1;
-      dayPLTrack.forEach((v, date) => {
-        if (v.pl < worstDayUnits) { worstDayUnits = v.pl; worstDayDate = date; worstDayBetId = v.worstBetId; }
-      });
-
-      // ── Current run computation ───────────────────────────────────────────────
-      // Walk equityCurve backwards to find the last local minimum (trough) before the current ATH
-      // The current run = cumPL at final point minus cumPL at the last trough
-      const finalCumPL = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].cumPL : 0;
-      let troughPL = finalCumPL;
-      let troughDate = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].date : "";
-      // Walk backwards from the end to find the last trough (lowest point before current level)
-      for (let i = equityCurve.length - 1; i >= 0; i--) {
-        if (equityCurve[i].cumPL <= troughPL) {
-          troughPL = equityCurve[i].cumPL;
-          troughDate = equityCurve[i].date;
-        } else {
-          // We found a point higher than the trough — the trough is the minimum
-          break;
-        }
-      }
-      const currentRunUnits = parseFloat((finalCumPL - troughPL).toFixed(2));
-      const currentRunSince = troughDate;
-
-      // ── Mark special equity curve points ─────────────────────────────────────
-      // Only mark: worst day bet, max drawdown bet — these get red dots
-      // ATH gets a gold badge
-      const specialBetIds = new Set<number>();
-      if (worstDayBetId >= 0) specialBetIds.add(worstDayBetId);
-      if (maxDrawdownBetId >= 0) specialBetIds.add(maxDrawdownBetId);
-      // Find ATH point index
-      let athBetId = -1;
-      let athCumPL = 0;
-      for (const pt of equityCurve) {
-        if (pt.cumPL > athCumPL) { athCumPL = pt.cumPL; athBetId = pt.betId; }
-      }
-      // Mark special points
-      for (const pt of equityCurve) {
-        if (specialBetIds.has(pt.betId) || pt.betId === athBetId) {
-          pt.isSpecial = true;
-        }
-      }
-
-      console.log(`[BetTracker][STATS] maxDrawdown=${maxDrawdown.toFixed(2)}u currentRunUnits=${currentRunUnits}u since=${currentRunSince} ath=${athCumPL.toFixed(2)}u worstDay=${worstDayDate}(${worstDayUnits.toFixed(2)}u)`);
-
-      const stats = {
-        totalBets:       statsRows.length,
-        wins, losses, pushes, pending, voids,
-        gradedBets:      wins + losses + pushes,
-        totalRisk:       parseFloat(totalRisk.toFixed(2)),
-        totalWon:        parseFloat(totalWon.toFixed(2)),
-        totalLost:       parseFloat(totalLost.toFixed(2)),
-        netProfit:       parseFloat(netProfit.toFixed(2)),
-        // Dollar P&L at the top level (netProfit × unitSize)
-        dollarNetProfit: parseFloat((netProfit * unitSize).toFixed(2)),
-        roi,
-        bestWin:         parseFloat(bestWin.toFixed(2)),
-        worstLoss:       parseFloat(worstLoss.toFixed(2)),
-        byType, bySize, byMonth, bySport, byResult, byTimeframe, byWagerType,
-        equityCurve,
-        biggestDayDate,
-        biggestDayUnits:  parseFloat(biggestDayUnits.toFixed(2)),
-        longestWinStreak,
-        // Winning ticket stats
-        maxDrawdown:      parseFloat(maxDrawdown.toFixed(2)),
-        currentRunUnits,
-        currentRunSince,
-        ath:              parseFloat(athCumPL.toFixed(2)),
-        worstDayDate,
-        worstDayUnits:    parseFloat(worstDayUnits.toFixed(2)),
-      };
-
-      console.log(`[BetTracker][OUTPUT] listWithStats: userId=${userId} netProfit=${stats.netProfit}u dollarNetProfit=$${stats.dollarNetProfit} unitSize=${unitSize}`);
-      return { bets: enriched, stats };
-    }),
 
   /**
    * getLinescores — fetch MLB per-inning linescore data for one or more dates.
    * Calls the official MLB Stats API: https://statsapi.mlb.com/api/v1/schedule
    * Returns a map keyed by gamePk with innings array + R/H/E totals + status.
    */
-  getLinescores: handicapperProcedure
+  getLinescores: appUserProcedure
     .input(z.object({
       sport:  z.literal("MLB"),
+      // max(14) bounds the per-request MLB API fan-out (Promise.all below).
+      // Clients spanning more dates MUST batch into ≤14-date chunks and merge
+      // (see BetTracker.tsx mlbDateChunks) — an oversized array 400s.
       dates:  z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(14),
     }))
     .query(async ({ input }) => {
@@ -1796,27 +1416,50 @@ export const betTrackerRouter = router({
     }),
 
   /**
-   * listWithStatsPaginated — cursor-based infinite scroll variant of listWithStats.
+   * listWithStatsPaginated — THE Bet Tracker read. One procedure, one aggregation.
    *
-   * Performance profile:
-   *   - Page query: LIMIT 50 rows (vs full table scan in listWithStats)
-   *   - Stats query: runs in parallel with page query (no sequential wait)
-   *   - isHistorical flag: skips AN slate enrichment for fully graded historical pages
-   *   - Cursor: (gameDate DESC, id DESC) — stable, index-aligned, no OFFSET penalty
-   *   - nextCursor: null when no more pages remain
+   * Returns a cursor page of enriched bets plus the full stats block computed
+   * over the WHOLE filtered set (not just the page). `getStats`, `list` and
+   * `listWithStats` used to sit alongside this with three separate copies of the
+   * aggregation; they had drifted, and the copy the UI actually called was the
+   * thinnest — silently omitting dollar P&L, drawdown, ATH, current-run,
+   * worst-day and the equity-point metadata the charts read. All three are gone;
+   * aggregation now happens exactly once, in betTrackerCore.aggregateStats.
+   *
+   * Query shape:
+   *   - Page query: LIMIT n+1 on (gameDate DESC, id DESC) — keyset, no OFFSET.
+   *     Served by idx_tb_user_date / idx_tb_user_sport_date.
+   *   - Stats query: the full filtered set, but projected to the 14 columns the
+   *     aggregation reads instead of SELECT * (which dragged notes, book, scores
+   *     and timestamps across the wire on every cache miss).
+   *   - Stats are memoized per (resolved user × filters × unitSize), so pages
+   *     2..n never re-scan.
+   *
+   * On why the aggregation is not a GROUP BY: the block spans seven independent
+   * breakdown dimensions plus an order-dependent equity curve, drawdown and
+   * streak walk. MySQL/TiDB has no GROUPING SETS, so that would be 7+ round
+   * trips plus a row fetch for the curve — strictly more work than one indexed
+   * narrow scan folded in a single pass. The projection is where the win is.
    *
    * Client usage:
    *   trpc.betTracker.listWithStatsPaginated.useInfiniteQuery(input, {
    *     getNextPageParam: (last) => last.nextCursor,
    *   })
    */
-  listWithStatsPaginated: handicapperProcedure
+  listWithStatsPaginated: appUserProcedure
     .input(z.object({
       sport:        z.enum(SPORTS).optional(),
       gameDate:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       dateFrom:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       dateTo:       z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       result:       z.enum(RESULTS).optional(),
+      /**
+       * Restrict the LIST to settled bets (WIN/LOSS) without touching stats.
+       * Backs the "Every pick tracked" drawer, which used to be fed from
+       * stats.equityCurve; that array is now thinned for transport, so reading
+       * a bet ledger out of it would silently under-report.
+       */
+      settledOnly:  z.boolean().optional(),
       targetUserId: z.number().int().positive().optional(),
       unitSize:     z.number().positive().optional(),
       limit:        z.number().int().min(1).max(200).default(50),
@@ -1826,100 +1469,137 @@ export const betTrackerRouter = router({
       isHistorical: z.boolean().optional(),
     }).optional())
     .query(async ({ ctx, input }) => {
-      const role = ctx.appUser.role;
-      let userId = ctx.appUser.id;
-      if (input?.targetUserId && input.targetUserId !== userId) {
-        if (role !== "owner" && role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view other handicappers" });
-        }
-        userId = input.targetUserId;
-      }
-      const unitSize    = input?.unitSize ?? 100;
-      const limit       = input?.limit    ?? 50;
+      const userId = await resolveScopeChecked(ctx, input?.targetUserId);
+      const unitSize     = input?.unitSize ?? 100;
+      const limit        = input?.limit    ?? 50;
       const isHistorical = input?.isHistorical ?? false;
 
-      // ── Decode cursor ──────────────────────────────────────────────────────────
-      let cursorDate: string | null = null;
-      let cursorId:   number | null = null;
-      if (input?.cursor) {
-        try {
-          const c = JSON.parse(input.cursor) as { gameDate: string; id: number };
-          cursorDate = c.gameDate;
-          cursorId   = c.id;
-        } catch { /* invalid cursor — start from beginning */ }
-      }
+      const cursor = decodeCursor(input?.cursor);
 
-      // ── Build WHERE conditions ─────────────────────────────────────────────────
+      // ── WHERE ──────────────────────────────────────────────────────────────────
       const baseConditions = [eq(trackedBets.userId, userId)];
       if (input?.sport)    baseConditions.push(eq(trackedBets.sport, input.sport));
       if (input?.gameDate) baseConditions.push(eq(trackedBets.gameDate, input.gameDate));
       if (input?.dateFrom) baseConditions.push(gte(trackedBets.gameDate, input.dateFrom));
       if (input?.dateTo)   baseConditions.push(lte(trackedBets.gameDate, input.dateTo));
 
-      // List conditions (with optional result filter)
+      // The result filter narrows the LIST only. Stats are always computed over
+      // the unfiltered set so the header does not change when the user filters
+      // the table to "losses".
       const listConditions = [...baseConditions];
       if (input?.result) listConditions.push(eq(trackedBets.result, input.result));
+      if (input?.settledOnly) listConditions.push(inArray(trackedBets.result, ["WIN", "LOSS"]));
 
-      // Cursor condition: (gameDate < cursorDate) OR (gameDate = cursorDate AND id < cursorId)
-      if (cursorDate !== null && cursorId !== null) {
+      if (cursor) {
         listConditions.push(
           or(
-            lt(trackedBets.gameDate, cursorDate),
-            and(
-              eq(trackedBets.gameDate, cursorDate),
-              lt(trackedBets.id, cursorId)
-            )
+            lt(trackedBets.gameDate, cursor.gameDate),
+            and(eq(trackedBets.gameDate, cursor.gameDate), lt(trackedBets.id, cursor.id)),
           )!
         );
       }
 
       const db = await getDb();
 
-      // ── Stats cache check ─────────────────────────────────────────────────────────────────
-      // On cache hit: skip the full-table stats scan (runs only page query)
-      // On cache miss: run page + stats in parallel, then cache the stats result
-      const statsCacheKey = buildStatsCacheKey(userId, input);
-      const cachedStats = getStatsCache(statsCacheKey);
+      // Fingerprint the row set the stats will be computed from, so a cached
+      // block written by ANOTHER replica can be detected as stale. One narrow
+      // indexed aggregate; the alternative is trusting per-process invalidation,
+      // which silently breaks the moment numReplicas > 1.
+      const [fp] = await db
+        .select({
+          rowCount: sql<number>`COUNT(*)`,
+          // UNIX_TIMESTAMP, not the raw column: mysql2 returns a DATETIME as a JS Date,
+          // and String(Date) renders the process's locale and offset
+          // ("Tue Aug 04 2026 06:11:02 GMT-0700 (Pacific Daylight Time)"). Two
+          // replicas in different zones would then compute different fingerprints
+          // for identical rows — every read a miss, defeating the cache in exactly
+          // the multi-replica case it was built for. An epoch integer has no zone.
+          maxUpdated: sql<number | null>`UNIX_TIMESTAMP(MAX(${trackedBets.updatedAt}))`,
+          idChecksum: sql<number | null>`SUM(${trackedBets.id})`,
+        })
+        .from(trackedBets)
+        .where(and(...baseConditions));
+      const fingerprint = buildStatsFingerprint({
+        rowCount: Number(fp?.rowCount ?? 0),
+        maxUpdated: fp?.maxUpdated != null ? String(Number(fp.maxUpdated)) : null,
+        idChecksum: fp?.idChecksum != null ? Number(fp.idChecksum) : null,
+      });
 
-      // ── Run page query (always) + stats query (only on cache miss) in parallel ───
+      const statsCacheKey = buildStatsCacheKey(userId, { ...input, unitSize });
+      const cachedStats = getStatsCache<BetStats>(statsCacheKey, fingerprint);
+
+      const pageQuery = db.select().from(trackedBets)
+        .where(and(...listConditions))
+        .orderBy(desc(trackedBets.gameDate), desc(trackedBets.id))
+        .limit(limit + 1);
+
       let pageRows: typeof trackedBets.$inferSelect[];
-      let statsRows: typeof trackedBets.$inferSelect[];
+      let stats: BetStats;
 
       if (cachedStats) {
-        // Cache hit: only fetch the page, skip full-table stats scan
-        if (process.env.NODE_ENV === "development") console.log(`[BetTracker][STEP] listWithStatsPaginated: stats cache HIT for userId=${userId}`);
-        pageRows = await db.select().from(trackedBets)
-          .where(and(...listConditions))
-          .orderBy(desc(trackedBets.gameDate), desc(trackedBets.id))
-          .limit(limit + 1);
-        statsRows = []; // not needed — using cached stats
+        pageRows = await pageQuery;
+        stats = cachedStats;
       } else {
-        // Cache miss: run both queries in parallel
-        if (process.env.NODE_ENV === "development") console.log(`[BetTracker][STEP] listWithStatsPaginated: stats cache MISS for userId=${userId} — running full aggregation`);
-        [pageRows, statsRows] = await Promise.all([
-          db.select().from(trackedBets)
-            .where(and(...listConditions))
-            .orderBy(desc(trackedBets.gameDate), desc(trackedBets.id))
-            .limit(limit + 1),
-          db.select().from(trackedBets)
+        const [page, statRows] = await Promise.all([
+          pageQuery,
+          db.select(STAT_COLUMNS).from(trackedBets)
             .where(and(...baseConditions))
             .orderBy(asc(trackedBets.gameDate), asc(trackedBets.id)),
         ]);
+        pageRows = page;
+        const full = aggregateStats(statRows as StatRow[], unitSize);
+
+        // Bound the curve BEFORE caching, so a heavy account cannot pin a
+        // multi-megabyte array in the process cache. Every headline figure was
+        // already computed over the complete series inside aggregateStats.
+        const curveTotal = full.equityCurve.length;
+        stats = {
+          ...full,
+          equityCurve: downsampleEquityCurve(full.equityCurve),
+          equityCurveTotal: curveTotal,
+        };
+        if (curveTotal > stats.equityCurve.length) {
+          console.log(
+            `[BetTracker][STATE] listWithStatsPaginated: equity curve thinned ` +
+            `${curveTotal} -> ${stats.equityCurve.length} pts for user=${userId}`,
+          );
+        }
+        setStatsCache(statsCacheKey, stats, isHistorical, fingerprint);
       }
 
-      // ── Determine next cursor ──────────────────────────────────────────────────
+      // ── Cursor for the next page ───────────────────────────────────────────────
       const hasNextPage = pageRows.length > limit;
       const rows = hasNextPage ? pageRows.slice(0, limit) : pageRows;
-      let nextCursor: string | null = null;
-      if (hasNextPage && rows.length > 0) {
-        const last = rows[rows.length - 1];
-        nextCursor = JSON.stringify({ gameDate: last.gameDate, id: last.id });
+      const nextCursor = hasNextPage && rows.length > 0
+        ? encodeCursor({ gameDate: rows[rows.length - 1].gameDate, id: rows[rows.length - 1].id })
+        : null;
+
+      // ── Attach parlay legs ─────────────────────────────────────────────────────
+      // One batched query for the whole page rather than one per ticket. A
+      // round trip against TiDB costs ~80ms regardless of how much it returns,
+      // so N+1 here would dominate the entire read. Straight-bet pages skip it
+      // entirely — legCount is 0, so there is nothing to look up.
+      const parlayIds = rows.filter(r => r.legCount > 0).map(r => r.id);
+      const legsByBet = new Map<number, Array<typeof trackedBetLegs.$inferSelect>>();
+      if (parlayIds.length > 0) {
+        const legRows = await db
+          .select()
+          .from(trackedBetLegs)
+          .where(inArray(trackedBetLegs.betId, parlayIds))
+          .orderBy(asc(trackedBetLegs.betId), asc(trackedBetLegs.legIndex));
+        for (const l of legRows) {
+          const list = legsByBet.get(l.betId);
+          if (list) list.push(l);
+          else legsByBet.set(l.betId, [l]);
+        }
+        console.log(`[BetTracker][STATE] listWithStatsPaginated: attached legs for ${parlayIds.length} parlay(s)`);
       }
 
-      // ── Enrich page rows with logos/slate data ─────────────────────────────────
-      // Skip enrichment for historical pages (no live data needed)
-      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-      const slateMap = new Map<number, import('../actionNetwork').SlateGame>();
+      // ── Enrich page rows with logos / live slate data ──────────────────────────
+      // Historical pages skip the Action Network round trip entirely; past dates
+      // resolve logos from the in-memory team map (O(1), no HTTP).
+      const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      const slateMap = new Map<number, import("../actionNetwork").SlateGame>();
 
       if (!isHistorical) {
         const pairs = new Map<string, { sport: string; gameDate: string }>();
@@ -1943,15 +1623,12 @@ export const betTrackerRouter = router({
         }
       }
 
-      type RawBet = typeof rows[0];
-      const enriched = rows.map((row: RawBet) => {
+      const enriched = rows.map((row) => {
         const slate = row.anGameId ? slateMap.get(row.anGameId) : undefined;
-        const awayLogo = slate?.awayLogo ?? (row.awayTeam ? resolveLogoUrl(row.sport, row.awayTeam, "") || null : null);
-        const homeLogo = slate?.homeLogo ?? (row.homeTeam ? resolveLogoUrl(row.sport, row.homeTeam, "") || null : null);
         return {
           ...row,
-          awayLogo,
-          homeLogo,
+          awayLogo: slate?.awayLogo ?? (row.awayTeam ? resolveLogoUrl(row.sport, row.awayTeam, "") || null : null),
+          homeLogo: slate?.homeLogo ?? (row.homeTeam ? resolveLogoUrl(row.sport, row.homeTeam, "") || null : null),
           awayFull:     slate?.awayFull     ?? null,
           homeFull:     slate?.homeFull     ?? null,
           awayNickname: slate?.awayNickname ?? null,
@@ -1961,134 +1638,21 @@ export const betTrackerRouter = router({
           gameTime:     slate?.gameTime     ?? null,
           startUtc:     slate?.startUtc     ?? null,
           gameStatus:   slate?.status       ?? null,
+          /** Selections on a parlay ticket, in display order. Empty for a straight bet. */
+          legs: legsByBet.get(row.id) ?? [],
         };
       });
-      // ── Stats aggregation (single pass, cache-aware) ─────────────────────────────────────────────
-      // Arrow functions used throughout (no function declarations inside blocks)
-      const toUnits = (dollarAmt: number, storedUnits: string | null | undefined): number => {
-        if (storedUnits != null && storedUnits !== "") {
-          const v = parseFloat(storedUnits);
-          if (!isNaN(v) && v > 0) return v;
-        }
-        return dollarAmt / unitSize;
+
+      return {
+        bets: enriched,
+        stats,
+        nextCursor,
+        hasNextPage,
+        pageSize: rows.length,
+        totalBets: stats.totalBets,
       };
-
-      type BkEntry = { wins: number; losses: number; pushes: number; risk: number; won: number; lost: number };
-      const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U"];
-
-      const bkGet = (map: Map<string, BkEntry>, key: string): BkEntry => {
-        if (!map.has(key)) map.set(key, { wins: 0, losses: 0, pushes: 0, risk: 0, won: 0, lost: 0 });
-        return map.get(key)!;
-      };
-      const bkApply = (map: Map<string, BkEntry>, key: string, result: string, riskU: number, toWinU: number): void => {
-        const e = bkGet(map, key);
-        if (result === "WIN")  { e.wins++;   e.risk += riskU; e.won  += toWinU; }
-        if (result === "LOSS") { e.losses++; e.risk += riskU; e.lost += riskU;  }
-        if (result === "PUSH") { e.pushes++; }
-      };
-      const finalizeBreakdown = (map: Map<string, BkEntry>) =>
-        Array.from(map.entries()).map(([key, e]) => {
-          const np = e.won - e.lost;
-          return { key, wins: e.wins, losses: e.losses, pushes: e.pushes, totalRisk: parseFloat(e.risk.toFixed(2)), netProfit: parseFloat(np.toFixed(2)), roi: e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0 };
-        }).sort((a, b) => a.key.localeCompare(b.key));
-
-      // Cache hit: skip entire aggregation, return cached stats
-      const stats = cachedStats ?? (() => {
-        let wins = 0, losses = 0, pushes = 0, pending = 0, voids = 0;
-        let totalRisk = 0, totalWon = 0, totalLost = 0;
-        let bestWin = 0, worstLoss = 0;
-        const byTypeMap      = new Map<string, BkEntry>();
-        const bySizeMap      = new Map<string, BkEntry>();
-        const byMonthMap     = new Map<string, BkEntry>();
-        const bySportMap     = new Map<string, BkEntry>();
-        const byResultMap    = new Map<string, BkEntry>();
-        const byTimeframeMap = new Map<string, BkEntry>();
-        const byWagerTypeMap = new Map<string, BkEntry>();
-        const dayPLMap       = new Map<string, number>();
-        let cumPL = 0;
-        const equityCurve: { date: string; cumPL: number; betId: number; pick: string; result: string; pl: number }[] = [];
-        let longestWinStreak = 0, currentWinStreak = 0;
-
-        for (const bet of statsRows) {
-          const riskU  = toUnits(parseFloat(bet.risk),  bet.riskUnits);
-          const toWinU = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
-          const res    = bet.result;
-          switch (res) {
-            case "WIN":     wins++;   totalRisk += riskU; totalWon  += toWinU; if (toWinU > bestWin)   bestWin   = toWinU; break;
-            case "LOSS":   losses++; totalRisk += riskU; totalLost += riskU;  if (riskU  > worstLoss) worstLoss = riskU;  break;
-            case "PUSH":   pushes++;  break;
-            case "PENDING": pending++; break;
-            case "VOID":   voids++;   break;
-          }
-          const typeKey      = bet.market ?? bet.betType ?? "ML";
-          const riskDollar   = parseFloat(bet.risk);
-          const toWinDollar  = parseFloat(bet.toWin);
-          const riskUnitsRaw = bet.riskUnits  != null ? parseFloat(bet.riskUnits)  : null;
-          const toWinUnitsRaw= bet.toWinUnits != null ? parseFloat(bet.toWinUnits) : null;
-          const sizeKey  = calcUnitBucket(bet.odds, riskDollar, toWinDollar, riskUnitsRaw, toWinUnitsRaw);
-          const monthKey = bet.gameDate.substring(0, 7);
-          bkApply(byTypeMap,      typeKey,              res, riskU, toWinU);
-          bkApply(bySizeMap,      sizeKey,              res, riskU, toWinU);
-          bkApply(byMonthMap,     monthKey,             res, riskU, toWinU);
-          bkApply(bySportMap,     bet.sport,            res, riskU, toWinU);
-          bkApply(byResultMap,    res,                  res, riskU, toWinU);
-          bkApply(byTimeframeMap, bet.timeframe ?? "FULL_GAME", res, riskU, toWinU);
-          bkApply(byWagerTypeMap, bet.wagerType ?? "PREGAME",   res, riskU, toWinU);
-          if (res === "WIN")  dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) + toWinU);
-          if (res === "LOSS") dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) - riskU);
-          if (res === "WIN") {
-            cumPL += toWinU;
-            equityCurve.push({ date: bet.gameDate, cumPL: parseFloat(cumPL.toFixed(2)), betId: bet.id, pick: bet.pick, result: "WIN", pl: parseFloat(toWinU.toFixed(2)) });
-          } else if (res === "LOSS") {
-            cumPL -= riskU;
-            equityCurve.push({ date: bet.gameDate, cumPL: parseFloat(cumPL.toFixed(2)), betId: bet.id, pick: bet.pick, result: "LOSS", pl: parseFloat((-riskU).toFixed(2)) });
-          }
-          if (res === "WIN")  { currentWinStreak++; if (currentWinStreak > longestWinStreak) longestWinStreak = currentWinStreak; }
-          else if (res === "LOSS") currentWinStreak = 0;
-        }
-
-        const byType      = finalizeBreakdown(byTypeMap);
-        const bySize      = finalizeBreakdown(bySizeMap).sort((a, b) => {
-          const ai = UNIT_BUCKET_ORDER.indexOf(a.key); const bi = UNIT_BUCKET_ORDER.indexOf(b.key);
-          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-        });
-        const byMonth     = finalizeBreakdown(byMonthMap);
-        const bySport     = finalizeBreakdown(bySportMap);
-        const byResult    = finalizeBreakdown(byResultMap);
-        const byTimeframe = finalizeBreakdown(byTimeframeMap);
-        const byWagerType = finalizeBreakdown(byWagerTypeMap);
-
-        const netProfit = totalWon - totalLost;
-        const roi       = totalRisk > 0 ? parseFloat(((netProfit / totalRisk) * 100).toFixed(2)) : 0;
-
-        let biggestDayDate = "", biggestDayUnits = 0;
-        dayPLMap.forEach((pl, date) => { if (pl > biggestDayUnits) { biggestDayUnits = pl; biggestDayDate = date; } });
-
-        const result = {
-          totalBets:  statsRows.length,
-          wins, losses, pushes, pending, voids,
-          gradedBets: wins + losses + pushes,
-          totalRisk:  parseFloat(totalRisk.toFixed(2)),
-          totalWon:   parseFloat(totalWon.toFixed(2)),
-          totalLost:  parseFloat(totalLost.toFixed(2)),
-          netProfit:  parseFloat(netProfit.toFixed(2)),
-          roi,
-          bestWin:    parseFloat(bestWin.toFixed(2)),
-          worstLoss:  parseFloat(worstLoss.toFixed(2)),
-          byType, bySize, byMonth, bySport, byResult, byTimeframe, byWagerType,
-          equityCurve,
-          biggestDayDate,
-          biggestDayUnits: parseFloat(biggestDayUnits.toFixed(2)),
-          longestWinStreak,
-        };
-        // Write computed stats to cache for future requests
-        setStatsCache(statsCacheKey, result, isHistorical);
-        return result;
-      })();
-
-      const statsTyped = stats as { totalBets: number; wins: number; losses: number; pushes: number; pending: number; voids: number; gradedBets: number; totalRisk: number; totalWon: number; totalLost: number; netProfit: number; roi: number; bestWin: number; worstLoss: number; byType: unknown[]; bySize: unknown[]; byMonth: unknown[]; bySport: unknown[]; byResult: unknown[]; byTimeframe: unknown[]; byWagerType: unknown[]; equityCurve: unknown[]; biggestDayDate: string; biggestDayUnits: number; longestWinStreak: number };
-      return { bets: enriched, stats: statsTyped, nextCursor, hasNextPage, pageSize: rows.length, totalBets: statsTyped.totalBets };
     }),
+
 
   /**
    * getCalendarData — returns per-day unit P/L for a given year-month and user.
@@ -2098,7 +1662,7 @@ export const betTrackerRouter = router({
    *   days: Array<{ date: string; units: number; wins: number; losses: number; pushes: number; pending: number }>
    *   monthRecord: { wins: number; losses: number; pushes: number; netUnits: number }
    */
-  getCalendarData: handicapperProcedure
+  getCalendarData: appUserProcedure
     .input(z.object({
       /** YYYY-MM — the month to compute calendar data for */
       yearMonth:    z.string().regex(/^\d{4}-\d{2}$/),
@@ -2106,14 +1670,7 @@ export const betTrackerRouter = router({
       unitSize:     z.number().positive().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const role = ctx.appUser.role;
-      let userId = ctx.appUser.id;
-      if (input.targetUserId && input.targetUserId !== userId) {
-        if (role !== "owner" && role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view other handicappers" });
-        }
-        userId = input.targetUserId;
-      }
+      const userId = await resolveScopeChecked(ctx, input.targetUserId);
       const unitSize = input.unitSize ?? 100;
       const dateFrom = `${input.yearMonth}-01`;
       // Last day of month: go to first day of next month then subtract 1 day
@@ -2150,13 +1707,10 @@ export const betTrackerRouter = router({
 
       console.log(`[BetTracker][STATE] getCalendarData: ${rows.length} bets found for ${input.yearMonth}`);
 
-      function toUnits(dollarAmt: number, storedUnits: string | null | undefined): number {
-        if (storedUnits != null && storedUnits !== "") {
-          const v = parseFloat(storedUnits);
-          if (!isNaN(v) && v > 0) return v;
-        }
-        return dollarAmt / unitSize;
-      }
+      // Unit normalization comes from betTrackerCore so the calendar can never
+      // disagree with the stats block about what a bet is worth in units.
+      const toUnits = (dollarAmt: number, storedUnits: string | null | undefined): number =>
+        coreToUnits(dollarAmt, storedUnits, unitSize);
 
       // Per-day aggregation
       type DayEntry = { units: number; wins: number; losses: number; pushes: number; pending: number; betCount: number; totalRisk: number };

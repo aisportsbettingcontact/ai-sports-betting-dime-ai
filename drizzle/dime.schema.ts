@@ -63,7 +63,17 @@ export const dimeCreditLedger = mysqlTable(
   },
   (table) => [
     index("idx_credit_user").on(table.userId),
-    index("idx_credit_request").on(table.requestId),
+    // UNIQUE: request_id is the credit-charge idempotency key — one ledger row
+    // per request, so a retried/duplicated request can never double-charge.
+    // Nullable, and MySQL/TiDB allow unlimited NULLs in a unique index, so
+    // non-request-scoped adjustments are unaffected. Production verified 0
+    // duplicate request_id values before the constraint was declared.
+    // NOTE: production still carries this index as a NON-unique KEY of the same
+    // name. Promoting it requires DROP INDEX + CREATE UNIQUE INDEX, which is
+    // NOT additive, so it is deliberately excluded from
+    // .github/workflows/db-stripe-hardening.yml and needs its own
+    // owner-authorized migration.
+    uniqueIndex("idx_credit_request").on(table.requestId),
   ]
 );
 

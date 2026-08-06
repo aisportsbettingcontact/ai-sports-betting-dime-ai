@@ -1,0 +1,871 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_cumulative_evidence.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "created_at",
+    "classification",
+    "private_content_counts",
+    "boundary_manifest",
+    "parent_proof",
+    "proof_reuse",
+    "lineage",
+    "admission",
+    "gates",
+    "semantic_evaluation",
+    "foundation_deficits",
+    "quarantines",
+    "private_inventory_bindings",
+    "context_capsule"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-foundation-incremental-evidence-v1"},
+    "evidence_id": {"const": "dime-foundation-admitted-450-v1"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "classification": {"const": "SANITIZED_AGGREGATE_ONLY"},
+    "private_content_counts": {"$ref": "#/$defs/zeroPrivate"},
+    "boundary_manifest": {"$ref": "#/$defs/boundaryManifest"},
+    "parent_proof": {"$ref": "#/$defs/parentProof"},
+    "proof_reuse": {"$ref": "#/$defs/proofReuse"},
+    "lineage": {"$ref": "#/$defs/lineage"},
+    "admission": {"$ref": "#/$defs/cumulativeAdmission"},
+    "gates": {"$ref": "#/$defs/gates"},
+    "semantic_evaluation": {"$ref": "#/$defs/semanticEvaluation"},
+    "foundation_deficits": {"$ref": "#/$defs/foundationDeficits"},
+    "quarantines": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/quarantine"}
+    },
+    "private_inventory_bindings": {"$ref": "#/$defs/privateInventoryBindings"},
+    "context_capsule": {"$ref": "#/$defs/contextCapsule"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "gitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "splitCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0}
+      }
+    },
+    "routeCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "account",
+        "educational",
+        "bet_explanation",
+        "matchup",
+        "full_slate",
+        "historical",
+        "live_data",
+        "general_sports"
+      ],
+      "properties": {
+        "platform": {"type": "integer", "minimum": 0},
+        "account": {"type": "integer", "minimum": 0},
+        "educational": {"type": "integer", "minimum": 0},
+        "bet_explanation": {"type": "integer", "minimum": 0},
+        "matchup": {"type": "integer", "minimum": 0},
+        "full_slate": {"type": "integer", "minimum": 0},
+        "historical": {"type": "integer", "minimum": 0},
+        "live_data": {"type": "integer", "minimum": 0},
+        "general_sports": {"type": "integer", "minimum": 0}
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory_count",
+        "payload_file_count",
+        "payload_byte_count",
+        "checksum_ledger_file_count",
+        "checksum_ledger_byte_count",
+        "total_file_count",
+        "total_byte_count",
+        "sha256sums_sha256",
+        "symlink_count",
+        "mode_failures",
+        "checksum_failures",
+        "closed_inventory"
+      ],
+      "properties": {
+        "directory_count": {"type": "integer", "minimum": 1},
+        "payload_file_count": {"type": "integer", "minimum": 1},
+        "payload_byte_count": {"type": "integer", "minimum": 1},
+        "checksum_ledger_file_count": {"const": 1},
+        "checksum_ledger_byte_count": {"type": "integer", "minimum": 1},
+        "total_file_count": {"type": "integer", "minimum": 2},
+        "total_byte_count": {"type": "integer", "minimum": 2},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "symlink_count": {"const": 0},
+        "mode_failures": {"const": 0},
+        "checksum_failures": {"const": 0},
+        "closed_inventory": {"const": true}
+      }
+    },
+    "sourcePacketInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory_count",
+        "payload_file_count",
+        "payload_byte_count",
+        "content_inventory_sha256",
+        "inventory_origin",
+        "symlink_count",
+        "mode_failures",
+        "mutation_failures",
+        "closed_inventory"
+      ],
+      "properties": {
+        "directory_count": {"const": 1},
+        "payload_file_count": {"type": "integer", "minimum": 1},
+        "payload_byte_count": {"type": "integer", "minimum": 1},
+        "content_inventory_sha256": {"$ref": "#/$defs/sha256"},
+        "inventory_origin": {"const": "COMPUTED_IN_MEMORY_FROM_CLOSED_SOURCE_ROOT"},
+        "symlink_count": {"const": 0},
+        "mode_failures": {"const": 0},
+        "mutation_failures": {"const": 0},
+        "closed_inventory": {"const": true}
+      }
+    },
+    "zeroPrivate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_records",
+        "semantic_cases",
+        "answer_keys",
+        "credentials",
+        "task_text",
+        "record_identifiers"
+      ],
+      "properties": {
+        "foundation_records": {"const": 0},
+        "semantic_cases": {"const": 0},
+        "answer_keys": {"const": 0},
+        "credentials": {"const": 0},
+        "task_text": {"const": 0},
+        "record_identifiers": {"const": 0}
+      }
+    },
+    "boundaryManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["boundary_id", "path", "sha256", "dependency_commit", "status"],
+      "properties": {
+        "boundary_id": {"const": "dime-foundation-admitted-450-v1"},
+        "path": {"const": "configs/foundation_cumulative_boundary_450_v1.json"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "dependency_commit": {"$ref": "#/$defs/gitSha"},
+        "status": {"const": "INCOMPLETE_NOT_AUTHORIZED"}
+      }
+    },
+    "parentProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_commit",
+        "evidence_sha256",
+        "sha256sums_sha256",
+        "schema_sha256",
+        "record_identity_root_sha256",
+        "record_count",
+        "split",
+        "route_counts"
+      ],
+      "properties": {
+        "evidence_id": {"const": "dime-llm-v1-foundation-002"},
+        "evidence_commit": {"$ref": "#/$defs/gitSha"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "schema_sha256": {"$ref": "#/$defs/sha256"},
+        "record_identity_root_sha256": {"$ref": "#/$defs/sha256"},
+        "record_count": {"const": 300},
+        "split": {"const": {"train": 270, "validation": 30}},
+        "route_counts": {"$ref": "#/$defs/routeCounts"}
+      }
+    },
+    "proofReuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "proof_contract_sha256",
+        "compatibility_mode",
+        "fallback_policy",
+        "fallback_used",
+        "historical_checks_reused",
+        "prior_identity_checks_rerun",
+        "delta_checks_new"
+      ],
+      "properties": {
+        "status": {"const": "PASS_EXACT_PARENT_WITH_BOOTSTRAP_COMPATIBILITY"},
+        "proof_contract_sha256": {"$ref": "#/$defs/sha256"},
+        "compatibility_mode": {
+          "const": "BOOTSTRAP_PRIOR_PROOF_SEMANTIC_PRIMITIVES_UNCHANGED_ADDITIVE_VALIDATION_ONLY"
+        },
+        "fallback_policy": {"const": "FULL_HISTORICAL_RERUN_REQUIRED"},
+        "fallback_used": {"const": false},
+        "historical_checks_reused": {
+          "const": [
+            "prior_full_admission",
+            "prior_internal_deduplication",
+            "prior_semantic_r5_comparisons"
+          ]
+        },
+        "prior_identity_checks_rerun": {
+          "const": [
+            "public_evidence_schema_and_checksum_ledger",
+            "private_artifact_closed_inventories",
+            "trainer_and_authoring_manifests",
+            "source_packet_inventory_bindings",
+            "semantic_suite_identity",
+            "repository_evaluation_identity",
+            "proof_contract_identity",
+            "prior_historical_implementation_identity"
+          ]
+        },
+        "delta_checks_new": {
+          "const": [
+            "full_delta_admission",
+            "delta_to_prior_exact_and_semantic_overlap",
+            "combined_partition_isolation",
+            "cumulative_repository_evaluation_overlap_rerun",
+            "delta_to_semantic_r5_overlap"
+          ]
+        }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "parent_state_sha256",
+        "prior_record_identity_root_sha256",
+        "delta_artifact_id",
+        "delta_identity_sha256",
+        "delta_record_identity_root_sha256",
+        "cumulative_record_identity_root_sha256",
+        "cumulative_state_sha256",
+        "single_parent",
+        "acyclic",
+        "duplicate_artifact_identities",
+        "duplicate_execution_identities",
+        "duplicate_record_identities"
+      ],
+      "properties": {
+        "domain": {"const": "dime-foundation-cumulative-state-v1"},
+        "parent_state_sha256": {"$ref": "#/$defs/sha256"},
+        "prior_record_identity_root_sha256": {"$ref": "#/$defs/sha256"},
+        "delta_artifact_id": {"const": "platform_shard_003"},
+        "delta_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "delta_record_identity_root_sha256": {"$ref": "#/$defs/sha256"},
+        "cumulative_record_identity_root_sha256": {"$ref": "#/$defs/sha256"},
+        "cumulative_state_sha256": {"$ref": "#/$defs/sha256"},
+        "single_parent": {"const": true},
+        "acyclic": {"const": true},
+        "duplicate_artifact_identities": {"const": 0},
+        "duplicate_execution_identities": {"const": 0},
+        "duplicate_record_identities": {"const": 0}
+      }
+    },
+    "deltaAdmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "decision",
+        "reason",
+        "record_count",
+        "report_status",
+        "manifest_status",
+        "trainer_manifest_status",
+        "reported_counts",
+        "reported_gates",
+        "per_record_admission",
+        "token_profile",
+        "inventory",
+        "source_packet_inventory",
+        "bindings"
+      ],
+      "properties": {
+        "artifact": {"const": "platform_shard_003"},
+        "decision": {"const": "ADMITTED"},
+        "reason": {"const": "ALL_PER_RECORD_AND_COLLECTION_GATES_PASS"},
+        "record_count": {"const": 150},
+        "report_status": {"const": "PASS"},
+        "manifest_status": {"const": "ACCEPTED_PRIVATE_NOT_RELEASED"},
+        "trainer_manifest_status": {"const": "ACCEPTED_PRIVATE_NOT_RELEASED"},
+        "reported_counts": {
+          "const": {
+            "accepted_records": 150,
+            "trainer_records": 150,
+            "train": 135,
+            "validation": 15,
+            "approved_originals": 150,
+            "approved_repairs": 0,
+            "resolved_carried_findings": 0
+          }
+        },
+        "reported_gates": {
+          "const": {
+            "context_binding_failures": 0,
+            "conversion_failures": 0,
+            "critic_independence_failures": 0,
+            "cross_shard_evaluation_overlap": 0,
+            "cross_shard_exact_duplicates": 0,
+            "cross_shard_partition_collisions": 0,
+            "cross_shard_semantic_duplicate_pairs": 0,
+            "decision_receipt_failures": 0,
+            "exact_duplicates": 0,
+            "future_timestamp_failures": 0,
+            "game_retrieval_calls": 0,
+            "mode_failures": 0,
+            "numeric_errors": 0,
+            "partition_collisions": 0,
+            "prior_semantic_overlap": 0,
+            "r5_evaluation_overlap": 0,
+            "rights_failures": 0,
+            "schema_failures": 0,
+            "semantic_duplicate_pairs": 0,
+            "silent_truncations": 0,
+            "source_preservation_failures": 0,
+            "unresolved_material_findings": 0
+          }
+        },
+        "per_record_admission": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "records_checked",
+            "checks",
+            "failure_counts",
+            "exact_duplicate_groups",
+            "semantic_duplicate_pairs",
+            "route_split_counts",
+            "record_identifiers_disclosed"
+          ],
+          "properties": {
+            "records_checked": {"const": 150},
+            "checks": {"$ref": "#/$defs/passChecks"},
+            "failure_counts": {"$ref": "#/$defs/zeroChecks"},
+            "exact_duplicate_groups": {"const": 0},
+            "semantic_duplicate_pairs": {"const": 0},
+            "route_split_counts": {
+              "const": {"platform": {"train": 135, "validation": 15}}
+            },
+            "record_identifiers_disclosed": {"const": 0}
+          }
+        },
+        "token_profile": {"$ref": "#/$defs/tokenProfile"},
+        "inventory": {"$ref": "#/$defs/inventory"},
+        "source_packet_inventory": {"$ref": "#/$defs/sourcePacketInventory"},
+        "bindings": {"$ref": "#/$defs/artifactBindings"}
+      }
+    },
+    "passChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assistant_only_masking",
+        "critic_independence",
+        "high_risk_two_approvals",
+        "numeric",
+        "partition",
+        "production_trainer_conversion",
+        "rights",
+        "schema",
+        "token_profile",
+        "truncation_rejected"
+      ],
+      "properties": {
+        "assistant_only_masking": {"const": 150},
+        "critic_independence": {"const": 150},
+        "high_risk_two_approvals": {"const": 150},
+        "numeric": {"const": 150},
+        "partition": {"const": 150},
+        "production_trainer_conversion": {"const": 150},
+        "rights": {"const": 150},
+        "schema": {"const": 150},
+        "token_profile": {"const": 150},
+        "truncation_rejected": {"const": 150}
+      }
+    },
+    "zeroChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assistant_only_masking",
+        "critic_independence",
+        "high_risk_two_approvals",
+        "numeric",
+        "partition",
+        "production_trainer_conversion",
+        "rights",
+        "schema",
+        "token_profile",
+        "truncation_rejected"
+      ],
+      "properties": {
+        "assistant_only_masking": {"const": 0},
+        "critic_independence": {"const": 0},
+        "high_risk_two_approvals": {"const": 0},
+        "numeric": {"const": 0},
+        "partition": {"const": 0},
+        "production_trainer_conversion": {"const": 0},
+        "rights": {"const": 0},
+        "schema": {"const": 0},
+        "token_profile": {"const": 0},
+        "truncation_rejected": {"const": 0}
+      }
+    },
+    "tokenProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present",
+        "profile_id",
+        "status",
+        "training_tokenizer_equivalent",
+        "sha256"
+      ],
+      "properties": {
+        "present": {"const": true},
+        "profile_id": {"const": "dime-foundation-local-byte-profile-v1"},
+        "status": {"const": "FROZEN_LOCAL_VALIDATION_ONLY"},
+        "training_tokenizer_equivalent": {"const": false},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "artifactBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authoring_manifest_sha256",
+        "trainer_manifest_sha256",
+        "report_sha256",
+        "sha256sums_sha256",
+        "source_packet_content_inventory_sha256"
+      ],
+      "properties": {
+        "authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "trainer_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "report_sha256": {"$ref": "#/$defs/sha256"},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "source_packet_content_inventory_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "cumulativeAdmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prior_admitted_records",
+        "delta",
+        "delta_admitted_records",
+        "cumulative_admitted_records",
+        "quarantined_admitted_records",
+        "split",
+        "route_counts"
+      ],
+      "properties": {
+        "prior_admitted_records": {"const": 300},
+        "delta": {"$ref": "#/$defs/deltaAdmission"},
+        "delta_admitted_records": {"const": 150},
+        "cumulative_admitted_records": {"const": 450},
+        "quarantined_admitted_records": {"const": 0},
+        "split": {"const": {"train": 405, "validation": 45}},
+        "route_counts": {"$ref": "#/$defs/routeCounts"}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "delta_internal_failures",
+        "delta_to_prior_exact_duplicates",
+        "delta_to_prior_semantic_duplicates",
+        "delta_to_prior_partition_collisions",
+        "delta_to_prior_pair_comparisons",
+        "cumulative_repository_evaluation_overlap",
+        "delta_private_semantic_overlap",
+        "answer_key_cases"
+      ],
+      "properties": {
+        "delta_internal_failures": {"const": 0},
+        "delta_to_prior_exact_duplicates": {"const": 0},
+        "delta_to_prior_semantic_duplicates": {"const": 0},
+        "delta_to_prior_partition_collisions": {"const": 0},
+        "delta_to_prior_pair_comparisons": {"const": 45000},
+        "cumulative_repository_evaluation_overlap": {"const": 0},
+        "delta_private_semantic_overlap": {"const": 0},
+        "answer_key_cases": {"const": 0}
+      }
+    },
+    "semanticBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generation_id",
+        "manifest_sha256",
+        "overlap_report_sha256",
+        "record_checksums_sha256",
+        "sha256sums_sha256",
+        "source_commit"
+      ],
+      "properties": {
+        "generation_id": {"type": "string", "minLength": 1},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "overlap_report_sha256": {"$ref": "#/$defs/sha256"},
+        "record_checksums_sha256": {"$ref": "#/$defs/sha256"},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "source_commit": {"$ref": "#/$defs/gitSha"}
+      }
+    },
+    "partitionComparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_records",
+        "evaluation_cases",
+        "pair_comparisons",
+        "collision_count",
+        "status"
+      ],
+      "properties": {
+        "foundation_records": {"const": 150},
+        "evaluation_cases": {"type": "integer", "minimum": 1},
+        "pair_comparisons": {"type": "integer", "minimum": 1},
+        "collision_count": {"const": 0},
+        "status": {"const": "PASS"}
+      }
+    },
+    "semanticEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "semantic_only",
+        "case_count",
+        "answer_key_case_count",
+        "prior_pair_comparisons_reused",
+        "delta_pair_comparisons_new",
+        "cumulative_pair_comparisons_reconciled",
+        "disallowed_overlap_count",
+        "semantic_manifest_release_proof_complete",
+        "semantic_manifest_blocker",
+        "semantic_inventory",
+        "bindings",
+        "delta_partition_comparisons"
+      ],
+      "properties": {
+        "status": {"const": "PASS_INCREMENTAL_RECONCILED"},
+        "semantic_only": {"const": true},
+        "case_count": {"const": 651},
+        "answer_key_case_count": {"const": 0},
+        "prior_pair_comparisons_reused": {"const": 195300},
+        "delta_pair_comparisons_new": {"const": 97650},
+        "cumulative_pair_comparisons_reconciled": {"const": 292950},
+        "disallowed_overlap_count": {"const": 0},
+        "semantic_manifest_release_proof_complete": {"const": false},
+        "semantic_manifest_blocker": {"type": "string", "minLength": 1},
+        "semantic_inventory": {"$ref": "#/$defs/inventory"},
+        "bindings": {"$ref": "#/$defs/semanticBindings"},
+        "delta_partition_comparisons": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["development", "sealed_critical", "locked", "general_regression"],
+          "properties": {
+            "development": {"$ref": "#/$defs/partitionComparison"},
+            "sealed_critical": {"$ref": "#/$defs/partitionComparison"},
+            "locked": {"$ref": "#/$defs/partitionComparison"},
+            "general_regression": {"$ref": "#/$defs/partitionComparison"}
+          }
+        }
+      }
+    },
+    "routeDeficit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "admitted", "deficit"],
+      "properties": {
+        "target": {"$ref": "#/$defs/routeTriple"},
+        "admitted": {"$ref": "#/$defs/routeTriple"},
+        "deficit": {"$ref": "#/$defs/routeTriple"}
+      }
+    },
+    "routeTriple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation", "total"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 0}
+      }
+    },
+    "foundationDeficits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "calculation_basis",
+        "target_profile",
+        "target_records",
+        "admitted_records",
+        "remaining_records",
+        "target_split",
+        "admitted_split",
+        "remaining_split",
+        "routes",
+        "complete_release"
+      ],
+      "properties": {
+        "calculation_basis": {"const": "ADMITTED_RECORDS_ONLY"},
+        "target_profile": {"const": "dime-foundation-v1-route-mixture"},
+        "target_records": {"const": 2400},
+        "admitted_records": {"const": 450},
+        "remaining_records": {"const": 1950},
+        "target_split": {"const": {"train": 2160, "validation": 240}},
+        "admitted_split": {"const": {"train": 405, "validation": 45}},
+        "remaining_split": {"const": {"train": 1755, "validation": 195}},
+        "routes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "platform",
+            "account",
+            "educational",
+            "bet_explanation",
+            "matchup",
+            "full_slate",
+            "historical",
+            "live_data",
+            "general_sports"
+          ],
+          "properties": {
+            "platform": {"$ref": "#/$defs/routeDeficit"},
+            "account": {"$ref": "#/$defs/routeDeficit"},
+            "educational": {"$ref": "#/$defs/routeDeficit"},
+            "bet_explanation": {"$ref": "#/$defs/routeDeficit"},
+            "matchup": {"$ref": "#/$defs/routeDeficit"},
+            "full_slate": {"$ref": "#/$defs/routeDeficit"},
+            "historical": {"$ref": "#/$defs/routeDeficit"},
+            "live_data": {"$ref": "#/$defs/routeDeficit"},
+            "general_sports": {"$ref": "#/$defs/routeDeficit"}
+          }
+        },
+        "complete_release": {"const": false}
+      }
+    },
+    "quarantine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root_id",
+        "incident_id",
+        "receipt_role",
+        "status",
+        "admitted_records",
+        "eligible_for_admission",
+        "eligible_for_repair_or_reuse",
+        "process_assurance",
+        "receipt_sha256",
+        "sha256sums_sha256"
+      ],
+      "properties": {
+        "root_id": {"type": "string", "minLength": 1},
+        "incident_id": {"type": "string", "minLength": 1},
+        "receipt_role": {
+          "enum": [
+            "ORIGINAL_SELF_AUTHORED_INCIDENT_RECEIPT",
+            "SEPARATE_POINT_IN_TIME_LIVE_PROCESS_AUDIT"
+          ]
+        },
+        "status": {"const": "TAINTED_REJECTED_QUARANTINED"},
+        "admitted_records": {"const": 0},
+        "eligible_for_admission": {"const": false},
+        "eligible_for_repair_or_reuse": {"const": false},
+        "process_assurance": {
+          "enum": [
+            "SELF_AUTHORED_NOT_INDEPENDENT",
+            "POINT_IN_TIME_ONLY_NO_CONTAINMENT_CLAIM"
+          ]
+        },
+        "receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "priorPrivateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "execution_id",
+        "sha256sums_sha256",
+        "authoring_manifest_sha256",
+        "trainer_manifest_sha256",
+        "report_sha256",
+        "source_packet_content_inventory_sha256",
+        "inventory",
+        "source_packet_inventory"
+      ],
+      "properties": {
+        "artifact_id": {"type": "string", "minLength": 1},
+        "execution_id": {"type": "string", "minLength": 1},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "trainer_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "report_sha256": {"$ref": "#/$defs/sha256"},
+        "source_packet_content_inventory_sha256": {"$ref": "#/$defs/sha256"},
+        "inventory": {"$ref": "#/$defs/inventory"},
+        "source_packet_inventory": {"$ref": "#/$defs/sourcePacketInventory"}
+      }
+    },
+    "deltaPrivateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "inventory", "source_packet_inventory", "bindings"],
+      "properties": {
+        "artifact_id": {"const": "platform_shard_003"},
+        "inventory": {"$ref": "#/$defs/inventory"},
+        "source_packet_inventory": {"$ref": "#/$defs/sourcePacketInventory"},
+        "bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "artifact_id",
+            "execution_id",
+            "sha256sums_sha256",
+            "authoring_manifest_sha256",
+            "trainer_manifest_sha256",
+            "report_sha256",
+            "source_packet_content_inventory_sha256",
+            "latest_report_sha256",
+            "partition_registry_sha256"
+          ],
+          "properties": {
+            "artifact_id": {"const": "platform_shard_003"},
+            "execution_id": {"type": "string", "minLength": 1},
+            "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+            "authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "trainer_manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "report_sha256": {"$ref": "#/$defs/sha256"},
+            "source_packet_content_inventory_sha256": {"$ref": "#/$defs/sha256"},
+            "latest_report_sha256": {"$ref": "#/$defs/sha256"},
+            "partition_registry_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      }
+    },
+    "quarantineInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_id", "inventory"],
+      "properties": {
+        "root_id": {"type": "string", "minLength": 1},
+        "inventory": {"$ref": "#/$defs/inventory"}
+      }
+    },
+    "privateInventoryBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prior_artifacts", "delta_artifact", "semantic_r5", "quarantines"],
+      "properties": {
+        "prior_artifacts": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/priorPrivateBinding"}
+        },
+        "delta_artifact": {"$ref": "#/$defs/deltaPrivateBinding"},
+        "semantic_r5": {"$ref": "#/$defs/inventory"},
+        "quarantines": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/quarantineInventory"}
+        }
+      }
+    },
+    "zeroOperations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credential_reads",
+        "model_downloads",
+        "network_calls",
+        "production_data_reads",
+        "provider_invocations",
+        "publications",
+        "railway_mutations",
+        "training_runs"
+      ],
+      "properties": {
+        "credential_reads": {"const": 0},
+        "model_downloads": {"const": 0},
+        "network_calls": {"const": 0},
+        "production_data_reads": {"const": 0},
+        "provider_invocations": {"const": 0},
+        "publications": {"const": 0},
+        "railway_mutations": {"const": 0},
+        "training_runs": {"const": 0}
+      }
+    },
+    "closedAuthorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deployment",
+        "model_download",
+        "provider_execution",
+        "publication",
+        "railway_mutation",
+        "route_activation",
+        "training"
+      ],
+      "properties": {
+        "deployment": {"const": false},
+        "model_download": {"const": false},
+        "provider_execution": {"const": false},
+        "publication": {"const": false},
+        "railway_mutation": {"const": false},
+        "route_activation": {"const": false},
+        "training": {"const": false}
+      }
+    },
+    "contextCapsule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "external_operations", "authorization_boundary"],
+      "properties": {
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["branch", "dependency_commit"],
+          "properties": {
+            "branch": {"const": "agent/foundation-platform-shard-v1"},
+            "dependency_commit": {"$ref": "#/$defs/gitSha"}
+          }
+        },
+        "external_operations": {"$ref": "#/$defs/zeroOperations"},
+        "authorization_boundary": {"$ref": "#/$defs/closedAuthorization"}
+      }
+    }
+  }
+}

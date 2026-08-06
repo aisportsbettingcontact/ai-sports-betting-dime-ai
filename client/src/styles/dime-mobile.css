@@ -19,9 +19,11 @@
   /* 2026-07-13 audit P0-11: raw mint text on white is 1.68:1 (hard AA fail).
    * The law's literal mapping (black) deleted all light-mode signal, which is
    * why this token drifted back to raw mint. Scoped exception (like --loss-red):
-   * #0B8557 is the same mint hue darkened to 4.66:1 on white — signal survives,
+   * #0A7C50 is the same mint hue darkened to 5.2:1 on white and 4.9:1 on the
+   * F7-tier light cards (theme audit 2026-07-31: the previous step passed on
+   * pure white but measured 4.35:1 on cards) — signal survives,
    * contrast passes. Strict-3 alternative remains #000000 if that direction wins. */
-  --dime-mint-text: #0B8557;
+  --dime-mint-text: #0a7c50;
   --dime-mint-keyline: #000000;
   --dime-bg: #ffffff;
   /* Law v2 tonal ramp (light): achromatic greys, mint still the only hue. */
@@ -29,25 +31,35 @@
   --dime-surface-card: #f7f7f7;
   --dime-surface-raised: #efefef;
   --dime-surface-bubble: #f7f7f7;
-  --dime-border: #d9d9d9;          /* quiet default hairline */
-  --dime-border-strong: #000000;   /* rationed keyline — signature only */
+  --dime-border: #d9d9d9; /* quiet default hairline */
+  --dime-border-strong: #000000; /* rationed keyline — signature only */
   --dime-text-primary: #000000;
   --dime-text-body: #000000;
-  --dime-text-secondary: #595959;  /* 7.0:1 on white */
-  --dime-text-muted: #767676;      /* 4.5:1 on white */
+  --dime-text-secondary: #595959; /* 7.0:1 on white */
+  --dime-text-muted: #6e6e6e; /* 5.1:1 on white, 4.8:1 on F7-tier cards (theme audit 2026-07-31: 767676 measured 4.24:1 on cards) */
   --dime-text-faint: #767676;
   --dime-ring: #45e0a8;
-  --dime-row-hover: #efefef;       /* v2: hover returns */
-  --dime-row-active: #e4e4e4;      /* v2: active fill (mint rail still leads) */
-  --dime-mint-dim: transparent;    /* dim-mint tiles → transparent */
-  --dime-mint-border: #45e0a8;
+  --dime-row-hover: #efefef; /* v2: hover returns */
+  --dime-row-active: #e4e4e4; /* v2: active fill (mint rail still leads) */
+  --dime-mint-dim: transparent; /* dim-mint tiles → transparent */
+  /* 2026-08-05: raw mint on white is ~1.9:1 — mint-bordered controls (LIVE
+   * pill, live-movement separators, edge-cell borders) dissolved on light.
+   * THREE-COLOR-LAW v3's light mint border is color-mix(mint 68%, black)
+   * (= #2F9872), which clears the 3:1 non-text boundary bar. Derived from
+   * the token (no new raw hex — X-HEX ratchet). Dark keeps raw mint. */
+  --dime-mint-border: color-mix(in srgb, var(--dime-mint) 68%, black);
+  /* Ink on constant-mint fills — black in BOTH themes (mint stays raw mint
+   * everywhere, so its ink never flips; same rule as the tracker's
+   * unmapped text-black). */
+  --dime-ink-on-mint: #000000;
   /* bet-loss red exception (Bet Tracker / calendar) */
-  --loss-red: #ff3b3b;
+  --loss-red: #d92d2d; /* light: 4.8:1 on white (theme audit 2026-07-31: ff3b3b measured 3.3:1); dark keeps ff3b3b below */
   --dime-font-sans: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
   /* Single-font mandate: the "mono" token now resolves to Familjen Grotesk so
    * every legacy var(--dime-font-mono) / var(--bt-mono) consumer renders the
    * one brand typeface. IBM Plex Mono is fully retired. */
-  --dime-font-mono: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --dime-font-mono:
+    "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --dime-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dime-t: 160ms;
   /* Brand coin-dot rule: mint fills on light get a near-black hairline. */
@@ -57,26 +69,33 @@
 html.dark {
   /* ── THREE-COLOR LAW — dark theme: black ground, white ink/borders, mint. */
   /* Law v2 tonal ramp (dark): achromatic greys, mint still the only hue. */
+  --loss-red: #ff3b3b; /* 5.9:1 on black — dark keeps the brighter bet-loss red (theme audit 2026-07-31) */
   --dime-mint-text: #45e0a8; /* mint text passes on black */
   --dime-bg: #000000;
   --dime-surface-sidebar: #000000;
-  --dime-surface-card: #0a0a0a;    /* surface tier 1 */
-  --dime-surface-raised: #141414;  /* raised tier — menus, active pills */
+  --dime-surface-card: #0a0a0a; /* surface tier 1 */
+  --dime-surface-raised: #141414; /* raised tier — menus, active pills */
   --dime-surface-bubble: #111111;
-  --dime-border: #262626;          /* quiet default hairline */
-  --dime-border-strong: #ffffff;   /* rationed keyline — signature only */
+  --dime-border: #262626; /* quiet default hairline */
+  --dime-border-strong: #ffffff; /* rationed keyline — signature only */
   --dime-text-primary: #ffffff;
   --dime-text-body: #ffffff;
-  --dime-text-secondary: #a6a6a6;  /* 8.6:1 on black */
-  --dime-text-muted: #6e6e6e;      /* 4.1:1 on black */
-  --dime-text-faint: #6e6e6e;
+  --dime-text-secondary: #a6a6a6; /* 8.6:1 on black */
+  --dime-text-muted: #7e7e7e; /* 5.2:1 on black, 4.9:1 on tier-1 cards (audit DIME-UI-005: 10–11px labels consuming this measured 3.9–4.1:1 at the old 6E-grey) */
+  --dime-text-faint: #7e7e7e;
   --dime-ring: #45e0a8;
-  --dime-row-hover: #141414;       /* v2: hover returns */
-  --dime-row-active: #1f1f1f;      /* v2: active fill (mint rail still leads) */
+  --dime-row-hover: #141414; /* v2: hover returns */
+  --dime-row-active: #1f1f1f; /* v2: active fill (mint rail still leads) */
   --dime-mint-dim: transparent;
   --dime-mint-border: #45e0a8;
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
 }
+
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): the mobile
+ * remap layer carried its own System-mode grey tier block (the twin of the
+ * removed index.css one; exact values in git history). System follows Dark
+ * everywhere now — WebKit probe caught this residual re-pinning the grey
+ * canvas at <=767px after the index.css fix. Do not reintroduce. */
 
 /* MASTER.md micro-label: IBM Plex Mono, 10px, uppercase, 0.08em, muted. */
 .dime-mono-label {
@@ -88,7 +107,8 @@ html.dark {
   color: var(--dime-text-muted);
 }
 
-/* MASTER.md motion law: no pulses/transitions under reduced motion. */
+/* MASTER.md motion law: no pulses/transitions under reduced motion.
+ * Reveals fall back to a static cut (opacity change only, no travel). */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse,
   .animate-in {
@@ -162,9 +182,12 @@ html.dark {
 .bs-brand-row .dime-wordmark {
   font-size: clamp(19px, 2vw, 24px);
 }
-/* 768–1023px: the shell's compact top bar already carries the wordmark
- * directly above this pane — one brand mark per screen. */
-@media (min-width: 768px) and (max-width: 1023.98px) {
+/* >=768px: the shell owns this route at every shell viewport and always
+ * carries a brand mark (compact top bar 768-1023, persistent sidebar
+ * wordmark >=1024) — one brand mark per screen. 2026-08-05: the old
+ * 1023.98px upper bound left a duplicate "dime" in the pane header beside
+ * the sidebar wordmark on desktop. */
+@media (min-width: 768px) {
   .bs-brand-row {
     display: none;
   }
@@ -318,139 +341,27 @@ html:not(.dark) .cal-panel {
   stroke: var(--dime-mint);
 }
 
-/* Split bars: one-accent discipline — away side mint, home side raised
- * grey. Side identity comes from the labels, not team paint. */
-.bsp-bar {
-  border-color: var(--dime-border-strong) !important;
-}
-/* Mobile compact bars square off slightly; desktop bars keep their pill. */
-.bsp-bar:not(.bsp-bar--pill) {
-  border-radius: 6px !important;
-}
-.bsp-seg--away {
-  background: var(--dime-mint) !important;
-}
-/* Home side reads as the black track — the pill border + divider carry the
- * edge; the label is full-weight primary text, never white-on-grey. */
-.bsp-seg--home {
-  background: transparent !important;
-}
-.bsp-div {
-  background: var(--dime-border-strong) !important;
-}
-.bsp-seg span {
-  text-shadow: none !important;
-  font-weight: 700 !important;
-}
-.bsp-seg--away span {
-  color: #000000 !important;
-}
-.bsp-seg--home span {
-  color: var(--dime-text-primary) !important;
-}
-.bsp-hdr span {
-  color: var(--dime-text-secondary) !important;
-}
-.bsp-hdr span:nth-child(2) {
-  font-family: var(--dime-font-mono);
-  color: var(--dime-text-secondary) !important;
-  letter-spacing: 0.08em !important;
+/* Splits desktop subtree: restore border-box sizing. frozen-tokens.css forces
+   content-box on all .dc-page descendants, which inflates every padded
+   min-width in the market columns (the 2026-07-22 1024px divider-cross
+   regression). These components were written assuming Tailwind/preflight
+   border-box semantics. Guarded by e2e/splits-layout.spec.ts.
+   Selector uses .dc-page prefix (specificity 0,2,0) to beat frozen-tokens.css's
+   .dc-page * (0,1,1) regardless of stylesheet load order — dime-mobile.css
+   (global, main.tsx) and frozen-tokens.css (lazy, DimeChatPage.tsx chunk)
+   have no guaranteed relative order once frozen-tokens.css loads later via
+   the lazy DimeAppShell/DimeChatPage chunk, so specificity must decide, not
+   cascade order. */
+.dc-page .bsp-desktop,
+.dc-page .bsp-desktop * {
+  box-sizing: border-box;
 }
 
-/* Market toggle: mono micro-labels on the standard pill states. */
-.bsp-toggle {
-  font-family: var(--dime-font-mono) !important;
-  font-size: 10px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.08em !important;
-  border-radius: 8px !important;
-  border: 1px solid var(--dime-border) !important;
-  background: transparent !important;
-  color: var(--dime-text-secondary) !important;
-}
-.bsp-toggle[data-active="true"] {
-  background: var(--dime-surface-raised) !important;
-  border-color: var(--dime-border-strong) !important;
-  color: var(--dime-text-primary) !important;
-}
-.bsp-toggle:disabled {
-  color: var(--dime-text-muted) !important;
-}
-
-/* Odds & Splits History toggle row: brand curve hover, visible focus. */
-.ohp-toggle {
-  background: transparent;
-  cursor: pointer;
-  transition: background var(--dime-t) var(--dime-ease);
-}
-.ohp-toggle:hover {
-  background: var(--dime-row-hover);
-}
-.ohp-toggle:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 3px var(--dime-ring);
-}
-.bs-pill:focus-visible,
-.bsp-toggle:focus-visible {
-  outline: none !important;
-  box-shadow: 0 0 0 3px var(--dime-ring) !important;
-}
-
-/* One motion curve everywhere (MASTER.md: 160ms, single curve). */
-.bs-page .bs-pill,
-.bs-page .bs-search,
-.bs-page .cal-trigger,
-.bs-page .cal-day,
-.bs-page .gc-star,
-.bsp-seg,
-.bsp-toggle {
-  transition-duration: var(--dime-t) !important;
-  transition-timing-function: var(--dime-ease) !important;
-}
-
-/* Tailwind family remap for the splits surface's satellite panels (user
- * menu, Last-5-Games, Trends): same one-accent discipline as the tracker. */
-.bs-page [class*="text-emerald-"],
-.bs-page [class*="text-green-"] {
-  color: var(--dime-mint-text) !important;
-}
-.bs-page [class*="text-red-"] {
-  color: var(--dime-text-secondary) !important;
-}
-.bs-page [class*="text-yellow-"],
-.bs-page [class*="text-amber-"],
-.bs-page [class*="text-blue-"] {
-  color: var(--dime-text-body) !important;
-}
-.bs-page [class*="bg-emerald-"] {
-  background-color: var(--dime-mint-dim) !important;
-  color: var(--dime-mint-text) !important;
-}
-.bs-page [class*="bg-red-"],
-.bs-page [class*="bg-yellow-"] {
-  background-color: var(--dime-surface-raised) !important;
-  color: var(--dime-text-secondary) !important;
-}
-.bs-page [class*="bg-zinc-7"],
-.bs-page [class*="bg-zinc-8"] {
-  background-color: var(--dime-surface-raised) !important;
-}
-.bs-page .font-mono {
-  font-family: var(--dime-font-mono) !important;
-}
-.bs-page [class*="duration-"] {
-  transition-duration: var(--dime-t) !important;
-  transition-timing-function: var(--dime-ease) !important;
-}
-
-/* Light theme: white-on-dark CDN art needs inversion on light surfaces. */
-html:not(.dark) .bs-page img[style*="invert(1)"] {
-  filter: invert(0.35) !important;
-}
-html:not(.dark) .bs-pill img,
-html:not(.dark) .cal-trigger img {
-  filter: invert(1) !important;
-}
+/* Split bars, market toggle, history toggle row, splits focus/motion-curve
+ * rules, and the interaction layer (disclosure motion, dropdown row states,
+ * press response) live in splits-interactions.css — LAZY, imported by
+ * GameCard.tsx / BettingSplits.tsx. Keep them out of this file: it ships on
+ * the chat critical path, whose bundle budget has near-zero headroom. */
 
 /* ═══ GLOBAL brand mappings — Bet Tracker surface (all widths, themes) ═════
  * BetTracker.tsx / BetTrackerAnalytics.tsx / BetCalendar.tsx consume
@@ -495,6 +406,62 @@ html:not(.dark) .cal-trigger img {
   border-bottom: 1px solid var(--dime-border) !important;
 }
 
+/* THREE-COLOR literals → tokens (2026-07-18): the Law remediation hard-coded
+ * bg-black / text-white / border-white throughout the tracker, which pinned
+ * the page to the dark ramp permanently. Route those literals through the
+ * theme tokens so the tracker follows the Profile Appearance setting
+ * (Dark / Light / System) like every other surface — light mode is a token
+ * swap, never a redesign. text-black is deliberately NOT remapped: it is the
+ * ink on constant-mint fills and must stay black in both themes. */
+.bt-page .bg-black {
+  background-color: var(--dime-bg) !important;
+}
+.bt-page .text-white {
+  color: var(--dime-text-primary) !important;
+}
+/* Law v2: "White keylines are now a rationed signature, not the default."
+ * The default hairline is the QUIET border tier; hover steps up to the strong
+ * keyline so affordance survives without the page reading as a white wireframe. */
+.bt-page .border-white {
+  border-color: var(--dime-border) !important;
+}
+.bt-page [class*="hover:border-white"]:hover {
+  border-color: var(--dime-border-strong) !important;
+}
+.bt-page [class*="hover:text-white"]:hover {
+  color: var(--dime-text-primary) !important;
+}
+/* White chips/rails (PUSH accent bar, count badge) invert with the theme;
+ * a paired black ink flips to the page ground so it never disappears. */
+.bt-page .bg-white {
+  background-color: var(--dime-text-primary) !important;
+}
+.bt-page .bg-white.text-black {
+  color: var(--dime-bg) !important;
+}
+
+/* Raw mint TEXT must ride the mint-text token: #45E0A8 passes on black but
+ * is 1.68:1 on white — light resolves to the law's 0A7C50 tone. Mint FILLS and
+ * borders stay raw mint in both themes (brand rule). */
+.bt-page [class*="text-[#45E0A8]"] {
+  color: var(--dime-mint-text) !important;
+}
+
+/* Theme-keyed coming-soon wordmark (the SVG assets are single-ground). */
+html.dark .bt-page .bt-wordmark-light {
+  display: none;
+}
+/* Theme audit 2026-07-31: `text-primary` resolves to raw mint in BOTH themes
+   (fills law), but as TEXT on light tracker surfaces it measured 1.68:1. On
+   light, tracker mint TEXT drops to the sanctioned mint-text tone. Same
+   defensive-override pattern as the [class*=] nets below. */
+html:not(.dark) .bt-page .text-primary {
+  color: var(--dime-mint-text) !important;
+}
+html:not(.dark) .bt-page .bt-wordmark-dark {
+  display: none;
+}
+
 /* Tailwind mass-mapping: the page styles itself with zinc/emerald/green/
  * red/yellow utilities — remap whole families onto the brand tokens. */
 .bt-page [class*="text-emerald-"],
@@ -503,7 +470,9 @@ html:not(.dark) .cal-trigger img {
   color: var(--dime-mint-text) !important;
 }
 .bt-page [class*="text-red-"] {
-  color: var(--loss-red) !important; /* bet-loss red exception (Three-Color Law) */
+  color: var(
+    --loss-red
+  ) !important; /* bet-loss red exception (Three-Color Law) */
 }
 .bt-page [class*="text-yellow-"],
 .bt-page [class*="text-amber-"],
@@ -616,6 +585,113 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
   border-radius: 8px;
 }
 
+/* ═══ Bet Tracker component layer — Law v2 tonal hierarchy ═════════════════
+ * Semantic recipes consumed by BetTracker.tsx so hierarchy lives in tokens,
+ * not in per-element utility soup. Three surface tiers (page ground → card →
+ * raised chip), three text tiers (primary → secondary → muted), quiet
+ * hairlines, and the single 160ms brand curve. */
+
+/* Surface tiers */
+.bt-surface {
+  background-color: var(--dime-surface-card);
+}
+.bt-raised {
+  background-color: var(--dime-surface-raised);
+}
+/* Floating surfaces (menus, toasts) — the ONE place Law v2 allows a shadow. */
+.bt-float {
+  background-color: var(--dime-surface-raised);
+  border: 1px solid var(--dime-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+html:not(.dark) .bt-float {
+  box-shadow: 0 12px 32px rgba(11, 11, 15, 0.18);
+}
+
+/* MASTER.md micro-label: 10–11px, uppercase, 0.08em tracking, muted tier. */
+.bt-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dime-text-muted);
+}
+
+/* Input recipe: card surface, quiet hairline, mint focus border. Keyboard
+ * focus keeps the unified 2px mint outline from the base layer. */
+.bt-input {
+  background-color: var(--dime-surface-card);
+  border: 1px solid var(--dime-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--dime-text-primary);
+  transition:
+    border-color var(--dime-t) var(--dime-ease),
+    background-color var(--dime-t) var(--dime-ease);
+}
+.bt-input::placeholder {
+  color: var(--dime-text-muted);
+}
+.bt-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--dime-border-strong);
+}
+.bt-input:focus {
+  outline: none;
+  border-color: var(--dime-mint-border);
+}
+.bt-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Text tiers (labels/meta demote; values stay primary/mint/red = signal
+ * pops). Declared after .bt-input so the tier wins on combined elements. */
+.bt-dim {
+  color: var(--dime-text-secondary);
+}
+.bt-faint {
+  color: var(--dime-text-muted);
+}
+
+/* Row hover affordance (dropdown rows, day strips) — v2 hover returns. */
+.bt-row-hover {
+  transition: background-color var(--dime-t) var(--dime-ease);
+}
+.bt-row-hover:hover {
+  background-color: var(--dime-row-hover);
+}
+
+/* apple-design §15: numeric data uses tabular figures so columns and stat
+ * rows never jitter as values tick; large numerals track slightly tight. */
+.bt-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.bt-page .font-mono,
+.bt-page input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* apple-design §1/§10: respond on pointer-down. Restrained compressed state
+ * on primary actions only; springs stay out (Motion 2/10, Law v3 is scoped
+ * to the projections product). Collapses to static under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .bt-press {
+    transition: transform var(--dime-t) var(--dime-ease);
+  }
+  .bt-press:active {
+    transform: scale(0.97);
+  }
+}
+
+/* MASTER.md checklist: every clickable element carries cursor:pointer
+ * (Tailwind 4 preflight defaults buttons to cursor:default). */
+.bt-page :is(button, [role="button"], select, summary):not(:disabled) {
+  cursor: pointer;
+}
+
 /* ═══ Mobile-only layout concerns (<768px) ═════════════════════════════════ */
 @media (max-width: 767px) {
   /* Brand type everywhere on mobile. Pages that already set their own brand
@@ -641,26 +717,27 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
     border-radius: 8px;
   }
 
-  /* ── Feed (/feed/model/*) ─────────────────────────────────────────────── */
-  /* The bottom tab bar already navigates to Splits/Chat/Profile — hide the
-   * topbar's duplicate links when the bar is present. Non-owners (no bar)
-   * keep them so the feed is never a dead end. */
-  body.mobile-owner-tabs-active .dmf-nav {
+  /* ── Floating nav integration (docs/plans/2026-07-18-mobile-floating-nav.md)
+   * body.dime-floating-nav-active = the top-floating logo + pill nav is
+   * mounted (authed mobile users). It reserves top document-flow space via
+   * --dime-floating-nav-h (index.css) and owns the brand identity — page-level
+   * wordmark chrome hides while it is present ("one Dime identity per page").
+   * Signed-out users (no nav) keep today's page chrome untouched. */
+
+  /* Feed ↔ floating-nav integration moved to pages/dimeModelFeed.css
+   * (2026-08-02): the feed owns ONE sticky offset variable (--dmf-topbar-h)
+   * and re-points it at the nav's published clearance
+   * (--dime-floating-nav-h − --dime-floating-nav-gap). No feed rules here. */
+
+  /* Splits: the header's row 1 is brand-only — the floating logo replaces it.
+   * (The header's sticky offset comes from the generic header.sticky.top-0
+   * rule in index.css.) */
+  body.dime-floating-nav-active .bs-header .bs-brand-row {
     display: none;
   }
-  /* body.mobile-owner-tabs-active reserves 60px + safe-area globally; keep
-   * only local breathing room instead of the pre-unification 130px slab. */
-  body.mobile-owner-tabs-active .dmf-scroll {
-    padding-bottom: 24px;
-  }
-  /* Notch/status-bar safe area on the sticky feed chrome. */
-  .dmf-root .dmf-topbar {
-    height: calc(46px + env(safe-area-inset-top, 0px));
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .dmf-root .dmf-feedhead {
-    top: calc(46px + env(safe-area-inset-top, 0px));
-  }
+
+  /* (Feed safe-area handling moved into pages/dimeModelFeed.css — the shared
+   * --dmf-topbar-h offset already includes env(safe-area-inset-top).) */
 
   /* ── Splits: phone layout ─────────────────────────────────────────────── */
   .bs-header {
@@ -673,12 +750,47 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
     margin: 8px 12px;
     width: auto !important;
   }
-  /* Give the splits column room at 390px — no in-card horizontal scroll. */
+  /* Give the splits column room at 390px — no in-card horizontal scroll.
+   * 2026-08-05 (mobile refinement): measured under true mobile emulation the
+   * old floors amputated the HOME half of every bar behind an unindicated
+   * scroll pane — the 148px frozen-column floor plus the scroll pane's fixed
+   * 220px inner minimum outgrew a 320-390px card, so the pane silently
+   * overflowed and the home percentages were off-screen. The frozen column
+   * now floors at 118px (matchup text truncates with its own ellipsis) and
+   * the inner pane sheds its fixed minimum so both bar halves fit the real
+   * pane width (the bars' own min-content still guards label integrity). */
   .bs-page .gc-splitgrid {
-    grid-template-columns: clamp(148px, 40vw, 200px) 1fr !important;
+    grid-template-columns: clamp(118px, 40vw, 200px) 1fr !important;
   }
   .bs-page .gc-scrollinner {
-    min-width: 220px !important;
+    min-width: 0 !important;
+  }
+  /* Adjacent floating cards belonging to one game group read as a pair:
+   * the history card tucks flush under its game card (shared background, no
+   * inner radii) instead of floating apart at full row rhythm — the -6px
+   * overlap collapses the double 8px gap the generic card rule would leave. */
+  .bs-page [data-edge-tier]:has(+ [data-edge-tier]) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .bs-page [data-edge-tier] + [data-edge-tier] {
+    margin-top: -6px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  /* Sticky-chrome seam: the floating nav publishes its height + an 8px
+   * breathing gap, and the page header pins below it (index.css) — the gap
+   * itself is transparent, so scrolled card fragments glint through the
+   * strip on every scroll. Cover it with page ground. */
+  body.dime-floating-nav-active .bs-page .bs-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 8px;
+    background: var(--dime-bg);
+    pointer-events: none;
   }
 
   /* Mobile type floor (MASTER.md): no content text below 11px on phones.

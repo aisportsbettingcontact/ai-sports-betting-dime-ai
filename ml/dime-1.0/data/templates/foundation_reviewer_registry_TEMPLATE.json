@@ -1,0 +1,15 @@
+{
+  "schema_version": "dime-foundation-reviewer-registry-v4",
+  "registry_version": "dime-foundation-reviewers-v0.0.0",
+  "status": "proposed",
+  "receipt_verifier": {
+    "receipt_schema_version": "dime-agent-decision-receipt-v1",
+    "receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+    "verifier_id": "dime-ed25519-decision-receipt-verifier",
+    "verifier_version": "1.0.0",
+    "canonicalization": "dime-canonical-json-v1",
+    "signature_algorithm": "ed25519",
+    "activation_authorized": false
+  },
+  "reviewers": []
+}

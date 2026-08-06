@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisportsbettingmodels.com/schemas/observability_pricing_registry.schema.json",
+  "title": "Dime Observability Pricing Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "registryRevision", "status", "entries"],
+  "properties": {
+    "schemaVersion": {
+      "const": "dime-observability-pricing-registry-v1"
+    },
+    "registryRevision": {
+      "$ref": "#/$defs/label"
+    },
+    "status": {
+      "enum": ["review_required", "independently_reviewed", "approved"]
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+\\-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "usdRate": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "model",
+        "modelRevision",
+        "pricingRevision",
+        "effectiveFrom",
+        "effectiveTo",
+        "inputUsdPerMillionTokens",
+        "cachedInputUsdPerMillionTokens",
+        "outputUsdPerMillionTokens",
+        "requestUsd",
+        "toolRequestUsd",
+        "currency",
+        "source",
+        "sourceDocumentSha256",
+        "reviewStatus",
+        "reviewer",
+        "reviewedAt",
+        "reviewEvidenceSha256",
+        "entryChecksumSha256"
+      ],
+      "properties": {
+        "provider": { "$ref": "#/$defs/label" },
+        "model": { "$ref": "#/$defs/label" },
+        "modelRevision": { "$ref": "#/$defs/label" },
+        "pricingRevision": { "$ref": "#/$defs/label" },
+        "effectiveFrom": { "$ref": "#/$defs/timestamp" },
+        "effectiveTo": {
+          "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
+        },
+        "inputUsdPerMillionTokens": { "$ref": "#/$defs/usdRate" },
+        "cachedInputUsdPerMillionTokens": {
+          "oneOf": [{ "$ref": "#/$defs/usdRate" }, { "type": "null" }]
+        },
+        "outputUsdPerMillionTokens": { "$ref": "#/$defs/usdRate" },
+        "requestUsd": { "$ref": "#/$defs/usdRate" },
+        "toolRequestUsd": { "$ref": "#/$defs/usdRate" },
+        "currency": { "const": "USD" },
+        "source": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "sourceDocumentSha256": { "$ref": "#/$defs/sha256" },
+        "reviewStatus": {
+          "enum": ["review_required", "independently_reviewed", "approved"]
+        },
+        "reviewer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "reviewedAt": { "$ref": "#/$defs/timestamp" },
+        "reviewEvidenceSha256": { "$ref": "#/$defs/sha256" },
+        "entryChecksumSha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

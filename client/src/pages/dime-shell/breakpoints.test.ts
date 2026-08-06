@@ -63,8 +63,8 @@ describe("post-login product default", () => {
   });
 
   it("rejects non-internal returnPath values with the mobile default", () => {
-    expect(resolvePostLoginPath("//evil.example", () => ({ matches: false }))).toBe(
-      "/feed/model/mlb"
-    );
+    expect(
+      resolvePostLoginPath("//evil.example", () => ({ matches: false }))
+    ).toBe("/feed/model/mlb");
   });
 });

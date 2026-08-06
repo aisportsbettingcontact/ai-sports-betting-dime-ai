@@ -1,0 +1,31 @@
+[
+  {
+    "gamePk": 631470,
+    "season": 2020,
+    "officialDate": "2020-08-02",
+    "gameDate": "2020-08-02T16:10:00Z",
+    "gameType": "R",
+    "seriesDescription": "Regular Season",
+    "doubleHeader": "Y",
+    "gameNumber": 1,
+    "status": "Final",
+    "codedState": "F",
+    "away": "Cincinnati Reds",
+    "awayId": 113,
+    "awayScore": 4,
+    "home": "Detroit Tigers",
+    "homeId": 116,
+    "homeScore": 3,
+    "winner": "Raisel Iglesias",
+    "loser": "Joe Jim\u00e9nez",
+    "save": null,
+    "innings": 7,
+    "venue": "Comerica Park",
+    "dayNight": "day",
+    "seriesGameNumber": 2,
+    "gamesInSeries": 3,
+    "isTie": false,
+    "resumeDate": null,
+    "rescheduleDate": null
+  }
+]

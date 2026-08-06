@@ -30,7 +30,13 @@ import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { MLB_BY_AN_SLUG } from "@shared/mlbTeams";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
-import { ArrowLeft, RefreshCw, Calendar, TrendingUp, AlertTriangle } from "lucide-react";
+import {
+  ArrowLeft,
+  RefreshCw,
+  Calendar,
+  TrendingUp,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -39,9 +45,9 @@ import { cn } from "@/lib/utils";
 interface ScheduleGame {
   id: number;
   anGameId: number;
-  gameDate: string;         // "YYYY-MM-DD"
-  startTimeUtc: string;    // ISO-8601 UTC
-  gameStatus: string;      // "complete" | "scheduled" | "inprogress" | "postponed"
+  gameDate: string; // "YYYY-MM-DD"
+  startTimeUtc: string; // ISO-8601 UTC
+  gameStatus: string; // "complete" | "scheduled" | "inprogress" | "postponed"
   awaySlug: string;
   awayAbbr: string;
   awayName: string;
@@ -63,7 +69,7 @@ interface ScheduleGame {
   dkHomeML: string | null;
   awayRunLineCovered: boolean | null;
   homeRunLineCovered: boolean | null;
-  totalResult: string | null;   // "OVER" | "UNDER" | "PUSH" | null
+  totalResult: string | null; // "OVER" | "UNDER" | "PUSH" | null
   awayWon: boolean | null;
   lastRefreshedAt: number | null;
   // NOTE: isNeutralSite is NOT in the DB schema — field intentionally omitted
@@ -71,7 +77,7 @@ interface ScheduleGame {
 
 // ─── Status constants ─────────────────────────────────────────────────────────
 
-const STATUS_COMPLETE  = "complete";
+const STATUS_COMPLETE = "complete";
 const STATUS_POSTPONED = "postponed";
 
 const isCompleteGame = (g: ScheduleGame) => g.gameStatus === STATUS_COMPLETE;
@@ -127,9 +133,9 @@ function fmtTotal(
 type BadgeVariant = "win" | "loss" | "push" | "neutral";
 
 const BADGE_CLS: Record<BadgeVariant, string> = {
-  win:     "bg-black text-[#45E0A8] border-[#45E0A8]",
-  loss:    "bg-black text-white border-white",
-  push:    "bg-black text-white border-white",
+  win: "bg-black text-[#45E0A8] border-[#45E0A8]",
+  loss: "bg-black text-white border-white",
+  push: "bg-black text-white border-white",
   neutral: "bg-black text-white border-white",
 };
 
@@ -139,7 +145,7 @@ function Badge({ label, variant }: { label: string; variant: BadgeVariant }) {
       className={cn(
         "inline-flex items-center justify-center rounded border font-mono font-bold",
         "tracking-wide whitespace-nowrap",
-        "text-[8px] sm:text-xs px-[3px] sm:px-1 py-[1px]",
+        "text-[10px] sm:text-xs px-[3px] sm:px-1 py-[1px]",
         BADGE_CLS[variant]
       )}
     >
@@ -163,45 +169,48 @@ function ScheduleRow({
   const isAway = game.awaySlug === teamSlug;
 
   // ── Opponent ───────────────────────────────────────────────────────────────
-  const oppSlug   = isAway ? game.homeSlug   : game.awaySlug;
+  const oppSlug = isAway ? game.homeSlug : game.awaySlug;
   const oppTeamId = isAway ? game.homeTeamId : game.awayTeamId;
-  const oppAbbr   = isAway ? game.homeAbbr   : game.awayAbbr;
-  const oppTeam   = MLB_BY_AN_SLUG.get(oppSlug);
-  const oppLogo   = oppTeam?.logoUrl ?? `https://www.mlbstatic.com/team-logos/${oppTeamId}.svg`;
+  const oppAbbr = isAway ? game.homeAbbr : game.awayAbbr;
+  const oppTeam = MLB_BY_AN_SLUG.get(oppSlug);
+  const oppLogo =
+    oppTeam?.logoUrl ?? `https://www.mlbstatic.com/team-logos/${oppTeamId}.svg`;
 
   // ── Scores ─────────────────────────────────────────────────────────────────
-  const myScore  = isAway ? game.awayScore : game.homeScore;
+  const myScore = isAway ? game.awayScore : game.homeScore;
   const oppScore = isAway ? game.homeScore : game.awayScore;
 
   // ── Odds ───────────────────────────────────────────────────────────────────
-  const myRunLine     = isAway ? game.dkAwayRunLine     : game.dkHomeRunLine;
-  const myRunLineOdds = isAway ? game.dkAwayRunLineOdds : game.dkHomeRunLineOdds;
-  const myML          = isAway ? game.dkAwayML          : game.dkHomeML;
-  const myCovered     = isAway ? game.awayRunLineCovered : game.homeRunLineCovered;
+  const myRunLine = isAway ? game.dkAwayRunLine : game.dkHomeRunLine;
+  const myRunLineOdds = isAway
+    ? game.dkAwayRunLineOdds
+    : game.dkHomeRunLineOdds;
+  const myML = isAway ? game.dkAwayML : game.dkHomeML;
+  const myCovered = isAway ? game.awayRunLineCovered : game.homeRunLineCovered;
 
   // ── W/L ────────────────────────────────────────────────────────────────────
-  const myWon = game.awayWon != null
-    ? (isAway ? game.awayWon : !game.awayWon)
-    : null;
+  const myWon =
+    game.awayWon != null ? (isAway ? game.awayWon : !game.awayWon) : null;
 
   // ── Location ───────────────────────────────────────────────────────────────
   // NOTE: isNeutralSite not in DB schema — future: add neutral_site column when AN API provides it
-  const location  = isAway ? "Away" : "Home";
-  const locStyle  = isAway ? "bg-black text-white" : "bg-black text-white";
+  const location = isAway ? "Away" : "Home";
+  const locStyle = isAway ? "bg-black text-white" : "bg-black text-white";
 
   // ── Score / Time ───────────────────────────────────────────────────────────
-  const isComplete  = game.gameStatus === STATUS_COMPLETE;
+  const isComplete = game.gameStatus === STATUS_COMPLETE;
   const isScheduled = game.gameStatus === "scheduled";
 
   const scoreDisplay =
     isComplete && myScore != null && oppScore != null
       ? `${myScore}–${oppScore}`
       : isScheduled
-      ? fmtTime(game.startTimeUtc)
-      : "Live";
+        ? fmtTime(game.startTimeUtc)
+        : "Live";
 
   // ── W/L badge ─────────────────────────────────────────────────────────────
-  const wlVariant: BadgeVariant = myWon === true ? "win" : myWon === false ? "loss" : "neutral";
+  const wlVariant: BadgeVariant =
+    myWon === true ? "win" : myWon === false ? "loss" : "neutral";
   const wlLabel = myWon === true ? "W" : myWon === false ? "L" : "—";
 
   // ── COVER badge: Y | N | — ────────────────────────────────────────────────
@@ -212,36 +221,45 @@ function ScheduleRow({
   // ── O/U badge: O | U | P | — ─────────────────────────────────────────────
   // OVER→O, UNDER→U, PUSH→P (single character saves column space)
   const ouVariant: BadgeVariant =
-    game.totalResult === "OVER"  ? "win"
-    : game.totalResult === "UNDER" ? "loss"
-    : game.totalResult === "PUSH"  ? "push"
-    : "neutral";
+    game.totalResult === "OVER"
+      ? "win"
+      : game.totalResult === "UNDER"
+        ? "loss"
+        : game.totalResult === "PUSH"
+          ? "push"
+          : "neutral";
   const ouLabel =
-    game.totalResult === "OVER"  ? "O"
-    : game.totalResult === "UNDER" ? "U"
-    : game.totalResult === "PUSH"  ? "P"
-    : "—";
+    game.totalResult === "OVER"
+      ? "O"
+      : game.totalResult === "UNDER"
+        ? "U"
+        : game.totalResult === "PUSH"
+          ? "P"
+          : "—";
 
   // ── Cell classes ───────────────────────────────────────────────────────────
   const cell = "px-[2px] sm:px-1 py-1.5 align-middle";
-  const mono = "font-mono text-[8px] sm:text-xs";
+  const mono = "font-mono text-[10px] sm:text-xs";
   const dash = <span className={cn(mono, "text-white")}>—</span>;
 
   return (
     <tr className="border-b border-white transition-colors">
-
       {/* DATE */}
-      <td className={cn(cell, mono, "text-white text-center whitespace-nowrap")}>
+      <td
+        className={cn(cell, mono, "text-white text-center whitespace-nowrap")}
+      >
         {fmtDate(game.gameDate)}
       </td>
 
       {/* LOCATION */}
       <td className={cn(cell, "text-center")}>
-        <span className={cn(
-          "inline-block rounded font-mono font-bold whitespace-nowrap",
-          "text-[7px] sm:text-[8px] px-[2px] sm:px-1 py-[1px]",
-          locStyle
-        )}>
+        <span
+          className={cn(
+            "inline-block rounded font-mono font-bold whitespace-nowrap",
+            "text-[10px] px-[2px] sm:px-1 py-[1px]",
+            locStyle
+          )}
+        >
           {location}
         </span>
       </td>
@@ -252,18 +270,25 @@ function ScheduleRow({
           src={oppLogo}
           alt={oppAbbr}
           className="w-5 h-5 sm:w-6 sm:h-6 object-contain mx-auto"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          onError={e => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
         />
       </td>
 
       {/* SCORE / TIME — single line, no wrap */}
       <td className={cn(cell, "text-center")}>
-        <span className={cn(
-          mono, "font-bold whitespace-nowrap",
-          isComplete
-            ? myWon ? "text-[#45E0A8]" : "text-white"
-            : "text-white"
-        )}>
+        <span
+          className={cn(
+            mono,
+            "font-bold whitespace-nowrap",
+            isComplete
+              ? myWon
+                ? "text-[#45E0A8]"
+                : "text-white"
+              : "text-white"
+          )}
+        >
           {scoreDisplay}
         </span>
       </td>
@@ -303,7 +328,6 @@ function ScheduleRow({
           {myML ?? "—"}
         </span>
       </td>
-
     </tr>
   );
 }
@@ -324,7 +348,7 @@ function StatsSummary({
   if (!completed.length) return null;
 
   // W/L
-  const wins = completed.filter((g) => {
+  const wins = completed.filter(g => {
     const ia = g.awaySlug === teamSlug;
     return ia ? g.awayWon === true : g.awayWon === false;
   }).length;
@@ -334,37 +358,36 @@ function StatsSummary({
   // covered = games where team explicitly covered (true).
   // notCovered = all other completed games with a line (false or null-no-line).
   // null means no line was available — excluded from both counts for accuracy.
-  const covered = completed.filter((g) => {
+  const covered = completed.filter(g => {
     const ia = g.awaySlug === teamSlug;
     return ia ? g.awayRunLineCovered === true : g.homeRunLineCovered === true;
   }).length;
-  const notCovered = completed.filter((g) => {
+  const notCovered = completed.filter(g => {
     const ia = g.awaySlug === teamSlug;
     // Only count explicit false (did not cover) — null means no line, excluded
     return ia ? g.awayRunLineCovered === false : g.homeRunLineCovered === false;
   }).length;
 
   // O/U
-  const overs  = completed.filter((g) => g.totalResult === "OVER").length;
-  const unders = completed.filter((g) => g.totalResult === "UNDER").length;
-  const ouPush = completed.filter((g) => g.totalResult === "PUSH").length;
+  const overs = completed.filter(g => g.totalResult === "OVER").length;
+  const unders = completed.filter(g => g.totalResult === "UNDER").length;
+  const ouPush = completed.filter(g => g.totalResult === "PUSH").length;
 
   console.log(
     `[MlbTeamSchedule][StatsSummary] [OUTPUT]` +
-    ` team="${teamSlug}"` +
-    ` | record=${wins}-${losses}` +
-    ` | rlCover=${covered}-${notCovered}` +
-    ` | ou=${overs}-${unders}-${ouPush}` +
-    ` | completedGames=${completed.length}`
+      ` team="${teamSlug}"` +
+      ` | record=${wins}-${losses}` +
+      ` | rlCover=${covered}-${notCovered}` +
+      ` | ou=${overs}-${unders}-${ouPush}` +
+      ` | completedGames=${completed.length}`
   );
 
   return (
     // Three chips, single row, no scroll — flex-nowrap, chips shrink if needed
     <div className="flex items-stretch gap-2 sm:gap-3 mb-4 sm:mb-5">
-
       {/* RECORD */}
       <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
+        <span className="text-[10px] sm:text-xs text-white font-mono tracking-widest mb-1">
           RECORD
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -374,7 +397,7 @@ function StatsSummary({
 
       {/* RL COVER */}
       <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
+        <span className="text-[10px] sm:text-xs text-white font-mono tracking-widest mb-1">
           RL COVER
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -384,14 +407,14 @@ function StatsSummary({
 
       {/* O/U */}
       <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
+        <span className="text-[10px] sm:text-xs text-white font-mono tracking-widest mb-1">
           O/U
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
-          {overs}–{unders}{ouPush > 0 ? `–${ouPush}` : ""}
+          {overs}–{unders}
+          {ouPush > 0 ? `–${ouPush}` : ""}
         </span>
       </div>
-
     </div>
   );
 }
@@ -410,7 +433,7 @@ function ScheduleTable({
   isUpcoming: boolean;
 }) {
   const th = cn(
-    "px-[2px] sm:px-1 py-1.5 text-[7px] sm:text-[8px] font-bold",
+    "px-[2px] sm:px-1 py-1.5 text-[10px] font-bold",
     "text-white font-mono tracking-widest text-center whitespace-nowrap align-middle"
   );
 
@@ -444,7 +467,7 @@ function ScheduleTable({
           </tr>
         </thead>
         <tbody>
-          {games.map((game) => (
+          {games.map(game => (
             <ScheduleRow
               key={game.anGameId}
               game={game}
@@ -487,14 +510,14 @@ export default function MlbTeamSchedule() {
         enabled: !!teamSlug && !appAuthLoading && Boolean(appUser),
         staleTime: 90 * 1000,
         retry: 3,
-        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
-        refetchInterval: (query) => {
+        retryDelay: attempt => Math.min(1000 * 2 ** attempt, 10000),
+        refetchInterval: query => {
           const games = (query.state.data?.games ?? []) as ScheduleGame[];
-          const hasLive = games.some((g) => g.gameStatus === "inprogress");
+          const hasLive = games.some(g => g.gameStatus === "inprogress");
           if (hasLive) {
             console.log(
               `[MlbTeamSchedule][POLL] In-progress game detected — polling every 60s` +
-              ` | team="${teamSlug}" liveGames=${games.filter((g) => g.gameStatus === "inprogress").length}`
+                ` | team="${teamSlug}" liveGames=${games.filter(g => g.gameStatus === "inprogress").length}`
             );
             return 60_000;
           }
@@ -508,7 +531,8 @@ export default function MlbTeamSchedule() {
   // ── Stale-data detection ─────────────────────────────────────────────────────
   // Show a stale indicator if data is > 5 minutes old and there are upcoming/live games.
   const STALE_THRESHOLD_MS = 5 * 60 * 1000;
-  const isStale = dataUpdatedAt > 0 && (Date.now() - dataUpdatedAt) > STALE_THRESHOLD_MS;
+  const isStale =
+    dataUpdatedAt > 0 && Date.now() - dataUpdatedAt > STALE_THRESHOLD_MS;
 
   // ── Error logging — never silent ─────────────────────────────────────────────
   const errorRef = useRef<string | null>(null);
@@ -519,9 +543,9 @@ export default function MlbTeamSchedule() {
         errorRef.current = msg;
         console.error(
           `[MlbTeamSchedule][ERROR] getTeamSchedule FAILED` +
-          ` | team="${teamSlug}"` +
-          ` | message="${msg}"` +
-          ` | timestamp=${new Date().toISOString()}`
+            ` | team="${teamSlug}"` +
+            ` | message="${msg}"` +
+            ` | timestamp=${new Date().toISOString()}`
         );
       }
     } else {
@@ -531,21 +555,23 @@ export default function MlbTeamSchedule() {
 
   // ── Status partitioning ──────────────────────────────────────────────────────
   // CRITICAL: postponed games hidden from both sections — no score, no time, no result.
-  const completedGames  = games.filter(isCompleteGame);
-  const upcomingGames   = games.filter(isUpcomingGame);
-  const inProgressGames = games.filter((g) => g.gameStatus === "inprogress");
-  const postponedCount  = games.filter((g) => g.gameStatus === STATUS_POSTPONED).length;
+  const completedGames = games.filter(isCompleteGame);
+  const upcomingGames = games.filter(isUpcomingGame);
+  const inProgressGames = games.filter(g => g.gameStatus === "inprogress");
+  const postponedCount = games.filter(
+    g => g.gameStatus === STATUS_POSTPONED
+  ).length;
 
   console.log(
     `[MlbTeamSchedule] [STATE] team="${teamSlug}"` +
-    ` | total=${games.length}` +
-    ` | complete=${completedGames.length}` +
-    ` | upcoming=${upcomingGames.length}` +
-    ` | inprogress=${inProgressGames.length}` +
-    ` | postponed=${postponedCount} (hidden)` +
-    ` | polling=${inProgressGames.length > 0 ? "60s" : "off"}` +
-    ` | stale=${isStale}` +
-    ` | dataAge=${dataUpdatedAt > 0 ? Math.round((Date.now() - dataUpdatedAt) / 1000) + "s" : "no-data"}`
+      ` | total=${games.length}` +
+      ` | complete=${completedGames.length}` +
+      ` | upcoming=${upcomingGames.length}` +
+      ` | inprogress=${inProgressGames.length}` +
+      ` | postponed=${postponedCount} (hidden)` +
+      ` | polling=${inProgressGames.length > 0 ? "60s" : "off"}` +
+      ` | stale=${isStale}` +
+      ` | dataAge=${dataUpdatedAt > 0 ? Math.round((Date.now() - dataUpdatedAt) / 1000) + "s" : "no-data"}`
   );
 
   if (!teamSlug) {
@@ -558,11 +584,9 @@ export default function MlbTeamSchedule() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-white">
-
       {/* ── Sticky Header ──────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-20 bg-[#000000] backdrop-blur-sm border-b border-white">
         <div className="w-full px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2">
-
           <Button
             variant="ghost"
             size="sm"
@@ -578,7 +602,9 @@ export default function MlbTeamSchedule() {
               src={teamInfo.logoUrl}
               alt={teamInfo.abbrev}
               className="w-6 h-6 sm:w-8 sm:h-8 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           )}
 
@@ -586,7 +612,7 @@ export default function MlbTeamSchedule() {
             <h1 className="text-sm sm:text-sm font-bold text-white font-mono tracking-wide truncate leading-tight">
               {teamInfo?.name ?? teamSlug.replace(/-/g, " ").toUpperCase()}
             </h1>
-            <p className="text-[8px] sm:text-sm text-white font-mono leading-tight">
+            <p className="text-[10px] sm:text-sm text-white font-mono leading-tight">
               2026 MLB SCHEDULE
             </p>
           </div>
@@ -594,7 +620,7 @@ export default function MlbTeamSchedule() {
           <div className="flex items-center gap-1 flex-shrink-0">
             {/* Stale indicator — shown when data > 5 min old and page has live/upcoming games */}
             {isStale && !isFetching && upcomingGames.length > 0 && (
-              <span className="text-[7px] font-mono text-white bg-black border border-white rounded px-1 py-0.5">
+              <span className="text-[10px] font-mono text-white bg-black border border-white rounded px-1 py-0.5">
                 STALE
               </span>
             )}
@@ -602,27 +628,35 @@ export default function MlbTeamSchedule() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                console.log(`[MlbTeamSchedule][STEP] Manual refresh triggered | team="${teamSlug}"`);
+                console.log(
+                  `[MlbTeamSchedule][STEP] Manual refresh triggered | team="${teamSlug}"`
+                );
                 refetch();
               }}
               disabled={isFetching}
               className="text-white hover:text-white px-2"
             >
-              <RefreshCw className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", isFetching && "animate-spin")} />
+              <RefreshCw
+                className={cn(
+                  "w-3 h-3 sm:w-3.5 sm:h-3.5",
+                  isFetching && "animate-spin"
+                )}
+              />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div className="w-full px-2 sm:px-4 py-3 sm:py-5">
-
+      {/* ── Body ── the page's single main landmark (A11Y-NO-MAIN) ─────────── */}
+      <main className="w-full px-2 sm:px-4 py-3 sm:py-5">
         {/* Loading */}
         {isLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
               <RefreshCw className="w-5 h-5 text-white animate-spin mx-auto mb-3" />
-              <p className="text-white font-mono text-xs">Loading schedule...</p>
+              <p className="text-white font-mono text-xs">
+                Loading schedule...
+              </p>
             </div>
           </div>
         )}
@@ -642,13 +676,17 @@ export default function MlbTeamSchedule() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  console.log(`[MlbTeamSchedule][STEP] Manual retry triggered | team="${teamSlug}"`);
+                  console.log(
+                    `[MlbTeamSchedule][STEP] Manual retry triggered | team="${teamSlug}"`
+                  );
                   refetch();
                 }}
                 disabled={isFetching}
                 className="text-xs font-mono h-6 px-2 border-white text-white hover:text-white"
               >
-                <RefreshCw className={cn("w-3 h-3 mr-1", isFetching && "animate-spin")} />
+                <RefreshCw
+                  className={cn("w-3 h-3 mr-1", isFetching && "animate-spin")}
+                />
                 RETRY
               </Button>
             </div>
@@ -659,7 +697,9 @@ export default function MlbTeamSchedule() {
         {!isLoading && !error && games.length === 0 && (
           <div className="text-center py-16">
             <Calendar className="w-7 h-7 text-white mx-auto mb-3" />
-            <p className="text-white font-mono text-xs">No 2026 schedule data available.</p>
+            <p className="text-white font-mono text-xs">
+              No 2026 schedule data available.
+            </p>
             <p className="text-white font-mono text-sm mt-1">
               Run a backfill from the admin panel to populate data.
             </p>
@@ -704,8 +744,7 @@ export default function MlbTeamSchedule() {
             />
           </div>
         )}
-
-      </div>
+      </main>
     </div>
   );
 }

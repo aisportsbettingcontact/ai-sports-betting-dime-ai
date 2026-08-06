@@ -1,0 +1,76 @@
+name: DB Reconcile migrations (baseline)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Repairs only the verified pre-existing 0112–0115 drift between the live
+# schema and drizzle's __drizzle_migrations journal.
+#
+# Migrations 0112–0115 are already live (0112–0114 applied via drizzle-kit push;
+# 0115's DROPs run by the one-shot drop workflow) but were never recorded as
+# applied. scripts/reconcile-migrations.mjs inserts the missing journal rows
+# (hash + created_at, computed by drizzle's own readMigrationFiles) WITHOUT
+# running any migration SQL — pure bookkeeping, never touches app tables.
+#
+# Default mode is dry-run (writes nothing, just lists what it would baseline).
+# apply mode requires typing RECONCILE. The legacy repair is hard-capped at
+# 0115, and verification uses the current reconciled runner in plan-only mode.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run (list only) or apply (write journal rows)"
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - apply
+      confirm:
+        description: "For apply mode, type RECONCILE"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-reconcile-migrations
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Baseline __drizzle_migrations
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Guard — apply requires typed confirmation
+        if: ${{ inputs.mode == 'apply' && inputs.confirm != 'RECONCILE' }}
+        run: |
+          echo "::error::apply mode requires the 'confirm' input to be exactly RECONCILE."
+          exit 1
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Reconcile (${{ inputs.mode }})
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MODE: ${{ inputs.mode }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: node scripts/reconcile-migrations.mjs
+
+      - name: Verify current migration plan without writes
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:plan

@@ -31,23 +31,77 @@ When generating code suggestions:
 
 Always respond in a structured, actionable format. Lead with the most impactful changes first.`;
 
-export interface ClaudeMessage { role: "user" | "assistant"; content: string; }
-export interface ClaudeResponse { content: string; inputTokens: number; outputTokens: number; model: string; }
-
-export async function invokeClaude({ messages, systemPrompt = UIUX_SYSTEM_PROMPT, model = CLAUDE_MODEL, maxTokens = 4096 }: { messages: ClaudeMessage[]; systemPrompt?: string; model?: string; maxTokens?: number; }): Promise<ClaudeResponse> {
-  const response = await client.messages.create({ model, max_tokens: maxTokens, system: systemPrompt, messages: messages.map((m) => ({ role: m.role, content: m.content })) });
-  const content = response.content[0]?.type === "text" ? response.content[0].text : "";
-  return { content, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens, model: response.model };
+export interface ClaudeMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+export interface ClaudeResponse {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+  model: string;
 }
 
-export async function* streamClaude({ messages, systemPrompt = UIUX_SYSTEM_PROMPT, model = CLAUDE_MODEL, maxTokens = 4096 }: { messages: ClaudeMessage[]; systemPrompt?: string; model?: string; maxTokens?: number; }): AsyncIterable<string> {
-  const stream = await client.messages.stream({ model, max_tokens: maxTokens, system: systemPrompt, messages: messages.map((m) => ({ role: m.role, content: m.content })) });
+export async function invokeClaude({
+  messages,
+  systemPrompt = UIUX_SYSTEM_PROMPT,
+  model = CLAUDE_MODEL,
+  maxTokens = 4096,
+}: {
+  messages: ClaudeMessage[];
+  systemPrompt?: string;
+  model?: string;
+  maxTokens?: number;
+}): Promise<ClaudeResponse> {
+  const response = await client.messages.create({
+    model,
+    max_tokens: maxTokens,
+    system: systemPrompt,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+  });
+  const content =
+    response.content[0]?.type === "text" ? response.content[0].text : "";
+  return {
+    content,
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    model: response.model,
+  };
+}
+
+export async function* streamClaude({
+  messages,
+  systemPrompt = UIUX_SYSTEM_PROMPT,
+  model = CLAUDE_MODEL,
+  maxTokens = 4096,
+}: {
+  messages: ClaudeMessage[];
+  systemPrompt?: string;
+  model?: string;
+  maxTokens?: number;
+}): AsyncIterable<string> {
+  const stream = await client.messages.stream({
+    model,
+    max_tokens: maxTokens,
+    system: systemPrompt,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+  });
   for await (const chunk of stream) {
-    if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") yield chunk.delta.text;
+    if (
+      chunk.type === "content_block_delta" &&
+      chunk.delta.type === "text_delta"
+    )
+      yield chunk.delta.text;
   }
 }
 
-export async function askClaude(userMessage: string, systemPrompt?: string): Promise<string> {
-  const response = await invokeClaude({ messages: [{ role: "user", content: userMessage }], systemPrompt });
+export async function askClaude(
+  userMessage: string,
+  systemPrompt?: string
+): Promise<string> {
+  const response = await invokeClaude({
+    messages: [{ role: "user", content: userMessage }],
+    systemPrompt,
+  });
   return response.content;
 }

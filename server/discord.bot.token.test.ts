@@ -28,7 +28,13 @@ function isNetworkError(err: unknown): boolean {
   if (msg.includes("fetch failed")) return true;
   // Direct Node error codes
   const code = (err as NodeJS.ErrnoException).code ?? "";
-  return ["ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "ENETUNREACH"].includes(code);
+  return [
+    "ECONNRESET",
+    "ECONNREFUSED",
+    "ETIMEDOUT",
+    "ENOTFOUND",
+    "ENETUNREACH",
+  ].includes(code);
 }
 
 // Live Discord REST credential probe — scoped out of CI.
@@ -36,7 +42,10 @@ describe.skipIf(IS_CI)("Discord Bot Token Validation", () => {
   it("DISCORD_BOT_TOKEN is set in environment", () => {
     const token = process.env.DISCORD_BOT_TOKEN;
     expect(token, "DISCORD_BOT_TOKEN must be set").toBeTruthy();
-    expect(token!.length, "Token must be at least 50 characters").toBeGreaterThan(50);
+    expect(
+      token!.length,
+      "Token must be at least 50 characters"
+    ).toBeGreaterThan(50);
   });
 
   it("DISCORD_BOT_TOKEN is accepted by Discord REST API (/users/@me)", async () => {
@@ -61,8 +70,8 @@ describe.skipIf(IS_CI)("Discord Bot Token Validation", () => {
       if (isNetworkError(err)) {
         console.log(
           "[SKIP] discord.com HTTPS unreachable in sandbox (network error: " +
-          `${(err as Error).message}) — ` +
-          "skipping live API validation. Token presence check above still passed."
+            `${(err as Error).message}) — ` +
+            "skipping live API validation. Token presence check above still passed."
         );
         return; // soft-skip
       }
@@ -76,16 +85,25 @@ describe.skipIf(IS_CI)("Discord Bot Token Validation", () => {
       const body = await res.json().catch(() => ({}));
       throw new Error(
         `[FAIL] Discord rejected the token with HTTP 401. ` +
-        `The token is invalid or revoked. ` +
-        `Regenerate it at discord.com/developers/applications and update DISCORD_BOT_TOKEN. ` +
-        `Response: ${JSON.stringify(body)}`
+          `The token is invalid or revoked. ` +
+          `Regenerate it at discord.com/developers/applications and update DISCORD_BOT_TOKEN. ` +
+          `Response: ${JSON.stringify(body)}`
       );
     }
 
-    expect(res.status, `Discord API returned unexpected status ${res.status}`).toBe(200);
+    expect(
+      res.status,
+      `Discord API returned unexpected status ${res.status}`
+    ).toBe(200);
 
-    const data = (await res.json()) as { id?: string; username?: string; bot?: boolean };
-    console.log(`[VERIFY] PASS — Discord accepted token. Bot: ${data.username}#0000 (id=${data.id})`);
+    const data = (await res.json()) as {
+      id?: string;
+      username?: string;
+      bot?: boolean;
+    };
+    console.log(
+      `[VERIFY] PASS — Discord accepted token. Bot: ${data.username}#0000 (id=${data.id})`
+    );
 
     expect(data.id, "Response must include bot user ID").toBeTruthy();
     expect(data.username, "Response must include bot username").toBeTruthy();

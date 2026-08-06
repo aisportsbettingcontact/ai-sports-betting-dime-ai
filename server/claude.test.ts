@@ -7,23 +7,58 @@ const mockCreate = vi.fn().mockResolvedValue({
   model: "claude-fable-5",
 });
 async function* mockStream() {
-  yield { type: "content_block_delta", delta: { type: "text_delta", text: "Mock " } };
-  yield { type: "content_block_delta", delta: { type: "text_delta", text: "streaming " } };
-  yield { type: "content_block_delta", delta: { type: "text_delta", text: "response" } };
+  yield {
+    type: "content_block_delta",
+    delta: { type: "text_delta", text: "Mock " },
+  };
+  yield {
+    type: "content_block_delta",
+    delta: { type: "text_delta", text: "streaming " },
+  };
+  yield {
+    type: "content_block_delta",
+    delta: { type: "text_delta", text: "response" },
+  };
 }
-vi.mock("@anthropic-ai/sdk", () => ({ default: vi.fn().mockImplementation(() => ({ messages: { create: mockCreate, stream: vi.fn().mockImplementation(mockStream) } })) }));
+// vitest 4: mock implementations used with `new` must be constructable —
+// arrow implementations lost `new` support. A `function` returning an
+// object yields that object under `new` (same instances as before).
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: vi.fn(function () {
+    return {
+      messages: {
+        create: mockCreate,
+        stream: vi.fn().mockImplementation(mockStream),
+      },
+    };
+  }),
+}));
 
 describe("Claude Fable 5 Integration", () => {
   // Presence-probe only — the rest of this suite is fully mocked and keeps running in CI.
-  it.skipIf(IS_CI)("Anthropic credentials are set (API key or AI Gateway auth token)", () => { expect((process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY)?.length).toBeGreaterThan(0); });
-  it("CLAUDE_MODEL is claude-fable-5", async () => { const { CLAUDE_MODEL } = await import("./_core/claude"); expect(CLAUDE_MODEL).toBe("claude-fable-5"); });
+  it.skipIf(IS_CI)(
+    "Anthropic credentials are set (API key or AI Gateway auth token)",
+    () => {
+      expect(
+        (process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY)
+          ?.length
+      ).toBeGreaterThan(0);
+    }
+  );
+  it("CLAUDE_MODEL is claude-fable-5", async () => {
+    const { CLAUDE_MODEL } = await import("./_core/claude");
+    expect(CLAUDE_MODEL).toBe("claude-fable-5");
+  });
   describe("invokeClaude", () => {
     beforeEach(() => mockCreate.mockClear());
     it("returns valid ClaudeResponse", async () => {
       const { invokeClaude } = await import("./_core/claude");
-      const r = await invokeClaude({ messages: [{ role: "user", content: "Test" }] });
+      const r = await invokeClaude({
+        messages: [{ role: "user", content: "Test" }],
+      });
       expect(r.content).toBe("Mock Claude Fable 5 response");
-      expect(r.inputTokens).toBe(150); expect(r.outputTokens).toBe(75);
+      expect(r.inputTokens).toBe(150);
+      expect(r.outputTokens).toBe(75);
     });
     it("calls API with correct model", async () => {
       const { invokeClaude, CLAUDE_MODEL } = await import("./_core/claude");
@@ -32,24 +67,39 @@ describe("Claude Fable 5 Integration", () => {
     });
     it("accepts custom system prompt", async () => {
       const { invokeClaude } = await import("./_core/claude");
-      await invokeClaude({ messages: [{ role: "user", content: "Test" }], systemPrompt: "Custom" });
+      await invokeClaude({
+        messages: [{ role: "user", content: "Test" }],
+        systemPrompt: "Custom",
+      });
       expect(mockCreate.mock.calls[0]![0].system).toBe("Custom");
     });
     it("passes multi-turn history", async () => {
       const { invokeClaude } = await import("./_core/claude");
-      await invokeClaude({ messages: [{ role: "user", content: "A" }, { role: "assistant", content: "B" }, { role: "user", content: "C" }] });
+      await invokeClaude({
+        messages: [
+          { role: "user", content: "A" },
+          { role: "assistant", content: "B" },
+          { role: "user", content: "C" },
+        ],
+      });
       expect(mockCreate.mock.calls[0]![0].messages).toHaveLength(3);
     });
   });
   describe("askClaude", () => {
     beforeEach(() => mockCreate.mockClear());
-    it("returns string", async () => { const { askClaude } = await import("./_core/claude"); expect(await askClaude("Test")).toBe("Mock Claude Fable 5 response"); });
+    it("returns string", async () => {
+      const { askClaude } = await import("./_core/claude");
+      expect(await askClaude("Test")).toBe("Mock Claude Fable 5 response");
+    });
   });
   describe("streamClaude", () => {
     it("yields chunks", async () => {
       const { streamClaude } = await import("./_core/claude");
       const chunks: string[] = [];
-      for await (const c of streamClaude({ messages: [{ role: "user", content: "Test" }] })) chunks.push(c);
+      for await (const c of streamClaude({
+        messages: [{ role: "user", content: "Test" }],
+      }))
+        chunks.push(c);
       expect(chunks.join("")).toBe("Mock streaming response");
     });
   });

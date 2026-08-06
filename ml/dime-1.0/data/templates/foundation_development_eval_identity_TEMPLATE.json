@@ -1,0 +1,23 @@
+{
+  "schema_version": "dime-foundation-development-eval-identity-v2",
+  "repo_type": "dataset",
+  "repo_id": "taileredsports/dime-eval-development",
+  "revision": "REPLACE_WITH_FULL_40_CHARACTER_HF_COMMIT_SHA",
+  "manifest_path": "evaluation_manifest.json",
+  "manifest_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "case_root": "cases",
+  "case_files": [
+    {
+      "path": "cases/development/part-000.jsonl",
+      "sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "record_count": 1
+    },
+    {
+      "path": "cases/validation/part-000.jsonl",
+      "sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "record_count": 1
+    }
+  ],
+  "case_files_sha256": "REPLACE_WITH_SHA256_OF_CANONICAL_SORTED_CASE_FILES_ARRAY",
+  "case_count": 2
+}

@@ -73,4 +73,4 @@ long as you map to the nearest rung.
 
 Rendered validation at the six widths, 200% zoom reflow, and axe/Lighthouse
 passes require a real browser (blocked here). The scale is proven by math; a
-LiveLab/Playwright pass should confirm pixels before the full migration lands.
+Playwright should confirm pixels before the full migration lands.

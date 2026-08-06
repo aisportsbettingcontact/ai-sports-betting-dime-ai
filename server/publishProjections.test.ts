@@ -26,9 +26,7 @@ function spreadInverse(val: string): string {
 // ── Input sanitization (mirrors EditablePill handleChange) ──
 function sanitizeInput(raw: string): string {
   const cleaned = raw.replace(/[^\d.\-]/g, "");
-  return cleaned
-    .replace(/(?!^)-/g, "")
-    .replace(/(\..*)\./g, "$1");
+  return cleaned.replace(/(?!^)-/g, "").replace(/(\..*)\./g, "$1");
 }
 
 describe("ML inverse logic", () => {

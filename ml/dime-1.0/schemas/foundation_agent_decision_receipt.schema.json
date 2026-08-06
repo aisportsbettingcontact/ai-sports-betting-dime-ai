@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_agent_decision_receipt.schema.json",
+  "title": "Dime Foundation AI-Agent Decision Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "canonicalization",
+    "signature_algorithm",
+    "payload",
+    "signature_base64"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-agent-decision-receipt-v1"
+    },
+    "canonicalization": {
+      "const": "dime-canonical-json-v1"
+    },
+    "signature_algorithm": {
+      "const": "ed25519"
+    },
+    "payload": {
+      "$ref": "#/$defs/payload"
+    },
+    "signature_base64": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{86}==$"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "canonicalUtc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "purpose",
+        "reviewer_id",
+        "agent_profile_id",
+        "agent_profile_sha256",
+        "reviewer_registry_version",
+        "reviewer_registry_sha256",
+        "receipt_issuer_key_id",
+        "subject_sha256",
+        "decision_context_sha256",
+        "decision_at_utc"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^dime-receipt-[0-9a-f]{32}$"
+        },
+        "purpose": {
+          "enum": [
+            "record_review",
+            "source_rights_review",
+            "external_audit",
+            "dataset_approval"
+          ]
+        },
+        "reviewer_id": {
+          "type": "string",
+          "pattern": "^dime-reviewer-[a-z0-9][a-z0-9._-]{7,63}$"
+        },
+        "agent_profile_id": {
+          "type": "string",
+          "pattern": "^dime-agent-profile-[a-z0-9][a-z0-9._-]{7,63}$"
+        },
+        "agent_profile_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "reviewer_registry_version": {
+          "type": "string",
+          "pattern": "^dime-foundation-reviewers-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "reviewer_registry_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "receipt_issuer_key_id": {
+          "type": "string",
+          "pattern": "^key-[0-9a-f]{64}$"
+        },
+        "subject_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "decision_context_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "decision_at_utc": {
+          "$ref": "#/$defs/canonicalUtc"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,344 @@
+[
+  {
+    "venueId": 1353,
+    "name": "Santiago Bernabéu",
+    "city": "Madrid",
+    "state": null,
+    "country": "Spain",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 1781,
+    "name": "Stade de France",
+    "city": "Saint-Denis",
+    "state": null,
+    "country": "France",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 2455,
+    "name": "Wembley Stadium",
+    "city": "London",
+    "state": null,
+    "country": "England",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3493,
+    "name": "Caesars Superdome",
+    "city": "New Orleans",
+    "state": "LA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 3622,
+    "name": "GEHA Field at Arrowhead Stadium",
+    "city": "Kansas City",
+    "state": "MO",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3628,
+    "name": "Bank of America Stadium",
+    "city": "Charlotte",
+    "state": "NC",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3673,
+    "name": "Lumen Field",
+    "city": "Seattle",
+    "state": "WA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3679,
+    "name": "Huntington Bank Field",
+    "city": "Cleveland",
+    "state": "OH",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3687,
+    "name": "AT&T Stadium",
+    "city": "Arlington",
+    "state": "TX",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 3712,
+    "name": "EverBank Stadium",
+    "city": "Jacksonville",
+    "state": "FL",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3719,
+    "name": "Northwest Stadium",
+    "city": "Landover",
+    "state": "MD",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3727,
+    "name": "Ford Field",
+    "city": "Detroit",
+    "state": "MI",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 3738,
+    "name": "Gillette Stadium",
+    "city": "Foxborough",
+    "state": "MA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3752,
+    "name": "Acrisure Stadium",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3798,
+    "name": "Lambeau Field",
+    "city": "Green Bay",
+    "state": "WI",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3806,
+    "name": "Lincoln Financial Field",
+    "city": "Philadelphia",
+    "state": "PA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3810,
+    "name": "Nissan Stadium",
+    "city": "Nashville",
+    "state": "TN",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3812,
+    "name": "Lucas Oil Stadium",
+    "city": "Indianapolis",
+    "state": "IN",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 3814,
+    "name": "M&T Bank Stadium",
+    "city": "Baltimore",
+    "state": "MD",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3839,
+    "name": "MetLife Stadium",
+    "city": "East Rutherford",
+    "state": "NJ",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3874,
+    "name": "Paycor Stadium",
+    "city": "Cincinnati",
+    "state": "OH",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3886,
+    "name": "Raymond James Stadium",
+    "city": "Tampa",
+    "state": "FL",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3891,
+    "name": "NRG Stadium",
+    "city": "Houston",
+    "state": "TX",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 3933,
+    "name": "Soldier Field",
+    "city": "Chicago",
+    "state": "IL",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3937,
+    "name": "Empower Field at Mile High",
+    "city": "Denver",
+    "state": "CO",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3948,
+    "name": "Hard Rock Stadium",
+    "city": "Miami Gardens",
+    "state": "FL",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 3970,
+    "name": "State Farm Stadium",
+    "city": "Glendale",
+    "state": "AZ",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 4738,
+    "name": "Levi's Stadium",
+    "city": "Santa Clara",
+    "state": "CA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 5239,
+    "name": "U.S. Bank Stadium",
+    "city": "Minneapolis",
+    "state": "MN",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 5348,
+    "name": "Mercedes-Benz Stadium",
+    "city": "Atlanta",
+    "state": "GA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 5534,
+    "name": "Tottenham Hotspur Stadium",
+    "city": "London",
+    "state": null,
+    "country": "England",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 6501,
+    "name": "Allegiant Stadium",
+    "city": "Las Vegas",
+    "state": "NV",
+    "country": "USA",
+    "capacity": null,
+    "indoor": true
+  },
+  {
+    "venueId": 7065,
+    "name": "SoFi Stadium",
+    "city": "Inglewood",
+    "state": "CA",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 8219,
+    "name": "Estadio Banorte",
+    "city": "Mexico City",
+    "state": null,
+    "country": "Mexico",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 9119,
+    "name": "Melbourne Cricket Ground",
+    "city": "Melbourne",
+    "state": "VIC",
+    "country": "Australia",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 11930,
+    "name": "FC Bayern Munich Stadium",
+    "city": "Munich",
+    "state": null,
+    "country": "Germany",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 11931,
+    "name": "Maracanã Stadium",
+    "city": "Rio De Janeiro",
+    "state": null,
+    "country": "Brazil",
+    "capacity": null,
+    "indoor": false
+  },
+  {
+    "venueId": 11938,
+    "name": "Highmark Stadium",
+    "city": "Orchard Park",
+    "state": "NY",
+    "country": "USA",
+    "capacity": null,
+    "indoor": false
+  }
+]

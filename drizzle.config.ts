@@ -6,7 +6,14 @@ if (!connectionString) {
 }
 
 export default defineConfig({
-  schema: ["./drizzle/schema.ts", "./drizzle/wc2026.schema.ts", "./drizzle/dime.schema.ts"],
+  schema: [
+    "./drizzle/schema.ts",
+    "./drizzle/wc2026.schema.ts",
+    "./drizzle/dime.schema.ts",
+    "./drizzle/cfb.schema.ts",
+    "./drizzle/nfl.schema.ts",
+    "./drizzle/mlb.schema.ts",
+  ],
   out: "./drizzle",
   dialect: "mysql",
   dbCredentials: {

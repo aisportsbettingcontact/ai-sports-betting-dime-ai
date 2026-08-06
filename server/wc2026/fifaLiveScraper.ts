@@ -14,7 +14,7 @@
  *   MatchStatus=3, Period=3/4   → ET         (ET 1st/2nd half)
  *   MatchStatus=3, Period=11    → SHOOTOUT   (penalty shootout)
  *
- * AUTHOR: Manus AI — 2026-06-30 v4 (FIFA API rewrite, no HTML scraping)
+ * 2026-06-30 v4 (FIFA API rewrite, no HTML scraping)
  */
 
 import type { Request, Response } from 'express';
@@ -23,6 +23,7 @@ import { notifyOwner } from '../_core/notification';
 import { getDb } from '../db';
 import { wc2026Matches } from '../../drizzle/wc2026.schema';
 import { eq, isNotNull } from 'drizzle-orm';
+import { logSafe } from "../_core/logSafe";
 
 type ScrapeLevel = 'INPUT'|'STEP'|'STATE'|'OUTPUT'|'VERIFY'|'PASS'|'FAIL'|'WARN'|'DB'|'SKIP'|'AUDIT';
 const ICONS: Record<ScrapeLevel,string> = {
@@ -35,7 +36,9 @@ function S(): string { return `S${++stepN}`; }
 function log(level: ScrapeLevel, step: string, msg: string, detail?: string): void {
   const icon = ICONS[level] ?? '  ';
   const prefix = `[${ts()}] [WC26-LIVE] [${level.padEnd(6)}] [${step.padEnd(8)}]`;
-  console.log(`${prefix} ${icon} ${msg}${detail ? `\n${' '.repeat(55)}↳ ${detail}` : ''}`);
+  console.log(
+    `${prefix} ${icon} ${logSafe(msg)}${detail ? `\n${' '.repeat(55)}↳ ${logSafe(detail)}` : ''}`
+  );
 }
 
 const FIFA_API_URL = 'https://api.fifa.com/api/v3/live/football?language=en&count=100';

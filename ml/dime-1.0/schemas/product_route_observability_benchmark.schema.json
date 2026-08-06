@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/product-route-observability-benchmark-v1.json",
+  "title": "Dime product-route observational benchmark v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "benchmark_version",
+    "control_plane_revision",
+    "data_classification",
+    "provenance",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-product-route-observability-benchmark-v1"
+    },
+    "benchmark_version": {
+      "type": "string",
+      "pattern": "^product-route-observability-v1\\.[0-9]+\\.[0-9]+$"
+    },
+    "control_plane_revision": {
+      "const": "dime-composite-engineering-control-v1"
+    },
+    "data_classification": {
+      "const": "synthetic"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at", "source", "contains_production_data"],
+      "properties": {
+        "created_at": { "type": "string", "format": "date-time" },
+        "source": { "const": "reviewed_synthetic_contract_cases" },
+        "contains_production_data": { "const": false }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 18,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "prompt",
+          "legacy_mode",
+          "expected_route",
+          "accepted_alternate_routes",
+          "entities",
+          "temporal_state",
+          "tools_required",
+          "authoritative_sources",
+          "expected_output_schema",
+          "critical_failure_conditions"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "pattern": "^product_route_[a-z_]+_[0-9]{3}$"
+          },
+          "prompt": { "type": "string", "minLength": 3, "maxLength": 500 },
+          "legacy_mode": {
+            "enum": ["platform", "matchup", "slate", "educational"]
+          },
+          "expected_route": {
+            "$ref": "#/$defs/productRoute"
+          },
+          "accepted_alternate_routes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/productRoute" }
+          },
+          "entities": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+          },
+          "temporal_state": {
+            "enum": [
+              "not_applicable",
+              "current",
+              "historical",
+              "explicit_date",
+              "missing_date",
+              "ambiguous"
+            ]
+          },
+          "tools_required": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+          },
+          "authoritative_sources": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 100 }
+          },
+          "expected_output_schema": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "critical_failure_conditions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "productRoute": {
+      "enum": [
+        "platform",
+        "matchup",
+        "full_slate",
+        "educational",
+        "bet_explanation",
+        "historical",
+        "account",
+        "live_data",
+        "general_sports"
+      ]
+    }
+  }
+}

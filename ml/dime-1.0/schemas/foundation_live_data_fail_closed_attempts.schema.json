@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_live_data_fail_closed_attempts.schema.json",
+  "title": "Dime Foundation Live Data Fail-Closed Attempts v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "recorded_at", "attempts"],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-live-data-fail-closed-attempts-v1"
+    },
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "attempts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence",
+          "gate",
+          "result",
+          "reason",
+          "accepted_artifacts_written",
+          "source_evidence_mutations"
+        ],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 1, "maximum": 2},
+          "gate": {
+            "enum": [
+              "REPAIR_DECISION_INVENTORY",
+              "HIGH_RISK_REVIEWER_CARDINALITY"
+            ]
+          },
+          "result": {"const": "BLOCKED_EXPECTED"},
+          "reason": {"type": "string", "minLength": 1},
+          "accepted_artifacts_written": {"const": false},
+          "source_evidence_mutations": {"const": 0}
+        }
+      }
+    }
+  }
+}

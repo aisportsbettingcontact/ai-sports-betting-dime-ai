@@ -1,0 +1,52 @@
+{
+  "example_id": "REPLACE_ME",
+  "dataset_version": "dime-sft-foundation-v1",
+  "task_type": "conversation_epistemics",
+  "messages": [
+    {
+      "role": "user",
+      "content": "REPLACE_ME"
+    },
+    {
+      "role": "assistant",
+      "content": "REPLACE_ME"
+    }
+  ],
+  "numeric_assertions": [],
+  "curriculum": {
+    "skill_ids": [
+      "conversation.evidence_interpretation"
+    ],
+    "difficulty": "foundation",
+    "interaction_mode": "direct_no_tool",
+    "scenario_cluster_id": "REPLACE_ME",
+    "evidence_status": "not_applicable",
+    "policy_action": "allow",
+    "risk_tier": "standard"
+  },
+  "metadata": {
+    "sport": null,
+    "league": null,
+    "as_of_utc": "2026-07-25T12:00:00Z",
+    "synthetic_or_deidentified": "synthetic",
+    "contains_user_data": false,
+    "consent_basis": null,
+    "source_ids": [
+      "REPLACE_ME"
+    ],
+    "event_partition_key": null,
+    "user_partition_hash": null,
+    "rights_basis": "REPLACE_ME",
+    "source_owner": "REPLACE_ME",
+    "deidentification_method": null,
+    "generation_method": "REPLACE_ME",
+    "deletion_policy_id": null,
+    "direct_identifier_scan_version": "REPLACE_ME"
+  },
+  "quality": {
+    "review_status": "draft",
+    "reviewer_ids": [],
+    "reviewed_at_utc": null,
+    "rubric_version": "dime-answer-v1"
+  }
+}

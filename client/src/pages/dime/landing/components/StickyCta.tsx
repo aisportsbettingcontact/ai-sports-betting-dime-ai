@@ -16,7 +16,8 @@ export default function StickyCta() {
       const pricing = document.getElementById("pricing");
       if (!hero || !pricing) return;
       const heroGone = hero.getBoundingClientRect().bottom < 0;
-      const pricingNear = pricing.getBoundingClientRect().top < window.innerHeight * 0.75;
+      const pricingNear =
+        pricing.getBoundingClientRect().top < window.innerHeight * 0.75;
       setOn(heroGone && !pricingNear);
     };
     update();
@@ -25,7 +26,12 @@ export default function StickyCta() {
   }, []);
 
   return (
-    <div className={on ? "slipbar on" : "slipbar"} role="complementary" aria-label="Subscribe" aria-hidden={!on}>
+    <div
+      className={on ? "slipbar on" : "slipbar"}
+      role="complementary"
+      aria-label="Subscribe"
+      aria-hidden={!on}
+    >
       <span className="price num">≈ $3.30 / day</span>
       <span className="lead" aria-hidden="true" />
       {/* Deep-link: the bar already quotes the Pro per-day price and only shows

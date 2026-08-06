@@ -62,37 +62,54 @@ describe("Dime structured verdict validation", () => {
   });
 
   it("rejects stale odds for confirmed edges", () => {
-    const result = validateDimeStructuredVerdict({ ...validMoneyline(), odds_observed_at: "2026-07-12T11:00:00.000Z" }, now);
+    const result = validateDimeStructuredVerdict(
+      { ...validMoneyline(), odds_observed_at: "2026-07-12T11:00:00.000Z" },
+      now
+    );
     expect(result.ok).toBe(false);
     expect(result.errors).toContain("edge_detected_stale_odds");
   });
 
   it("rejects generated arithmetic outside tolerance", () => {
-    const result = validateDimeStructuredVerdict({ ...validMoneyline(), probability_edge: 0.25 }, now);
+    const result = validateDimeStructuredVerdict(
+      { ...validMoneyline(), probability_edge: 0.25 },
+      now
+    );
     expect(result.ok).toBe(false);
     expect(result.errors).toContain("probability_edge_mismatch");
   });
 
   it("allows need_more_data only when missing fields are explicit", () => {
-    const result = validateDimeStructuredVerdict({
-      schema_version: "1",
-      market_type: "total",
-      verdict: "need_more_data",
-      selection: "over",
-      data_quality: "missing",
-      missing_data_fields: ["current_odds", "model_version"],
-    }, now);
+    const result = validateDimeStructuredVerdict(
+      {
+        schema_version: "1",
+        market_type: "total",
+        verdict: "need_more_data",
+        selection: "over",
+        data_quality: "missing",
+        missing_data_fields: ["current_odds", "model_version"],
+      },
+      now
+    );
     expect(result.ok).toBe(true);
   });
 
   it("blocks legacy edge text without a valid structured verdict", () => {
-    const result = validateDimeResponseText("[EDGE] verdict=edge_detected market=ML model_line=x market_line=y [/EDGE]", now);
+    const result = validateDimeResponseText(
+      "[EDGE] verdict=edge_detected market=ML model_line=x market_line=y [/EDGE]",
+      now
+    );
     expect(result.ok).toBe(false);
-    expect(result.errors).toContain("edge_claim_without_valid_structured_verdict");
+    expect(result.errors).toContain(
+      "edge_claim_without_valid_structured_verdict"
+    );
   });
 
   it("validates a structured verdict embedded in a response", () => {
-    const result = validateDimeResponseText(`Verdict below\n\n\`\`\`json\n${JSON.stringify(validMoneyline())}\n\`\`\``, now);
+    const result = validateDimeResponseText(
+      `Verdict below\n\n\`\`\`json\n${JSON.stringify(validMoneyline())}\n\`\`\``,
+      now
+    );
     expect(result.ok).toBe(true);
   });
 

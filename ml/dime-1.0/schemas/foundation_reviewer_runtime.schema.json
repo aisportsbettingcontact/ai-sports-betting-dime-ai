@@ -1,0 +1,476 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_reviewer_runtime.schema.json",
+  "title": "Dime Foundation Reviewer Runtime Candidate",
+  "description": "Public, inactive, unprovisioned RunPod Serverless reviewer runtime contract. Secrets, endpoint identifiers, activation, and network execution are prohibited.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "activation_authorized",
+    "runtime",
+    "reviewers"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-reviewer-runtime-v1"
+    },
+    "status": {
+      "const": "planned_unprovisioned"
+    },
+    "activation_authorized": {
+      "const": false
+    },
+    "runtime": {
+      "$ref": "#/$defs/runtime"
+    },
+    "reviewers": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/reviewer"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sha256Prefixed": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "immutableRevision": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "not": {
+        "pattern": "(?:^|[-_.:/])(?:replace|placeholder|example|sample|test|tbd|todo|unknown|latest|unassigned|main|master|stable|current|head)(?:$|[-_.:/])"
+      }
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+      "not": {
+        "pattern": "(?:^/|^\\.\\.?/|/\\.\\.?/|/\\.\\.?$|//)"
+      }
+    },
+    "authorizationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activates_reviewer",
+        "approves_data",
+        "authorizes_gpu_execution",
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_release",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "activates_reviewer": {
+          "const": false
+        },
+        "approves_data": {
+          "const": false
+        },
+        "authorizes_gpu_execution": {
+          "const": false
+        },
+        "authorizes_training": {
+          "const": false
+        },
+        "authorizes_locked_evaluation": {
+          "const": false
+        },
+        "authorizes_publication": {
+          "const": false
+        },
+        "authorizes_release": {
+          "const": false
+        },
+        "authorizes_serving": {
+          "const": false
+        },
+        "authorizes_provider_activation": {
+          "const": false
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "endpoint_type",
+        "worker_source",
+        "container",
+        "security"
+      ],
+      "properties": {
+        "provider": {
+          "const": "runpod_serverless"
+        },
+        "endpoint_type": {
+          "const": "queue"
+        },
+        "worker_source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "release",
+            "source_revision"
+          ],
+          "properties": {
+            "repository": {
+              "const": "runpod-workers/worker-vllm"
+            },
+            "release": {
+              "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "type": "string"
+            },
+            "source_revision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            }
+          }
+        },
+        "container": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "release",
+            "oci_index_digest",
+            "linux_amd64_digest",
+            "deploy_ref",
+            "runtime_version",
+            "platform",
+            "vllm_version",
+            "cuda_version"
+          ],
+          "properties": {
+            "repository": {
+              "const": "docker.io/runpod/worker-v1-vllm"
+            },
+            "release": {
+              "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "type": "string"
+            },
+            "oci_index_digest": {
+              "$ref": "#/$defs/sha256Prefixed"
+            },
+            "linux_amd64_digest": {
+              "$ref": "#/$defs/sha256Prefixed"
+            },
+            "deploy_ref": {
+              "type": "string",
+              "pattern": "^docker\\.io/runpod/worker-v1-vllm:v[0-9]+\\.[0-9]+\\.[0-9]+@sha256:[0-9a-f]{64}$"
+            },
+            "runtime_version": {
+              "$ref": "#/$defs/sha256"
+            },
+            "platform": {
+              "const": "linux/amd64"
+            },
+            "vllm_version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+            },
+            "cuda_version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+            }
+          }
+        },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "secrets_in_repository_allowed",
+            "network_calls_during_planning_allowed",
+            "custom_handler",
+            "model_weights_baked_in"
+          ],
+          "properties": {
+            "secrets_in_repository_allowed": {
+              "const": false
+            },
+            "network_calls_during_planning_allowed": {
+              "const": false
+            },
+            "custom_handler": {
+              "const": false
+            },
+            "model_weights_baked_in": {
+              "const": false
+            }
+          }
+        }
+      }
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_id",
+        "profile_id",
+        "independence_group_id",
+        "status",
+        "active",
+        "model_provider",
+        "model_id",
+        "model_revision",
+        "runtime_version",
+        "model_lineage_id",
+        "policy_lineage_id",
+        "roles",
+        "policy_paths",
+        "policy_sha256",
+        "endpoint",
+        "request_policy",
+        "authorization_effect"
+      ],
+      "properties": {
+        "reviewer_id": {
+          "type": "string",
+          "pattern": "^dime-reviewer-[a-z0-9][a-z0-9._-]{7,63}$"
+        },
+        "profile_id": {
+          "type": "string",
+          "pattern": "^dime-agent-profile-[a-z0-9][a-z0-9._-]{7,63}$"
+        },
+        "independence_group_id": {
+          "type": "string",
+          "pattern": "^dime-independence-group-[a-z0-9][a-z0-9._-]{7,63}$"
+        },
+        "status": {
+          "const": "planned_unprovisioned"
+        },
+        "active": {
+          "const": false
+        },
+        "model_provider": {
+          "const": "hugging_face"
+        },
+        "model_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+        },
+        "model_revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "runtime_version": {
+          "$ref": "#/$defs/sha256"
+        },
+        "model_lineage_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "policy_lineage_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "coaching",
+              "dataset-approver",
+              "domain",
+              "evaluation-audit",
+              "locked-evaluation",
+              "numeric",
+              "privacy",
+              "rights",
+              "safety",
+              "semantic-audit",
+              "simulation"
+            ]
+          }
+        },
+        "policy_paths": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "system_instruction",
+            "tool_contract",
+            "inference_policy",
+            "conflict_policy",
+            "recusal_policy"
+          ],
+          "properties": {
+            "system_instruction": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "tool_contract": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "inference_policy": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "conflict_policy": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "recusal_policy": {
+              "$ref": "#/$defs/relativePath"
+            }
+          }
+        },
+        "policy_sha256": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "system_instruction",
+            "tool_contract",
+            "inference_policy",
+            "conflict_policy",
+            "recusal_policy"
+          ],
+          "properties": {
+            "system_instruction": {
+              "$ref": "#/$defs/sha256"
+            },
+            "tool_contract": {
+              "$ref": "#/$defs/sha256"
+            },
+            "inference_policy": {
+              "$ref": "#/$defs/sha256"
+            },
+            "conflict_policy": {
+              "$ref": "#/$defs/sha256"
+            },
+            "recusal_policy": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "endpoint": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "endpoint_id",
+            "workload_identity_id",
+            "minimum_vram_gb",
+            "workers_min",
+            "workers_max",
+            "gpu_candidates",
+            "environment",
+            "secret_environment"
+          ],
+          "properties": {
+            "endpoint_id": {
+              "type": "null"
+            },
+            "workload_identity_id": {
+              "type": "null"
+            },
+            "minimum_vram_gb": {
+              "type": "integer",
+              "minimum": 80
+            },
+            "workers_min": {
+              "const": 0
+            },
+            "workers_max": {
+              "const": 1
+            },
+            "gpu_candidates": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "NVIDIA A100 80GB",
+                  "NVIDIA H100 80GB",
+                  "NVIDIA H100 NVL 94GB",
+                  "NVIDIA RTX PRO 6000 96GB",
+                  "NVIDIA B200 180GB"
+                ]
+              }
+            },
+            "environment": {
+              "type": "object",
+              "minProperties": 10,
+              "maxProperties": 16,
+              "propertyNames": {
+                "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+                "not": {
+                  "pattern": "(?:^|_)(?:TOKEN|SECRET|PASSWORD|CREDENTIAL|API_KEY|PRIVATE_KEY)(?:$|_)"
+                }
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "secret_environment": {
+              "type": "array",
+              "maxItems": 0
+            }
+          }
+        },
+        "request_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "temperature",
+            "top_p",
+            "top_k",
+            "max_tokens",
+            "seed",
+            "response_format"
+          ],
+          "properties": {
+            "temperature": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "top_p": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            "top_k": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 100
+            },
+            "max_tokens": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 4096
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2147483647
+            },
+            "response_format": {
+              "const": "json_object"
+            }
+          }
+        },
+        "authorization_effect": {
+          "$ref": "#/$defs/authorizationEffect"
+        }
+      }
+    }
+  }
+}

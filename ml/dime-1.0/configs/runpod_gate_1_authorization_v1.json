@@ -1,0 +1,154 @@
+{
+  "schema_version": "dime-runpod-gate-1-authorization-v1",
+  "gate_id": "dime-llm-v1-runpod-baseline-inference",
+  "status": "BLOCKED_INCOMPLETE_NOT_AUTHORIZED",
+  "source_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+  "authorization_effect": "NONE_WHILE_REQUIRED_IDENTITIES_OR_LIMITS_ARE_UNFROZEN",
+  "existing_control_plane": {
+    "path": "ml/dime-1.0/configs/model_execution_gates_v1.json",
+    "sha256": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee",
+    "status": "FROZEN_NOT_AUTHORIZED"
+  },
+  "runtime_identity": {
+    "container_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",
+    "container_image_evidence": [
+      {
+        "path": "ml/dime-1.0/configs/platform_contract.json",
+        "sha256": "8d385de6b1e26eb5714ec7e18f9088e4e38b6501f33ba55c64a453ce46f8eca9"
+      },
+      {
+        "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
+        "sha256": "07566d9e86eafd2ea3372142a8b8078ebc3f94f61a7d22b181174da9127dfb4b"
+      }
+    ],
+    "container_digest": null
+  },
+  "candidates": {
+    "base": {
+      "repo_id": "meta-llama/Llama-3.1-8B",
+      "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "tokenizer_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "serialization_profile_sha256": null
+    },
+    "instruct": {
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "tokenizer_revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "serialization_profile_sha256": null
+    },
+    "identity_evidence": {
+      "path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
+      "sha256": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+      "status": "FROZEN_NOT_AUTHORIZED"
+    }
+  },
+  "shared_controls": {
+    "prompt_revision": "dime-prompt-v1",
+    "prompt_bindings": [
+      {
+        "path": "ml/dime-1.0/prompts/dime_system_v1.md",
+        "sha256": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9"
+      },
+      {
+        "path": "ml/dime-1.0/prompts/llama3_dime_chat_template_v1.jinja",
+        "sha256": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087"
+      }
+    ],
+    "tool_revision": "tools.v1",
+    "tool_binding": {
+      "path": "ml/dime-1.0/tools/tools.v1.json",
+      "sha256": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5"
+    },
+    "retrieval_revision": null,
+    "retrieval_source_binding": {
+      "path": "server/_core/dimeChatContext.ts",
+      "sha256": "1436a564daa2b101607256fe17a57da6c5599960fa71b96c420b11f2ecc6261d"
+    },
+    "routing_revision": "runtime-answer-routing-v1",
+    "routing_binding": {
+      "path": "server/_core/dimeAnswerRouting.ts",
+      "sha256": "f0ccc880992f6dfcfd91f93733dad4ab0c3b1c55485fb5d41e143051535f17b7"
+    },
+    "context_compiler_revision": null,
+    "decoding_revision": "decoding-v1",
+    "decoding_binding": {
+      "path": "ml/dime-1.0/configs/decoding_v1.json",
+      "sha256": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1"
+    },
+    "evaluation_revisions": [
+      {
+        "revision": "base-model-suitability-v1",
+        "path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
+        "sha256": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+        "status": "FROZEN_NOT_AUTHORIZED"
+      },
+      {
+        "revision": "model-artifact-evaluation-v1",
+        "path": "ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json",
+        "sha256": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19",
+        "status": "FROZEN_NOT_AUTHORIZED"
+      }
+    ],
+    "random_seed": 1729
+  },
+  "budgets": {
+    "maximum_gpu_hours": null,
+    "maximum_spend_usd": null,
+    "currency": "USD"
+  },
+  "security_preconditions": {
+    "credential_execution_closure": "BLOCKED_ROOT_TRUST_NOT_PROVISIONED",
+    "runpod_permission_attestation": "MISSING",
+    "credential_accessed": false
+  },
+  "required_blockers": [
+    "container_digest",
+    "base.serialization_profile_sha256",
+    "instruct.serialization_profile_sha256",
+    "retrieval_revision",
+    "context_compiler_revision",
+    "maximum_gpu_hours",
+    "maximum_spend_usd",
+    "credential_execution_closure",
+    "runpod_permission_attestation",
+    "independent_review",
+    "owner_merge"
+  ],
+  "owner_merge_may_authorize": {
+    "model_download": true,
+    "base_vs_instruct_inference": true,
+    "candidate_a_inference": true,
+    "candidate_b_inference": true
+  },
+  "effective_authorization": {
+    "model_download": false,
+    "base_vs_instruct_inference": false,
+    "candidate_a_inference": false,
+    "candidate_b_inference": false
+  },
+  "still_not_authorized": {
+    "benchmark_scoring": false,
+    "answer_key_access": false,
+    "locked_evaluation_execution": false,
+    "model_selection": false,
+    "smoke_training": false,
+    "full_training": false,
+    "checkpoint_resume": false,
+    "model_serving": false,
+    "provider_activation": false,
+    "railway_mutation": false,
+    "deployment": false
+  },
+  "external_actions_performed": {
+    "credential_accesses": 0,
+    "runpod_calls": 0,
+    "model_downloads": 0,
+    "tokenizer_downloads": 0,
+    "inference_requests": 0,
+    "benchmark_executions": 0,
+    "training_runs": 0,
+    "serving_changes": 0,
+    "railway_mutations": 0,
+    "deployments": 0
+  }
+}

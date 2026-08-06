@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "dime-evidence-lifecycle-migration-verification-v1",
+  "verifiedAt": "2026-07-29T12:57:36Z",
+  "sourceCommit": "47e338fbbcb10e30f63fc048ac366f85a9a18f72",
+  "sourceCommitStatus": "uncommitted_local_changes",
+  "database": {
+    "engine": "MySQL",
+    "image": "mysql:8.0",
+    "imageDigest": "sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b",
+    "scope": "disposable_local_container"
+  },
+  "results": [
+    {
+      "check": "migration_0122_first_application",
+      "status": "pass",
+      "evidence": "All seven nullable lifecycle columns were added with the reviewed definitions."
+    },
+    {
+      "check": "migration_0122_second_application",
+      "status": "pass",
+      "evidence": "All seven guards reported the columns already present and no ALTER was repeated."
+    },
+    {
+      "check": "historical_null_preservation",
+      "status": "pass",
+      "evidence": "The pre-existing test row remained present and all seven new fields remained null."
+    },
+    {
+      "check": "rollback_first_application",
+      "status": "pass",
+      "evidence": "The manual guarded rollback removed all seven lifecycle columns and preserved the test row."
+    },
+    {
+      "check": "rollback_second_application",
+      "status": "pass",
+      "evidence": "All seven guards reported the columns already absent."
+    },
+    {
+      "check": "full_historical_migration_chain",
+      "status": "baseline_blocked",
+      "evidence": "The existing migration history failed before 0122 because wc2026_matches was created twice; migration 0122 was therefore verified in isolation."
+    }
+  ],
+  "cleanup": {
+    "containerRemoved": true,
+    "productionResourcesTouched": false
+  },
+  "authorizationEffect": {
+    "authorizesProductionDatabaseMutation": false,
+    "authorizesDeployment": false,
+    "authorizesTraceActivation": false,
+    "authorizesShadow": false
+  }
+}

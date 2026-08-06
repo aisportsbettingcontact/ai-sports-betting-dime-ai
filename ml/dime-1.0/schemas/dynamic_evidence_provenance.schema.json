@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisportsbettingmodels.com/schemas/dynamic_evidence_provenance.schema.json",
+  "title": "Dime Dynamic Evidence Provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["providerObservation", "ingestionLifecycle"],
+  "properties": {
+    "providerObservation": {
+      "$ref": "#/$defs/providerObservation"
+    },
+    "ingestionLifecycle": {
+      "$ref": "#/$defs/ingestionLifecycle"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableTimestamp": {
+      "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+\\-]*$"
+    },
+    "nullableLabel": {
+      "oneOf": [{ "$ref": "#/$defs/label" }, { "type": "null" }]
+    },
+    "providerRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedAt",
+        "timestampSource",
+        "providerName",
+        "providerRevision",
+        "confidence",
+        "fallbackUsed"
+      ],
+      "properties": {
+        "observedAt": { "$ref": "#/$defs/timestamp" },
+        "timestampSource": { "$ref": "#/$defs/label" },
+        "providerName": { "$ref": "#/$defs/label" },
+        "providerRevision": { "$ref": "#/$defs/label" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "fallbackUsed": { "type": "boolean" }
+      }
+    },
+    "providerObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "observations",
+        "selectedObservedAt",
+        "freshnessAtRequest",
+        "issues"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "unavailable",
+            "available",
+            "conflicting",
+            "rejected"
+          ]
+        },
+        "observations": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/providerRecord" }
+        },
+        "selectedObservedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "freshnessAtRequest": {
+          "enum": [
+            "current",
+            "delayed",
+            "stale",
+            "not_applicable",
+            "unavailable",
+            "conflicting",
+            "rejected"
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/label" }
+        }
+      }
+    },
+    "ingestionLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "sourceObservedAt",
+        "receivedAt",
+        "normalizedAt",
+        "persistedAt",
+        "retrievedAt",
+        "responseGeneratedAt",
+        "pipelineRevision",
+        "ingestionRunId",
+        "clockSkewClassification",
+        "issues"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_applicable",
+            "unavailable",
+            "available",
+            "clock_skew",
+            "rejected"
+          ]
+        },
+        "sourceObservedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "receivedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "normalizedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "persistedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "retrievedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "responseGeneratedAt": { "$ref": "#/$defs/nullableTimestamp" },
+        "pipelineRevision": { "$ref": "#/$defs/nullableLabel" },
+        "ingestionRunId": { "$ref": "#/$defs/nullableLabel" },
+        "clockSkewClassification": {
+          "oneOf": [
+            {
+              "enum": [
+                "source_clock_ahead",
+                "pipeline_clock_skew",
+                "cross_region_clock_skew",
+                "unclassified_clock_skew"
+              ]
+            },
+            { "type": "null" }
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "$ref": "#/$defs/label" }
+        }
+      }
+    }
+  }
+}

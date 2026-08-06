@@ -1,0 +1,104 @@
+# TEMPLATE ONLY. Do not run until the dataset, split, and release gates are approved.
+run:
+  name: replace-with-unique-experiment-id
+  experiment_id: replace-with-unique-experiment-id
+  manifest: /workspace/runs/replace-with-unique-experiment-id/run_manifest.json
+  mode: full
+  authorization_status: authorized_for_full_training
+  release_review_status: not_started
+  seed: 1729
+
+model:
+  id: meta-llama/Llama-3.1-8B
+  revision: d04e592bb4f6aa9cfee91e2e20afa771667e1d4b
+  trust_remote_code: false
+  attention_implementation: sdpa
+  chat_template: prompts/llama3_dime_chat_template_v1.jinja
+  tool_catalog: tools/tools.v1.json
+
+provenance:
+  source:
+    github_repository: aisportsbettingcontact/ai-sports-betting-dime-ai
+  datasets:
+    foundation_sft:
+      repo_id: taileredsports/dime-foundation-sft
+      revision: REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA
+    development_eval:
+      repo_id: taileredsports/dime-eval-development
+      revision: REPLACE_WITH_EXACT_40_CHARACTER_DEVELOPMENT_EVAL_SHA
+    locked_eval:
+      repo_id: taileredsports/dime-eval-locked
+      revision_or_opaque_reference: REPLACE_WITH_LOCKED_REVISION_OR_OPAQUE_REFERENCE
+  files:
+    system_prompt: prompts/dime_system_v1.md
+    chat_template: prompts/llama3_dime_chat_template_v1.jinja
+    tool_catalog: tools/tools.v1.json
+    dataset_schema: schemas/sft_record.schema.json
+    evaluation_schema: schemas/eval_case.schema.json
+    decoding_config: configs/decoding_v1.json
+    run_manifest_schema: schemas/run_manifest.schema.json
+    foundation_checksums_schema: schemas/foundation_checksums.schema.json
+
+data:
+  train: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/train.jsonl
+  validation: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/validation.jsonl
+  manifest: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/dataset_manifest.json
+  checksums: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/checksums.json
+  dataset_card: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/dataset_card.md
+  curriculum: configs/curriculum_v1.yaml
+  max_length: 4096
+  minimum_assistant_tokens: 32
+  reject_overlength: true
+
+quantization:
+  load_in_4bit: true
+  quant_type: nf4
+  compute_dtype: bfloat16
+  use_double_quant: true
+
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+training:
+  output_dir: /workspace/runs/replace-with-unique-experiment-id/checkpoints
+  final_adapter_dir: /workspace/runs/replace-with-unique-experiment-id/adapters/final
+  max_steps: -1
+  epochs: 1
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  weight_decay: 0.0
+  warmup_fraction: 0.03
+  scheduler: cosine
+  logging_steps: 5
+  eval_steps: 20
+  save_steps: 20
+  save_total_limit: 3
+  early_stopping:
+    metric: validation_loss
+    mode: minimize
+    patience_evaluations: 3
+    minimum_delta: 0.001
+    restore_best_checkpoint: true
+  validation_schedule:
+    minimum_validation_events: 6
+    evaluation_and_checkpoint_cadence_aligned: true
+    best_checkpoint_restoration_verification_required: true
+  max_grad_norm: 1.0
+  optimizer: paged_adamw_8bit
+  gradient_checkpointing: true
+  bf16: true
+  tf32: true
+  report_to: tensorboard

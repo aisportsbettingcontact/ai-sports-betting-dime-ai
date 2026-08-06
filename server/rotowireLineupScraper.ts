@@ -67,9 +67,9 @@ export interface RotoStartingPitcher {
   /** Full pitcher name */
   name: string;
   /** Throws: "R" | "L" */
-  hand: string;
-  /** Season stats string, e.g. "12-4 · 3.06 ERA" or "0-0 · 0.00 ERA" */
-  era: string;
+  hand: string | null;
+  /** Season stats string, e.g. "12-4 · 3.06 ERA"; null when Rotowire omits it */
+  era: string | null;
   /** Rotowire internal player ID */
   rotowireId: number | null;
   /** Whether the lineup card shows "Confirmed Lineup" (vs "Expected Lineup") */
@@ -114,6 +114,23 @@ export interface RotoLineupGame {
   umpire: string | null;
 }
 
+/** DB game fields required to assign a Rotowire card to one canonical event. */
+export interface MatchableLineupDbGame {
+  id: number;
+  awayTeam: string;
+  homeTeam: string;
+  startTimeEst: string;
+  gameNumber: number | null;
+  mlbGamePk: number | null;
+}
+
+export interface RotowireLineupMatch<R extends MatchableLineupDbGame> {
+  lineupGame: RotoLineupGame;
+  dbGame: R | null;
+  matchMethod: "teams+gameNumber" | "teams+time" | "teams" | "none";
+  inferredGameNumber: number;
+}
+
 export interface ScrapeRotowireResult {
   games: RotoLineupGame[];
   /** Total .lineup.is-mlb cards found on page */
@@ -147,8 +164,8 @@ const TOMORROW_URL = `${BASE_URL}?date=tomorrow`;
  * Maps Rotowire abbrev → DB abbrev (which matches the games.awayTeam / homeTeam column).
  */
 const ROTO_ABBREV_OVERRIDES: Record<string, string> = {
-  "OAK": "ATH",  // Athletics relocated to Sacramento; Rotowire may still show "OAK"
-  "SAC": "ATH",  // Sacramento Athletics alternate
+  OAK: "ATH", // Athletics relocated to Sacramento; Rotowire may still show "OAK"
+  SAC: "ATH", // Sacramento Athletics alternate
 };
 
 /** Weather icon selection based on text patterns (first match wins) */
@@ -178,17 +195,179 @@ function extractRotowireId(href: string | undefined): number | null {
   const oldFmt = href.match(/[?&]id=(\d+)/i);
   if (oldFmt) return parseInt(oldFmt[1], 10);
   // New format: /baseball/player/name-NNNNN  (last segment ends with -digits)
-  const newFmt = href.match(/-(\d+)\s*$/);
+  const newFmt = href.split(/[?#]/, 1)[0].match(/-(\d+)\s*$/);
   if (newFmt) return parseInt(newFmt[1], 10);
   return null;
 }
 
+const GENERATIONAL_SUFFIXES: Record<string, string> = {
+  ii: "II",
+  iii: "III",
+  iv: "IV",
+  jr: "Jr.",
+  sr: "Sr.",
+};
+
+const NAME_PARTICLES = new Set([
+  "da",
+  "de",
+  "del",
+  "della",
+  "di",
+  "dos",
+  "du",
+  "la",
+  "le",
+  "van",
+  "von",
+]);
+
+const NAME_INITIALISMS = new Set([
+  "aj",
+  "cj",
+  "dj",
+  "jd",
+  "jj",
+  "jp",
+  "jt",
+  "pj",
+  "tj",
+]);
+
+function normalizeNameForComparison(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/gi, "")
+    .toLowerCase();
+}
+
+function formatSlugNamePart(part: string, index: number): string {
+  const lower = part.toLocaleLowerCase("en-US");
+  const suffix = GENERATIONAL_SUFFIXES[lower];
+  if (suffix) return suffix;
+  if (NAME_INITIALISMS.has(lower)) {
+    return `${lower.toUpperCase().split("").join(".")}.`;
+  }
+  if (index > 0 && NAME_PARTICLES.has(lower)) return lower;
+
+  const capitalized = lower.replace(
+    /(^|['’])([a-z])/g,
+    (_match, boundary: string, letter: string) =>
+      `${boundary}${letter.toLocaleUpperCase("en-US")}`
+  );
+  if (lower.startsWith("mc") && lower.length > 3) {
+    return `Mc${capitalized.charAt(2).toLocaleUpperCase("en-US")}${capitalized.slice(3)}`;
+  }
+  return capitalized;
+}
+
+/**
+ * Recover the canonical player name embedded in current Rotowire URLs.
+ *
+ * When the page shortens a name to "E. Rodriguez", retain the visible surname
+ * (including punctuation/accents) and recover only the omitted given name from
+ * `/baseball/player/eduardo-rodriguez-12783`.
+ */
+function playerNameFromSlug(
+  href: string | undefined,
+  abbreviatedName = ""
+): string | null {
+  if (!href) return null;
+
+  const path = href.split(/[?#]/, 1)[0];
+  const encodedSegment = path.split("/").filter(Boolean).at(-1);
+  if (!encodedSegment) return null;
+
+  let segment: string;
+  try {
+    segment = decodeURIComponent(encodedSegment);
+  } catch {
+    segment = encodedSegment;
+  }
+
+  const slugMatch = segment.match(/^(.+)-\d+$/);
+  if (!slugMatch) return null;
+  const parts = slugMatch[1].split("-").filter(Boolean);
+  if (parts.length === 0) return null;
+
+  const abbreviatedMatch = abbreviatedName.match(
+    /^[A-Za-zÀ-ÖØ-öø-ÿ]\.\s+(.+)$/
+  );
+  if (abbreviatedMatch && parts.length > 1) {
+    const visibleSurname = abbreviatedMatch[1].trim();
+    const normalizedSurname = normalizeNameForComparison(visibleSurname);
+
+    for (let surnameStart = 1; surnameStart < parts.length; surnameStart += 1) {
+      const slugSurname = normalizeNameForComparison(
+        parts.slice(surnameStart).join("")
+      );
+      if (slugSurname !== normalizedSurname) continue;
+
+      const givenName = parts
+        .slice(0, surnameStart)
+        .map((part, index) => formatSlugNamePart(part, index))
+        .join(" ");
+      return `${givenName} ${visibleSurname}`.trim();
+    }
+  }
+
+  return parts.map((part, index) => formatSlugNamePart(part, index)).join(" ");
+}
+
+function hasAbbreviatedGivenName(value: string): boolean {
+  return /^[A-Za-zÀ-ÖØ-öø-ÿ]\.\s+\S/.test(value.trim());
+}
+
+/** Resolve one player link consistently for pitchers and all nine batters. */
+function resolveRotowirePlayerName(
+  href: string | undefined,
+  title: string | undefined,
+  visibleText: string
+): string {
+  const visible = visibleText.replace(/\s+/g, " ").trim();
+  const titled = (title ?? "").replace(/\s+/g, " ").trim();
+
+  // Rotowire's visible link is frequently abbreviated even when other markup
+  // is absent or stale. For this exact form the URL slug is authoritative.
+  if (hasAbbreviatedGivenName(visible)) {
+    return (
+      playerNameFromSlug(href, visible) ??
+      (hasAbbreviatedGivenName(titled) ? visible : titled || visible)
+    );
+  }
+
+  if (titled && !hasAbbreviatedGivenName(titled)) return titled;
+  if (visible) return visible;
+  return playerNameFromSlug(href) ?? titled;
+}
+
+type RotowireLineupStatus = "confirmed" | "expected" | "unknown";
+
+/**
+ * RotoWire exposes the state as a class on the status row. The class wins over
+ * decorative/nested text; normalized text remains a compatibility fallback.
+ */
+function parseColumnLineupStatus(
+  $col: cheerio.Cheerio<any>
+): RotowireLineupStatus {
+  const $status = $col.find(".lineup__status").first();
+  if (!$status.length) return "unknown";
+  if ($status.hasClass("is-confirmed")) return "confirmed";
+  if ($status.hasClass("is-expected")) return "expected";
+
+  const text = $status.text().replace(/\s+/g, " ").trim();
+  if (/^confirmed(?:\s+lineup)?$/i.test(text)) return "confirmed";
+  if (/^expected(?:\s+lineup)?$/i.test(text)) return "expected";
+  return "unknown";
+}
+
 /** Normalize pitcher hand from Rotowire text like "RHP", "LHP", "R", "L" */
-function normalizePitcherHand(text: string): string {
+function normalizePitcherHand(text: string): string | null {
   const t = text.trim().toUpperCase();
   if (t.includes("L")) return "L";
   if (t.includes("R")) return "R";
-  return "?";
+  return null;
 }
 
 /** Parse weather text like "0% 81° Wind 3 mph Out" into structured RotoWeather */
@@ -208,7 +387,9 @@ function parseWeatherText(rawText: string, isDome: boolean): RotoWeather {
   const temp = tempMatch ? `${tempMatch[1]}°F` : "?°F";
 
   // Wind (e.g. "Wind 8 mph Out", "Wind 3 mph In", "Wind 12 mph L-R")
-  const windMatch = text.match(/Wind\s+(\d+)\s*mph(?:\s+(In|Out|L-R|R-L|Calm|N|S|E|W|NE|NW|SE|SW))?/i);
+  const windMatch = text.match(
+    /Wind\s+(\d+)\s*mph(?:\s+(In|Out|L-R|R-L|Calm|N|S|E|W|NE|NW|SE|SW))?/i
+  );
   let wind = "Calm";
   if (windMatch) {
     const speed = windMatch[1];
@@ -240,19 +421,346 @@ function normalizeAbbrev(rotoAbbrev: string): string {
   return ROTO_ABBREV_OVERRIDES[upper] ?? upper;
 }
 
+/** Parse an Eastern-time label such as "7:05 PM ET" or "7:05 PM". */
+export function lineupTimeToMinutes(value: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s+E(?:S|D)?T)?$/i.exec(
+    value.trim()
+  );
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+  return (hour % 12) * 60 + (/pm/i.test(match[3]) ? 12 * 60 : 0) + minute;
+}
+
+/** Calendar date used by Rotowire's today/tomorrow pages (Eastern Time). */
+export function rotowireDateInEastern(
+  now = new Date(),
+  offsetDays = 0
+): string {
+  const easternDate = now.toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
+  if (offsetDays === 0) return easternDate;
+
+  // Advance the calendar date at UTC noon, avoiding DST-short/long-day errors.
+  const calendar = new Date(`${easternDate}T12:00:00Z`);
+  calendar.setUTCDate(calendar.getUTCDate() + offsetDays);
+  return calendar.toISOString().slice(0, 10);
+}
+
+const MAX_DOUBLEHEADER_TIME_DRIFT_MINUTES = 120;
+
+function lineupStableKey(game: RotoLineupGame, sourceIndex: number): string {
+  const minutes = lineupTimeToMinutes(game.startTime);
+  return [
+    minutes == null ? "9999" : String(minutes).padStart(4, "0"),
+    game.startTime.trim().toUpperCase(),
+    game.awayPitcher?.rotowireId ?? game.awayPitcher?.name ?? "",
+    game.homePitcher?.rotowireId ?? game.homePitcher?.name ?? "",
+    String(sourceIndex).padStart(4, "0"),
+  ].join("|");
+}
+
+/**
+ * Assign Rotowire cards to DB events with one-to-one claim semantics.
+ *
+ * Rotowire does not expose MLB gamePk on the daily-lineups page, so a full
+ * same-matchup slate is ordered by parsed first-pitch time and aligned to
+ * distinct DB gameNumbers. Partial slates and legacy rows fall back to the
+ * globally closest start-time pairs. mlbGamePk, then row id, provide stable
+ * event-identity tie-breakers; no DB row can be returned twice.
+ */
+export function matchRotowireLineupsToDbRows<R extends MatchableLineupDbGame>(
+  lineupGames: RotoLineupGame[],
+  dbGames: R[]
+): { matches: Array<RotowireLineupMatch<R>>; warnings: string[] } {
+  const warnings: string[] = [];
+  const claimedRowIds = new Set<number>();
+  const resolved = new Map<number, RotowireLineupMatch<R>>();
+  const groups = new Map<
+    string,
+    Array<{ game: RotoLineupGame; sourceIndex: number }>
+  >();
+
+  lineupGames.forEach((game, sourceIndex) => {
+    const key = `${game.awayAbbrev}@${game.homeAbbrev}`;
+    const group = groups.get(key);
+    const entry = { game, sourceIndex };
+    if (group) group.push(entry);
+    else groups.set(key, [entry]);
+  });
+
+  for (const [matchup, group] of Array.from(groups.entries())) {
+    const matchupRows = dbGames
+      .filter(row => `${row.awayTeam}@${row.homeTeam}` === matchup)
+      .sort(
+        (a, b) =>
+          (a.gameNumber ?? Number.MAX_SAFE_INTEGER) -
+            (b.gameNumber ?? Number.MAX_SAFE_INTEGER) ||
+          (a.mlbGamePk ?? Number.MAX_SAFE_INTEGER) -
+            (b.mlbGamePk ?? Number.MAX_SAFE_INTEGER) ||
+          a.id - b.id
+      );
+    const orderedLineups = [...group].sort((a, b) =>
+      lineupStableKey(a.game, a.sourceIndex).localeCompare(
+        lineupStableKey(b.game, b.sourceIndex)
+      )
+    );
+    const inferredNumbers = new Map(
+      orderedLineups.map(
+        (entry, index) => [entry.sourceIndex, index + 1] as const
+      )
+    );
+
+    const dbNumbersAreSignal =
+      matchupRows.length >= 2 &&
+      matchupRows.every(
+        row => typeof row.gameNumber === "number" && row.gameNumber >= 1
+      ) &&
+      new Set(matchupRows.map(row => row.gameNumber)).size ===
+        matchupRows.length;
+    const orderedLineupMinutes = orderedLineups.map(entry =>
+      lineupTimeToMinutes(entry.game.startTime)
+    );
+    const lineupOrderIsSignal =
+      orderedLineupMinutes.every(
+        (minutes): minutes is number => minutes != null
+      ) && new Set(orderedLineupMinutes).size === orderedLineupMinutes.length;
+    const fullSlate =
+      orderedLineups.length >= 2 &&
+      orderedLineups.length === matchupRows.length &&
+      lineupOrderIsSignal;
+
+    // A complete doubleheader can align distinct chronological Rotowire cards
+    // to canonical DB gameNumbers even when the DB's stored times are TBD.
+    // Rotowire cards whose own times are missing/duplicated remain ambiguous.
+    if (fullSlate && dbNumbersAreSignal) {
+      for (const entry of orderedLineups) {
+        const inferredGameNumber = inferredNumbers.get(entry.sourceIndex)!;
+        const row = matchupRows.find(
+          candidate =>
+            !claimedRowIds.has(candidate.id) &&
+            candidate.gameNumber === inferredGameNumber
+        );
+        if (!row) continue;
+        claimedRowIds.add(row.id);
+        resolved.set(entry.sourceIndex, {
+          lineupGame: entry.game,
+          dbGame: row,
+          matchMethod: "teams+gameNumber",
+          inferredGameNumber,
+        });
+      }
+    }
+
+    const assignByTime = (
+      entry: { game: RotoLineupGame; sourceIndex: number },
+      row: R
+    ) => {
+      claimedRowIds.add(row.id);
+      resolved.set(entry.sourceIndex, {
+        lineupGame: entry.game,
+        dbGame: row,
+        matchMethod: "teams+time",
+        inferredGameNumber: inferredNumbers.get(entry.sourceIndex)!,
+      });
+    };
+
+    // Legacy DB rows can carry duplicate/default gameNumbers. When both
+    // complete slates have distinct parsed times, chronological alignment is
+    // the only order-preserving assignment and avoids greedy nearest-pair
+    // mistakes.
+    const unresolvedForTimeline = orderedLineups.filter(
+      entry => !resolved.has(entry.sourceIndex)
+    );
+    const rowsForTimeline = matchupRows.filter(
+      row => !claimedRowIds.has(row.id)
+    );
+    const timelineEntries = unresolvedForTimeline
+      .map(entry => ({
+        entry,
+        minutes: lineupTimeToMinutes(entry.game.startTime),
+      }))
+      .filter(
+        (
+          item
+        ): item is {
+          entry: (typeof orderedLineups)[number];
+          minutes: number;
+        } => item.minutes != null
+      );
+    const timelineRows = rowsForTimeline
+      .map(row => ({ row, minutes: lineupTimeToMinutes(row.startTimeEst) }))
+      .filter(
+        (item): item is { row: R; minutes: number } => item.minutes != null
+      );
+    const timelineIsSignal =
+      unresolvedForTimeline.length >= 2 &&
+      unresolvedForTimeline.length === rowsForTimeline.length &&
+      timelineEntries.length === unresolvedForTimeline.length &&
+      timelineRows.length === rowsForTimeline.length &&
+      new Set(timelineEntries.map(item => item.minutes)).size ===
+        timelineEntries.length &&
+      new Set(timelineRows.map(item => item.minutes)).size ===
+        timelineRows.length;
+
+    if (timelineIsSignal) {
+      timelineEntries.sort((a, b) => a.minutes - b.minutes);
+      timelineRows.sort((a, b) => a.minutes - b.minutes);
+      const aligned = timelineEntries.map((item, index) => ({
+        ...item,
+        row: timelineRows[index].row,
+        distance: Math.abs(item.minutes - timelineRows[index].minutes),
+      }));
+      if (
+        aligned.every(
+          pair => pair.distance <= MAX_DOUBLEHEADER_TIME_DRIFT_MINUTES
+        )
+      ) {
+        for (const pair of aligned) assignByTime(pair.entry, pair.row);
+      }
+    }
+
+    // Partial slates are accepted only when a pair is the unique nearest
+    // choice in both directions and within a conservative drift window.
+    // Equal-distance ties, duplicate times, and far-away rows stay unmatched.
+    let matchedUniquePair = true;
+    while (matchedUniquePair) {
+      matchedUniquePair = false;
+      const entries = orderedLineups.filter(
+        entry => !resolved.has(entry.sourceIndex)
+      );
+      const rows = matchupRows.filter(row => !claimedRowIds.has(row.id));
+      const candidates = entries.flatMap(entry => {
+        const entryMinutes = lineupTimeToMinutes(entry.game.startTime);
+        if (entryMinutes == null) return [];
+        return rows.flatMap(row => {
+          const rowMinutes = lineupTimeToMinutes(row.startTimeEst);
+          if (rowMinutes == null) return [];
+          const distance = Math.abs(entryMinutes - rowMinutes);
+          return distance <= MAX_DOUBLEHEADER_TIME_DRIFT_MINUTES
+            ? [{ entry, row, distance }]
+            : [];
+        });
+      });
+
+      const uniqueNearestForEntry = (sourceIndex: number) => {
+        const choices = candidates
+          .filter(candidate => candidate.entry.sourceIndex === sourceIndex)
+          .sort((a, b) => a.distance - b.distance || a.row.id - b.row.id);
+        if (
+          choices.length === 0 ||
+          (choices.length > 1 && choices[0].distance === choices[1].distance)
+        )
+          return null;
+        return choices[0];
+      };
+      const uniqueNearestForRow = (rowId: number) => {
+        const choices = candidates
+          .filter(candidate => candidate.row.id === rowId)
+          .sort(
+            (a, b) =>
+              a.distance - b.distance ||
+              a.entry.sourceIndex - b.entry.sourceIndex
+          );
+        if (
+          choices.length === 0 ||
+          (choices.length > 1 && choices[0].distance === choices[1].distance)
+        )
+          return null;
+        return choices[0];
+      };
+
+      const mutuallyUnique = entries
+        .map(entry => uniqueNearestForEntry(entry.sourceIndex))
+        .filter(
+          (candidate): candidate is NonNullable<typeof candidate> =>
+            candidate != null
+        )
+        .filter(
+          candidate =>
+            uniqueNearestForRow(candidate.row.id)?.entry.sourceIndex ===
+            candidate.entry.sourceIndex
+        )
+        .sort(
+          (a, b) =>
+            a.distance - b.distance ||
+            a.entry.sourceIndex - b.entry.sourceIndex ||
+            a.row.id - b.row.id
+        );
+
+      for (const candidate of mutuallyUnique) {
+        if (
+          resolved.has(candidate.entry.sourceIndex) ||
+          claimedRowIds.has(candidate.row.id)
+        )
+          continue;
+        assignByTime(candidate.entry, candidate.row);
+        matchedUniquePair = true;
+      }
+    }
+
+    // Preserve the ordinary one-card/one-row TBD case. This fallback is
+    // intentionally unavailable to multi-event matchups.
+    if (
+      group.length === 1 &&
+      matchupRows.length === 1 &&
+      !resolved.has(group[0].sourceIndex)
+    ) {
+      const [entry] = group;
+      const [row] = matchupRows;
+      claimedRowIds.add(row.id);
+      resolved.set(entry.sourceIndex, {
+        lineupGame: entry.game,
+        dbGame: row,
+        matchMethod: "teams",
+        inferredGameNumber: 1,
+      });
+    }
+
+    const missing = group.filter(entry => !resolved.has(entry.sourceIndex));
+    if (missing.length > 0) {
+      warnings.push(
+        `${missing.length} Rotowire card(s) for ${matchup} have no unclaimed DB event: ` +
+          missing.map(entry => entry.game.startTime).join(", ")
+      );
+    }
+  }
+
+  const matches = lineupGames.map(
+    (lineupGame, sourceIndex) =>
+      resolved.get(sourceIndex) ?? {
+        lineupGame,
+        dbGame: null,
+        matchMethod: "none" as const,
+        inferredGameNumber: 1,
+      }
+  );
+  return { matches, warnings };
+}
+
 // ─── Core HTML parser ─────────────────────────────────────────────────────────
 
-function parseLineupHtml(
+export function parseLineupHtml(
   html: string,
   dateScope: "today" | "tomorrow",
   tag: string
-): { games: RotoLineupGame[]; cardsFound: number; cardsParsed: number; cardsSkipped: number; parseErrors: number } {
+): {
+  games: RotoLineupGame[];
+  cardsFound: number;
+  cardsParsed: number;
+  cardsSkipped: number;
+  parseErrors: number;
+} {
   const $ = cheerio.load(html);
   const games: RotoLineupGame[] = [];
 
   const cards = $(".lineup.is-mlb");
   const cardsFound = cards.length;
-  console.log(`${tag} Found ${cardsFound} .lineup.is-mlb cards on ${dateScope} page`);
+  console.log(
+    `${tag} Found ${cardsFound} .lineup.is-mlb cards on ${dateScope} page`
+  );
 
   let cardsParsed = 0;
   let cardsSkipped = 0;
@@ -278,8 +786,8 @@ function parseLineupHtml(
       if (!awayTeam || !homeTeam) {
         console.warn(
           `${cardTag} SKIP — unknown team(s): ` +
-          `away="${rawAway}"→"${awayAbbrev}" (${awayTeam ? "found" : "MISSING"}) | ` +
-          `home="${rawHome}"→"${homeAbbrev}" (${homeTeam ? "found" : "MISSING"})`
+            `away="${rawAway}"→"${awayAbbrev}" (${awayTeam ? "found" : "MISSING"}) | ` +
+            `home="${rawHome}"→"${homeAbbrev}" (${homeTeam ? "found" : "MISSING"})`
         );
         cardsSkipped++;
         return;
@@ -292,63 +800,80 @@ function parseLineupHtml(
         $card.find(".lineup__meta").first().children().first().text().trim() ||
         "TBD";
 
-      console.log(`${cardTag} Parsing ${awayAbbrev} @ ${homeAbbrev} | startTime="${startTime}"`);
+      console.log(
+        `${cardTag} Parsing ${awayAbbrev} @ ${homeAbbrev} | startTime="${startTime}"`
+      );
 
       // ── Parse one team's lineup column ────────────────────────────────────
       const parseColumn = (
         $col: cheerio.Cheerio<any>,
         side: "away" | "home"
-      ): { pitcher: RotoStartingPitcher | null; lineup: RotoLineupPlayer[]; lineupConfirmed: boolean } => {
+      ): {
+        pitcher: RotoStartingPitcher | null;
+        lineup: RotoLineupPlayer[];
+        lineupConfirmed: boolean;
+      } => {
         const colTag = `${cardTag}[${side}]`;
+        const lineupStatus = parseColumnLineupStatus($col);
+        const lineupConfirmed = lineupStatus === "confirmed";
 
         // ── Pitcher ────────────────────────────────────────────────────────
         let pitcher: RotoStartingPitcher | null = null;
         const $highlight = $col.find(".lineup__player-highlight").first();
 
         if ($highlight.length) {
-          const $link = $highlight.find("a").first();
-          // Prefer the `title` attribute for the full name (e.g. "Max Fried");
-          // fall back to visible text which may be abbreviated (e.g. "M. Fried")
-          const pitcherName = ($link.attr("title") || $link.text()).trim();
-          const rotowireId = extractRotowireId($link.attr("href"));
+          const $link = $highlight.find('a[href*="/baseball/player"]').first();
+          const href = $link.attr("href");
+          const pitcherName = resolveRotowirePlayerName(
+            href,
+            $link.attr("title"),
+            $link.text()
+          );
+          const rotowireId = extractRotowireId(href);
 
           // Hand: from .lineup__throws span ("RHP" / "LHP")
           const throwsRaw = $highlight.find(".lineup__throws").text().trim();
-          const hand = normalizePitcherHand(throwsRaw || "R");
+          const hand = normalizePitcherHand(throwsRaw);
 
           // Stats: "12-4 · 3.06 ERA" — try both class names (page updated to .lineup__player-highlight-stats)
-          const statsRaw = (
+          const statsRaw =
             $highlight.find(".lineup__player-highlight-stats").text().trim() ||
-            $highlight.find(".lineup__stats").text().trim()
-          );
+            $highlight.find(".lineup__stats").text().trim();
           // Normalize: convert "2-2&nbsp;5.21 ERA" or "2-2 5.21 ERA" to "2-2 · 5.21 ERA"
-          const eraRaw = statsRaw.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+          const eraRaw = statsRaw
+            .replace(/\u00a0/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
           // If format is "W-L ERA" (no middle dot), insert the dot
           const era = eraRaw
             ? eraRaw.replace(/^(\d+-\d+)\s+([.\d]+\s*ERA)$/, "$1 · $2")
-            : "0-0 · 0.00 ERA";
-
-          // Confirmed: check .lineup__status text in the column
-          const statusText = $col.find(".lineup__status").first().text().trim();
-          const confirmed = /confirmed/i.test(statusText);
+            : null;
 
           if (pitcherName) {
-            pitcher = { name: pitcherName, hand, era, rotowireId, confirmed };
+            pitcher = {
+              name: pitcherName,
+              hand,
+              era,
+              rotowireId,
+              confirmed: lineupConfirmed,
+            };
             console.log(
-              `${colTag} Pitcher: "${pitcherName}" (${hand}HP) | era="${era}" | ` +
-              `rotowireId=${rotowireId ?? "null"} | confirmed=${confirmed}`
+              `${colTag} Pitcher: "${pitcherName}" (${hand ? `${hand}HP` : "hand unknown"}) | era="${era}" | ` +
+                `rotowireId=${rotowireId ?? "null"} | status=${lineupStatus}`
             );
           } else {
-            console.warn(`${colTag} Pitcher highlight found but name is empty (TBD)`);
+            console.warn(
+              `${colTag} Pitcher highlight found but name is empty (TBD)`
+            );
           }
         } else {
-          console.warn(`${colTag} No .lineup__player-highlight found — pitcher TBD`);
+          console.warn(
+            `${colTag} No .lineup__player-highlight found — pitcher TBD`
+          );
         }
 
         // ── Batting lineup ────────────────────────────────────────────────
         const lineup: RotoLineupPlayer[] = [];
-        const statusText = $col.find(".lineup__status").first().text().trim();
-        const lineupConfirmed = /confirmed/i.test(statusText);
 
         $col.find(".lineup__player").each((i: number, playerEl: any) => {
           const battingOrder = i + 1;
@@ -356,15 +881,20 @@ function parseLineupHtml(
 
           const $p = $(playerEl);
           const position = $p.find(".lineup__pos").text().trim() || "?";
-          const $nameLink = $p.find("a").first();
-          // Prefer the `title` attribute for the full name (e.g. "Rafael Devers");
-          // fall back to visible text which may be abbreviated (e.g. "R. Devers")
-          const name = ($nameLink.attr("title") || $nameLink.text()).trim();
-          const rotowireId = extractRotowireId($nameLink.attr("href"));
+          const $nameLink = $p.find('a[href*="/baseball/player"]').first();
+          const href = $nameLink.attr("href");
+          const name = resolveRotowirePlayerName(
+            href,
+            $nameLink.attr("title"),
+            $nameLink.text()
+          );
+          const rotowireId = extractRotowireId(href);
           const bats = $p.find(".lineup__bats").text().trim() || "?";
 
           if (!name) {
-            console.warn(`${colTag} Empty player name at batting order ${battingOrder}`);
+            console.warn(
+              `${colTag} Empty player name at batting order ${battingOrder}`
+            );
             return;
           }
 
@@ -374,8 +904,8 @@ function parseLineupHtml(
         if (lineup.length > 0) {
           console.log(
             `${colTag} Lineup: ${lineup.length}/9 players | confirmed=${lineupConfirmed} | ` +
-            `1: ${lineup[0]?.name ?? "?"} (${lineup[0]?.position ?? "?"}, ${lineup[0]?.bats ?? "?"}B) | ` +
-            `4: ${lineup[3]?.name ?? "?"} (${lineup[3]?.position ?? "?"}, ${lineup[3]?.bats ?? "?"}B)`
+              `1: ${lineup[0]?.name ?? "?"} (${lineup[0]?.position ?? "?"}, ${lineup[0]?.bats ?? "?"}B) | ` +
+              `4: ${lineup[3]?.name ?? "?"} (${lineup[3]?.position ?? "?"}, ${lineup[3]?.bats ?? "?"}B)`
           );
         } else {
           console.log(`${colTag} Lineup: not yet posted (0 players)`);
@@ -385,8 +915,14 @@ function parseLineupHtml(
       };
 
       // Away = .is-visit, Home = .is-home
-      const awayData = parseColumn($card.find(".lineup__list.is-visit").first(), "away");
-      const homeData = parseColumn($card.find(".lineup__list.is-home").first(), "home");
+      const awayData = parseColumn(
+        $card.find(".lineup__list.is-visit").first(),
+        "away"
+      );
+      const homeData = parseColumn(
+        $card.find(".lineup__list.is-home").first(),
+        "home"
+      );
 
       // ── Weather ────────────────────────────────────────────────────────────
       let weather: RotoWeather | null = null;
@@ -402,8 +938,8 @@ function parseLineupHtml(
           weather = parseWeatherText(weatherText, isDome);
           console.log(
             `${cardTag} Weather: ${weather.icon} ${weather.temp} | ` +
-            `wind="${weather.wind}" | precip=${weather.precip}% | dome=${weather.dome} | ` +
-            `raw="${weatherText}"`
+              `wind="${weather.wind}" | precip=${weather.precip}% | dome=${weather.dome} | ` +
+              `raw="${weatherText}"`
           );
         } else {
           console.warn(`${cardTag} No weather text in .lineup__bottom`);
@@ -429,12 +965,13 @@ function parseLineupHtml(
         } else {
           // Fallback: strip "Umpire:" label and numeric stats (R/G, K/G) from raw text
           const rawText = $umpireEl.text().trim();
-          umpire = rawText
-            .replace(/^Umpire:\s*/i, "")
-            .replace(/\d+\.\d+\s*R\/G/gi, "")
-            .replace(/\d+\.\d+\s*K\/G/gi, "")
-            .replace(/\s+/g, " ")
-            .trim() || null;
+          umpire =
+            rawText
+              .replace(/^Umpire:\s*/i, "")
+              .replace(/\d+\.\d+\s*R\/G/gi, "")
+              .replace(/\d+\.\d+\s*K\/G/gi, "")
+              .replace(/\s+/g, " ")
+              .trim() || null;
         }
         if (umpire) console.log(`${cardTag} Umpire: "${umpire}"`);
       }
@@ -459,11 +996,10 @@ function parseLineupHtml(
 
       console.log(
         `${cardTag} OK ${awayAbbrev} @ ${homeAbbrev} | ` +
-        `awayP=${awayData.pitcher?.name ?? "TBD"} | homeP=${homeData.pitcher?.name ?? "TBD"} | ` +
-        `awayLineup=${awayData.lineup.length}/9 | homeLineup=${homeData.lineup.length}/9 | ` +
-        `weather=${weather?.icon ?? "none"} | umpire=${umpire ?? "none"}`
+          `awayP=${awayData.pitcher?.name ?? "TBD"} | homeP=${homeData.pitcher?.name ?? "TBD"} | ` +
+          `awayLineup=${awayData.lineup.length}/9 | homeLineup=${homeData.lineup.length}/9 | ` +
+          `weather=${weather?.icon ?? "none"} | umpire=${umpire ?? "none"}`
       );
-
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`${cardTag} PARSE ERROR: ${msg}`);
@@ -476,7 +1012,10 @@ function parseLineupHtml(
 
 // ─── Fetch helper ─────────────────────────────────────────────────────────────
 
-async function fetchLineupPage(url: string, tag: string): Promise<{ html: string; httpStatus: number; fetchMs: number }> {
+async function fetchLineupPage(
+  url: string,
+  tag: string
+): Promise<{ html: string; httpStatus: number; fetchMs: number }> {
   const fetchStart = Date.now();
   console.log(`${tag} GET ${url}`);
 
@@ -485,7 +1024,7 @@ async function fetchLineupPage(url: string, tag: string): Promise<{ html: string
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.5",
       "Cache-Control": "no-cache",
     },
@@ -494,7 +1033,9 @@ async function fetchLineupPage(url: string, tag: string): Promise<{ html: string
 
   const fetchMs = Date.now() - fetchStart;
   const html = await resp.text();
-  console.log(`${tag} HTTP ${resp.status} in ${fetchMs}ms | HTML ${html.length} chars`);
+  console.log(
+    `${tag} HTTP ${resp.status} in ${fetchMs}ms | HTML ${html.length} chars`
+  );
 
   return { html, httpStatus: resp.status, fetchMs };
 }
@@ -519,16 +1060,32 @@ export async function scrapeRotowireLineupsToday(): Promise<ScrapeRotowireResult
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${tag} Fetch failed: ${msg}`);
     return {
-      games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
-      scrapedAt: Date.now(), httpStatus: 0, fetchMs: 0, parseMs: 0, dateScope: "today",
+      games: [],
+      cardsFound: 0,
+      cardsParsed: 0,
+      cardsSkipped: 0,
+      parseErrors: 1,
+      scrapedAt: Date.now(),
+      httpStatus: 0,
+      fetchMs: 0,
+      parseMs: 0,
+      dateScope: "today",
     };
   }
 
   if (httpStatus !== 200) {
     console.error(`${tag} Non-200 HTTP status: ${httpStatus}`);
     return {
-      games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
-      scrapedAt: Date.now(), httpStatus, fetchMs, parseMs: 0, dateScope: "today",
+      games: [],
+      cardsFound: 0,
+      cardsParsed: 0,
+      cardsSkipped: 0,
+      parseErrors: 1,
+      scrapedAt: Date.now(),
+      httpStatus,
+      fetchMs,
+      parseMs: 0,
+      dateScope: "today",
     };
   }
 
@@ -539,11 +1096,18 @@ export async function scrapeRotowireLineupsToday(): Promise<ScrapeRotowireResult
 
   console.log(
     `${tag} DONE | cardsFound=${result.cardsFound} parsed=${result.cardsParsed} ` +
-    `skipped=${result.cardsSkipped} errors=${result.parseErrors} | ` +
-    `fetchMs=${fetchMs} parseMs=${parseMs} totalMs=${totalMs}`
+      `skipped=${result.cardsSkipped} errors=${result.parseErrors} | ` +
+      `fetchMs=${fetchMs} parseMs=${parseMs} totalMs=${totalMs}`
   );
 
-  return { ...result, scrapedAt: Date.now(), httpStatus, fetchMs, parseMs, dateScope: "today" };
+  return {
+    ...result,
+    scrapedAt: Date.now(),
+    httpStatus,
+    fetchMs,
+    parseMs,
+    dateScope: "today",
+  };
 }
 
 /**
@@ -565,16 +1129,32 @@ export async function scrapeRotowireLineupsTomorrow(): Promise<ScrapeRotowireRes
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${tag} Fetch failed: ${msg}`);
     return {
-      games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
-      scrapedAt: Date.now(), httpStatus: 0, fetchMs: 0, parseMs: 0, dateScope: "tomorrow",
+      games: [],
+      cardsFound: 0,
+      cardsParsed: 0,
+      cardsSkipped: 0,
+      parseErrors: 1,
+      scrapedAt: Date.now(),
+      httpStatus: 0,
+      fetchMs: 0,
+      parseMs: 0,
+      dateScope: "tomorrow",
     };
   }
 
   if (httpStatus !== 200) {
     console.error(`${tag} Non-200 HTTP status: ${httpStatus}`);
     return {
-      games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
-      scrapedAt: Date.now(), httpStatus, fetchMs, parseMs: 0, dateScope: "tomorrow",
+      games: [],
+      cardsFound: 0,
+      cardsParsed: 0,
+      cardsSkipped: 0,
+      parseErrors: 1,
+      scrapedAt: Date.now(),
+      httpStatus,
+      fetchMs,
+      parseMs: 0,
+      dateScope: "tomorrow",
     };
   }
 
@@ -585,17 +1165,34 @@ export async function scrapeRotowireLineupsTomorrow(): Promise<ScrapeRotowireRes
 
   console.log(
     `${tag} DONE | cardsFound=${result.cardsFound} parsed=${result.cardsParsed} ` +
-    `skipped=${result.cardsSkipped} errors=${result.parseErrors} | ` +
-    `fetchMs=${fetchMs} parseMs=${parseMs} totalMs=${totalMs}`
+      `skipped=${result.cardsSkipped} errors=${result.parseErrors} | ` +
+      `fetchMs=${fetchMs} parseMs=${parseMs} totalMs=${totalMs}`
   );
 
-  return { ...result, scrapedAt: Date.now(), httpStatus, fetchMs, parseMs, dateScope: "tomorrow" };
+  return {
+    ...result,
+    scrapedAt: Date.now(),
+    httpStatus,
+    fetchMs,
+    parseMs,
+    dateScope: "tomorrow",
+  };
 }
 
 /**
- * Scrape both today and tomorrow, deduplicate by awayAbbrev+homeAbbrev.
- * Returns all unique games found across both pages.
- * Today's results take precedence (more up-to-date confirmations).
+ * Preserve every daily card. Today and tomorrow are distinct date scopes, so
+ * an identical matchup/time on both pages may still be two legitimate games.
+ */
+export function combineRotowireLineupSlates(
+  todayGames: RotoLineupGame[],
+  tomorrowGames: RotoLineupGame[]
+): RotoLineupGame[] {
+  return [...todayGames, ...tomorrowGames];
+}
+
+/**
+ * Scrape both today and tomorrow. Preserve every card within each daily slate
+ * (including same-matchup doubleheaders and consecutive-day series games).
  */
 export async function scrapeRotowireLineupsBoth(): Promise<{
   today: ScrapeRotowireResult;
@@ -610,27 +1207,63 @@ export async function scrapeRotowireLineupsBoth(): Promise<{
     scrapeRotowireLineupsTomorrow(),
   ]);
 
-  // Deduplicate: today takes precedence over tomorrow for same matchup
-  const seen = new Set<string>();
-  const combined: RotoLineupGame[] = [];
-
-  for (const game of [...today.games, ...tomorrow.games]) {
-    const key = `${game.awayAbbrev}@${game.homeAbbrev}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      combined.push(game);
-    }
-  }
+  // Date scope belongs to the surrounding result, so no cross-date dedupe.
+  const combined = combineRotowireLineupSlates(today.games, tomorrow.games);
 
   console.log(
     `${tag} Combined: today=${today.cardsParsed} + tomorrow=${tomorrow.cardsParsed} → ` +
-    `${combined.length} unique games`
+      `${combined.length} unique games`
   );
 
   return { today, tomorrow, combined };
 }
 
 // ─── DB Upsert ────────────────────────────────────────────────────────────────
+
+/** Build the exact DB payload; kept pure so null/missing data is regression-testable. */
+export function buildMlbLineupPayload(
+  game: RotoLineupGame,
+  gameId: number,
+  scrapedAt: number,
+  resolveMlbamId: (name: string | null | undefined) => number | null
+) {
+  const enrichLineup = (players: RotoLineupPlayer[]): string | null => {
+    if (players.length === 0) return null;
+    return JSON.stringify(
+      players.map(player => ({
+        ...player,
+        mlbamId: resolveMlbamId(player.name),
+      }))
+    );
+  };
+
+  return {
+    gameId,
+    scrapedAt,
+    awayPitcherName: game.awayPitcher?.name ?? null,
+    awayPitcherHand: game.awayPitcher?.hand ?? null,
+    awayPitcherEra: game.awayPitcher?.era ?? null,
+    awayPitcherRotowireId: game.awayPitcher?.rotowireId ?? null,
+    awayPitcherMlbamId: resolveMlbamId(game.awayPitcher?.name),
+    awayPitcherConfirmed: game.awayPitcher?.confirmed ?? false,
+    homePitcherName: game.homePitcher?.name ?? null,
+    homePitcherHand: game.homePitcher?.hand ?? null,
+    homePitcherEra: game.homePitcher?.era ?? null,
+    homePitcherRotowireId: game.homePitcher?.rotowireId ?? null,
+    homePitcherMlbamId: resolveMlbamId(game.homePitcher?.name),
+    homePitcherConfirmed: game.homePitcher?.confirmed ?? false,
+    awayLineup: enrichLineup(game.awayLineup),
+    homeLineup: enrichLineup(game.homeLineup),
+    awayLineupConfirmed: game.awayLineupConfirmed,
+    homeLineupConfirmed: game.homeLineupConfirmed,
+    weatherIcon: game.weather?.icon ?? null,
+    weatherTemp: game.weather?.temp ?? null,
+    weatherWind: game.weather?.wind ?? null,
+    weatherPrecip: game.weather?.precip ?? null,
+    weatherDome: game.weather?.dome ?? false,
+    umpire: game.umpire ?? null,
+  };
+}
 
 /**
  * Persist a list of scraped RotoLineupGame records to the mlb_lineups table.
@@ -646,8 +1279,13 @@ export async function scrapeRotowireLineupsBoth(): Promise<{
  */
 export async function upsertLineupsToDB(
   games: RotoLineupGame[],
-  targetDate?: string
-): Promise<{ saved: number; skipped: number; errors: number; gameIdMap: Map<string, number> }> {
+  targetDate: string
+): Promise<{
+  saved: number;
+  skipped: number;
+  errors: number;
+  gameIdMap: Map<RotoLineupGame, number>;
+}> {
   const tag = "[RotoScraper][upsertDB]";
 
   if (games.length === 0) {
@@ -658,22 +1296,47 @@ export async function upsertLineupsToDB(
   // Lazy-import DB helpers to avoid circular deps at module load time
   const { getDb } = await import("./db.js");
   const { upsertMlbLineup } = await import("./db.js");
-  const { games: gamesTable, mlbPlayers } = await import("../drizzle/schema.js");
+  const { games: gamesTable, mlbPlayers } =
+    await import("../drizzle/schema.js");
   const { eq, and, gte, lte } = await import("drizzle-orm");
 
-  // Date window: use targetDate for exact match (prevents cross-day overwrite),
-  // or fall back to a 7-day window if no targetDate is provided.
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-  const dateFrom = targetDate ?? todayStr;
-  const plusSevenDate = new Date(dateFrom + "T12:00:00Z");
-  plusSevenDate.setUTCDate(plusSevenDate.getUTCDate() + (targetDate ? 0 : 6));
-  const dateTo = targetDate ?? plusSevenDate.toISOString().slice(0, 10);
-  console.log(`${tag} Date window: ${dateFrom} → ${dateTo} (targetDate=${targetDate ?? "none, using 7-day window"})`);
+  // An exact date is required because Rotowire does not expose MLB gamePk.
+  // A multi-day fallback can silently match a same-team series game.
+  const dateFrom = targetDate;
+  const dateTo = targetDate;
+  console.log(`${tag} Exact target date: ${targetDate}`);
 
   const db = await getDb();
   if (!db) {
-    console.warn(`${tag} DB not available — skipping all ${games.length} games`);
+    console.warn(
+      `${tag} DB not available — skipping all ${games.length} games`
+    );
     return { saved: 0, skipped: games.length, errors: 0, gameIdMap: new Map() };
+  }
+
+  // Fetch the complete date-window slate once. Matching all sibling cards
+  // together is required for doubleheader cardinality; LIMIT 1 per matchup
+  // silently sent both Rotowire cards to the same games row.
+  const candidateGames = await db
+    .select({
+      id: gamesTable.id,
+      awayTeam: gamesTable.awayTeam,
+      homeTeam: gamesTable.homeTeam,
+      startTimeEst: gamesTable.startTimeEst,
+      gameNumber: gamesTable.gameNumber,
+      mlbGamePk: gamesTable.mlbGamePk,
+    })
+    .from(gamesTable)
+    .where(
+      and(
+        eq(gamesTable.sport, "MLB"),
+        gte(gamesTable.gameDate, dateFrom),
+        lte(gamesTable.gameDate, dateTo)
+      )
+    );
+  const lineupMatches = matchRotowireLineupsToDbRows(games, candidateGames);
+  for (const warning of lineupMatches.warnings) {
+    console.warn(`${tag} ${warning}`);
   }
 
   // ── Build name → mlbamId lookup from mlb_players table ──────────────────────
@@ -686,11 +1349,12 @@ export async function upsertLineupsToDB(
   // Normalize names: lowercase, strip accents, strip generational suffixes (Jr./Sr./II/III),
   // collapse whitespace — for fuzzy matching Rotowire names to MLB Stats API names.
   const normalize = (s: string) =>
-    s.toLowerCase()
+    s
+      .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")        // strip diacritics
+      .replace(/[\u0300-\u036f]/g, "") // strip diacritics
       .replace(/\b(jr\.?|sr\.?|ii|iii|iv)\b/g, "") // strip generational suffixes
-      .replace(/[^a-z0-9 ]/g, "")             // strip punctuation
+      .replace(/[^a-z0-9 ]/g, "") // strip punctuation
       .replace(/\s+/g, " ")
       .trim();
 
@@ -700,7 +1364,9 @@ export async function upsertLineupsToDB(
       nameToMlbamId.set(normalize(p.name), p.mlbamId);
     }
   }
-  console.log(`${tag} Loaded ${nameToMlbamId.size} active players for mlbamId lookup`);
+  console.log(
+    `${tag} Loaded ${nameToMlbamId.size} active players for mlbamId lookup`
+  );
 
   const resolveMlbamId = (name: string | null | undefined): number | null => {
     if (!name) return null;
@@ -710,89 +1376,44 @@ export async function upsertLineupsToDB(
   let saved = 0;
   let skipped = 0;
   let errors = 0;
-  /** Maps "awayAbbrev@homeAbbrev" → DB gameId — consumed by LineupWatcher after upsert */
-  const gameIdMap = new Map<string, number>();
+  /** Object-identity handoff prevents same-matchup DH cards from sharing a key. */
+  const gameIdMap = new Map<RotoLineupGame, number>();
 
-  for (const g of games) {
+  for (const match of lineupMatches.matches) {
+    const g = match.lineupGame;
     const gameTag = `${tag}[${g.awayAbbrev}@${g.homeAbbrev}]`;
 
     try {
-      // Look up the DB game row by awayTeam + homeTeam within 7-day window
-      // (Rotowire doesn't give us an exact date, so we match by team pair)
-      const rows = await db
-        .select({ id: gamesTable.id, gameDate: gamesTable.gameDate })
-        .from(gamesTable)
-        .where(
-          and(
-            eq(gamesTable.awayTeam, g.awayAbbrev),
-            eq(gamesTable.homeTeam, g.homeAbbrev),
-            eq(gamesTable.sport, "MLB"),
-            gte(gamesTable.gameDate, dateFrom),
-            lte(gamesTable.gameDate, dateTo)
-          )
-        )
-        .limit(1);
-
-      if (rows.length === 0) {
-        console.log(`${gameTag} NO_MATCH in DB — skipping (Spring Training or unseeded game)`);
+      if (!match.dbGame) {
+        console.log(
+          `${gameTag} NO_MATCH in DB — skipping (Spring Training or unseeded game)`
+        );
         skipped++;
         continue;
       }
 
-      const gameId = rows[0].id;
-      // Register in gameIdMap so the LineupWatcher can resolve gameIds without a second DB query
-      gameIdMap.set(`${g.awayAbbrev}@${g.homeAbbrev}`, gameId);
-
-      // Resolve mlbamIds for pitchers
-      const awayPitcherMlbamId = resolveMlbamId(g.awayPitcher?.name);
-      const homePitcherMlbamId = resolveMlbamId(g.homePitcher?.name);
-
-      // Resolve mlbamIds for each batter and embed into lineup JSON
-      const enrichLineup = (players: RotoLineupPlayer[]): string | null => {
-        if (players.length === 0) return null;
-        const enriched = players.map(p => ({
-          ...p,
-          mlbamId: resolveMlbamId(p.name),
-        }));
-        return JSON.stringify(enriched);
-      };
+      const gameId = match.dbGame.id;
+      // Register the exact scraped object so the watcher resolves both DH siblings.
+      gameIdMap.set(g, gameId);
 
       // Build the InsertMlbLineup payload
-      const payload = {
+      const payload = buildMlbLineupPayload(
+        g,
         gameId,
-        scrapedAt: Date.now(),
-        awayPitcherName: g.awayPitcher?.name ?? null,
-        awayPitcherHand: g.awayPitcher?.hand ?? null,
-        awayPitcherEra: g.awayPitcher?.era ?? null,
-        awayPitcherRotowireId: g.awayPitcher?.rotowireId ?? null,
-        awayPitcherMlbamId,
-        awayPitcherConfirmed: g.awayPitcher?.confirmed ?? false,
-        homePitcherName: g.homePitcher?.name ?? null,
-        homePitcherHand: g.homePitcher?.hand ?? null,
-        homePitcherEra: g.homePitcher?.era ?? null,
-        homePitcherRotowireId: g.homePitcher?.rotowireId ?? null,
-        homePitcherMlbamId,
-        homePitcherConfirmed: g.homePitcher?.confirmed ?? false,
-        awayLineup: enrichLineup(g.awayLineup),
-        homeLineup: enrichLineup(g.homeLineup),
-        awayLineupConfirmed: g.awayLineupConfirmed,
-        homeLineupConfirmed: g.homeLineupConfirmed,
-        weatherIcon: g.weather?.icon ?? null,
-        weatherTemp: g.weather?.temp ?? null,
-        weatherWind: g.weather?.wind ?? null,
-        weatherPrecip: g.weather?.precip ?? null,
-        weatherDome: g.weather?.dome ?? false,
-        umpire: g.umpire ?? null,
-      };
+        Date.now(),
+        resolveMlbamId
+      );
 
       console.log(
-        `${gameTag} Upserting gameId=${gameId} | ` +
-        `awayP="${payload.awayPitcherName ?? "TBD"}" (${payload.awayPitcherHand ?? "?"}) | ` +
-        `homeP="${payload.homePitcherName ?? "TBD"}" (${payload.homePitcherHand ?? "?"}) | ` +
-        `awayLineup=${g.awayLineup.length}/9 (${g.awayLineupConfirmed ? "CONFIRMED" : "expected"}) | ` +
-        `homeLineup=${g.homeLineup.length}/9 (${g.homeLineupConfirmed ? "CONFIRMED" : "expected"}) | ` +
-        `weather=${payload.weatherIcon ?? "none"} ${payload.weatherTemp ?? ""} | ` +
-        `umpire="${payload.umpire ?? "none"}"`
+        `${gameTag} Upserting gameId=${gameId} ` +
+          `(G${match.dbGame.gameNumber ?? match.inferredGameNumber}, ${match.matchMethod}, ` +
+          `gamePk=${match.dbGame.mlbGamePk ?? "unknown"}) | ` +
+          `awayP="${payload.awayPitcherName ?? "TBD"}" (${payload.awayPitcherHand ?? "?"}) | ` +
+          `homeP="${payload.homePitcherName ?? "TBD"}" (${payload.homePitcherHand ?? "?"}) | ` +
+          `awayLineup=${g.awayLineup.length}/9 (${g.awayLineupConfirmed ? "CONFIRMED" : "expected"}) | ` +
+          `homeLineup=${g.homeLineup.length}/9 (${g.homeLineupConfirmed ? "CONFIRMED" : "expected"}) | ` +
+          `weather=${payload.weatherIcon ?? "none"} ${payload.weatherTemp ?? ""} | ` +
+          `umpire="${payload.umpire ?? "none"}"`
       );
 
       await upsertMlbLineup(payload);
@@ -804,6 +1425,8 @@ export async function upsertLineupsToDB(
     }
   }
 
-  console.log(`${tag} Done — saved=${saved} skipped=${skipped} errors=${errors} gameIdMap=${gameIdMap.size}`);
+  console.log(
+    `${tag} Done — saved=${saved} skipped=${skipped} errors=${errors} gameIdMap=${gameIdMap.size}`
+  );
   return { saved, skipped, errors, gameIdMap };
 }

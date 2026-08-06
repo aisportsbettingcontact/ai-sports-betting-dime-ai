@@ -1,0 +1,447 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/run_manifest.schema.json",
+  "title": "Dime authorized full-training preflight manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "status",
+    "created_at_utc",
+    "owner",
+    "hypothesis",
+    "authorization",
+    "source",
+    "datasets",
+    "base_model",
+    "starting_adapter",
+    "contracts",
+    "training",
+    "environment",
+    "approvals",
+    "commands",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-run-manifest-v1"
+    },
+    "experiment_id": {
+      "$ref": "#/$defs/experiment_id"
+    },
+    "status": {
+      "const": "preflight"
+    },
+    "created_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "owner": {
+      "$ref": "#/$defs/non_placeholder"
+    },
+    "hypothesis": {
+      "$ref": "#/$defs/non_placeholder"
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reference",
+        "approver",
+        "approved_at_utc"
+      ],
+      "properties": {
+        "status": {
+          "const": "authorized_for_full_training"
+        },
+        "reference": {
+          "$ref": "#/$defs/non_placeholder"
+        },
+        "approver": {
+          "$ref": "#/$defs/non_placeholder"
+        },
+        "approved_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "github_repository",
+        "source_github_commit"
+      ],
+      "properties": {
+        "github_repository": {
+          "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+        },
+        "source_github_commit": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "datasets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_sft",
+        "development_eval",
+        "locked_eval"
+      ],
+      "properties": {
+        "foundation_sft": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repo_id",
+            "revision",
+            "dataset_manifest_sha256",
+            "checksums_sha256"
+          ],
+          "properties": {
+            "repo_id": {
+              "const": "taileredsports/dime-foundation-sft"
+            },
+            "revision": {
+              "$ref": "#/$defs/commit"
+            },
+            "dataset_manifest_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "checksums_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "development_eval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repo_id",
+            "revision"
+          ],
+          "properties": {
+            "repo_id": {
+              "const": "taileredsports/dime-eval-development"
+            },
+            "revision": {
+              "$ref": "#/$defs/commit"
+            }
+          }
+        },
+        "locked_eval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repo_id",
+            "revision_or_opaque_reference"
+          ],
+          "properties": {
+            "repo_id": {
+              "const": "taileredsports/dime-eval-locked"
+            },
+            "revision_or_opaque_reference": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-f]{40}|locked-eval-(?:approval|suite|revision):[a-z0-9][a-z0-9._-]{3,95})$"
+            }
+          }
+        }
+      }
+    },
+    "base_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "revision"
+      ],
+      "properties": {
+        "repo_id": {
+          "const": "meta-llama/Llama-3.1-8B"
+        },
+        "revision": {
+          "const": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+        }
+      }
+    },
+    "starting_adapter": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repo_id",
+            "revision",
+            "adapter_sha256"
+          ],
+          "properties": {
+            "repo_id": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 256
+            },
+            "revision": {
+              "$ref": "#/$defs/commit"
+            },
+            "adapter_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "training_config_sha256",
+        "system_prompt_sha256",
+        "chat_template_sha256",
+        "tool_catalog_sha256",
+        "dataset_schema_sha256",
+        "evaluation_schema_sha256",
+        "decoding_config_sha256",
+        "runtime_contract_sha256",
+        "requirements_lock_sha256",
+        "run_manifest_schema_sha256",
+        "foundation_checksums_schema_sha256"
+      ],
+      "properties": {
+        "training_config_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "system_prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chat_template_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tool_catalog_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "dataset_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evaluation_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "decoding_config_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "runtime_contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "requirements_lock_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "run_manifest_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "foundation_checksums_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "training": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seed",
+        "output_dir",
+        "final_adapter_dir",
+        "logs_dir",
+        "reports_dir",
+        "checkpoint_retention",
+        "early_stopping"
+      ],
+      "properties": {
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_dir": {
+          "$ref": "#/$defs/workspace_path"
+        },
+        "final_adapter_dir": {
+          "$ref": "#/$defs/final_adapter_path"
+        },
+        "logs_dir": {
+          "$ref": "#/$defs/workspace_path"
+        },
+        "reports_dir": {
+          "$ref": "#/$defs/workspace_path"
+        },
+        "checkpoint_retention": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "save_steps",
+            "save_total_limit"
+          ],
+          "properties": {
+            "save_steps": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "save_total_limit": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "early_stopping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "mode",
+            "patience_evaluations",
+            "minimum_delta",
+            "restore_best_checkpoint"
+          ],
+          "properties": {
+            "metric": {
+              "const": "validation_loss"
+            },
+            "mode": {
+              "const": "minimize"
+            },
+            "patience_evaluations": {
+              "const": 3
+            },
+            "minimum_delta": {
+              "const": 0.001
+            },
+            "restore_best_checkpoint": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runpod_image",
+        "python",
+        "pytorch",
+        "cuda_runtime",
+        "gpu"
+      ],
+      "properties": {
+        "runpod_image": {
+          "$ref": "#/$defs/non_placeholder"
+        },
+        "python": {
+          "$ref": "#/$defs/non_placeholder"
+        },
+        "pytorch": {
+          "$ref": "#/$defs/non_placeholder"
+        },
+        "cuda_runtime": {
+          "$ref": "#/$defs/non_placeholder"
+        },
+        "gpu": {
+          "$ref": "#/$defs/non_placeholder"
+        }
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "privacy",
+        "provenance",
+        "rights",
+        "partition",
+        "future_data",
+        "semantic_deduplication",
+        "evaluation_contamination"
+      ],
+      "properties": {
+        "privacy": {
+          "const": true
+        },
+        "provenance": {
+          "const": true
+        },
+        "rights": {
+          "const": true
+        },
+        "partition": {
+          "const": true
+        },
+        "future_data": {
+          "const": true
+        },
+        "semantic_deduplication": {
+          "const": true
+        },
+        "evaluation_contamination": {
+          "const": true
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/non_placeholder"
+      }
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "final_artifact_sha256",
+        "report_sha256"
+      ],
+      "properties": {
+        "final_artifact_sha256": {
+          "type": "null"
+        },
+        "report_sha256": {
+          "type": "array",
+          "maxItems": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "workspace_path": {
+      "type": "string",
+      "pattern": "^/workspace/runs/[a-z0-9][a-z0-9._-]{7,127}/[^/]+$"
+    },
+    "final_adapter_path": {
+      "type": "string",
+      "pattern": "^/workspace/runs/[a-z0-9][a-z0-9._-]{7,127}/adapters/final$"
+    },
+    "non_placeholder": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1024,
+      "not": {
+        "pattern": "(?i)(todo|tbd|replace)"
+      }
+    }
+  }
+}

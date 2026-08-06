@@ -1,9 +1,11 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch, Redirect, useLocation } from "wouter";
+import { parseInviteCode } from "@shared/inviteCode";
 import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
+import { RequireOwner } from "./components/RequireOwner";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAppAuth } from "./_core/hooks/useAppAuth";
 // [PERF/FIX] The landing page is EAGER (not lazy) — it's the first thing unauthenticated
@@ -25,8 +27,11 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const DimeModelFeed = lazy(() => import("./pages/DimeModelFeed"));
 const BettingSplits = lazy(() => import("./pages/BettingSplits"));
 const Home = lazy(() => import("./pages/Home"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
+const UserActivity = lazy(() => import("./pages/UserActivity"));
+const SubscriptionPlans = lazy(() => import("./pages/admin/SubscriptionPlans"));
 const IngestAnOdds = lazy(() => import("./pages/IngestAnOdds"));
 const TheModelResults = lazy(() => import("./pages/TheModelResults"));
 const SecurityEvents = lazy(() => import("./pages/SecurityEvents"));
@@ -36,7 +41,6 @@ const NhlTeamSchedule = lazy(() => import("./pages/NhlTeamSchedule"));
 const BetTracker = lazy(() => import("@/pages/BetTracker"));
 const AdminModelStatus = lazy(() => import("@/pages/AdminModelStatus"));
 const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
-const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 
@@ -52,11 +56,11 @@ const WaitlistAdmin = lazy(() => import("./pages/WaitlistAdmin"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 
-// ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
-const MobileOwnerLayout = lazy(
-  () => import("./features/mobileOwnerTabs/MobileOwnerLayout")
+// ── Mobile /m/* screens (all authenticated users) ───────────────────────────
+const MobileNavLayout = lazy(
+  () => import("./features/mobileNav/MobileNavLayout")
 );
-import { GlobalMobileOwnerTabs } from "./features/mobileOwnerTabs/GlobalMobileOwnerTabs";
+import { GlobalMobileNav } from "./features/mobileNav/GlobalMobileNav";
 import {
   feedModelPath,
   bettingSplitsPath,
@@ -88,11 +92,9 @@ import type { SplitsDateSource } from "./pages/dime-shell/splitsDateState";
  *   NEW: return LandingPage immediately → auth resolves → redirect if authenticated
  *   Result: Loading shell dismissed the moment React mounts (0ms after JS executes).
  *
- * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth) so that
+ * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (legacy OAuth) so that
  * Discord-logged-in users are correctly detected and redirected to the feed.
  *
- * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
- * Flow: unauthenticated user clicks pricing → login → auto-checkout.
  *
  * [LOG] All branches log their state to the console for traceability.
  */
@@ -111,16 +113,9 @@ function RootRoute() {
       return;
     }
     if (appUser) {
-      // Handle pending checkout from a pre-login pricing button click.
-      const pendingCheckout = sessionStorage.getItem("pendingCheckout");
-      if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
-        sessionStorage.removeItem("pendingCheckout");
-        console.log(
-          `[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`
-        );
-        navigate(`/checkout?plan=${pendingCheckout}`, { replace: true });
-        return;
-      }
+      // (2026-07-24) The old sessionStorage.pendingCheckout auto-checkout
+      // branch is gone: nothing ever wrote the key (audit S3-016) and its
+      // only accepted values were the retired legacy plan ids.
       const target = feedModelPath("MLB");
       console.log(
         `[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`
@@ -190,7 +185,8 @@ function Router() {
   // width — an active SSE stream and the composer draft must survive a
   // resize, not just a navigation. Before this fix, /chat below 768px fell
   // through to the legacy <Switch> below and mounted a DIFFERENT lazy
-  // component (pages/DimeChat.tsx) than the >=768px branch (DimeAppShell),
+  // component (the legacy pages/DimeChat.tsx shim, since deleted) than the
+  // >=768px branch (DimeAppShell),
   // so crossing 768px swapped which component sat at this tree position and
   // React tore down and rebuilt DimeChatPage — destroying all conversation
   // state. Now /chat always takes this branch, and DimeAppShell's `mode`
@@ -240,9 +236,15 @@ function Router() {
         {/* ── Legacy slug eradication — permanent client-side redirects ─────────
           (server issues 308s for full-page loads; these cover SPA navigations).
           None of these slugs may be emitted by app code — see lib/feedRoutes. */}
-        <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
-        <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
-        <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
+        <Route path="/dashboard">
+          {() => <Redirect to={feedModelPath("MLB")} replace />}
+        </Route>
+        <Route path="/projections">
+          {() => <Redirect to={feedModelPath("MLB")} replace />}
+        </Route>
+        <Route path="/splits">
+          {() => <Redirect to={bettingSplitsPath("MLB")} replace />}
+        </Route>
         {/* Legal pages — public, no auth required */}
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
@@ -256,7 +258,24 @@ function Router() {
           audit 2026-07-10). The v2 grid on the landing page is canonical. */}
         <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
         {/* Password reset — public, accessed via reset link */}
-        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/reset-password">{() => <ResetPassword />}</Route>
+        {/* Compact invite link — /invite/<uid base36>.<token> (shared/inviteCode.ts).
+          Same single-use token + resetPassword consumer as /reset-password; the
+          route itself implies the first-time "welcome" treatment. An unparseable
+          code falls through with empty overrides, landing on the page's own
+          invalid-link state. */}
+        <Route path="/invite/:code">
+          {params => {
+            const parsed = parseInviteCode(params.code ?? "");
+            return (
+              <ResetPassword
+                tokenOverride={parsed?.token ?? ""}
+                uidOverride={parsed?.uid ?? 0}
+                welcomeOverride
+              />
+            );
+          }}
+        </Route>
         {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
           old page still marketed the de-marketed annual plan. */}
         <Route path="/landingpage">{() => <Redirect to="/" />}</Route>
@@ -268,13 +287,32 @@ function Router() {
         {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
         {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
           maps to /betting-splits/MLB; everything else to the dated feed URL. */}
-        <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
+        <Route path="/feed">
+          {() => (
+            <Redirect
+              to={legacyFeedRedirectTarget(window.location.search)}
+              replace
+            />
+          )}
+        </Route>
         {/* Dime AI Model Projections — the canonical feed surface.
           /feed/model/mlb-07-11-2026 or /feed/model/wc-07-11-2026 (also the
           split form /feed/model/mlb/07-11-2026; bare /feed/model/mlb
           canonicalizes to today's dated URL inside DimeModelFeed). */}
-        <Route path="/feed/model/:sport/:date">{p => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
-        <Route path="/feed/model/:sport">{p => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
+        <Route path="/feed/model/:sport/:date">
+          {p => (
+            <RequireAuth>
+              <DimeModelFeed sport={p.sport} date={p.date} />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/feed/model/:sport">
+          {p => (
+            <RequireAuth>
+              <DimeModelFeed sport={p.sport} />
+            </RequireAuth>
+          )}
+        </Route>
         {/* Betting splits — lowercase dated canonical URL; legacy forms replace. */}
         <Route path="/betting-splits/:sport/:date">
           {p => (
@@ -290,32 +328,80 @@ function Router() {
         <Route path="/betting-splits">
           {() => <Redirect to={bettingSplitsPath("MLB")} replace />}
         </Route>
-        {/* Admin pages */}
+        {/* /trends is a shell-owned (≥768px) surface. Below the shell
+            boundary there is no Trends pane — the accordions still live on
+            the splits cards — so land mobile visitors there. */}
+        <Route path="/trends">
+          {() => <Redirect to={bettingSplitsPath()} replace />}
+        </Route>
+        {/* Admin Dashboard — owner-only (@prez), owner directive 2026-07-22:
+          "No other users or site members should be able to view these
+          pages." RequireOwner is the client-side (cosmetic) half of the
+          lockdown — it never flashes admin content and redirects any
+          non-owner to /chat. The real boundary is server-verified
+          ownerProcedure middleware on every procedure these pages call
+          (see server/routers/appUsers.ts, routers.ts, wc2026Router.ts). */}
+        <Route path="/admin">
+          {() => (
+            <RequireAuth>
+              <RequireOwner>
+                <AdminDashboard />
+              </RequireOwner>
+            </RequireAuth>
+          )}
+        </Route>
+
         <Route path="/admin/users">
           {() => (
             <RequireAuth>
-              <UserManagement />
+              <RequireOwner>
+                <UserManagement />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/publish">
           {() => (
             <RequireAuth>
-              <PublishProjections />
+              <RequireOwner>
+                <PublishProjections />
+              </RequireOwner>
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/activity">
+          {() => (
+            <RequireAuth>
+              <RequireOwner>
+                <UserActivity />
+              </RequireOwner>
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/plans">
+          {() => (
+            <RequireAuth>
+              <RequireOwner>
+                <SubscriptionPlans />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/ingest-an">
           {() => (
             <RequireAuth>
-              <IngestAnOdds />
+              <RequireOwner>
+                <IngestAnOdds />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/model-results">
           {() => (
             <RequireAuth>
-              <TheModelResults />
+              <RequireOwner>
+                <TheModelResults />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -325,28 +411,36 @@ function Router() {
         <Route path="/admin/security">
           {() => (
             <RequireAuth>
-              <SecurityEvents />
+              <RequireOwner>
+                <SecurityEvents />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/model-status">
           {() => (
             <RequireAuth>
-              <AdminModelStatus />
+              <RequireOwner>
+                <AdminModelStatus />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/postponed-games">
           {() => (
             <RequireAuth>
-              <PostponedGames />
+              <RequireOwner>
+                <PostponedGames />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/backtest">
           {() => (
             <RequireAuth>
-              <MlbBacktest />
+              <RequireOwner>
+                <MlbBacktest />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -354,7 +448,9 @@ function Router() {
         <Route path="/admin/waitlist">
           {() => (
             <RequireAuth>
-              <WaitlistAdmin />
+              <RequireOwner>
+                <WaitlistAdmin />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -388,13 +484,6 @@ function Router() {
             </RequireAuth>
           )}
         </Route>
-        <Route path="/resources">
-          {() => (
-            <RequireAuth>
-              <Resources />
-            </RequireAuth>
-          )}
-        </Route>
         {/* Manage Account page */}
         <Route path="/account">
           {() => (
@@ -407,7 +496,9 @@ function Router() {
         <Route path="/admin/claude">
           {() => (
             <RequireAuth>
-              <ClaudeAssistant />
+              <RequireOwner>
+                <ClaudeAssistant />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -432,13 +523,13 @@ function Router() {
             </RequireAuth>
           )}
         </Route>
-        {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+        {/* ── Mobile /m/* screens ─────────────────────────────────────────────── */}
         {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
         <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
         <Route path="/m/:rest*">
           {() => (
             <RequireAuth>
-              <MobileOwnerLayout />
+              <MobileNavLayout />
             </RequireAuth>
           )}
         </Route>
@@ -457,8 +548,8 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          {/* Global mobile owner bottom tabs — appears on ALL pages for owner users on mobile */}
-          <GlobalMobileOwnerTabs />
+          {/* Global mobile nav — appears on ALL pages for authenticated users on mobile */}
+          <GlobalMobileNav />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

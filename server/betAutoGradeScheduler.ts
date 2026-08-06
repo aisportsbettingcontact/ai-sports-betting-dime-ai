@@ -32,8 +32,14 @@
  */
 
 import { getDb } from "./db";
-import { trackedBets } from "../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  gradeParlaysForDate,
+  gradeAllParlaysAllDates,
+  gradeParlaysForUser,
+  findStuckLegs,
+} from "./parlayGrader";
+import { trackedBets, type TrackedBet } from "../drizzle/schema";
+import { eq, and, sql } from "drizzle-orm";
 import {
   gradeTrackedBet,
   fetchScores,
@@ -42,7 +48,16 @@ import {
   type Market as GraderMarket,
   type PickSide as GraderPickSide,
 } from "./scoreGrader";
-import { invalidateStatsCacheForUser } from "./routers/betTracker";
+import { invalidateStatsCacheForUser } from "./betTrackerStatsCache";
+import { effectiveLine } from "./betTrackerCore";
+import {
+  describeGradingErrors,
+  describeNoMatch,
+  describeStuckBets,
+  gradingAlert,
+  STUCK_THRESHOLD_HOURS,
+  type StuckBet,
+} from "./betGradingHealth";
 
 // ─── PST/PDT helpers ─────────────────────────────────────────────────────────
 
@@ -75,65 +90,65 @@ function yesterdayPst(): string {
 
 // ─── Core grading engine ──────────────────────────────────────────────────────
 
-interface GradeSummary {
+export interface GradeSummary {
   date: string;
   total: number;
   graded: number;
   wins: number;
   losses: number;
   pushes: number;
+  voids: number;
   stillPending: number;
   errors: number;
+  details: Array<{ betId: number; result: string; reason: string }>;
+}
+
+function emptySummary(date: string): GradeSummary {
+  return { date, total: 0, graded: 0, wins: 0, losses: 0, pushes: 0, voids: 0, stillPending: 0, errors: 0, details: [] };
 }
 
 /**
- * Grade all PENDING bets for a specific date across all users.
- * Persists awayScore + homeScore on each settled bet.
+ * THE grading implementation. Every path that settles a bet goes through here:
+ * the in-process scheduler, the /api/cron/bet-grade endpoint, and the
+ * betTracker.autoGrade / autoGradeAll tRPC procedures.
  *
- * CRITICAL: passes customLine (overrides line), gameNumber (DH support),
- * and invalidates stats cache for each affected user after grading.
+ * Previously the router carried its own near-copy of this loop, and the two had
+ * already drifted (create's copy overwrote team abbreviations whenever they
+ * differed; the router's copy only filled blanks). One implementation removes
+ * the class of bug entirely.
+ *
+ * Behaviour:
+ *   - customLine wins over line (an explicit user override beats the book line)
+ *   - gameNumber is passed through so doubleheader G2 resolves to the right game
+ *   - Blank/"OPP" team names self-heal from the official feed's abbreviations
+ *   - VOID (postponed/cancelled) is persisted like any other terminal result
+ *   - Stats caches are invalidated for the OWNER of each graded bet
  */
-async function gradeAllPendingForDate(date: string, trigger: string): Promise<GradeSummary> {
-  console.log(`[BetAutoGrade][INPUT] gradeAllPendingForDate: date=${date} trigger=${trigger}`);
+async function gradePendingRows(rows: TrackedBet[], date: string, trigger: string): Promise<GradeSummary> {
+  if (rows.length === 0) return emptySummary(date);
 
   const db = await getDb();
 
-  // Fetch all PENDING bets for this date
-  const pending = await db.select().from(trackedBets).where(
-    and(
-      eq(trackedBets.result, "PENDING"),
-      eq(trackedBets.gameDate, date),
+  // Warm the score cache once per sport so the per-bet loop is pure CPU + DB.
+  const sportsNeeded = Array.from(new Set(rows.map(b => b.sport))) as GraderSport[];
+  const datesNeeded = Array.from(new Set(rows.map(b => b.gameDate)));
+  await Promise.all(
+    sportsNeeded.flatMap(s =>
+      datesNeeded.map(d =>
+        fetchScores(s, d).catch(err => {
+          console.log(`[BetAutoGrade][ERROR] score pre-fetch failed: sport=${s} date=${d} err=${(err as Error).message}`);
+        })
+      )
     )
   );
 
-  if (pending.length === 0) {
-    console.log(`[BetAutoGrade][STATE] gradeAllPendingForDate: 0 PENDING bets for date=${date} — skipping`);
-    return { date, total: 0, graded: 0, wins: 0, losses: 0, pushes: 0, stillPending: 0, errors: 0 };
-  }
-
-  console.log(`[BetAutoGrade][STATE] gradeAllPendingForDate: ${pending.length} PENDING bets for date=${date}`);
-
-  // Pre-fetch scores for all sports in parallel (warm the cache)
-  const sportsNeeded = Array.from(new Set(pending.map((b: { sport: string }) => b.sport))) as GraderSport[];
-  console.log(`[BetAutoGrade][STEP] gradeAllPendingForDate: pre-fetching scores for sports=[${sportsNeeded.join(",")}]`);
-
-  await Promise.all(sportsNeeded.map(s => fetchScores(s, date).catch(err => {
-    console.log(`[BetAutoGrade][ERROR] score pre-fetch failed: sport=${s} date=${date} err=${(err as Error).message}`);
-  })));
-  console.log(`[BetAutoGrade][STATE] gradeAllPendingForDate: score pre-fetch complete for ${sportsNeeded.length} sports`);
-
-  let graded = 0, wins = 0, losses = 0, pushes = 0, stillPending = 0, errors = 0;
-  // Track which users had bets graded — for stats cache invalidation
+  const summary = emptySummary(date);
+  summary.total = rows.length;
   const gradedUserIds = new Set<number>();
 
-  for (const bet of pending) {
+  for (const bet of rows) {
     try {
-      // CRITICAL FIX: use customLine if set (overrides default line for custom total/RL bets)
-      const gradeLineValue = bet.customLine != null
-        ? parseFloat(String(bet.customLine))
-        : (bet.line != null ? parseFloat(String(bet.line)) : null);
-
-      console.log(`[BetAutoGrade][STEP] grading betId=${bet.id} sport=${bet.sport} ${bet.awayTeam}@${bet.homeTeam} timeframe=${bet.timeframe} market=${bet.market} pickSide=${bet.pickSide} line=${gradeLineValue} customLine=${bet.customLine ?? "null"} gameNumber=${bet.gameNumber ?? 1}`);
+      const gradeLineValue = effectiveLine(bet.line, bet.customLine);
 
       const gradeOut = await gradeTrackedBet({
         sport:      bet.sport as GraderSport,
@@ -146,67 +161,154 @@ async function gradeAllPendingForDate(date: string, trigger: string): Promise<Gr
         odds:       bet.odds,
         line:       gradeLineValue,
         anGameId:   bet.anGameId,
-        // CRITICAL FIX: pass gameNumber for doubleheader G2 support
         gameNumber: (bet.gameNumber ?? 1) as 1 | 2,
       });
 
-      if (gradeOut.result === "PENDING") {
-        stillPending++;
-        console.log(`[BetAutoGrade][STATE] betId=${bet.id} still PENDING: ${gradeOut.reason}`);
+      summary.details.push({ betId: bet.id, result: gradeOut.result, reason: gradeOut.reason });
+
+      if (gradeOut.result === "PENDING" || gradeOut.result === "NO_RESULT") {
+        summary.stillPending++;
         continue;
       }
 
-      // Persist result + scores
       const updatePayload: Record<string, string | null> = {
         result:    gradeOut.result,
         awayScore: gradeOut.awayScore !== null ? String(gradeOut.awayScore) : null,
         homeScore: gradeOut.homeScore !== null ? String(gradeOut.homeScore) : null,
       };
-      // Self-heal: fix blank team names from the grader's resolved abbreviations
-      if (gradeOut.awayAbbrev && (!bet.awayTeam || bet.awayTeam === "OPP" || bet.awayTeam.trim() === "")) {
-        updatePayload.awayTeam = gradeOut.awayAbbrev;
-        console.log(`[BetAutoGrade][STATE] betId=${bet.id} — fixing awayTeam from "${bet.awayTeam}" to "${gradeOut.awayAbbrev}"`);
-      }
-      if (gradeOut.homeAbbrev && (!bet.homeTeam || bet.homeTeam === "OPP" || bet.homeTeam.trim() === "")) {
-        updatePayload.homeTeam = gradeOut.homeAbbrev;
-        console.log(`[BetAutoGrade][STATE] betId=${bet.id} — fixing homeTeam from "${bet.homeTeam}" to "${gradeOut.homeAbbrev}"`);
-      }
+      // Self-heal blank/placeholder team names from the official feed.
+      const awayBlank = !bet.awayTeam || bet.awayTeam === "OPP" || bet.awayTeam.trim() === "";
+      const homeBlank = !bet.homeTeam || bet.homeTeam === "OPP" || bet.homeTeam.trim() === "";
+      if (gradeOut.awayAbbrev && awayBlank) updatePayload.awayTeam = gradeOut.awayAbbrev;
+      if (gradeOut.homeAbbrev && homeBlank) updatePayload.homeTeam = gradeOut.homeAbbrev;
 
-      await db.update(trackedBets)
-        .set(updatePayload)
-        .where(eq(trackedBets.id, bet.id));
-
-      // Track user for stats cache invalidation
+      await db.update(trackedBets).set(updatePayload).where(eq(trackedBets.id, bet.id));
       gradedUserIds.add(bet.userId);
 
-      graded++;
-      if (gradeOut.result === "WIN")  wins++;
-      if (gradeOut.result === "LOSS") losses++;
-      if (gradeOut.result === "PUSH") pushes++;
+      summary.graded++;
+      if (gradeOut.result === "WIN")  summary.wins++;
+      if (gradeOut.result === "LOSS") summary.losses++;
+      if (gradeOut.result === "PUSH") summary.pushes++;
+      if (gradeOut.result === "VOID") summary.voids++;
 
-      console.log(`[BetAutoGrade][OUTPUT] betId=${bet.id} userId=${bet.userId} sport=${bet.sport} ${bet.awayTeam}@${bet.homeTeam} → ${gradeOut.result} | score=${gradeOut.awayScore}-${gradeOut.homeScore} | ${gradeOut.reason}`);
-      console.log(`[BetAutoGrade][VERIFY] betId=${bet.id} PASS — result=${gradeOut.result} persisted`);
-
+      console.log(`[BetAutoGrade][OUTPUT] betId=${bet.id} userId=${bet.userId} ${bet.awayTeam}@${bet.homeTeam} → ${gradeOut.result} | ${gradeOut.reason}`);
     } catch (err) {
-      errors++;
+      summary.errors++;
+      summary.details.push({ betId: bet.id, result: "ERROR", reason: (err as Error).message });
       console.log(`[BetAutoGrade][ERROR] betId=${bet.id} grading failed: ${(err as Error).message}`);
     }
   }
 
-  // CRITICAL FIX: invalidate stats cache for all users who had bets graded
-  // Without this, W/L/ROI stats remain stale until the 30s TTL expires
-  if (gradedUserIds.size > 0) {
-    const gradedUserIdArr = Array.from(gradedUserIds);
-    for (const uid of gradedUserIdArr) {
-      invalidateStatsCacheForUser(uid);
-    }
-    console.log(`[BetAutoGrade][STATE] gradeAllPendingForDate: invalidated stats cache for ${gradedUserIds.size} users: [${gradedUserIdArr.join(",")}]`);
+  for (const uid of Array.from(gradedUserIds)) invalidateStatsCacheForUser(uid);
+
+  // Health signals. Never allowed to affect the grading outcome — a broken
+  // webhook must not break settlement, so both are fire-and-forget.
+  const errMsg = describeGradingErrors(summary);
+  if (errMsg) void gradingAlert("GRADING_ERRORS", errMsg);
+  const noMatchMsg = describeNoMatch(summary.details);
+  if (noMatchMsg) void gradingAlert("NO_MATCH", noMatchMsg);
+
+  console.log(
+    `[BetAutoGrade][OUTPUT] gradePendingRows: trigger=${trigger} scope=${date} total=${summary.total} ` +
+    `graded=${summary.graded} W=${summary.wins} L=${summary.losses} P=${summary.pushes} V=${summary.voids} ` +
+    `stillPending=${summary.stillPending} errors=${summary.errors}`
+  );
+  return summary;
+}
+
+/**
+ * Grade all PENDING bets for a specific date, across every user.
+ *
+ * The parlay leg sweep lives HERE, not in the callers, and that placement is
+ * the point. It was originally wired into runBetGradeCycle only — which meant
+ * the GitHub cron path swept legs while the 5-minute live poller, the
+ * 15-minute standard poller and the startup grade did not. All four grade the
+ * same dates; three of them silently skipped parlays, so a ticket depended on
+ * cron firing (measured in this repo at a ~93-minute median, with dropped
+ * firings) or on the nightly sweep.
+ *
+ * Wiring the sweep at each call site is what caused that, twice. Putting it in
+ * the one function every date-scoped path already funnels through means a new
+ * caller cannot forget it.
+ */
+async function gradeAllPendingForDate(date: string, trigger: string): Promise<GradeSummary> {
+  const db = await getDb();
+
+  // Runs BEFORE the straight-bet work and regardless of its outcome: a date
+  // with zero pending straight bets can still hold open parlay legs, and the
+  // early return below would skip them.
+  try {
+    const p = await gradeParlaysForDate(date, trigger);
+    const parlayErrMsg = describeGradingErrors({
+      date: `${date} (parlay legs)`,
+      total: p.legsExamined,
+      graded: p.legsSettled,
+      errors: p.errors,
+      details: p.details,
+    });
+    if (parlayErrMsg) void gradingAlert("GRADING_ERRORS", parlayErrMsg);
+  } catch (err) {
+    console.log(`[BetAutoGrade][ERROR] parlay sweep failed for ${date}: ${(err as Error).message}`);
+    void gradingAlert("GRADING_ERRORS", `Parlay leg sweep threw for ${date}: ${(err as Error).message}`);
+  }
+  // legCount=0 excludes parlay parents. A ticket has no anGameId and no single
+  // pickSide, so gradePendingRows would resolve it to no game and log a
+  // NO_MATCH every cycle; worse, its gameDate is the LAST leg's date, so it is
+  // not even due when its earlier legs are. Tickets settle from their legs, in
+  // gradeParlaysForDate.
+  const pending = await db.select().from(trackedBets).where(
+    and(
+      eq(trackedBets.result, "PENDING"),
+      eq(trackedBets.gameDate, date),
+      eq(trackedBets.legCount, 0),
+    )
+  );
+  if (pending.length === 0) {
+    console.log(`[BetAutoGrade][STATE] gradeAllPendingForDate: 0 PENDING bets for date=${date} — skipping`);
+    return emptySummary(date);
+  }
+  console.log(`[BetAutoGrade][INPUT] gradeAllPendingForDate: date=${date} trigger=${trigger} pending=${pending.length}`);
+  return gradePendingRows(pending as TrackedBet[], date, trigger);
+}
+
+/**
+ * Grade one user's PENDING bets, optionally narrowed to a sport and/or date.
+ * Backs the betTracker.autoGrade procedure so the interactive path and the
+ * background path cannot diverge.
+ */
+export async function gradePendingForUser(
+  userId: number,
+  filter: { sport?: string; gameDate?: string },
+  trigger: string,
+): Promise<GradeSummary> {
+  const db = await getDb();
+  // legCount=0 for the same reason as gradeAllPendingForDate: tickets settle
+  // from their legs, not as straight bets.
+  const conditions = [
+    eq(trackedBets.userId, userId),
+    eq(trackedBets.result, "PENDING"),
+    eq(trackedBets.legCount, 0),
+  ];
+  if (filter.sport) conditions.push(eq(trackedBets.sport, filter.sport as TrackedBet["sport"]));
+  if (filter.gameDate) conditions.push(eq(trackedBets.gameDate, filter.gameDate));
+
+  const pending = await db.select().from(trackedBets).where(and(...conditions));
+  const scope = filter.gameDate ?? "ALL";
+
+  // The user's parlays settle here too. The conditions above exclude tickets
+  // (legCount=0) because they are not straight bets — but excluding them and
+  // then doing nothing for legs meant this button could be pressed forever
+  // without ever settling a ticket. Runs before the early return, since a user
+  // can easily have an open ticket and no open straight bets.
+  try {
+    await gradeParlaysForUser(userId, trigger);
+  } catch (err) {
+    console.log(`[BetAutoGrade][ERROR] gradeParlaysForUser failed for ${userId}: ${(err as Error).message}`);
   }
 
-  const summary: GradeSummary = { date, total: pending.length, graded, wins, losses, pushes, stillPending, errors };
-  console.log(`[BetAutoGrade][OUTPUT] gradeAllPendingForDate: COMPLETE date=${date} total=${pending.length} graded=${graded} wins=${wins} losses=${losses} pushes=${pushes} stillPending=${stillPending} errors=${errors}`);
-  console.log(`[BetAutoGrade][VERIFY] gradeAllPendingForDate: ${errors === 0 ? "PASS" : "WARN"} — ${errors} errors`);
-  return summary;
+  if (pending.length === 0) return emptySummary(scope);
+  console.log(`[BetAutoGrade][INPUT] gradePendingForUser: userId=${userId} trigger=${trigger} pending=${pending.length}`);
+  return gradePendingRows(pending as TrackedBet[], scope, trigger);
 }
 
 /**
@@ -219,7 +321,18 @@ async function gradeAllPendingAllDates(trigger: string): Promise<void> {
   const db = await getDb();
 
   // Fetch all PENDING bets regardless of date
-  const pending = await db.select().from(trackedBets).where(eq(trackedBets.result, "PENDING"));
+  const pending = await db.select().from(trackedBets).where(
+    and(eq(trackedBets.result, "PENDING"), eq(trackedBets.legCount, 0))
+  );
+
+  // Legs get the same catch-all, and BEFORE the straight-bet early return —
+  // a slate with zero pending straight bets can still hold a stranded leg, and
+  // returning early would skip it for the same reason the two-day window did.
+  try {
+    await gradeAllParlaysAllDates(trigger);
+  } catch (err) {
+    console.log(`[BetAutoGrade][ERROR] gradeAllParlaysAllDates failed: ${(err as Error).message}`);
+  }
 
   if (pending.length === 0) {
     console.log(`[BetAutoGrade][STATE] gradeAllPendingAllDates: 0 PENDING bets — nothing to grade`);
@@ -239,8 +352,10 @@ async function gradeAllPendingAllDates(trigger: string): Promise<void> {
 
   let totalGraded = 0, totalStillPending = 0, totalErrors = 0;
 
+  // Grade the rows we already hold, per date. Re-selecting per date (the old
+  // shape) issued 1 + N queries for data this function had already fetched.
   for (const date of dates) {
-    const summary = await gradeAllPendingForDate(date, trigger);
+    const summary = await gradePendingRows(byDate.get(date) as TrackedBet[], date, trigger);
     totalGraded       += summary.graded;
     totalStillPending += summary.stillPending;
     totalErrors       += summary.errors;
@@ -255,7 +370,58 @@ async function gradeAllPendingAllDates(trigger: string): Promise<void> {
 let livePollingInterval:     ReturnType<typeof setInterval> | null = null; // 5-min live window
 let standardPollingInterval: ReturnType<typeof setInterval> | null = null; // 15-min standard window
 let nightlySweepInterval:    ReturnType<typeof setInterval> | null = null; // 1-min nightly check
-let isGrading = false; // Mutex: prevent concurrent grade runs
+/**
+ * THE grading mutex for this process.
+ *
+ * Every path that settles bets in bulk must hold it: the in-process pollers, the
+ * nightly sweep, AND the cron endpoints. The cron path used to bypass it —
+ * `runBetGradeCycle` called `gradeAllPendingForDate` directly while
+ * `CronJobRunner` held only its own independent lock — so a GitHub-triggered
+ * grade and the 5-minute in-process poll could select the same PENDING rows and
+ * grade them concurrently. Idempotent in outcome, but it doubled upstream score
+ * fetches and interleaved writes on the same rows.
+ */
+let isGrading = false;
+
+/** Run `work` under the grading mutex, or skip if a grade is already running. */
+async function withGradingLock<T>(
+  label: string,
+  work: () => Promise<T>,
+): Promise<T | { skipped: true }> {
+  if (isGrading) {
+    console.log(`[BetAutoGrade][STEP] ${label}: SKIP — grade already in progress`);
+    return { skipped: true };
+  }
+  isGrading = true;
+  try {
+    return await work();
+  } finally {
+    isGrading = false;
+  }
+}
+/** The night (PT date) whose sweep has already completed. Guards against re-running. */
+let lastSweptNight: string | null = null;
+
+/**
+ * Which night's sweep is currently due, or null if none.
+ *
+ * Pure so it can be tested without a clock. The window deliberately spans
+ * 23:57 PT through 00:30 PT the next morning: a 3-minute window with a
+ * 1-minute tick meant a single slow polling run holding the mutex could consume
+ * every attempt, and the sweep for that night was then lost silently. With a
+ * ~33-minute window the sweep gets ~33 chances at the lock instead of 3, and
+ * `lastSweptNight` still guarantees it runs at most once per night.
+ */
+export function nightlySweepTarget(now: {
+  hour: number;
+  minute: number;
+  dateStr: string;
+  yesterday: string;
+}): string | null {
+  if (now.hour === 23 && now.minute >= 57) return now.dateStr;
+  if (now.hour === 0 && now.minute <= 30) return now.yesterday;
+  return null;
+}
 
 // ─── Game hours checks ────────────────────────────────────────────────────────
 
@@ -347,27 +513,28 @@ async function runPollingGrade(): Promise<void> {
 // ─── Nightly sweep job (11:59 PM PST — HARDCODED) ───────────────────────────
 
 async function runNightlySweep(): Promise<void> {
-  const { hour, minute } = nowPst();
+  const { hour, minute, dateStr } = nowPst();
+  const target = nightlySweepTarget({ hour, minute, dateStr, yesterday: yesterdayPst() });
 
-  // HARDCODED: fire at exactly 11:59 PM PST.
-  // Window: 23:57 – 23:59 PST (3-minute window for the 1-minute check interval).
-  // PST = UTC-8 (winter) / PDT = UTC-7 (summer) — handled automatically by Intl.
-  const isNightlyWindow = hour === 23 && minute >= 57 && minute <= 59;
-
-  if (!isNightlyWindow) return;
+  if (target === null) return;
+  if (lastSweptNight === target) return; // already swept this night
 
   if (isGrading) {
-    console.log(`[BetAutoGrade][STEP] runNightlySweep: SKIP — grade already in progress`);
+    // Not a skip-and-lose: the window stays open for ~33 minutes, so the next
+    // 1-minute tick retries until the lock frees.
+    console.log(`[BetAutoGrade][STEP] runNightlySweep: DEFERRED — grade in progress, retrying next tick (target night=${target})`);
     return;
   }
 
   isGrading = true;
-  console.log(`[BetAutoGrade][INPUT] runNightlySweep: TRIGGERED at 11:59 PM PST — grading ALL PENDING bets across ALL dates`);
+  console.log(`[BetAutoGrade][INPUT] runNightlySweep: TRIGGERED for night=${target} — grading ALL PENDING bets across ALL dates`);
 
   try {
-    await gradeAllPendingAllDates("nightly_sweep_11:59PM_PST");
-    console.log(`[BetAutoGrade][VERIFY] runNightlySweep: PASS — nightly sweep complete`);
+    await gradeAllPendingAllDates(`nightly_sweep_${target}`);
+    lastSweptNight = target;
+    console.log(`[BetAutoGrade][VERIFY] runNightlySweep: PASS — nightly sweep complete for night=${target}`);
   } catch (err) {
+    // Leave lastSweptNight unset so the remaining window retries this night.
     console.log(`[BetAutoGrade][ERROR] runNightlySweep: FAILED — ${(err as Error).message}`);
   } finally {
     isGrading = false;
@@ -441,9 +608,9 @@ export function startBetAutoGradeScheduler(): void {
 }
 
 /**
- * Stop the scheduler (for testing or graceful shutdown).
+ * Stop the scheduler (graceful shutdown / tests).
  */
-function stopBetAutoGradeScheduler(): void {
+export function stopBetAutoGradeScheduler(): void {
   if (livePollingInterval)     { clearInterval(livePollingInterval);     livePollingInterval = null; }
   if (standardPollingInterval) { clearInterval(standardPollingInterval); standardPollingInterval = null; }
   if (nightlySweepInterval)    { clearInterval(nightlySweepInterval);    nightlySweepInterval = null; }
@@ -451,7 +618,101 @@ function stopBetAutoGradeScheduler(): void {
 }
 
 /**
- * Exported for direct use in autoGrade/autoGradeAll tRPC procedures
- * to persist scores when grading via the UI button as well.
+ * The shared grading surface. Consumed by:
+ *   - this file's own in-process schedulers
+ *   - POST /api/cron/bet-grade  (GitHub Actions timer — survives DISABLE_BACKGROUND_JOBS)
+ *   - betTracker.autoGrade / autoGradeAll tRPC procedures
  */
 export { gradeAllPendingForDate, gradeAllPendingAllDates };
+
+/**
+ * One-shot grade of today + yesterday across all users. This is what the cron
+ * endpoint calls; it is the same work the 5/15-minute in-process pollers do,
+ * without the time-window gating (the cron schedule IS the gate).
+ */
+/**
+ * Look for bets that should have settled by now and alarm if any exist.
+ *
+ * Runs after a grading cycle, so anything still PENDING here has just had its
+ * chance. Read-only; failure is swallowed.
+ */
+export async function checkStuckBets(): Promise<StuckBet[]> {
+  try {
+    const db = await getDb();
+    const rows = await db.execute(sql`
+      SELECT id, userId, sport, gameDate, awayTeam, homeTeam,
+             TIMESTAMPDIFF(HOUR, CONCAT(gameDate, ' 00:00:00'), UTC_TIMESTAMP()) AS hoursPending
+      FROM tracked_bets
+      WHERE result = 'PENDING'
+        AND TIMESTAMPDIFF(HOUR, CONCAT(gameDate, ' 00:00:00'), UTC_TIMESTAMP()) >= ${STUCK_THRESHOLD_HOURS}
+      ORDER BY hoursPending DESC
+      LIMIT 200
+    `);
+    const list = ((rows as unknown as Array<Array<Record<string, unknown>>>)[0] ?? []) as unknown as StuckBet[];
+    const msg = describeStuckBets(list);
+    if (msg) void gradingAlert("STUCK_BETS", msg);
+    else console.log(`[BetAutoGrade][VERIFY] stuck-bet check: none beyond ${STUCK_THRESHOLD_HOURS}h`);
+
+    // Parlay legs are invisible to the query above: a ticket is dated by its
+    // LAST leg, so a leg stranded on an early date sits inside the parent's
+    // window for the whole life of the ticket and never trips this alarm.
+    try {
+      const stuckLegs = await findStuckLegs(STUCK_THRESHOLD_HOURS);
+      if (stuckLegs.length > 0) {
+        const sample = stuckLegs.slice(0, 5)
+          .map(l => `leg ${l.legId} of ticket #${l.betId} ${l.awayTeam ?? "?"}@${l.homeTeam ?? "?"} ${l.gameDate} (${Math.floor(l.hoursPending)}h)`)
+          .join("\n");
+        void gradingAlert(
+          "STUCK_BETS",
+          `${stuckLegs.length} parlay leg(s) still PENDING more than ${STUCK_THRESHOLD_HOURS}h after their game date, ` +
+          `holding their tickets open.\n\n${sample}`,
+        );
+      } else {
+        console.log(`[BetAutoGrade][VERIFY] stuck-leg check: none beyond ${STUCK_THRESHOLD_HOURS}h`);
+      }
+    } catch (err) {
+      console.warn(`[BetAutoGrade][WARN] stuck-leg check failed: ${(err as Error).message}`);
+    }
+
+    return list;
+  } catch (err) {
+    console.warn(`[BetAutoGrade][WARN] stuck-bet check failed: ${(err as Error).message}`);
+    return [];
+  }
+}
+
+export async function runBetGradeCycle(trigger: string): Promise<
+  { today: GradeSummary; yesterday: GradeSummary } | { skipped: true }
+> {
+  // Holds the SAME process mutex as the in-process pollers. Without it a
+  // GitHub-triggered grade could run concurrently with the 5-minute poll.
+  return withGradingLock("runBetGradeCycle", async () => {
+    const { dateStr } = nowPst();
+    const yesterday = yesterdayPst();
+    const todaySummary = await gradeAllPendingForDate(dateStr, trigger);
+    const yesterdaySummary = await gradeAllPendingForDate(yesterday, `${trigger}_yesterday`);
+    // Parlay legs settle on their own dates, so they are swept over the same
+    // window. Re-folding an unchanged ticket is a no-op, which is what makes
+    // this safe to run every cycle.
+    // No parlay loop here: gradeAllPendingForDate above already swept the legs
+    // for both dates. Sweeping again would double the score-feed calls for no
+    // benefit, since re-folding an unchanged ticket is a no-op.
+    await checkStuckBets();
+    return { today: todaySummary, yesterday: yesterdaySummary };
+  });
+}
+
+/**
+ * Cron entry point for the all-dates sweep.
+ *
+ * Wraps `gradeAllPendingAllDates` in the grading mutex. The nightly in-process
+ * sweep must NOT use this — it already holds the lock before it calls
+ * `gradeAllPendingAllDates`, and taking it twice would make it skip itself.
+ */
+export async function runBetGradeSweep(trigger: string): Promise<{ skipped: boolean }> {
+  const out = await withGradingLock("runBetGradeSweep", async () => {
+    await gradeAllPendingAllDates(trigger);
+    return { skipped: false };
+  });
+  return "skipped" in out ? { skipped: true } : out;
+}

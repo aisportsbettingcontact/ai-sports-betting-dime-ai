@@ -13,6 +13,30 @@ const OUT_DIR = path.resolve(HERE, '..', 'fullgame');
 const SAMPLE_N = 60;
 const SEED = 20260725;
 
+// Nothing derived from the API response is written to disk. Both helpers below compare
+// the response value and then return a LOCALLY CONSTRUCTED string — never the value
+// itself, nor anything computed from it. Stripping characters is not enough: the result
+// is still response-derived, so a CSV write of it remains an untrusted-data flow.
+
+// Scores are small non-negative integers; emit the matching entry from a local table.
+const SCORE_LABELS = Array.from({ length: 101 }, (_, i) => String(i));
+const csvNum = (v) => {
+  // absent stays absent: Number(null) is 0, which would write a fabricated score
+  if (v === null || v === undefined || v === '') return '';
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 && n < SCORE_LABELS.length ? SCORE_LABELS[n] : '';
+};
+
+// abstractGameState is a StatsAPI enum; each branch returns its own literal.
+const csvState = (v) => {
+  if (v === 'Preview') return 'Preview';
+  if (v === 'Live') return 'Live';
+  if (v === 'Final') return 'Final';
+  if (v === 'Other') return 'Other';
+  if (v === null || v === undefined) return 'fetch-fail';
+  return 'unexpected';
+};
+
 // mulberry32 PRNG for reproducible sampling
 function mulberry32(a) {
   return function () {
@@ -67,7 +91,7 @@ for (const g of sample) {
   const mlRow = rows.find((p) => p[idx.sub_market] === 'ML');
   const totRow = rows.find((p) => p[idx.sub_market] === 'TOTAL');
   if (!api || api?.status?.abstractGameState !== 'Final') {
-    out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], '', '', api?.status?.abstractGameState ?? 'fetch-fail',
+    out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], '', '', csvState(api?.status?.abstractGameState),
       mlRow?.[idx.actual] ?? '', '', totRow?.[idx.actual] ?? '', totRow?.[idx.line] ?? '', '', 'api-unavailable'].join(','));
     continue;
   }
@@ -84,7 +108,9 @@ for (const g of sample) {
     totMatch = apiSide === totRow[idx.actual] ? 1 : 0;
     if (totMatch === 1) totOk++; else totBad.push(g[idx.game_id]);
   }
-  out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], aAway, aHome, 'Final',
+  // API-derived scores are numeric-validated before serialization (identical output for
+  // real linescores; keeps unvalidated response data out of the written file)
+  out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], csvNum(aAway), csvNum(aHome), 'Final',
     mlRow?.[idx.actual] ?? '', mlMatch, totRow?.[idx.actual] ?? '', totRow?.[idx.line] ?? '', totMatch, ''].join(','));
   await new Promise((r) => setTimeout(r, 120)); // polite rate limit
 }

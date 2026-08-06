@@ -2,9 +2,17 @@ name: P0 Feed Verify (read-only)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Read-only verification that the THREE P0 surfaces actually carry live data on
-# the deployed Railway app. Hits public tRPC feed endpoints from a GitHub runner
-# (which has real egress, unlike the sandboxed agent container) and reports
-# HTTP status, the X-Games-Count header, and presence/counts of key fields.
+# the deployed app. Hits public tRPC feed endpoints from a GitHub runner (which
+# has real egress, unlike the sandboxed agent container) and reports HTTP status,
+# the X-Games-Count header, and presence/counts of key fields.
+#
+# TARGET THE CLOUDFLARE HOST (default below), never the raw *.up.railway.app
+# origin: since the Phase-4 edge went live the origin lock 403s every path but
+# /health on the raw origin, so a raw-origin run reports HTTP 403 for all seven
+# probes (that is the lock working, not a data outage). Through Cloudflare the
+# /api/trpc/* surface is bot-exempt (the "Skip WAF+Bot for app API" rule), so this
+# read-only probe needs NO bypass key — X-Games-Count and X-Cache-Status pass
+# straight through the proxy. (deploy-smoke.yml documents the wider edge contract.)
 #
 # No secrets. No writes. It never dumps full rows — only counts and field
 # presence — so it is safe to run repeatedly (e.g. for two-cycle verification).
@@ -14,16 +22,16 @@ on:
   workflow_dispatch:
     inputs:
       origin:
-        description: "Origin to verify"
+        description: "Origin to verify — MUST be the Cloudflare-fronted host; the raw origin 403s /api/trpc behind the edge lock"
         required: true
-        default: "https://ai-sports-betting-dime-ai-production.up.railway.app"
+        default: "https://aisportsbettingmodels.com"
         type: string
       proc:
         description: "Ad-hoc: single tRPC procedure to probe (optional; overrides the default suite)"
         required: false
         type: string
       input_json:
-        description: "Ad-hoc: JSON input for the procedure (e.g. {\"sport\":\"MLB\"} or null)"
+        description: 'Ad-hoc: JSON input for the procedure (e.g. {"sport":"MLB"} or null)'
         required: false
         default: "null"
         type: string
@@ -57,7 +65,7 @@ jobs:
           probe() {
             local label="$1" proc="$2" json="$3"
             local input; input="$(batch_input "$json")"
-            local url="$base/api/trpc/$proc?batch=1&input=$(enc "$input")"
+            local url; url="$base/api/trpc/$proc?batch=1&input=$(enc "$input")"
             echo "---- $label : $proc  @ $(stamp) ----"
             local hdr body code
             hdr="$(mktemp)"; body="$(mktemp)"
@@ -81,6 +89,13 @@ jobs:
             echo "wc_noDraw=$(grep -o '\"noDraw\":-\?[0-9]' "$body" | wc -l)"
             echo "wc_dkOdds_objs=$(grep -o '\"dkOdds\":{' "$body" | wc -l)"
             echo "wc_modelOdds_objs=$(grep -o '\"modelOdds\":{' "$body" | wc -l)"
+            # WC winner-scope verification (owner directive 2026-07-18): the
+            # model winner odds (model_*_to_advance → modelOdds.toAdvance*) are
+            # public display data already served to every visitor — extract
+            # matchId → home/away team ids → book+model toAdvance and 3-way ML
+            # per match so the winner-market binding can be verified end-to-end
+            # from CI (the sandboxed agent container has no egress to prod).
+            echo "wc_winner_scope=$(jq -c '(.[0].result.data.json // []) | if type=="array" then map({id:.matchId, home:.homeTeamId, away:.awayTeamId, bookAdvH:(.dkOdds.toAdvanceHome // null), bookAdvA:(.dkOdds.toAdvanceAway // null), modelAdvH:(.modelOdds.toAdvanceHome // null), modelAdvA:(.modelOdds.toAdvanceAway // null), modelH:(.modelOdds.home // null), modelD:(.modelOdds.draw // null), modelA:(.modelOdds.away // null)}) else "not-a-match-array" end' "$body" 2>/dev/null || echo 'jq-parse-failed')"
             echo "wc_venueIds=$(grep -o '\"venueId\":\"[a-z0-9-]*\"' "$body" | sort | uniq -c | tr '\n' ' ')"
             # First 500 bytes for shape sanity (public data only):
             echo "head: $(head -c 500 "$body" | tr '\n' ' ')"

@@ -12,15 +12,61 @@
  * `trpc.games.lastRefresh` so the UI can show "Last updated HH:MM".
  */
 
-import { listGamesByDate, updateBookOdds, insertGames, updateAnOdds, insertOddsHistory, getGameByNcaaContestId, updateNcaaStartTime } from "./db";
+import {
+  listGamesByDate,
+  updateBookOdds,
+  insertGames,
+  updateAnOdds,
+  insertOddsHistory,
+  getGameByNcaaContestId,
+  updateNcaaStartTime,
+} from "./db";
 import { debugLog } from "./_core/debugLogger";
 import { fetchActionNetworkOdds, type AnSport } from "./actionNetworkScraper";
-import { scrapeVsinBettingSplits, scrapeVsinBettingSplitsBothDays, scrapeVsinMlbBettingSplits, scrapeVsinNbaBettingSplits, scrapeVsinNhlBettingSplits, type VsinSplitsGame } from "./vsinBettingSplitsScraper";
-import { fetchNbaGamesForDate, buildNbaStartTimeMap, fetchNbaLiveScores } from "./nbaScoreboard";
-import { fetchNhlGamesForRange, buildNhlStartTimeMap, buildNhlGameMap, fetchNhlLiveScores, type NhlScheduleGame } from "./nhlSchedule";
-import { NBA_VALID_DB_SLUGS, NBA_BY_VSIN_SLUG, NBA_BY_AN_SLUG, getNbaTeamByVsinSlug, NBA_BY_DB_SLUG } from "../shared/nbaTeams";
-import { NHL_VALID_DB_SLUGS, NHL_BY_ABBREV, NHL_BY_DB_SLUG, NHL_BY_VSIN_SLUG, NHL_BY_AN_SLUG, getNhlTeamByAnSlug, VSIN_NHL_HREF_ALIASES } from "../shared/nhlTeams";
-import { MLB_BY_ABBREV, MLB_BY_VSIN_SLUG, MLB_VALID_ABBREVS, getMlbTeamByAnSlug, getMlbTeamByVsinSlug, VSIN_MLB_HREF_ALIASES } from "../shared/mlbTeams";
+import {
+  scrapeVsinBettingSplits,
+  scrapeVsinBettingSplitsBothDays,
+  scrapeVsinMlbBettingSplits,
+  scrapeVsinNbaBettingSplits,
+  scrapeVsinNhlBettingSplits,
+  type VsinSplitsGame,
+} from "./vsinBettingSplitsScraper";
+import {
+  fetchNbaGamesForDate,
+  buildNbaStartTimeMap,
+  fetchNbaLiveScores,
+} from "./nbaScoreboard";
+import {
+  fetchNhlGamesForRange,
+  buildNhlStartTimeMap,
+  buildNhlGameMap,
+  fetchNhlLiveScores,
+  type NhlScheduleGame,
+} from "./nhlSchedule";
+import {
+  NBA_VALID_DB_SLUGS,
+  NBA_BY_VSIN_SLUG,
+  NBA_BY_AN_SLUG,
+  getNbaTeamByVsinSlug,
+  NBA_BY_DB_SLUG,
+} from "../shared/nbaTeams";
+import {
+  NHL_VALID_DB_SLUGS,
+  NHL_BY_ABBREV,
+  NHL_BY_DB_SLUG,
+  NHL_BY_VSIN_SLUG,
+  NHL_BY_AN_SLUG,
+  getNhlTeamByAnSlug,
+  VSIN_NHL_HREF_ALIASES,
+} from "../shared/nhlTeams";
+import {
+  MLB_BY_ABBREV,
+  MLB_BY_VSIN_SLUG,
+  MLB_VALID_ABBREVS,
+  getMlbTeamByAnSlug,
+  getMlbTeamByVsinSlug,
+  VSIN_MLB_HREF_ALIASES,
+} from "../shared/mlbTeams";
 import type { InsertGame } from "../drizzle/schema";
 
 const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes — all sports refresh cadence (24/7, no time gates)
@@ -43,33 +89,37 @@ function resolveNhlVsinSlug(rawSlug: string) {
   if (!team) {
     console.warn(
       `[VSiNAutoRefresh][NHL] resolveNhlVsinSlug: unknown slug "${rawSlug}"` +
-      (canonical !== rawSlug ? ` (aliased from "${rawSlug}" → "${canonical}")` : "") +
-      " — game will be skipped. Add to VSIN_NHL_HREF_ALIASES if this is a known alias."
+        (canonical !== rawSlug
+          ? ` (aliased from "${rawSlug}" → "${canonical}")`
+          : "") +
+        " — game will be skipped. Add to VSIN_NHL_HREF_ALIASES if this is a known alias."
     );
   } else if (canonical !== rawSlug) {
-    console.log(`[VSiNAutoRefresh][NHL] resolveNhlVsinSlug: alias resolved "${rawSlug}" → "${canonical}" → dbSlug="${team.dbSlug}"`);
+    console.log(
+      `[VSiNAutoRefresh][NHL] resolveNhlVsinSlug: alias resolved "${rawSlug}" → "${canonical}" → dbSlug="${team.dbSlug}"`
+    );
   }
   return team;
 }
 
 export interface RefreshResult {
-  refreshedAt: string;       // ISO timestamp of last VSiN odds/splits refresh
+  refreshedAt: string; // ISO timestamp of last VSiN odds/splits refresh
   scoresRefreshedAt: string; // ISO timestamp of last score refresh
-  updated: number;           // games matched + updated (VSiN)
-  inserted: number;          // new games inserted (VSiN stubs)
-  nbaUpdated: number;        // NBA games matched + updated (VSiN)
-  nbaInserted: number;       // new NBA games inserted (VSiN stubs)
+  updated: number; // games matched + updated (VSiN)
+  inserted: number; // new games inserted (VSiN stubs)
+  nbaUpdated: number; // NBA games matched + updated (VSiN)
+  nbaInserted: number; // new NBA games inserted (VSiN stubs)
   nbaScheduleInserted: number; // new NBA-only games inserted from schedule
-  total: number;             // total VSiN games processed
-  nbaTotal: number;          // total NBA VSiN games processed
-  nhlUpdated: number;        // NHL games matched + updated (VSiN)
-  nhlInserted: number;       // new NHL games inserted (VSiN stubs)
+  total: number; // total VSiN games processed
+  nbaTotal: number; // total NBA VSiN games processed
+  nhlUpdated: number; // NHL games matched + updated (VSiN)
+  nhlInserted: number; // new NHL games inserted (VSiN stubs)
   nhlScheduleInserted: number; // new NHL-only games inserted from schedule
-  nhlTotal: number;          // total NHL VSiN games processed
-  mlbUpdated: number;        // MLB games matched + updated (VSiN)
-  mlbInserted: number;       // new MLB games inserted (VSiN stubs)
-  mlbTotal: number;          // total MLB VSiN games processed
-  gameDate: string;          // today YYYY-MM-DD (PST)
+  nhlTotal: number; // total NHL VSiN games processed
+  mlbUpdated: number; // MLB games matched + updated (VSiN)
+  mlbInserted: number; // new MLB games inserted (VSiN stubs)
+  mlbTotal: number; // total MLB VSiN games processed
+  gameDate: string; // today YYYY-MM-DD (PST)
 }
 
 let lastRefreshResult: RefreshResult | null = null;
@@ -85,7 +135,12 @@ export function getLastRefreshResult(): RefreshResult | null {
  */
 function slugsMatch(a: string, b: string): boolean {
   if (a === b) return true;
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "");
   const na = norm(a);
   const nb = norm(b);
   if (na === nb) return true;
@@ -108,7 +163,7 @@ function isWithinActiveHours(): boolean {
   // 14:01 UTC → utcHour=14, utcMinute>=1
   // 04:59 UTC → utcHour=4, utcMinute<=59
   const afterStart = utcHour > 14 || (utcHour === 14 && utcMinute >= 1);
-  const beforeEnd  = utcHour < 4  || (utcHour === 4  && utcMinute <= 59);
+  const beforeEnd = utcHour < 4 || (utcHour === 4 && utcMinute <= 59);
   return afterStart || beforeEnd;
 }
 
@@ -173,7 +228,9 @@ function dateRange(start: string, end: string): string[] {
 async function runTomorrowSplitsUpdate(tomorrowStr: string): Promise<void> {
   try {
     const allSplits = await scrapeVsinBettingSplits("tomorrow");
-    console.log(`[VSiNAutoRefresh][Tomorrow] ${allSplits.length} total splits games`);
+    console.log(
+      `[VSiNAutoRefresh][Tomorrow] ${allSplits.length} total splits games`
+    );
 
     // Process NBA
     const nbaSplits = allSplits.filter(g => g.sport === "NBA");
@@ -184,29 +241,65 @@ async function runTomorrowSplitsUpdate(tomorrowStr: string): Promise<void> {
         const awayTeam = getNbaTeamByVsinSlug(g.awayVsinSlug);
         const homeTeam = getNbaTeamByVsinSlug(g.homeVsinSlug);
         if (!awayTeam || !homeTeam) continue;
-        let dbGame = existingNba.find(e => e.awayTeam === awayTeam.dbSlug && e.homeTeam === homeTeam.dbSlug);
+        let dbGame = existingNba.find(
+          e => e.awayTeam === awayTeam.dbSlug && e.homeTeam === homeTeam.dbSlug
+        );
         let teamsSwapped = false;
         if (!dbGame) {
-          dbGame = existingNba.find(e => e.awayTeam === homeTeam.dbSlug && e.homeTeam === awayTeam.dbSlug);
+          dbGame = existingNba.find(
+            e =>
+              e.awayTeam === homeTeam.dbSlug && e.homeTeam === awayTeam.dbSlug
+          );
           if (dbGame) teamsSwapped = true;
         }
         if (!dbGame) continue;
-        const rawSpreadBets = teamsSwapped ? (g.spreadAwayBetsPct != null ? 100 - g.spreadAwayBetsPct : null) : g.spreadAwayBetsPct;
-        const rawSpreadMoney = teamsSwapped ? (g.spreadAwayMoneyPct != null ? 100 - g.spreadAwayMoneyPct : null) : g.spreadAwayMoneyPct;
+        const rawSpreadBets = teamsSwapped
+          ? g.spreadAwayBetsPct != null
+            ? 100 - g.spreadAwayBetsPct
+            : null
+          : g.spreadAwayBetsPct;
+        const rawSpreadMoney = teamsSwapped
+          ? g.spreadAwayMoneyPct != null
+            ? 100 - g.spreadAwayMoneyPct
+            : null
+          : g.spreadAwayMoneyPct;
         // Skip spread splits when VSIN returns 0/0 — market not yet open
-        const nbaSpreadAvailable = !(rawSpreadBets === 0 && rawSpreadMoney === 0);
+        const nbaSpreadAvailable = !(
+          rawSpreadBets === 0 && rawSpreadMoney === 0
+        );
         await updateBookOdds(dbGame.id, {
-          ...(nbaSpreadAvailable ? { spreadAwayBetsPct: rawSpreadBets, spreadAwayMoneyPct: rawSpreadMoney } : {}),
+          ...(nbaSpreadAvailable
+            ? {
+                spreadAwayBetsPct: rawSpreadBets,
+                spreadAwayMoneyPct: rawSpreadMoney,
+              }
+            : {}),
           totalOverBetsPct: g.totalOverBetsPct,
           totalOverMoneyPct: g.totalOverMoneyPct,
-          mlAwayBetsPct: teamsSwapped ? (g.mlAwayBetsPct != null ? 100 - g.mlAwayBetsPct : null) : g.mlAwayBetsPct,
-          mlAwayMoneyPct: teamsSwapped ? (g.mlAwayMoneyPct != null ? 100 - g.mlAwayMoneyPct : null) : g.mlAwayMoneyPct,
+          mlAwayBetsPct: teamsSwapped
+            ? g.mlAwayBetsPct != null
+              ? 100 - g.mlAwayBetsPct
+              : null
+            : g.mlAwayBetsPct,
+          mlAwayMoneyPct: teamsSwapped
+            ? g.mlAwayMoneyPct != null
+              ? 100 - g.mlAwayMoneyPct
+              : null
+            : g.mlAwayMoneyPct,
         });
-        if (teamsSwapped) console.log(`[VSiNAutoRefresh][Tomorrow][NBA] Swapped teams for ${awayTeam.dbSlug}@${homeTeam.dbSlug} → matched DB ${dbGame.awayTeam}@${dbGame.homeTeam}`);
-        if (!nbaSpreadAvailable) console.log(`[VSiNAutoRefresh][Tomorrow][NBA] SKIP_SPREAD_ZERO: ${dbGame.awayTeam}@${dbGame.homeTeam} — spread 0/0 not written`);
+        if (teamsSwapped)
+          console.log(
+            `[VSiNAutoRefresh][Tomorrow][NBA] Swapped teams for ${awayTeam.dbSlug}@${homeTeam.dbSlug} → matched DB ${dbGame.awayTeam}@${dbGame.homeTeam}`
+          );
+        if (!nbaSpreadAvailable)
+          console.log(
+            `[VSiNAutoRefresh][Tomorrow][NBA] SKIP_SPREAD_ZERO: ${dbGame.awayTeam}@${dbGame.homeTeam} — spread 0/0 not written`
+          );
         updated++;
       }
-      console.log(`[VSiNAutoRefresh][Tomorrow][NBA] ${updated} games updated with tomorrow's splits`);
+      console.log(
+        `[VSiNAutoRefresh][Tomorrow][NBA] ${updated} games updated with tomorrow's splits`
+      );
     }
 
     // Process NHL
@@ -218,73 +311,136 @@ async function runTomorrowSplitsUpdate(tomorrowStr: string): Promise<void> {
         const awayTeam = resolveNhlVsinSlug(g.awayVsinSlug);
         const homeTeam = resolveNhlVsinSlug(g.homeVsinSlug);
         if (!awayTeam || !homeTeam) continue;
-        let dbGame = existingNhl.find(e => e.awayTeam === awayTeam.dbSlug && e.homeTeam === homeTeam.dbSlug);
+        let dbGame = existingNhl.find(
+          e => e.awayTeam === awayTeam.dbSlug && e.homeTeam === homeTeam.dbSlug
+        );
         let teamsSwapped = false;
         if (!dbGame) {
-          dbGame = existingNhl.find(e => e.awayTeam === homeTeam.dbSlug && e.homeTeam === awayTeam.dbSlug);
+          dbGame = existingNhl.find(
+            e =>
+              e.awayTeam === homeTeam.dbSlug && e.homeTeam === awayTeam.dbSlug
+          );
           if (dbGame) teamsSwapped = true;
         }
         if (!dbGame) continue;
-        const rawSpreadBetsNhl = teamsSwapped ? (g.spreadAwayBetsPct != null ? 100 - g.spreadAwayBetsPct : null) : g.spreadAwayBetsPct;
-        const rawSpreadMoneyNhl = teamsSwapped ? (g.spreadAwayMoneyPct != null ? 100 - g.spreadAwayMoneyPct : null) : g.spreadAwayMoneyPct;
+        const rawSpreadBetsNhl = teamsSwapped
+          ? g.spreadAwayBetsPct != null
+            ? 100 - g.spreadAwayBetsPct
+            : null
+          : g.spreadAwayBetsPct;
+        const rawSpreadMoneyNhl = teamsSwapped
+          ? g.spreadAwayMoneyPct != null
+            ? 100 - g.spreadAwayMoneyPct
+            : null
+          : g.spreadAwayMoneyPct;
         // Skip spread splits when VSIN returns 0/0 — market not yet open
-        const nhlSpreadAvailable = !(rawSpreadBetsNhl === 0 && rawSpreadMoneyNhl === 0);
+        const nhlSpreadAvailable = !(
+          rawSpreadBetsNhl === 0 && rawSpreadMoneyNhl === 0
+        );
         await updateBookOdds(dbGame.id, {
-          ...(nhlSpreadAvailable ? { spreadAwayBetsPct: rawSpreadBetsNhl, spreadAwayMoneyPct: rawSpreadMoneyNhl } : {}),
+          ...(nhlSpreadAvailable
+            ? {
+                spreadAwayBetsPct: rawSpreadBetsNhl,
+                spreadAwayMoneyPct: rawSpreadMoneyNhl,
+              }
+            : {}),
           totalOverBetsPct: g.totalOverBetsPct,
           totalOverMoneyPct: g.totalOverMoneyPct,
-          mlAwayBetsPct: teamsSwapped ? (g.mlAwayBetsPct != null ? 100 - g.mlAwayBetsPct : null) : g.mlAwayBetsPct,
-          mlAwayMoneyPct: teamsSwapped ? (g.mlAwayMoneyPct != null ? 100 - g.mlAwayMoneyPct : null) : g.mlAwayMoneyPct,
+          mlAwayBetsPct: teamsSwapped
+            ? g.mlAwayBetsPct != null
+              ? 100 - g.mlAwayBetsPct
+              : null
+            : g.mlAwayBetsPct,
+          mlAwayMoneyPct: teamsSwapped
+            ? g.mlAwayMoneyPct != null
+              ? 100 - g.mlAwayMoneyPct
+              : null
+            : g.mlAwayMoneyPct,
         });
-        if (teamsSwapped) console.log(`[VSiNAutoRefresh][Tomorrow][NHL] Swapped teams for ${awayTeam.dbSlug}@${homeTeam.dbSlug} → matched DB ${dbGame.awayTeam}@${dbGame.homeTeam}`);
-        if (!nhlSpreadAvailable) console.log(`[VSiNAutoRefresh][Tomorrow][NHL] SKIP_SPREAD_ZERO: ${dbGame.awayTeam}@${dbGame.homeTeam} — spread 0/0 not written`);
+        if (teamsSwapped)
+          console.log(
+            `[VSiNAutoRefresh][Tomorrow][NHL] Swapped teams for ${awayTeam.dbSlug}@${homeTeam.dbSlug} → matched DB ${dbGame.awayTeam}@${dbGame.homeTeam}`
+          );
+        if (!nhlSpreadAvailable)
+          console.log(
+            `[VSiNAutoRefresh][Tomorrow][NHL] SKIP_SPREAD_ZERO: ${dbGame.awayTeam}@${dbGame.homeTeam} — spread 0/0 not written`
+          );
         updated++;
       }
-      console.log(`[VSiNAutoRefresh][Tomorrow][NHL] ${updated} games updated with tomorrow's splits`);
+      console.log(
+        `[VSiNAutoRefresh][Tomorrow][NHL] ${updated} games updated with tomorrow's splits`
+      );
     }
 
     // AN odds for tomorrow are ingested via ingestAnHtml tRPC procedure (paste AN HTML)
   } catch (err) {
-    console.warn("[VSiNAutoRefresh][Tomorrow] Tomorrow splits update failed (non-fatal):", err);
+    console.warn(
+      "[VSiNAutoRefresh][Tomorrow] Tomorrow splits update failed (non-fatal):",
+      err
+    );
   }
 }
 // ─── NBA refresh ──────────────────────────────────────────────────────────────────────────────
 
-async function refreshNba(todayStr: string, allDates: string[]): Promise<{
+async function refreshNba(
+  todayStr: string,
+  allDates: string[]
+): Promise<{
   updated: number;
   inserted: number;
   scheduleInserted: number;
   total: number;
 }> {
-  console.log(`[refreshNba] ► START — today: ${todayStr} | dates: [${allDates.join(", ")}]`);
+  console.log(
+    `[refreshNba] ► START — today: ${todayStr} | dates: [${allDates.join(", ")}]`
+  );
   // Scrape VSiN NBA betting splits (today only)
   let vsinSplits: VsinSplitsGame[] = [];
   try {
     // NBA: view=today and view=tomorrow both serve NBA on the combined page.
     // scrapeVsinNbaBettingSplits() uses ?source=DK&sport=NBA for reliability.
     vsinSplits = await scrapeVsinNbaBettingSplits();
-    console.log(`[refreshNba] VSiN NBA splits fetched: ${vsinSplits.length} games (sport-specific URL, today+tomorrow merged)`);
+    console.log(
+      `[refreshNba] VSiN NBA splits fetched: ${vsinSplits.length} games (sport-specific URL, today+tomorrow merged)`
+    );
   } catch (err) {
-    console.warn("[VSiNAutoRefresh] VSiN NBA splits scrape failed (non-fatal):", err);
+    console.warn(
+      "[VSiNAutoRefresh] VSiN NBA splits scrape failed (non-fatal):",
+      err
+    );
   }
 
   // Build a map: dbSlug pair → VsinSplitsGame for fast lookup (both orderings)
   // Use getNbaTeamByVsinSlug() which applies alias resolution (e.g. "la-clippers" → "los-angeles-clippers")
-  const vsinSplitsMap = new Map<string, { game: VsinSplitsGame; swapped: boolean }>();
+  const vsinSplitsMap = new Map<
+    string,
+    { game: VsinSplitsGame; swapped: boolean }
+  >();
   for (const g of vsinSplits) {
     const awayTeam = getNbaTeamByVsinSlug(g.awayVsinSlug);
     const homeTeam = getNbaTeamByVsinSlug(g.homeVsinSlug);
     if (awayTeam && homeTeam) {
-      vsinSplitsMap.set(`${awayTeam.dbSlug}@${homeTeam.dbSlug}`, { game: g, swapped: false });
-      vsinSplitsMap.set(`${homeTeam.dbSlug}@${awayTeam.dbSlug}`, { game: g, swapped: true });
+      vsinSplitsMap.set(`${awayTeam.dbSlug}@${homeTeam.dbSlug}`, {
+        game: g,
+        swapped: false,
+      });
+      vsinSplitsMap.set(`${homeTeam.dbSlug}@${awayTeam.dbSlug}`, {
+        game: g,
+        swapped: true,
+      });
     } else {
-      console.log(`[VSiNAutoRefresh][NBA] Unknown VSiN slug: ${g.awayVsinSlug} @ ${g.homeVsinSlug}`);
+      console.log(
+        `[VSiNAutoRefresh][NBA] Unknown VSiN slug: ${g.awayVsinSlug} @ ${g.homeVsinSlug}`
+      );
     }
   }
 
   // Fetch NBA schedule start times for each date in the rolling window
   const nbaStartTimeMaps = new Map<string, Map<string, string>>();
-  const nbaGamesByDate = new Map<string, Awaited<ReturnType<typeof fetchNbaGamesForDate>>>();
+  const nbaGamesByDate = new Map<
+    string,
+    Awaited<ReturnType<typeof fetchNbaGamesForDate>>
+  >();
 
   for (const dateStr of allDates) {
     try {
@@ -292,42 +448,73 @@ async function refreshNba(todayStr: string, allDates: string[]): Promise<{
       nbaStartTimeMaps.set(dateStr, buildNbaStartTimeMap(nbaGames));
       nbaGamesByDate.set(dateStr, nbaGames);
       if (nbaGames.length > 0) {
-        console.log(`[VSiNAutoRefresh] NBA schedule: ${nbaGames.length} games for ${dateStr}`);
+        console.log(
+          `[VSiNAutoRefresh] NBA schedule: ${nbaGames.length} games for ${dateStr}`
+        );
       }
     } catch (err) {
-      console.warn(`[VSiNAutoRefresh] NBA schedule fetch failed for ${dateStr} (non-fatal):`, err);
+      console.warn(
+        `[VSiNAutoRefresh] NBA schedule fetch failed for ${dateStr} (non-fatal):`,
+        err
+      );
     }
   }
 
   // Apply VSiN splits to today's existing NBA games
   let totalUpdated = 0;
-  let spreadPopulated = 0;   // freshness monitor: games with real spread splits
-  let spreadPending = 0;     // freshness monitor: games with 0/0 spread (market not open)
-  let spreadUnmatched = 0;   // freshness monitor: DB games not found in VSIN map
+  let spreadPopulated = 0; // freshness monitor: games with real spread splits
+  let spreadPending = 0; // freshness monitor: games with 0/0 spread (market not open)
+  let spreadUnmatched = 0; // freshness monitor: DB games not found in VSIN map
   const existingToday = await listGamesByDate(todayStr, "NBA");
   for (const dbGame of existingToday) {
     const key = `${dbGame.awayTeam}@${dbGame.homeTeam}`;
     const entry = vsinSplitsMap.get(key);
-    if (!entry) { spreadUnmatched++; continue; }
+    if (!entry) {
+      spreadUnmatched++;
+      continue;
+    }
     const { game: splits, swapped } = entry;
-    const rawSpreadBets = swapped ? (splits.spreadAwayBetsPct != null ? 100 - splits.spreadAwayBetsPct : null) : splits.spreadAwayBetsPct;
-    const rawSpreadMoney = swapped ? (splits.spreadAwayMoneyPct != null ? 100 - splits.spreadAwayMoneyPct : null) : splits.spreadAwayMoneyPct;
-    if (rawSpreadBets === 0 && rawSpreadMoney === 0) { spreadPending++; } else if (rawSpreadBets != null) { spreadPopulated++; }
+    const rawSpreadBets = swapped
+      ? splits.spreadAwayBetsPct != null
+        ? 100 - splits.spreadAwayBetsPct
+        : null
+      : splits.spreadAwayBetsPct;
+    const rawSpreadMoney = swapped
+      ? splits.spreadAwayMoneyPct != null
+        ? 100 - splits.spreadAwayMoneyPct
+        : null
+      : splits.spreadAwayMoneyPct;
+    if (rawSpreadBets === 0 && rawSpreadMoney === 0) {
+      spreadPending++;
+    } else if (rawSpreadBets != null) {
+      spreadPopulated++;
+    }
     await updateBookOdds(dbGame.id, {
       spreadAwayBetsPct: rawSpreadBets,
       spreadAwayMoneyPct: rawSpreadMoney,
       totalOverBetsPct: splits.totalOverBetsPct,
       totalOverMoneyPct: splits.totalOverMoneyPct,
-      mlAwayBetsPct: swapped ? (splits.mlAwayBetsPct != null ? 100 - splits.mlAwayBetsPct : null) : splits.mlAwayBetsPct,
-      mlAwayMoneyPct: swapped ? (splits.mlAwayMoneyPct != null ? 100 - splits.mlAwayMoneyPct : null) : splits.mlAwayMoneyPct,
+      mlAwayBetsPct: swapped
+        ? splits.mlAwayBetsPct != null
+          ? 100 - splits.mlAwayBetsPct
+          : null
+        : splits.mlAwayBetsPct,
+      mlAwayMoneyPct: swapped
+        ? splits.mlAwayMoneyPct != null
+          ? 100 - splits.mlAwayMoneyPct
+          : null
+        : splits.mlAwayMoneyPct,
     });
     totalUpdated++;
-    if (swapped) console.log(`[VSiNAutoRefresh][NBA] Swapped splits for ${dbGame.awayTeam}@${dbGame.homeTeam}`);
+    if (swapped)
+      console.log(
+        `[VSiNAutoRefresh][NBA] Swapped splits for ${dbGame.awayTeam}@${dbGame.homeTeam}`
+      );
     console.log(
       `[VSiNAutoRefresh][NBA] Splits updated: ${dbGame.awayTeam} @ ${dbGame.homeTeam} ` +
-      `spread=${splits.spreadAwayBetsPct}%/${splits.spreadAwayMoneyPct}% ` +
-      `total=${splits.totalOverBetsPct}%/${splits.totalOverMoneyPct}% ` +
-      `ml=${splits.mlAwayBetsPct}%/${splits.mlAwayMoneyPct}%`
+        `spread=${splits.spreadAwayBetsPct}%/${splits.spreadAwayMoneyPct}% ` +
+        `total=${splits.totalOverBetsPct}%/${splits.totalOverMoneyPct}% ` +
+        `ml=${splits.mlAwayBetsPct}%/${splits.mlAwayMoneyPct}%`
     );
   }
 
@@ -361,7 +548,10 @@ async function refreshNba(todayStr: string, allDates: string[]): Promise<{
       const byGameId = await getGameByNcaaContestId(gameId);
       if (byGameId) continue;
 
-      const resolvedStartTime = startTimeMap?.get(`${awayDbSlug}@${homeDbSlug}`) ?? startTimeEst ?? "TBD";
+      const resolvedStartTime =
+        startTimeMap?.get(`${awayDbSlug}@${homeDbSlug}`) ??
+        startTimeEst ??
+        "TBD";
       const row: InsertGame = {
         fileId: 0,
         gameDate: dateStr,
@@ -399,49 +589,77 @@ async function refreshNba(todayStr: string, allDates: string[]): Promise<{
     `[refreshNba] ✅ DONE — updated=${totalUpdated} inserted=${totalInserted} scheduleInserted=${scheduleInserted} total=${vsinSplits.length}`
   );
   // ── Splits freshness health-check ──────────────────────────────────────────
-  const spreadStatus = spreadPopulated > 0
-    ? `${spreadPopulated}/${existingToday.length} spread_populated`
-    : spreadPending > 0
-      ? `0/${existingToday.length} spread_populated (${spreadPending} pending — market not yet open)`
-      : `0/${existingToday.length} spread_populated`;
+  const spreadStatus =
+    spreadPopulated > 0
+      ? `${spreadPopulated}/${existingToday.length} spread_populated`
+      : spreadPending > 0
+        ? `0/${existingToday.length} spread_populated (${spreadPending} pending — market not yet open)`
+        : `0/${existingToday.length} spread_populated`;
   console.log(
     `[refreshNba][SPLITS_HEALTH] today=${todayStr} | ${spreadStatus}` +
-    ` | unmatched=${spreadUnmatched} | vsin_fetched=${vsinSplits.length}` +
-    (spreadPopulated === 0 && vsinSplits.length > 0 ? " ⚠️  WARN: VSIN has games but 0 spread splits written — check team slug mapping" : "")
+      ` | unmatched=${spreadUnmatched} | vsin_fetched=${vsinSplits.length}` +
+      (spreadPopulated === 0 && vsinSplits.length > 0
+        ? " ⚠️  WARN: VSIN has games but 0 spread splits written — check team slug mapping"
+        : "")
   );
-  return { updated: totalUpdated, inserted: totalInserted, scheduleInserted, total: vsinSplits.length };
+  return {
+    updated: totalUpdated,
+    inserted: totalInserted,
+    scheduleInserted,
+    total: vsinSplits.length,
+  };
 }
 
 // ─── NHL Refresh ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────═
 
-async function refreshNhl(todayStr: string, allDates: string[]): Promise<{
+async function refreshNhl(
+  todayStr: string,
+  allDates: string[]
+): Promise<{
   updated: number;
   inserted: number;
   scheduleInserted: number;
   total: number;
 }> {
-  console.log(`[refreshNhl] ► START — today: ${todayStr} | dates: [${allDates.join(", ")}]`);
+  console.log(
+    `[refreshNhl] ► START — today: ${todayStr} | dates: [${allDates.join(", ")}]`
+  );
   // Scrape VSiN NHL betting splits (today only)
   let vsinSplits: VsinSplitsGame[] = [];
   try {
     // NHL: view=today and view=tomorrow both serve NHL on the combined page.
     // scrapeVsinNhlBettingSplits() uses ?source=DK&sport=NHL for reliability.
     vsinSplits = await scrapeVsinNhlBettingSplits();
-    console.log(`[refreshNhl] VSiN NHL splits fetched: ${vsinSplits.length} games (sport-specific URL, today+tomorrow merged)`);
-
+    console.log(
+      `[refreshNhl] VSiN NHL splits fetched: ${vsinSplits.length} games (sport-specific URL, today+tomorrow merged)`
+    );
   } catch (err) {
-    console.warn("[VSiNAutoRefresh] VSiN NHL splits scrape failed (non-fatal):", err);
+    console.warn(
+      "[VSiNAutoRefresh] VSiN NHL splits scrape failed (non-fatal):",
+      err
+    );
   }
 
   // Build a map: dbSlug pair → VsinSplitsGame for fast lookup (both orderings)
-  const vsinSplitsMap = new Map<string, { game: VsinSplitsGame; swapped: boolean }>();
+  const vsinSplitsMap = new Map<
+    string,
+    { game: VsinSplitsGame; swapped: boolean }
+  >();
   for (const g of vsinSplits) {
     const awayTeam = resolveNhlVsinSlug(g.awayVsinSlug);
     const homeTeam = resolveNhlVsinSlug(g.homeVsinSlug);
     if (awayTeam && homeTeam) {
-      vsinSplitsMap.set(`${awayTeam.dbSlug}@${homeTeam.dbSlug}`, { game: g, swapped: false });
-      vsinSplitsMap.set(`${homeTeam.dbSlug}@${awayTeam.dbSlug}`, { game: g, swapped: true });
-      console.log(`[VSiNAutoRefresh][NHL] Mapped splits: ${awayTeam.dbSlug} @ ${homeTeam.dbSlug} (awayVsinSlug="${g.awayVsinSlug}" homeVsinSlug="${g.homeVsinSlug}")`);
+      vsinSplitsMap.set(`${awayTeam.dbSlug}@${homeTeam.dbSlug}`, {
+        game: g,
+        swapped: false,
+      });
+      vsinSplitsMap.set(`${homeTeam.dbSlug}@${awayTeam.dbSlug}`, {
+        game: g,
+        swapped: true,
+      });
+      console.log(
+        `[VSiNAutoRefresh][NHL] Mapped splits: ${awayTeam.dbSlug} @ ${homeTeam.dbSlug} (awayVsinSlug="${g.awayVsinSlug}" homeVsinSlug="${g.homeVsinSlug}")`
+      );
     }
   }
 
@@ -451,14 +669,17 @@ async function refreshNhl(todayStr: string, allDates: string[]): Promise<{
   try {
     nhlScheduleGames = await fetchNhlGamesForRange(todayStr, rangeEnd);
   } catch (err) {
-    console.warn("[VSiNAutoRefresh] NHL schedule fetch failed (non-fatal):", err);
+    console.warn(
+      "[VSiNAutoRefresh] NHL schedule fetch failed (non-fatal):",
+      err
+    );
     nhlScheduleGames = [];
   }
 
   // Build per-date start time maps from the schedule
   const nhlStartTimeMaps = new Map<string, Map<string, string>>();
   for (const dateStr of allDates) {
-    const gamesOnDate = nhlScheduleGames.filter((g) => g.gameDateEst === dateStr);
+    const gamesOnDate = nhlScheduleGames.filter(g => g.gameDateEst === dateStr);
     nhlStartTimeMaps.set(dateStr, buildNhlStartTimeMap(gamesOnDate));
   }
 
@@ -471,33 +692,59 @@ async function refreshNhl(todayStr: string, allDates: string[]): Promise<{
 
   // Apply VSiN splits to today's existing NHL games
   let totalUpdated = 0;
-  let spreadPopulated = 0;   // freshness monitor: games with real puck line splits
-  let spreadPending = 0;     // freshness monitor: games with 0/0 puck line (market not open)
-  let spreadUnmatched = 0;   // freshness monitor: DB games not found in VSIN map
+  let spreadPopulated = 0; // freshness monitor: games with real puck line splits
+  let spreadPending = 0; // freshness monitor: games with 0/0 puck line (market not open)
+  let spreadUnmatched = 0; // freshness monitor: DB games not found in VSIN map
   const existingToday = await listGamesByDate(todayStr, "NHL");
   for (const dbGame of existingToday) {
     const key = `${dbGame.awayTeam}@${dbGame.homeTeam}`;
     const entry = vsinSplitsMap.get(key);
-    if (!entry) { spreadUnmatched++; continue; }
+    if (!entry) {
+      spreadUnmatched++;
+      continue;
+    }
     const { game: splits, swapped } = entry;
-    const rawSpreadBets = swapped ? (splits.spreadAwayBetsPct != null ? 100 - splits.spreadAwayBetsPct : null) : splits.spreadAwayBetsPct;
-    const rawSpreadMoney = swapped ? (splits.spreadAwayMoneyPct != null ? 100 - splits.spreadAwayMoneyPct : null) : splits.spreadAwayMoneyPct;
-    if (rawSpreadBets === 0 && rawSpreadMoney === 0) { spreadPending++; } else if (rawSpreadBets != null) { spreadPopulated++; }
+    const rawSpreadBets = swapped
+      ? splits.spreadAwayBetsPct != null
+        ? 100 - splits.spreadAwayBetsPct
+        : null
+      : splits.spreadAwayBetsPct;
+    const rawSpreadMoney = swapped
+      ? splits.spreadAwayMoneyPct != null
+        ? 100 - splits.spreadAwayMoneyPct
+        : null
+      : splits.spreadAwayMoneyPct;
+    if (rawSpreadBets === 0 && rawSpreadMoney === 0) {
+      spreadPending++;
+    } else if (rawSpreadBets != null) {
+      spreadPopulated++;
+    }
     await updateBookOdds(dbGame.id, {
       spreadAwayBetsPct: rawSpreadBets,
       spreadAwayMoneyPct: rawSpreadMoney,
       totalOverBetsPct: splits.totalOverBetsPct,
       totalOverMoneyPct: splits.totalOverMoneyPct,
-      mlAwayBetsPct: swapped ? (splits.mlAwayBetsPct != null ? 100 - splits.mlAwayBetsPct : null) : splits.mlAwayBetsPct,
-      mlAwayMoneyPct: swapped ? (splits.mlAwayMoneyPct != null ? 100 - splits.mlAwayMoneyPct : null) : splits.mlAwayMoneyPct,
+      mlAwayBetsPct: swapped
+        ? splits.mlAwayBetsPct != null
+          ? 100 - splits.mlAwayBetsPct
+          : null
+        : splits.mlAwayBetsPct,
+      mlAwayMoneyPct: swapped
+        ? splits.mlAwayMoneyPct != null
+          ? 100 - splits.mlAwayMoneyPct
+          : null
+        : splits.mlAwayMoneyPct,
     });
     totalUpdated++;
-    if (swapped) console.log(`[VSiNAutoRefresh][NHL] Swapped splits for ${dbGame.awayTeam}@${dbGame.homeTeam}`);
+    if (swapped)
+      console.log(
+        `[VSiNAutoRefresh][NHL] Swapped splits for ${dbGame.awayTeam}@${dbGame.homeTeam}`
+      );
     console.log(
       `[VSiNAutoRefresh][NHL] Splits updated: ${dbGame.awayTeam} @ ${dbGame.homeTeam} ` +
-      `spread=${splits.spreadAwayBetsPct}%/${splits.spreadAwayMoneyPct}% ` +
-      `total=${splits.totalOverBetsPct}%/${splits.totalOverMoneyPct}% ` +
-      `ml=${splits.mlAwayBetsPct}%/${splits.mlAwayMoneyPct}%`
+        `spread=${splits.spreadAwayBetsPct}%/${splits.spreadAwayMoneyPct}% ` +
+        `total=${splits.totalOverBetsPct}%/${splits.totalOverMoneyPct}% ` +
+        `ml=${splits.mlAwayBetsPct}%/${splits.mlAwayMoneyPct}%`
     );
   }
 
@@ -516,7 +763,7 @@ async function refreshNhl(todayStr: string, allDates: string[]): Promise<{
       const { awayDbSlug, homeDbSlug, startTimeEst, gameId } = nhlGame;
 
       const bySlug = existing.find(
-        (e) => e.awayTeam === awayDbSlug && e.homeTeam === homeDbSlug
+        e => e.awayTeam === awayDbSlug && e.homeTeam === homeDbSlug
       );
       if (bySlug) {
         if (startTimeEst && startTimeEst !== bySlug.startTimeEst) {
@@ -528,7 +775,10 @@ async function refreshNhl(todayStr: string, allDates: string[]): Promise<{
       const byGameId = await getGameByNcaaContestId(String(gameId));
       if (byGameId) continue;
 
-      const resolvedStartTime = startTimeMap?.get(`${awayDbSlug}@${homeDbSlug}`) ?? startTimeEst ?? "TBD";
+      const resolvedStartTime =
+        startTimeMap?.get(`${awayDbSlug}@${homeDbSlug}`) ??
+        startTimeEst ??
+        "TBD";
       const row: InsertGame = {
         fileId: 0,
         gameDate: dateStr,
@@ -566,17 +816,25 @@ async function refreshNhl(todayStr: string, allDates: string[]): Promise<{
     `[refreshNhl] ✅ DONE — updated=${totalUpdated} inserted=${totalInserted} scheduleInserted=${scheduleInserted} total=${vsinSplits.length}`
   );
   // ── Splits freshness health-check ──────────────────────────────────────────
-  const nhlSpreadStatus = spreadPopulated > 0
-    ? `${spreadPopulated}/${existingToday.length} puck_line_populated`
-    : spreadPending > 0
-      ? `0/${existingToday.length} puck_line_populated (${spreadPending} pending — market not yet open)`
-      : `0/${existingToday.length} puck_line_populated`;
+  const nhlSpreadStatus =
+    spreadPopulated > 0
+      ? `${spreadPopulated}/${existingToday.length} puck_line_populated`
+      : spreadPending > 0
+        ? `0/${existingToday.length} puck_line_populated (${spreadPending} pending — market not yet open)`
+        : `0/${existingToday.length} puck_line_populated`;
   console.log(
     `[refreshNhl][SPLITS_HEALTH] today=${todayStr} | ${nhlSpreadStatus}` +
-    ` | unmatched=${spreadUnmatched} | vsin_fetched=${vsinSplits.length}` +
-    (spreadPopulated === 0 && vsinSplits.length > 0 ? " ⚠️  WARN: VSIN has games but 0 puck line splits written — check team slug mapping" : "")
+      ` | unmatched=${spreadUnmatched} | vsin_fetched=${vsinSplits.length}` +
+      (spreadPopulated === 0 && vsinSplits.length > 0
+        ? " ⚠️  WARN: VSIN has games but 0 puck line splits written — check team slug mapping"
+        : "")
   );
-  return { updated: totalUpdated, inserted: totalInserted, scheduleInserted, total: vsinSplits.length };
+  return {
+    updated: totalUpdated,
+    inserted: totalInserted,
+    scheduleInserted,
+    total: vsinSplits.length,
+  };
 }
 
 // ─── MLB refresh ─────────────────────────────────────────────────────────────
@@ -605,16 +863,18 @@ async function refreshMlb(todayStr: string): Promise<{
   let vsinSplits: VsinSplitsGame[] = [];
   try {
     vsinSplits = await scrapeVsinMlbBettingSplits();
-    console.log(`${tag} VSiN MLB splits fetched: ${vsinSplits.length} games from MLB-specific page`);
+    console.log(
+      `${tag} VSiN MLB splits fetched: ${vsinSplits.length} games from MLB-specific page`
+    );
     if (vsinSplits.length === 0) {
       console.log(`${tag} No MLB games on VSiN today — splits update skipped`);
     } else {
       for (const g of vsinSplits) {
         console.log(
           `${tag} VSiN game: ${g.awayVsinSlug} @ ${g.homeVsinSlug} ` +
-          `| spread: ${g.spreadAwayBetsPct}%/${g.spreadAwayMoneyPct}% ` +
-          `| total: ${g.totalOverBetsPct}%/${g.totalOverMoneyPct}% ` +
-          `| ml: ${g.mlAwayBetsPct}%/${g.mlAwayMoneyPct}%`
+            `| spread: ${g.spreadAwayBetsPct}%/${g.spreadAwayMoneyPct}% ` +
+            `| total: ${g.totalOverBetsPct}%/${g.totalOverMoneyPct}% ` +
+            `| ml: ${g.mlAwayBetsPct}%/${g.mlAwayMoneyPct}%`
         );
       }
     }
@@ -636,7 +896,7 @@ async function refreshMlb(todayStr: string): Promise<{
   // This ensures today's DB games always get today's VSIN splits, and tomorrow's DB
   // games always get tomorrow's VSIN splits.
   type SplitsEntry = { game: VsinSplitsGame; swapped: boolean };
-  const todaySplitsMap    = new Map<string, SplitsEntry>();
+  const todaySplitsMap = new Map<string, SplitsEntry>();
   const tomorrowSplitsMap = new Map<string, SplitsEntry>();
 
   // Compute tomorrowStr early so we can use it for map partitioning
@@ -651,8 +911,12 @@ async function refreshMlb(todayStr: string): Promise<{
     const homeTeam = getMlbTeamByVsinSlug(g.homeVsinSlug);
     if (awayTeam && homeTeam) {
       // Determine which date this VSIN game belongs to
-      const gameDate = g.gameId.length >= 8 ? `${g.gameId.slice(0,4)}-${g.gameId.slice(4,6)}-${g.gameId.slice(6,8)}` : 'unknown';
-      const targetMap = gameDate === tomorrowStr ? tomorrowSplitsMap : todaySplitsMap;
+      const gameDate =
+        g.gameId.length >= 8
+          ? `${g.gameId.slice(0, 4)}-${g.gameId.slice(4, 6)}-${g.gameId.slice(6, 8)}`
+          : "unknown";
+      const targetMap =
+        gameDate === tomorrowStr ? tomorrowSplitsMap : todaySplitsMap;
       const normalKey = `${awayTeam.abbrev}@${homeTeam.abbrev}`;
       const swappedKey = `${homeTeam.abbrev}@${awayTeam.abbrev}`;
       if (!targetMap.has(normalKey)) {
@@ -660,7 +924,7 @@ async function refreshMlb(todayStr: string): Promise<{
         targetMap.set(swappedKey, { game: g, swapped: true });
         console.log(
           `${tag} Mapped VSiN splits [${gameDate}]: ${awayTeam.abbrev} @ ${homeTeam.abbrev} ` +
-          `(awaySlug="${g.awayVsinSlug}" homeSlug="${g.homeVsinSlug}")`
+            `(awaySlug="${g.awayVsinSlug}" homeSlug="${g.homeVsinSlug}")`
         );
       } else {
         console.log(
@@ -670,16 +934,21 @@ async function refreshMlb(todayStr: string): Promise<{
     } else {
       console.warn(
         `${tag} UNRESOLVED VSiN slug: "${g.awayVsinSlug}" @ "${g.homeVsinSlug}" ` +
-        `— awayResolved=${!!awayTeam} homeResolved=${!!homeTeam} ` +
-        `— add to VSIN_MLB_HREF_ALIASES if this is a known alias`
+          `— awayResolved=${!!awayTeam} homeResolved=${!!homeTeam} ` +
+          `— add to VSIN_MLB_HREF_ALIASES if this is a known alias`
       );
     }
   }
-  console.log(`${tag} Split maps: today=${todaySplitsMap.size / 2} games, tomorrow=${tomorrowSplitsMap.size / 2} games`);
+  console.log(
+    `${tag} Split maps: today=${todaySplitsMap.size / 2} games, tomorrow=${tomorrowSplitsMap.size / 2} games`
+  );
 
   // Backward-compat alias: for today's DB games, fall back to tomorrowSplitsMap if not in todaySplitsMap
   // (handles edge case where a game is only on VSIN's tomorrow view but the DB has it as today)
-  const getEntry = (key: string, dbGameDate: string): SplitsEntry | undefined => {
+  const getEntry = (
+    key: string,
+    dbGameDate: string
+  ): SplitsEntry | undefined => {
     if (dbGameDate === tomorrowStr) {
       return tomorrowSplitsMap.get(key) ?? todaySplitsMap.get(key);
     }
@@ -690,9 +959,9 @@ async function refreshMlb(todayStr: string): Promise<{
   // VSiN's MLB page shows games for the next 1-2 days, so we query both
   // today and tomorrow to ensure we catch games on either side of midnight.
   let totalUpdated = 0;
-  let rlPopulated = 0;    // freshness monitor: today's games with real run-line splits
-  let rlPending = 0;      // freshness monitor: today's games with 0/0 RL (market not open)
-  let rlUnmatched = 0;    // freshness monitor: DB games not found in VSIN map
+  let rlPopulated = 0; // freshness monitor: today's games with real run-line splits
+  let rlPending = 0; // freshness monitor: today's games with 0/0 RL (market not open)
+  let rlUnmatched = 0; // freshness monitor: DB games not found in VSIN map
   // tomorrowStr already computed above for map partitioning
   const [todayGames, tomorrowGames] = await Promise.all([
     listGamesByDate(todayStr, "MLB"),
@@ -701,8 +970,8 @@ async function refreshMlb(todayStr: string): Promise<{
   const existingToday = [...todayGames, ...tomorrowGames];
   console.log(
     `${tag} DB has ${todayGames.length} MLB games for ${todayStr}` +
-    ` + ${tomorrowGames.length} games for ${tomorrowStr}` +
-    ` = ${existingToday.length} total`
+      ` + ${tomorrowGames.length} games for ${tomorrowStr}` +
+      ` = ${existingToday.length} total`
   );
 
   for (const dbGame of existingToday) {
@@ -711,7 +980,7 @@ async function refreshMlb(todayStr: string): Promise<{
     if (!entry) {
       console.log(
         `${tag} NO_VSIN_MATCH: ${dbGame.awayTeam} @ ${dbGame.homeTeam} ` +
-        `(gameId=${dbGame.id} date=${dbGame.gameDate}) — not in VSiN splits`
+          `(gameId=${dbGame.id} date=${dbGame.gameDate}) — not in VSiN splits`
       );
       rlUnmatched++;
       continue;
@@ -720,16 +989,24 @@ async function refreshMlb(todayStr: string): Promise<{
 
     // Flip away/home percentages when VSiN and DB have teams in opposite order
     const spreadAwayBetsPct = swapped
-      ? (splits.spreadAwayBetsPct != null ? 100 - splits.spreadAwayBetsPct : null)
+      ? splits.spreadAwayBetsPct != null
+        ? 100 - splits.spreadAwayBetsPct
+        : null
       : splits.spreadAwayBetsPct;
     const spreadAwayMoneyPct = swapped
-      ? (splits.spreadAwayMoneyPct != null ? 100 - splits.spreadAwayMoneyPct : null)
+      ? splits.spreadAwayMoneyPct != null
+        ? 100 - splits.spreadAwayMoneyPct
+        : null
       : splits.spreadAwayMoneyPct;
     const mlAwayBetsPct = swapped
-      ? (splits.mlAwayBetsPct != null ? 100 - splits.mlAwayBetsPct : null)
+      ? splits.mlAwayBetsPct != null
+        ? 100 - splits.mlAwayBetsPct
+        : null
       : splits.mlAwayBetsPct;
     const mlAwayMoneyPct = swapped
-      ? (splits.mlAwayMoneyPct != null ? 100 - splits.mlAwayMoneyPct : null)
+      ? splits.mlAwayMoneyPct != null
+        ? 100 - splits.mlAwayMoneyPct
+        : null
       : splits.mlAwayMoneyPct;
 
     // For MLB: VSiN's "spread" column is the run line.
@@ -739,25 +1016,33 @@ async function refreshMlb(todayStr: string): Promise<{
     // hasn't opened yet. Writing integer 0 to the DB causes the frontend to render a
     // misleading 100% home bar (home = 100 - 0 = 100). Skip run-line writes when both
     // bets AND money are 0 — treat as "not yet available" and preserve any existing DB value.
-    const rlSplitsAvailable = !(spreadAwayBetsPct === 0 && spreadAwayMoneyPct === 0);
+    const rlSplitsAvailable = !(
+      spreadAwayBetsPct === 0 && spreadAwayMoneyPct === 0
+    );
     // Track freshness for today's games only
     if (dbGame.gameDate === todayStr) {
-      if (!rlSplitsAvailable) { rlPending++; } else if (spreadAwayBetsPct != null) { rlPopulated++; }
+      if (!rlSplitsAvailable) {
+        rlPending++;
+      } else if (spreadAwayBetsPct != null) {
+        rlPopulated++;
+      }
     }
     if (!rlSplitsAvailable) {
       console.log(
         `${tag} SKIP_RL_ZERO: ${dbGame.awayTeam} @ ${dbGame.homeTeam} (gameId=${dbGame.id}) ` +
-        `— run-line splits are 0%/0% (market not yet open), preserving existing DB value`
+          `— run-line splits are 0%/0% (market not yet open), preserving existing DB value`
       );
     }
     await updateBookOdds(dbGame.id, {
       // Only write run-line splits when VSIN has real non-zero data
-      ...(rlSplitsAvailable ? {
-        spreadAwayBetsPct,       // generic spread column (used by GameCard display)
-        spreadAwayMoneyPct,
-        rlAwayBetsPct: spreadAwayBetsPct,   // dedicated MLB run line column
-        rlAwayMoneyPct: spreadAwayMoneyPct,
-      } : {}),
+      ...(rlSplitsAvailable
+        ? {
+            spreadAwayBetsPct, // generic spread column (used by GameCard display)
+            spreadAwayMoneyPct,
+            rlAwayBetsPct: spreadAwayBetsPct, // dedicated MLB run line column
+            rlAwayMoneyPct: spreadAwayMoneyPct,
+          }
+        : {}),
       totalOverBetsPct: splits.totalOverBetsPct,
       totalOverMoneyPct: splits.totalOverMoneyPct,
       mlAwayBetsPct,
@@ -766,14 +1051,16 @@ async function refreshMlb(todayStr: string): Promise<{
     totalUpdated++;
 
     if (swapped) {
-      console.log(`${tag} SWAPPED: VSiN has ${splits.awayVsinSlug}@${splits.homeVsinSlug} but DB has ${dbGame.awayTeam}@${dbGame.homeTeam} — flipped percentages`);
+      console.log(
+        `${tag} SWAPPED: VSiN has ${splits.awayVsinSlug}@${splits.homeVsinSlug} but DB has ${dbGame.awayTeam}@${dbGame.homeTeam} — flipped percentages`
+      );
     }
     console.log(
       `${tag} Splits updated: ${dbGame.awayTeam} @ ${dbGame.homeTeam} ` +
-      `(gameId=${dbGame.id}) ` +
-      `| runLine: ${rlSplitsAvailable ? spreadAwayBetsPct + "%B/" + spreadAwayMoneyPct + "%H" : "SKIPPED(0/0)"} (→ rlAway* + spreadAway*)` +
-      `| total: ${splits.totalOverBetsPct}%B/${splits.totalOverMoneyPct}%H` +
-      `| ml: ${mlAwayBetsPct}%B/${mlAwayMoneyPct}%H`
+        `(gameId=${dbGame.id}) ` +
+        `| runLine: ${rlSplitsAvailable ? spreadAwayBetsPct + "%B/" + spreadAwayMoneyPct + "%H" : "SKIPPED(0/0)"} (→ rlAway* + spreadAway*)` +
+        `| total: ${splits.totalOverBetsPct}%B/${splits.totalOverMoneyPct}%H` +
+        `| ml: ${mlAwayBetsPct}%B/${mlAwayMoneyPct}%H`
     );
   }
 
@@ -781,15 +1068,18 @@ async function refreshMlb(todayStr: string): Promise<{
     `${tag} ✅ DONE — splits_updated=${totalUpdated} db_games=${existingToday.length} vsin_games=${vsinSplits.length}`
   );
   // ── Splits freshness health-check ──────────────────────────────────────────
-  const mlbRlStatus = rlPopulated > 0
-    ? `${rlPopulated}/${todayGames.length} run_line_populated`
-    : rlPending > 0
-      ? `0/${todayGames.length} run_line_populated (${rlPending} pending — market not yet open)`
-      : `0/${todayGames.length} run_line_populated`;
+  const mlbRlStatus =
+    rlPopulated > 0
+      ? `${rlPopulated}/${todayGames.length} run_line_populated`
+      : rlPending > 0
+        ? `0/${todayGames.length} run_line_populated (${rlPending} pending — market not yet open)`
+        : `0/${todayGames.length} run_line_populated`;
   console.log(
     `${tag}[SPLITS_HEALTH] today=${todayStr} | ${mlbRlStatus}` +
-    ` | tomorrow_skipped=${rlPending} | unmatched=${rlUnmatched} | vsin_fetched=${vsinSplits.length}` +
-    (rlPopulated === 0 && todayGames.length > 0 && vsinSplits.length > 0 ? " ⚠️  WARN: VSIN has games but 0 run-line splits written for today — check team slug mapping" : "")
+      ` | tomorrow_skipped=${rlPending} | unmatched=${rlUnmatched} | vsin_fetched=${vsinSplits.length}` +
+      (rlPopulated === 0 && todayGames.length > 0 && vsinSplits.length > 0
+        ? " ⚠️  WARN: VSIN has games but 0 run-line splits written for today — check team slug mapping"
+        : "")
   );
   return { updated: totalUpdated, inserted: 0, total: vsinSplits.length };
 }
@@ -813,7 +1103,12 @@ export async function refreshAnApiOdds(
   dateStr: string,
   sports: AnSport[] = ["ncaab", "nba", "nhl"],
   source: "auto" | "manual" = "auto"
-): Promise<{ updated: number; skipped: number; frozen: number; errors: string[] }> {
+): Promise<{
+  updated: number;
+  skipped: number;
+  frozen: number;
+  errors: string[];
+}> {
   let totalUpdated = 0;
   let totalSkipped = 0;
   let totalFrozen = 0;
@@ -821,17 +1116,54 @@ export async function refreshAnApiOdds(
 
   for (const sport of sports) {
     try {
-      const dbSport = sport === "nba" ? "NBA" : sport === "nhl" ? "NHL" : sport === "mlb" ? "MLB" : "NBA";
+      const dbSport =
+        sport === "nba"
+          ? "NBA"
+          : sport === "nhl"
+            ? "NHL"
+            : sport === "mlb"
+              ? "MLB"
+              : "NBA";
       const anGames = await fetchActionNetworkOdds(sport, dateStr);
 
       if (anGames.length === 0) {
-        debugLog("ANApiOdds", "info", `[ANApiOdds][${dbSport}] No games with DK odds for ${dateStr}`);
+        debugLog(
+          "ANApiOdds",
+          "info",
+          `[ANApiOdds][${dbSport}] No games with DK odds for ${dateStr}`
+        );
         continue;
       }
 
       const existingGames = await listGamesByDate(dateStr, dbSport);
       let updated = 0;
       let skipped = 0;
+
+      // DOUBLEHEADER SAFETY: a DB row may receive odds from at most ONE AN game
+      // per refresh. Without this, both games of an MLB doubleheader matched the
+      // same (first-found) row and the later game's odds overwrote the earlier
+      // game's (2026-07-17 TB@BOS incident class).
+      const claimedGameIds = new Set<number>();
+      /** Minutes-since-midnight ET for an ISO instant (null when unparseable). */
+      const anStartToEstMinutes = (iso: string): number | null => {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return null;
+        const s = d.toLocaleTimeString("en-US", {
+          timeZone: "America/New_York",
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const m = /^(\d{1,2}):(\d{2})/.exec(s);
+        return m ? (parseInt(m[1], 10) % 24) * 60 + parseInt(m[2], 10) : null;
+      };
+      const estStrToMinutes = (t: string): number | null => {
+        const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(t.trim());
+        if (!m) return null;
+        let h = parseInt(m[1], 10) % 12;
+        if (/pm/i.test(m[3])) h += 12;
+        return h * 60 + parseInt(m[2], 10);
+      };
 
       for (const anGame of anGames) {
         // Resolve away team dbSlug via AN url_slug
@@ -854,20 +1186,26 @@ export async function refreshAnApiOdds(
           if (!awayMlb || !homeMlb) {
             console.warn(
               `[ANApiOdds][MLB] UNRESOLVED AN slug: "${anGame.awayUrlSlug}" @ "${anGame.homeUrlSlug}" ` +
-              `— awayResolved=${!!awayMlb} homeResolved=${!!homeMlb} ` +
-              `— add to MLB_AN_SLUG_ALIASES in mlbTeams.ts if this is a known alias`
+                `— awayResolved=${!!awayMlb} homeResolved=${!!homeMlb} ` +
+                `— add to MLB_AN_SLUG_ALIASES in mlbTeams.ts if this is a known alias`
             );
           } else {
-            debugLog("ANApiOdds", "info",
+            debugLog(
+              "ANApiOdds",
+              "info",
               `[ANApiOdds][MLB] Resolved: "${anGame.awayUrlSlug}" → ${awayMlb.abbrev} | ` +
-              `"${anGame.homeUrlSlug}" → ${homeMlb.abbrev} | ` +
-              `runLine=${anGame.dkAwaySpread}/${anGame.dkHomeSpread} ` +
-              `total=${anGame.dkTotal} ml=${anGame.dkAwayML}/${anGame.dkHomeML}`
+                `"${anGame.homeUrlSlug}" → ${homeMlb.abbrev} | ` +
+                `runLine=${anGame.dkAwaySpread}/${anGame.dkHomeSpread} ` +
+                `total=${anGame.dkTotal} ml=${anGame.dkAwayML}/${anGame.dkHomeML}`
             );
           }
         } else {
           // Unknown sport — skip
-          debugLog("ANApiOdds", "warn", `[ANApiOdds] Unknown sport "${dbSport}" — skipping game ${anGame.awayUrlSlug} @ ${anGame.homeUrlSlug}`);
+          debugLog(
+            "ANApiOdds",
+            "warn",
+            `[ANApiOdds] Unknown sport "${dbSport}" — skipping game ${anGame.awayUrlSlug} @ ${anGame.homeUrlSlug}`
+          );
           skipped++;
           continue;
         }
@@ -880,15 +1218,50 @@ export async function refreshAnApiOdds(
           continue;
         }
 
-        // Try both orderings: AN may list teams as away@home while DB has them reversed
-        const dbGameDirect = existingGames.find(
-          e => e.awayTeam === awayDbSlug && e.homeTeam === homeDbSlug
+        // Try both orderings: AN may list teams as away@home while DB has them reversed.
+        // DOUBLEHEADER-SAFE: consider ALL unclaimed team-matching rows and pick
+        // the one whose start time is closest to this AN game's start time
+        // (identical for single games; disambiguates G1 vs G2 for doubleheaders).
+        const directMatches = existingGames.filter(
+          e =>
+            !claimedGameIds.has(e.id) &&
+            e.awayTeam === awayDbSlug &&
+            e.homeTeam === homeDbSlug
         );
-        const dbGameSwapped = !dbGameDirect ? existingGames.find(
-          e => e.awayTeam === homeDbSlug && e.homeTeam === awayDbSlug
-        ) : undefined;
-        const dbGame = dbGameDirect ?? dbGameSwapped;
-        const teamsSwapped = !!dbGameSwapped && !dbGameDirect;
+        const swappedMatches =
+          directMatches.length === 0
+            ? existingGames.filter(
+                e =>
+                  !claimedGameIds.has(e.id) &&
+                  e.awayTeam === homeDbSlug &&
+                  e.homeTeam === awayDbSlug
+              )
+            : [];
+        const pool = directMatches.length > 0 ? directMatches : swappedMatches;
+        let dbGame: (typeof existingGames)[number] | undefined;
+        if (pool.length === 1) {
+          dbGame = pool[0];
+        } else if (pool.length > 1) {
+          const anMin = anStartToEstMinutes(anGame.startTime);
+          dbGame = [...pool].sort((a, b) => {
+            const da =
+              anMin != null && estStrToMinutes(a.startTimeEst) != null
+                ? Math.abs(anMin - estStrToMinutes(a.startTimeEst)!)
+                : 24 * 60;
+            const dbb =
+              anMin != null && estStrToMinutes(b.startTimeEst) != null
+                ? Math.abs(anMin - estStrToMinutes(b.startTimeEst)!)
+                : 24 * 60;
+            return da - dbb || a.id - b.id;
+          })[0];
+          console.log(
+            `[ANApiOdds][${dbSport}] [DH] ${pool.length} candidate rows for ${awayDbSlug}@${homeDbSlug} on ${dateStr} ` +
+              `(anId=${anGame.gameId}, anStart=${anGame.startTime}) — matched id=${dbGame.id} G${dbGame.gameNumber ?? 1} ` +
+              `startTimeEst=${dbGame.startTimeEst} by closest start time`
+          );
+        }
+        if (dbGame) claimedGameIds.add(dbGame.id);
+        const teamsSwapped = !!dbGame && directMatches.length === 0;
 
         if (!dbGame) {
           const msg = `[ANApiOdds][${dbSport}] NO_MATCH: ${awayDbSlug} @ ${homeDbSlug} on ${dateStr} (anId=${anGame.gameId})`;
@@ -899,7 +1272,9 @@ export async function refreshAnApiOdds(
         }
 
         if (teamsSwapped) {
-          debugLog("ANApiOdds", "info",
+          debugLog(
+            "ANApiOdds",
+            "info",
             `[ANApiOdds][${dbSport}] SWAPPED: AN has ${awayDbSlug}@${homeDbSlug} but DB has ${dbGame.awayTeam}@${dbGame.homeTeam} — flipping spreads/ML`
           );
         }
@@ -908,25 +1283,43 @@ export async function refreshAnApiOdds(
         // Once a game goes live, the AN API starts returning live in-game lines.
         // We lock in the pre-game line by refusing to overwrite it.
         if (dbGame.gameStatus === "live" || dbGame.gameStatus === "final") {
-          debugLog("ANApiOdds", "info",
+          debugLog(
+            "ANApiOdds",
+            "info",
             `[ANApiOdds][${dbSport}] FROZEN: ${awayDbSlug} @ ${homeDbSlug} (${dateStr}) ` +
-            `— gameStatus=${dbGame.gameStatus}, odds locked in, skipping update`
+              `— gameStatus=${dbGame.gameStatus}, odds locked in, skipping update`
           );
           totalFrozen++;
           continue;
         }
 
         // When teams are swapped, flip away/home spread and ML so they align with DB ordering
-        const dkAwaySpread = teamsSwapped ? anGame.dkHomeSpread : anGame.dkAwaySpread;
-        const dkAwaySpreadOdds = teamsSwapped ? anGame.dkHomeSpreadOdds : anGame.dkAwaySpreadOdds;
-        const dkHomeSpread = teamsSwapped ? anGame.dkAwaySpread : anGame.dkHomeSpread;
-        const dkHomeSpreadOdds = teamsSwapped ? anGame.dkAwaySpreadOdds : anGame.dkHomeSpreadOdds;
+        const dkAwaySpread = teamsSwapped
+          ? anGame.dkHomeSpread
+          : anGame.dkAwaySpread;
+        const dkAwaySpreadOdds = teamsSwapped
+          ? anGame.dkHomeSpreadOdds
+          : anGame.dkAwaySpreadOdds;
+        const dkHomeSpread = teamsSwapped
+          ? anGame.dkAwaySpread
+          : anGame.dkHomeSpread;
+        const dkHomeSpreadOdds = teamsSwapped
+          ? anGame.dkAwaySpreadOdds
+          : anGame.dkHomeSpreadOdds;
         const dkAwayML = teamsSwapped ? anGame.dkHomeML : anGame.dkAwayML;
         const dkHomeML = teamsSwapped ? anGame.dkAwayML : anGame.dkHomeML;
-        const openAwaySpread = teamsSwapped ? anGame.openHomeSpread : anGame.openAwaySpread;
-        const openAwaySpreadOdds = teamsSwapped ? anGame.openHomeSpreadOdds : anGame.openAwaySpreadOdds;
-        const openHomeSpread = teamsSwapped ? anGame.openAwaySpread : anGame.openHomeSpread;
-        const openHomeSpreadOdds = teamsSwapped ? anGame.openAwaySpreadOdds : anGame.openHomeSpreadOdds;
+        const openAwaySpread = teamsSwapped
+          ? anGame.openHomeSpread
+          : anGame.openAwaySpread;
+        const openAwaySpreadOdds = teamsSwapped
+          ? anGame.openHomeSpreadOdds
+          : anGame.openAwaySpreadOdds;
+        const openHomeSpread = teamsSwapped
+          ? anGame.openAwaySpread
+          : anGame.openHomeSpread;
+        const openHomeSpreadOdds = teamsSwapped
+          ? anGame.openAwaySpreadOdds
+          : anGame.openHomeSpreadOdds;
         const openAwayML = teamsSwapped ? anGame.openHomeML : anGame.openAwayML;
         const openHomeML = teamsSwapped ? anGame.openAwayML : anGame.openHomeML;
 
@@ -947,59 +1340,83 @@ export async function refreshAnApiOdds(
         // There is NEVER a partial/null state. Every game always has either DK or Open.
         //
         // [STEP] Evaluate DK NJ completeness across all 3 markets
-        const dkSpreadComplete = dkAwaySpread !== null && dkAwaySpreadOdds !== null &&
-                                  dkHomeSpread !== null && dkHomeSpreadOdds !== null;
-        const dkTotalComplete  = anGame.dkTotal !== null && anGame.dkOverOdds !== null &&
-                                  anGame.dkUnderOdds !== null;
-        const dkMlComplete     = dkAwayML !== null && dkHomeML !== null;
-        const dkAllComplete    = dkSpreadComplete && dkTotalComplete && dkMlComplete;
+        const dkSpreadComplete =
+          dkAwaySpread !== null &&
+          dkAwaySpreadOdds !== null &&
+          dkHomeSpread !== null &&
+          dkHomeSpreadOdds !== null;
+        const dkTotalComplete =
+          anGame.dkTotal !== null &&
+          anGame.dkOverOdds !== null &&
+          anGame.dkUnderOdds !== null;
+        const dkMlComplete = dkAwayML !== null && dkHomeML !== null;
+        const dkAllComplete =
+          dkSpreadComplete && dkTotalComplete && dkMlComplete;
 
         // [STATE] Log DK completeness check — redirected to DB to avoid stdout noise
-        debugLog("ANApiOdds", "info",
+        debugLog(
+          "ANApiOdds",
+          "info",
           `[ANApiOdds][${dbSport}][DK_CHECK] ${dbGame.awayTeam}@${dbGame.homeTeam} (${dateStr}) ` +
-          `dkSpread=${dkSpreadComplete ? '✓' : '✗'} ` +
-          `dkTotal=${dkTotalComplete ? '✓' : '✗'} ` +
-          `dkML=${dkMlComplete ? '✓' : '✗'} ` +
-          `→ source=${dkAllComplete ? 'DK' : 'OPEN'} | ` +
-          `DK: spread=${dkAwaySpread ?? 'null'}(${dkAwaySpreadOdds ?? 'null'}) ` +
-          `total=${anGame.dkTotal ?? 'null'}(${anGame.dkOverOdds ?? 'null'}/${anGame.dkUnderOdds ?? 'null'}) ` +
-          `ml=${dkAwayML ?? 'null'}/${dkHomeML ?? 'null'} | ` +
-          `OPEN: spread=${openAwaySpread ?? 'null'}(${openAwaySpreadOdds ?? 'null'}) ` +
-          `total=${anGame.openTotal ?? 'null'}(${anGame.openOverOdds ?? 'null'}/${anGame.openUnderOdds ?? 'null'}) ` +
-          `ml=${openAwayML ?? 'null'}/${openHomeML ?? 'null'}`
+            `dkSpread=${dkSpreadComplete ? "✓" : "✗"} ` +
+            `dkTotal=${dkTotalComplete ? "✓" : "✗"} ` +
+            `dkML=${dkMlComplete ? "✓" : "✗"} ` +
+            `→ source=${dkAllComplete ? "DK" : "OPEN"} | ` +
+            `DK: spread=${dkAwaySpread ?? "null"}(${dkAwaySpreadOdds ?? "null"}) ` +
+            `total=${anGame.dkTotal ?? "null"}(${anGame.dkOverOdds ?? "null"}/${anGame.dkUnderOdds ?? "null"}) ` +
+            `ml=${dkAwayML ?? "null"}/${dkHomeML ?? "null"} | ` +
+            `OPEN: spread=${openAwaySpread ?? "null"}(${openAwaySpreadOdds ?? "null"}) ` +
+            `total=${anGame.openTotal ?? "null"}(${anGame.openOverOdds ?? "null"}/${anGame.openUnderOdds ?? "null"}) ` +
+            `ml=${openAwayML ?? "null"}/${openHomeML ?? "null"}`
         );
 
         // [STEP] Select source atomically — DK if all 3 markets complete, else Opening line
-        const oddsSource: 'dk' | 'open' = dkAllComplete ? 'dk' : 'open';
-        const useAwaySpread     = dkAllComplete ? fmtSpread(dkAwaySpread)     : fmtSpread(openAwaySpread);
-        const useAwaySpreadOdds = dkAllComplete ? dkAwaySpreadOdds            : openAwaySpreadOdds;
-        const useHomeSpread     = dkAllComplete ? fmtSpread(dkHomeSpread)     : fmtSpread(openHomeSpread);
-        const useHomeSpreadOdds = dkAllComplete ? dkHomeSpreadOdds            : openHomeSpreadOdds;
-        const useTotal          = dkAllComplete ? fmtTotal(anGame.dkTotal)    : fmtTotal(anGame.openTotal);
-        const useOverOdds       = dkAllComplete ? anGame.dkOverOdds           : anGame.openOverOdds;
-        const useUnderOdds      = dkAllComplete ? anGame.dkUnderOdds          : anGame.openUnderOdds;
-        const useAwayML         = dkAllComplete ? dkAwayML                    : openAwayML;
-        const useHomeML         = dkAllComplete ? dkHomeML                    : openHomeML;
+        const oddsSource: "dk" | "open" = dkAllComplete ? "dk" : "open";
+        const useAwaySpread = dkAllComplete
+          ? fmtSpread(dkAwaySpread)
+          : fmtSpread(openAwaySpread);
+        const useAwaySpreadOdds = dkAllComplete
+          ? dkAwaySpreadOdds
+          : openAwaySpreadOdds;
+        const useHomeSpread = dkAllComplete
+          ? fmtSpread(dkHomeSpread)
+          : fmtSpread(openHomeSpread);
+        const useHomeSpreadOdds = dkAllComplete
+          ? dkHomeSpreadOdds
+          : openHomeSpreadOdds;
+        const useTotal = dkAllComplete
+          ? fmtTotal(anGame.dkTotal)
+          : fmtTotal(anGame.openTotal);
+        const useOverOdds = dkAllComplete
+          ? anGame.dkOverOdds
+          : anGame.openOverOdds;
+        const useUnderOdds = dkAllComplete
+          ? anGame.dkUnderOdds
+          : anGame.openUnderOdds;
+        const useAwayML = dkAllComplete ? dkAwayML : openAwayML;
+        const useHomeML = dkAllComplete ? dkHomeML : openHomeML;
 
         // [STATE] Log final resolved values — redirected to DB to avoid stdout noise
-        debugLog("ANApiOdds", "info",
+        debugLog(
+          "ANApiOdds",
+          "info",
           `[ANApiOdds][${dbSport}][RESOLVED] ${dbGame.awayTeam}@${dbGame.homeTeam} (${dateStr}) ` +
-          `oddsSource=${oddsSource} | ` +
-          `spread=${useAwaySpread ?? '-'}(${useAwaySpreadOdds ?? '-'}) / ${useHomeSpread ?? '-'}(${useHomeSpreadOdds ?? '-'}) ` +
-          `total=${useTotal ?? '-'} over=${useOverOdds ?? '-'} under=${useUnderOdds ?? '-'} ` +
-          `ml=${useAwayML ?? '-'}/${useHomeML ?? '-'}`
+            `oddsSource=${oddsSource} | ` +
+            `spread=${useAwaySpread ?? "-"}(${useAwaySpreadOdds ?? "-"}) / ${useHomeSpread ?? "-"}(${useHomeSpreadOdds ?? "-"}) ` +
+            `total=${useTotal ?? "-"} over=${useOverOdds ?? "-"} under=${useUnderOdds ?? "-"} ` +
+            `ml=${useAwayML ?? "-"}/${useHomeML ?? "-"}`
         );
 
         // Alias for backwards compat with snapshot/history block below
-        const rAwaySpread     = { value: useAwaySpread };
+        const rAwaySpread = { value: useAwaySpread };
         const rAwaySpreadOdds = { value: useAwaySpreadOdds };
-        const rHomeSpread     = { value: useHomeSpread };
+        const rHomeSpread = { value: useHomeSpread };
         const rHomeSpreadOdds = { value: useHomeSpreadOdds };
-        const rTotal          = { value: useTotal };
-        const rOverOdds       = { value: useOverOdds };
-        const rUnderOdds      = { value: useUnderOdds };
-        const rAwayML         = { value: useAwayML };
-        const rHomeML         = { value: useHomeML };
+        const rTotal = { value: useTotal };
+        const rOverOdds = { value: useOverOdds };
+        const rUnderOdds = { value: useUnderOdds };
+        const rAwayML = { value: useAwayML };
+        const rHomeML = { value: useHomeML };
 
         // ── DB WRITE: primary book columns + open lines + oddsSource ─────────────────────
         // ── MLB DUAL-WRITE: spread → awayRunLine + awayBookSpread ─────────────────────
@@ -1021,7 +1438,11 @@ export async function refreshAnApiOdds(
         // inverted order. Flipping the line without flipping the odds produces the
         // impossible display: SD -203 on -1.5 but only -125 ML (PHI@SD bug).
         let _layer2OddsSwapped = false;
-        if (sport === 'mlb' && rAwaySpread.value !== null && useAwayML !== null) {
+        if (
+          sport === "mlb" &&
+          rAwaySpread.value !== null &&
+          useAwayML !== null
+        ) {
           const _awayMLNum = parseFloat(String(useAwayML));
           const _awayRLNum = parseFloat(String(rAwaySpread.value));
           if (!isNaN(_awayMLNum) && !isNaN(_awayRLNum)) {
@@ -1034,18 +1455,24 @@ export async function refreshAnApiOdds(
               // Contradiction — flip the run line to match ML direction
               const correctedAwayRL = mlSaysAwayIsFav ? -1.5 : 1.5;
               const correctedHomeRL = -correctedAwayRL;
-              _finalAwayRunLine = correctedAwayRL > 0 ? `+${correctedAwayRL.toFixed(1)}` : `${correctedAwayRL.toFixed(1)}`;
-              _finalHomeRunLine = correctedHomeRL > 0 ? `+${correctedHomeRL.toFixed(1)}` : `${correctedHomeRL.toFixed(1)}`;
+              _finalAwayRunLine =
+                correctedAwayRL > 0
+                  ? `+${correctedAwayRL.toFixed(1)}`
+                  : `${correctedAwayRL.toFixed(1)}`;
+              _finalHomeRunLine =
+                correctedHomeRL > 0
+                  ? `+${correctedHomeRL.toFixed(1)}`
+                  : `${correctedHomeRL.toFixed(1)}`;
               // CRITICAL: odds must also be swapped — the scraped awaySpreadOdds were for the
               // ORIGINAL (wrong) direction. After flipping the line, the away team is now the
               // dog (+1.5) so it gets the dog odds (previously homeSpreadOdds), and vice versa.
               _layer2OddsSwapped = true;
               console.warn(
                 `[ANApiOdds][MLB][LAYER2_ML_GUARD] ${dbGame.awayTeam}@${dbGame.homeTeam} — ` +
-                `scraped awayRunLine=${rAwaySpread.value} contradicts awayML=${useAwayML}. ` +
-                `Corrected to awayRunLine=${_finalAwayRunLine} homeRunLine=${_finalHomeRunLine}. ` +
-                `[ODDS_SWAP] awayRunLineOdds: ${rAwaySpreadOdds.value} → ${rHomeSpreadOdds.value} ` +
-                `homeRunLineOdds: ${rHomeSpreadOdds.value} → ${rAwaySpreadOdds.value}`
+                  `scraped awayRunLine=${rAwaySpread.value} contradicts awayML=${useAwayML}. ` +
+                  `Corrected to awayRunLine=${_finalAwayRunLine} homeRunLine=${_finalHomeRunLine}. ` +
+                  `[ODDS_SWAP] awayRunLineOdds: ${rAwaySpreadOdds.value} → ${rHomeSpreadOdds.value} ` +
+                  `homeRunLineOdds: ${rHomeSpreadOdds.value} → ${rAwaySpreadOdds.value}`
               );
             }
           }
@@ -1053,20 +1480,29 @@ export async function refreshAnApiOdds(
         // When LAYER2 swaps the run line direction, the odds must also be swapped:
         // the fav odds (more negative) belong to the team now on -1.5, and the dog
         // odds (more positive) belong to the team now on +1.5.
-        const _finalAwayRunLineOdds = _layer2OddsSwapped ? rHomeSpreadOdds.value : rAwaySpreadOdds.value;
-        const _finalHomeRunLineOdds = _layer2OddsSwapped ? rAwaySpreadOdds.value : rHomeSpreadOdds.value;
-        const mlbRunLineFields = sport === 'mlb' ? {
-          awayRunLine:     _finalAwayRunLine,
-          homeRunLine:     _finalHomeRunLine,
-          awayRunLineOdds: _finalAwayRunLineOdds,
-          homeRunLineOdds: _finalHomeRunLineOdds,
-        } : {};
-        if (sport === 'mlb' && _finalAwayRunLine !== null) {
-          debugLog("ANApiOdds", "info",
+        const _finalAwayRunLineOdds = _layer2OddsSwapped
+          ? rHomeSpreadOdds.value
+          : rAwaySpreadOdds.value;
+        const _finalHomeRunLineOdds = _layer2OddsSwapped
+          ? rAwaySpreadOdds.value
+          : rHomeSpreadOdds.value;
+        const mlbRunLineFields =
+          sport === "mlb"
+            ? {
+                awayRunLine: _finalAwayRunLine,
+                homeRunLine: _finalHomeRunLine,
+                awayRunLineOdds: _finalAwayRunLineOdds,
+                homeRunLineOdds: _finalHomeRunLineOdds,
+              }
+            : {};
+        if (sport === "mlb" && _finalAwayRunLine !== null) {
+          debugLog(
+            "ANApiOdds",
+            "info",
             `[ANApiOdds][MLB][DUAL_WRITE] ${dbGame.awayTeam}@${dbGame.homeTeam} ` +
-            `awayRunLine=${_finalAwayRunLine}(${rAwaySpreadOdds.value ?? '-'}) ` +
-            `homeRunLine=${_finalHomeRunLine}(${rHomeSpreadOdds.value ?? '-'}) ` +
-            `→ writing to BOTH awayBookSpread AND awayRunLine columns`
+              `awayRunLine=${_finalAwayRunLine}(${rAwaySpreadOdds.value ?? "-"}) ` +
+              `homeRunLine=${_finalHomeRunLine}(${rHomeSpreadOdds.value ?? "-"}) ` +
+              `→ writing to BOTH awayBookSpread AND awayRunLine columns`
           );
         }
 
@@ -1080,43 +1516,51 @@ export async function refreshAnApiOdds(
         //
         // Fix: for MLB, use _finalAwayRunLine/_finalHomeRunLine as awayBookSpread/homeBookSpread.
         // For all other sports, use rAwaySpread.value as before (no run line guard applies).
-        const _finalAwayBookSpread = (sport === 'mlb' && _finalAwayRunLine !== null)
-          ? _finalAwayRunLine
-          : rAwaySpread.value;
-        const _finalHomeBookSpread = (sport === 'mlb' && _finalHomeRunLine !== null)
-          ? _finalHomeRunLine
-          : rHomeSpread.value;
+        const _finalAwayBookSpread =
+          sport === "mlb" && _finalAwayRunLine !== null
+            ? _finalAwayRunLine
+            : rAwaySpread.value;
+        const _finalHomeBookSpread =
+          sport === "mlb" && _finalHomeRunLine !== null
+            ? _finalHomeRunLine
+            : rHomeSpread.value;
 
         const _anOddsResult = await updateAnOdds(dbGame.id, {
           // Resolved primary book columns (DK NJ or Open-line — atomic switch)
           // For MLB: use LAYER2-corrected run line values so awayBookSpread always
           // matches the ML direction (invariant: ML fav = RL fav).
-          awayBookSpread:  _finalAwayBookSpread,
+          awayBookSpread: _finalAwayBookSpread,
           // LAYER2 odds swap: when the run line direction is corrected, the display odds
           // (awaySpreadOdds/homeSpreadOdds) must also be swapped so the fav odds (-203)
           // are shown next to the fav's -1.5 line, not the dog's +1.5 line.
-          awaySpreadOdds:  _layer2OddsSwapped ? rHomeSpreadOdds.value : rAwaySpreadOdds.value,
-          homeBookSpread:  _finalHomeBookSpread,
-          homeSpreadOdds:  _layer2OddsSwapped ? rAwaySpreadOdds.value : rHomeSpreadOdds.value,
-          bookTotal:       rTotal.value,
-          overOdds:        rOverOdds.value,
-          underOdds:       rUnderOdds.value,
-          awayML:          rAwayML.value,
-          homeML:          rHomeML.value,
+          awaySpreadOdds: _layer2OddsSwapped
+            ? rHomeSpreadOdds.value
+            : rAwaySpreadOdds.value,
+          homeBookSpread: _finalHomeBookSpread,
+          homeSpreadOdds: _layer2OddsSwapped
+            ? rAwaySpreadOdds.value
+            : rHomeSpreadOdds.value,
+          bookTotal: rTotal.value,
+          overOdds: rOverOdds.value,
+          underOdds: rUnderOdds.value,
+          awayML: rAwayML.value,
+          homeML: rHomeML.value,
           // Computed odds source label — always 'dk' or 'open', never null or partial
           oddsSource,
           // MLB run line dual-write — same values as awayBookSpread/homeBookSpread
           ...mlbRunLineFields,
           // Open line reference columns (always write when AN has open data)
-          ...(openAwaySpread !== null ? {
-            openAwaySpread:     fmtSpread(openAwaySpread),
-            openAwaySpreadOdds: openAwaySpreadOdds,
-            openHomeSpread:     fmtSpread(openHomeSpread),
-            openHomeSpreadOdds: openHomeSpreadOdds,
-            openTotal:          fmtTotal(anGame.openTotal),
-            openAwayML:         openAwayML,
-            openHomeML:         openHomeML,
-          } : {}),
+          ...(openAwaySpread !== null
+            ? {
+                openAwaySpread: fmtSpread(openAwaySpread),
+                openAwaySpreadOdds: openAwaySpreadOdds,
+                openHomeSpread: fmtSpread(openHomeSpread),
+                openHomeSpreadOdds: openHomeSpreadOdds,
+                openTotal: fmtTotal(anGame.openTotal),
+                openAwayML: openAwayML,
+                openHomeML: openHomeML,
+              }
+            : {}),
         });
 
         // ── LAYER3 IMMEDIATE RE-RUN ──────────────────────────────────────────────────────────────────
@@ -1125,29 +1569,39 @@ export async function refreshAnApiOdds(
         // RL direction) stays on screen for up to 5 minutes until the next scheduled
         // MLB model sync cycle picks it up. This reduces the stale window to ~15-30s.
         if (_anOddsResult.layer3Fired && _anOddsResult.gameDate) {
-          const _l3GameId   = _anOddsResult.gameId;
+          const _l3GameId = _anOddsResult.gameId;
           const _l3GameDate = _anOddsResult.gameDate;
-          debugLog("ANApiOdds", "info",
+          debugLog(
+            "ANApiOdds",
+            "info",
             `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} gameDate=${_l3GameDate} — ` +
-            `ML direction flipped → triggering immediate model re-run to eliminate stale RL display.`
+              `ML direction flipped → triggering immediate model re-run to eliminate stale RL display.`
           );
           // Fire-and-forget: do NOT await — this is a background re-run.
           // forceRerun=true: bypass the modelRunAt IS NULL guard (it was just cleared).
-          import('./mlbModelRunner').then(({ runMlbModelForDate }) =>
-            runMlbModelForDate(_l3GameDate, { targetGameIds: [_l3GameId], forceRerun: true })
-          ).then(result => {
-            debugLog("ANApiOdds", "info",
-              `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} COMPLETE — ` +
-              `written=${result.written} errors=${result.errors} ` +
-              `validation=${result.validation.passed ? '✅ PASSED' : '❌ FAILED'}`
-            );
-          }).catch(err => {
-            console.error(
-              `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} FAILED (non-fatal, 5-min cycle will retry):`, err
-            );
-          });
+          import("./mlbModelRunner")
+            .then(({ runMlbModelForDate }) =>
+              runMlbModelForDate(_l3GameDate, {
+                targetGameIds: [_l3GameId],
+                forceRerun: true,
+              })
+            )
+            .then(result => {
+              debugLog(
+                "ANApiOdds",
+                "info",
+                `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} COMPLETE — ` +
+                  `written=${result.written} errors=${result.errors} ` +
+                  `validation=${result.validation.passed ? "✅ PASSED" : "❌ FAILED"}`
+              );
+            })
+            .catch(err => {
+              console.error(
+                `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} FAILED (non-fatal, 5-min cycle will retry):`,
+                err
+              );
+            });
         }
-
 
         // ── ODDS HISTORY SNAPSHOT ───────────────────────────────────────────────
         // Snapshot the resolved lines (DK or Open fallback) + current VSIN splits.
@@ -1155,8 +1609,10 @@ export async function refreshAnApiOdds(
         // that runs in the same cycle, before refreshAnApiOdds is called).
         // Apply the 0/0 guard: treat both-zero as "not yet available" (null).
         const _spreadBothZero =
-          (dbGame.spreadAwayBetsPct === 0 || dbGame.spreadAwayBetsPct === null) &&
-          (dbGame.spreadAwayMoneyPct === 0 || dbGame.spreadAwayMoneyPct === null);
+          (dbGame.spreadAwayBetsPct === 0 ||
+            dbGame.spreadAwayBetsPct === null) &&
+          (dbGame.spreadAwayMoneyPct === 0 ||
+            dbGame.spreadAwayMoneyPct === null);
         const _totalBothZero =
           (dbGame.totalOverBetsPct === 0 || dbGame.totalOverBetsPct === null) &&
           (dbGame.totalOverMoneyPct === 0 || dbGame.totalOverMoneyPct === null);
@@ -1165,48 +1621,57 @@ export async function refreshAnApiOdds(
           (dbGame.mlAwayMoneyPct === 0 || dbGame.mlAwayMoneyPct === null);
 
         // lineSource for the snapshot mirrors the computed oddsSource — always 'dk' or 'open'
-        const lineSource: 'dk' | 'open' = oddsSource;
+        const lineSource: "dk" | "open" = oddsSource;
 
-        await insertOddsHistory(
-          dbGame.id,
-          dbSport,
-          source,
-          {
-            awaySpread:    rAwaySpread.value,
-            awaySpreadOdds: rAwaySpreadOdds.value,
-            homeSpread:    rHomeSpread.value,
-            homeSpreadOdds: rHomeSpreadOdds.value,
-            total:         rTotal.value,
-            overOdds:      rOverOdds.value,
-            underOdds:     rUnderOdds.value,
-            awayML:        rAwayML.value,
-            homeML:        rHomeML.value,
-            lineSource,
-            // VSIN splits — null if market not yet open (0/0 guard)
-            spreadAwayBetsPct:  _spreadBothZero ? null : (dbGame.spreadAwayBetsPct ?? null),
-            spreadAwayMoneyPct: _spreadBothZero ? null : (dbGame.spreadAwayMoneyPct ?? null),
-            totalOverBetsPct:   _totalBothZero  ? null : (dbGame.totalOverBetsPct ?? null),
-            totalOverMoneyPct:  _totalBothZero  ? null : (dbGame.totalOverMoneyPct ?? null),
-            mlAwayBetsPct:      _mlBothZero     ? null : (dbGame.mlAwayBetsPct ?? null),
-            mlAwayMoneyPct:     _mlBothZero     ? null : (dbGame.mlAwayMoneyPct ?? null),
-          }
-        );
+        await insertOddsHistory(dbGame.id, dbSport, source, {
+          awaySpread: rAwaySpread.value,
+          awaySpreadOdds: rAwaySpreadOdds.value,
+          homeSpread: rHomeSpread.value,
+          homeSpreadOdds: rHomeSpreadOdds.value,
+          total: rTotal.value,
+          overOdds: rOverOdds.value,
+          underOdds: rUnderOdds.value,
+          awayML: rAwayML.value,
+          homeML: rHomeML.value,
+          lineSource,
+          // VSIN splits — null if market not yet open (0/0 guard)
+          spreadAwayBetsPct: _spreadBothZero
+            ? null
+            : (dbGame.spreadAwayBetsPct ?? null),
+          spreadAwayMoneyPct: _spreadBothZero
+            ? null
+            : (dbGame.spreadAwayMoneyPct ?? null),
+          totalOverBetsPct: _totalBothZero
+            ? null
+            : (dbGame.totalOverBetsPct ?? null),
+          totalOverMoneyPct: _totalBothZero
+            ? null
+            : (dbGame.totalOverMoneyPct ?? null),
+          mlAwayBetsPct: _mlBothZero ? null : (dbGame.mlAwayBetsPct ?? null),
+          mlAwayMoneyPct: _mlBothZero ? null : (dbGame.mlAwayMoneyPct ?? null),
+        });
 
         // [OUTPUT] Confirm update with full resolved values — redirected to DB
         updated++;
-        debugLog("ANApiOdds", "info",
+        debugLog(
+          "ANApiOdds",
+          "info",
           `[ANApiOdds][${dbSport}][UPDATED] ${dbGame.awayTeam}@${dbGame.homeTeam} (${dateStr}) ` +
-          `source=${source} oddsSource=${oddsSource ?? 'null'}${teamsSwapped ? ' [SWAPPED]' : ''} | ` +
-          `spread=${rAwaySpread.value ?? '-'}/${rHomeSpread.value ?? '-'} ` +
-          `total=${rTotal.value ?? '-'} ` +
-          `ml=${rAwayML.value ?? '-'}/${rHomeML.value ?? '-'} | ` +
-          `splits: spread=${_spreadBothZero ? 'PENDING' : `${dbGame.spreadAwayBetsPct}%B/${dbGame.spreadAwayMoneyPct}%M`} ` +
-          `total=${_totalBothZero ? 'PENDING' : `${dbGame.totalOverBetsPct}%B/${dbGame.totalOverMoneyPct}%M`} ` +
-          `ml=${_mlBothZero ? 'PENDING' : `${dbGame.mlAwayBetsPct}%B/${dbGame.mlAwayMoneyPct}%M`}`
+            `source=${source} oddsSource=${oddsSource ?? "null"}${teamsSwapped ? " [SWAPPED]" : ""} | ` +
+            `spread=${rAwaySpread.value ?? "-"}/${rHomeSpread.value ?? "-"} ` +
+            `total=${rTotal.value ?? "-"} ` +
+            `ml=${rAwayML.value ?? "-"}/${rHomeML.value ?? "-"} | ` +
+            `splits: spread=${_spreadBothZero ? "PENDING" : `${dbGame.spreadAwayBetsPct}%B/${dbGame.spreadAwayMoneyPct}%M`} ` +
+            `total=${_totalBothZero ? "PENDING" : `${dbGame.totalOverBetsPct}%B/${dbGame.totalOverMoneyPct}%M`} ` +
+            `ml=${_mlBothZero ? "PENDING" : `${dbGame.mlAwayBetsPct}%B/${dbGame.mlAwayMoneyPct}%M`}`
         );
       }
 
-      debugLog("ANApiOdds", "info", `[ANApiOdds][${dbSport}] ${dateStr}: updated=${updated} skipped=${skipped} frozen=${totalFrozen} total=${anGames.length}`);
+      debugLog(
+        "ANApiOdds",
+        "info",
+        `[ANApiOdds][${dbSport}] ${dateStr}: updated=${updated} skipped=${skipped} frozen=${totalFrozen} total=${anGames.length}`
+      );
       totalUpdated += updated;
       totalSkipped += skipped;
 
@@ -1216,45 +1681,56 @@ export async function refreshAnApiOdds(
       // [VERIFY] Run completeness check for all games on this date
       try {
         const afterGames = await listGamesByDate(dateStr, dbSport);
-        const incomplete = afterGames.filter(g =>
-          g.awayBookSpread == null ||
-          g.homeBookSpread == null ||
-          g.bookTotal == null ||
-          g.awayML == null ||
-          g.homeML == null ||
-          g.awaySpreadOdds == null ||
-          g.homeSpreadOdds == null ||
-          g.overOdds == null ||
-          g.underOdds == null
+        const incomplete = afterGames.filter(
+          g =>
+            g.awayBookSpread == null ||
+            g.homeBookSpread == null ||
+            g.bookTotal == null ||
+            g.awayML == null ||
+            g.homeML == null ||
+            g.awaySpreadOdds == null ||
+            g.homeSpreadOdds == null ||
+            g.overOdds == null ||
+            g.underOdds == null
         );
         if (incomplete.length === 0) {
-          debugLog("ANApiOdds", "info",
+          debugLog(
+            "ANApiOdds",
+            "info",
             `[ANApiOdds][${dbSport}][COMPLETENESS] ✅ PASS — all ${afterGames.length} games on ${dateStr} have full primary odds`
           );
         } else {
-          debugLog("ANApiOdds", "warn",
+          debugLog(
+            "ANApiOdds",
+            "warn",
             `[ANApiOdds][${dbSport}][COMPLETENESS] ⚠️  ${incomplete.length}/${afterGames.length} games on ${dateStr} have MISSING primary fields`
           );
           for (const g of incomplete) {
             const missing: string[] = [];
-            if (g.awayBookSpread == null)  missing.push('awayBookSpread');
-            if (g.homeBookSpread == null)  missing.push('homeBookSpread');
-            if (g.bookTotal == null)       missing.push('bookTotal');
-            if (g.awayML == null)          missing.push('awayML');
-            if (g.homeML == null)          missing.push('homeML');
-            if (g.awaySpreadOdds == null)  missing.push('awaySpreadOdds');
-            if (g.homeSpreadOdds == null)  missing.push('homeSpreadOdds');
-            if (g.overOdds == null)        missing.push('overOdds');
-            if (g.underOdds == null)       missing.push('underOdds');
-            debugLog("ANApiOdds", "warn",
+            if (g.awayBookSpread == null) missing.push("awayBookSpread");
+            if (g.homeBookSpread == null) missing.push("homeBookSpread");
+            if (g.bookTotal == null) missing.push("bookTotal");
+            if (g.awayML == null) missing.push("awayML");
+            if (g.homeML == null) missing.push("homeML");
+            if (g.awaySpreadOdds == null) missing.push("awaySpreadOdds");
+            if (g.homeSpreadOdds == null) missing.push("homeSpreadOdds");
+            if (g.overOdds == null) missing.push("overOdds");
+            if (g.underOdds == null) missing.push("underOdds");
+            debugLog(
+              "ANApiOdds",
+              "warn",
               `[ANApiOdds][${dbSport}][COMPLETENESS]   INCOMPLETE gameId=${g.id} ` +
-              `${g.awayTeam}@${g.homeTeam} oddsSource=${(g as any).oddsSource ?? 'null'} ` +
-              `MISSING=[${missing.join(', ')}]`
+                `${g.awayTeam}@${g.homeTeam} oddsSource=${(g as any).oddsSource ?? "null"} ` +
+                `MISSING=[${missing.join(", ")}]`
             );
           }
         }
       } catch (completenessErr) {
-        debugLog("ANApiOdds", "warn", `[ANApiOdds][${dbSport}][COMPLETENESS] WARN: completeness check failed: ${completenessErr instanceof Error ? completenessErr.message : String(completenessErr)}`);
+        debugLog(
+          "ANApiOdds",
+          "warn",
+          `[ANApiOdds][${dbSport}][COMPLETENESS] WARN: completeness check failed: ${completenessErr instanceof Error ? completenessErr.message : String(completenessErr)}`
+        );
       }
     } catch (err) {
       const msg = `[ANApiOdds][${sport.toUpperCase()}] Failed for ${dateStr}: ${err instanceof Error ? err.message : String(err)}`;
@@ -1263,7 +1739,12 @@ export async function refreshAnApiOdds(
     }
   }
 
-  return { updated: totalUpdated, skipped: totalSkipped, frozen: totalFrozen, errors: allErrors };
+  return {
+    updated: totalUpdated,
+    skipped: totalSkipped,
+    frozen: totalFrozen,
+    errors: allErrors,
+  };
 }
 
 // ─── Main refresh orchestrator ─────────────────────────────────────────────────
@@ -1291,13 +1772,13 @@ export async function runVsinRefresh(): Promise<RefreshResult | null> {
     ]);
     console.log(
       `[VSiNAutoRefresh] NBA refresh complete: updated=${nbaResult.updated} ` +
-      `inserted=${nbaResult.inserted} scheduleInserted=${nbaResult.scheduleInserted} ` +
-      `total=${nbaResult.total}`
+        `inserted=${nbaResult.inserted} scheduleInserted=${nbaResult.scheduleInserted} ` +
+        `total=${nbaResult.total}`
     );
     console.log(
       `[VSiNAutoRefresh] NHL refresh complete: updated=${nhlResult.updated} ` +
-      `inserted=${nhlResult.inserted} scheduleInserted=${nhlResult.scheduleInserted} ` +
-      `total=${nhlResult.total}`
+        `inserted=${nhlResult.inserted} scheduleInserted=${nhlResult.scheduleInserted} ` +
+        `total=${nhlResult.total}`
     );
     console.log(
       `[VSiNAutoRefresh] MLB VSiN splits: updated=${mlbResult.updated} total=${mlbResult.total}`
@@ -1306,10 +1787,14 @@ export async function runVsinRefresh(): Promise<RefreshResult | null> {
     // Auto-populate DK NJ current lines from Action Network API for today
     // (non-fatal — errors are logged but do not block the refresh)
     // MLB included: run line (spread), total, moneyline from AN DK NJ
-    const anOddsResult = await refreshAnApiOdds(todayStr, ["nba", "nhl", "mlb"], "auto");
+    const anOddsResult = await refreshAnApiOdds(
+      todayStr,
+      ["nba", "nhl", "mlb"],
+      "auto"
+    );
     console.log(
       `[VSiNAutoRefresh] AN API DK odds: updated=${anOddsResult.updated} ` +
-      `skipped=${anOddsResult.skipped} frozen=${anOddsResult.frozen} errors=${anOddsResult.errors.length}`
+        `skipped=${anOddsResult.skipped} frozen=${anOddsResult.frozen} errors=${anOddsResult.errors.length}`
     );
 
     // Pre-populate tomorrow's splits and DK odds (non-fatal)
@@ -1317,10 +1802,14 @@ export async function runVsinRefresh(): Promise<RefreshResult | null> {
     await runTomorrowSplitsUpdate(tomorrowStr);
     // Also populate tomorrow's DK odds from AN API (tomorrow games are never live, no freeze needed)
     // MLB included for tomorrow
-    const anOddsTomorrow = await refreshAnApiOdds(tomorrowStr, ["nba", "nhl", "mlb"], "auto");
+    const anOddsTomorrow = await refreshAnApiOdds(
+      tomorrowStr,
+      ["nba", "nhl", "mlb"],
+      "auto"
+    );
     console.log(
       `[VSiNAutoRefresh] AN API DK odds (tomorrow): updated=${anOddsTomorrow.updated} ` +
-      `skipped=${anOddsTomorrow.skipped} frozen=${anOddsTomorrow.frozen} errors=${anOddsTomorrow.errors.length}`
+        `skipped=${anOddsTomorrow.skipped} frozen=${anOddsTomorrow.frozen} errors=${anOddsTomorrow.errors.length}`
     );
 
     const result: RefreshResult = {
@@ -1346,9 +1835,9 @@ export async function runVsinRefresh(): Promise<RefreshResult | null> {
     lastRefreshResult = result;
     console.log(
       `[VSiNAutoRefresh] Done — ` +
-      `NBA: ${nbaResult.updated} updated, ${nbaResult.inserted} inserted, ${nbaResult.scheduleInserted} schedule-only | ` +
-      `NHL: ${nhlResult.updated} updated, ${nhlResult.inserted} inserted, ${nhlResult.scheduleInserted} schedule-only | ` +
-      `MLB: ${mlbResult.updated} updated, ${mlbResult.inserted} inserted, ${mlbResult.total} total`
+        `NBA: ${nbaResult.updated} updated, ${nbaResult.inserted} inserted, ${nbaResult.scheduleInserted} schedule-only | ` +
+        `NHL: ${nhlResult.updated} updated, ${nhlResult.inserted} inserted, ${nhlResult.scheduleInserted} schedule-only | ` +
+        `MLB: ${mlbResult.updated} updated, ${mlbResult.inserted} inserted, ${mlbResult.total} total`
     );
     return result;
   } catch (err) {
@@ -1374,7 +1863,9 @@ async function refreshNbaScores(): Promise<void> {
     for (const liveGame of liveGames) {
       // Match by away+home DB slugs
       const dbGame = existing.find(
-        g => g.awayTeam === liveGame.awayDbSlug && g.homeTeam === liveGame.homeDbSlug
+        g =>
+          g.awayTeam === liveGame.awayDbSlug &&
+          g.homeTeam === liveGame.homeDbSlug
       );
       if (!dbGame) continue;
 
@@ -1389,7 +1880,7 @@ async function refreshNbaScores(): Promise<void> {
 
       await updateNcaaStartTime(dbGame.id, {
         startTimeEst: dbGame.startTimeEst,
-        ncaaContestId: dbGame.ncaaContestId ?? '',
+        ncaaContestId: dbGame.ncaaContestId ?? "",
         gameStatus: liveGame.gameStatus,
         awayScore: liveGame.awayScore,
         homeScore: liveGame.homeScore,
@@ -1397,7 +1888,9 @@ async function refreshNbaScores(): Promise<void> {
       });
       updated++;
     }
-    console.log(`[ScoreRefresh] Updated scores for ${updated} NBA games (${todayStr})`);
+    console.log(
+      `[ScoreRefresh] Updated scores for ${updated} NBA games (${todayStr})`
+    );
   } catch (err) {
     console.warn("[ScoreRefresh] NBA score refresh failed (non-fatal):", err);
   }
@@ -1412,7 +1905,9 @@ async function refreshNhlScores(): Promise<void> {
     for (const liveGame of liveGames) {
       // Match by away+home DB slugs
       const dbGame = existing.find(
-        (g) => g.awayTeam === liveGame.awayDbSlug && g.homeTeam === liveGame.homeDbSlug
+        g =>
+          g.awayTeam === liveGame.awayDbSlug &&
+          g.homeTeam === liveGame.homeDbSlug
       );
       if (!dbGame) continue;
       // Only update if status or scores have changed
@@ -1432,7 +1927,9 @@ async function refreshNhlScores(): Promise<void> {
       });
       updated++;
     }
-    console.log(`[ScoreRefresh] Updated scores for ${updated} NHL games (${todayStr})`);
+    console.log(
+      `[ScoreRefresh] Updated scores for ${updated} NHL games (${todayStr})`
+    );
   } catch (err) {
     console.warn("[ScoreRefresh] NHL score refresh failed (non-fatal):", err);
   }
@@ -1447,19 +1944,23 @@ async function refreshMlbScoresNow(): Promise<{ newlyFinalGamePks: number[] }> {
   try {
     const { refreshMlbScores } = await import("./mlbScoreRefresh");
     const result = await refreshMlbScores(todayStr);
-    const finalMsg = result.newlyFinalGamePks.length > 0
-      ? ` | 🏁 newlyFinal=${result.newlyFinalGamePks.length} gamePks=[${result.newlyFinalGamePks.join(',')}]`
-      : '';
+    const finalMsg =
+      result.newlyFinalGamePks.length > 0
+        ? ` | 🏁 newlyFinal=${result.newlyFinalGamePks.length} gamePks=[${result.newlyFinalGamePks.join(",")}]`
+        : "";
     console.log(
       `[ScoreRefresh][MLB] ✅ ${todayStr}: updated=${result.updated} unchanged=${result.unchanged} ` +
-      `noMatch=${result.noMatch} errors=${result.errors.length}${finalMsg}`
+        `noMatch=${result.noMatch} errors=${result.errors.length}${finalMsg}`
     );
     if (result.errors.length > 0) {
       console.warn(`[ScoreRefresh][MLB] Errors:`, result.errors);
     }
     return { newlyFinalGamePks: result.newlyFinalGamePks };
   } catch (err) {
-    console.warn("[ScoreRefresh][MLB] MLB score refresh failed (non-fatal):", err);
+    console.warn(
+      "[ScoreRefresh][MLB] MLB score refresh failed (non-fatal):",
+      err
+    );
     return { newlyFinalGamePks: [] };
   }
 }
@@ -1477,7 +1978,10 @@ export async function refreshAllScoresNow(): Promise<void> {
   lastScoresRefreshedAt = new Date().toISOString();
   // Patch scoresRefreshedAt into the last refresh result so the UI can show it
   if (lastRefreshResult) {
-    lastRefreshResult = { ...lastRefreshResult, scoresRefreshedAt: lastScoresRefreshedAt };
+    lastRefreshResult = {
+      ...lastRefreshResult,
+      scoresRefreshedAt: lastScoresRefreshedAt,
+    };
   }
 }
 
@@ -1511,54 +2015,66 @@ export async function runVsinRefreshManual(
     const allDates = dateRange(todayStr, rangeEnd);
 
     // ── Per-sport VSiN splits + schedule refresh ──────────────────────────────────────────
-    const doNba   = !sport || sport === "NBA";
-    const doNhl   = !sport || sport === "NHL";
-    const doMlb   = !sport || sport === "MLB";
+    const doNba = !sport || sport === "NBA";
+    const doNhl = !sport || sport === "NHL";
+    const doMlb = !sport || sport === "MLB";
 
-    let nbaResult   = { updated: 0, inserted: 0, scheduleInserted: 0, total: 0 };
-    let nhlResult   = { updated: 0, inserted: 0, scheduleInserted: 0, total: 0 };
-    let mlbResult   = { updated: 0, inserted: 0, total: 0 };
+    let nbaResult = { updated: 0, inserted: 0, scheduleInserted: 0, total: 0 };
+    let nhlResult = { updated: 0, inserted: 0, scheduleInserted: 0, total: 0 };
+    let mlbResult = { updated: 0, inserted: 0, total: 0 };
 
     if (doNba) {
-      console.log(`[VSiNAutoRefresh][MANUAL][NBA] ── Refreshing NBA VSiN splits + schedule…`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][NBA] ── Refreshing NBA VSiN splits + schedule…`
+      );
       nbaResult = await refreshNba(todayStr, allDates);
       console.log(
         `[VSiNAutoRefresh][MANUAL][NBA] ✓ VSiN done — ` +
-        `updated=${nbaResult.updated} inserted=${nbaResult.inserted} ` +
-        `scheduleInserted=${nbaResult.scheduleInserted} total=${nbaResult.total}`
+          `updated=${nbaResult.updated} inserted=${nbaResult.inserted} ` +
+          `scheduleInserted=${nbaResult.scheduleInserted} total=${nbaResult.total}`
       );
     } else {
-      console.log(`[VSiNAutoRefresh][MANUAL][${sportLabel}] Skipping NBA VSiN refresh (not in scope)`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][${sportLabel}] Skipping NBA VSiN refresh (not in scope)`
+      );
     }
 
     if (doNhl) {
-      console.log(`[VSiNAutoRefresh][MANUAL][NHL] ── Refreshing NHL VSiN splits + schedule…`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][NHL] ── Refreshing NHL VSiN splits + schedule…`
+      );
       nhlResult = await refreshNhl(todayStr, allDates);
       console.log(
         `[VSiNAutoRefresh][MANUAL][NHL] ✓ VSiN done — ` +
-        `updated=${nhlResult.updated} inserted=${nhlResult.inserted} ` +
-        `scheduleInserted=${nhlResult.scheduleInserted} total=${nhlResult.total}`
+          `updated=${nhlResult.updated} inserted=${nhlResult.inserted} ` +
+          `scheduleInserted=${nhlResult.scheduleInserted} total=${nhlResult.total}`
       );
     } else {
-      console.log(`[VSiNAutoRefresh][MANUAL][${sportLabel}] Skipping NHL VSiN refresh (not in scope)`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][${sportLabel}] Skipping NHL VSiN refresh (not in scope)`
+      );
     }
 
     // ── AN API DK odds refresh (scoped to active sport) ───────────────────────
     const anSports: AnSport[] = [];
-    if (doNba)   anSports.push("nba");
-    if (doNhl)   anSports.push("nhl");
-    if (doMlb)   anSports.push("mlb");
+    if (doNba) anSports.push("nba");
+    if (doNhl) anSports.push("nhl");
+    if (doMlb) anSports.push("mlb");
 
     // MLB VSiN splits refresh (manual)
     if (doMlb) {
-      console.log(`[VSiNAutoRefresh][MANUAL][MLB] —— Refreshing MLB VSiN splits…`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][MLB] —— Refreshing MLB VSiN splits…`
+      );
       mlbResult = await refreshMlb(todayStr);
       console.log(
         `[VSiNAutoRefresh][MANUAL][MLB] ✓ MLB VSiN splits done — ` +
-        `updated=${mlbResult.updated} total=${mlbResult.total}`
+          `updated=${mlbResult.updated} total=${mlbResult.total}`
       );
     } else {
-      console.log(`[VSiNAutoRefresh][MANUAL][${sportLabel}] Skipping MLB VSiN refresh (not in scope)`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][${sportLabel}] Skipping MLB VSiN refresh (not in scope)`
+      );
     }
 
     console.log(
@@ -1567,8 +2083,8 @@ export async function runVsinRefreshManual(
     const anOddsResult = await refreshAnApiOdds(todayStr, anSports, "manual");
     console.log(
       `[VSiNAutoRefresh][MANUAL][${sportLabel}] ✓ AN API DK odds (today) — ` +
-      `updated=${anOddsResult.updated} skipped=${anOddsResult.skipped} ` +
-      `frozen=${anOddsResult.frozen} errors=${anOddsResult.errors.length}`
+        `updated=${anOddsResult.updated} skipped=${anOddsResult.skipped} ` +
+        `frozen=${anOddsResult.frozen} errors=${anOddsResult.errors.length}`
     );
     if (anOddsResult.errors.length > 0) {
       console.warn(
@@ -1579,17 +2095,24 @@ export async function runVsinRefreshManual(
 
     // ── NHL model sync (runs after odds refresh so book lines are fresh) ────────
     if (doNhl) {
-      console.log(`[VSiNAutoRefresh][MANUAL][NHL] ── Running NHL model sync (manual trigger)…`);
+      console.log(
+        `[VSiNAutoRefresh][MANUAL][NHL] ── Running NHL model sync (manual trigger)…`
+      );
       try {
         const { syncNhlModelForToday } = await import("./nhlModelSync");
         const nhlModelResult = await syncNhlModelForToday("manual");
         console.log(
           `[VSiNAutoRefresh][MANUAL][NHL] ✓ NHL model sync done — ` +
-          `synced=${nhlModelResult.synced} skipped=${nhlModelResult.skipped} errors=${nhlModelResult.errors.length}`
+            `synced=${nhlModelResult.synced} skipped=${nhlModelResult.skipped} errors=${nhlModelResult.errors.length}`
         );
       } catch (nhlModelErr) {
-        const msg = nhlModelErr instanceof Error ? nhlModelErr.message : String(nhlModelErr);
-        console.error(`[VSiNAutoRefresh][MANUAL][NHL] ⚠ NHL model sync failed (non-fatal): ${msg}`);
+        const msg =
+          nhlModelErr instanceof Error
+            ? nhlModelErr.message
+            : String(nhlModelErr);
+        console.error(
+          `[VSiNAutoRefresh][MANUAL][NHL] ⚠ NHL model sync failed (non-fatal): ${msg}`
+        );
       }
     }
 
@@ -1599,10 +2122,14 @@ export async function runVsinRefreshManual(
       `[VSiNAutoRefresh][MANUAL][${sportLabel}] ── Pre-populating tomorrow (${tomorrowStr}) splits + DK odds…`
     );
     await runTomorrowSplitsUpdate(tomorrowStr);
-    const anOddsTomorrow = await refreshAnApiOdds(tomorrowStr, anSports, "manual");
+    const anOddsTomorrow = await refreshAnApiOdds(
+      tomorrowStr,
+      anSports,
+      "manual"
+    );
     console.log(
       `[VSiNAutoRefresh][MANUAL][${sportLabel}] ✓ AN API DK odds (tomorrow) — ` +
-      `updated=${anOddsTomorrow.updated} frozen=${anOddsTomorrow.frozen}`
+        `updated=${anOddsTomorrow.updated} frozen=${anOddsTomorrow.frozen}`
     );
 
     const result: RefreshResult = {
@@ -1631,16 +2158,19 @@ export async function runVsinRefreshManual(
     );
     console.log(
       `[VSiNAutoRefresh][MANUAL][${sportLabel}] ✅ COMPLETE — ` +
-      `NBA: ${nbaResult.updated} updated | ` +
-      `NHL: ${nhlResult.updated} updated | ` +
-      `AN odds: ${anOddsResult.updated} updated, ${anOddsResult.frozen} frozen`
+        `NBA: ${nbaResult.updated} updated | ` +
+        `NHL: ${nhlResult.updated} updated | ` +
+        `AN odds: ${anOddsResult.updated} updated, ${anOddsResult.frozen} frozen`
     );
     console.log(
       `[VSiNAutoRefresh][MANUAL][${sportLabel}] ════════════════════════════════════════`
     );
     return result;
   } catch (err) {
-    console.error(`[VSiNAutoRefresh][MANUAL][${sportLabel}] ❌ Refresh failed:`, err);
+    console.error(
+      `[VSiNAutoRefresh][MANUAL][${sportLabel}] ❌ Refresh failed:`,
+      err
+    );
     return null;
   }
 }
@@ -1666,169 +2196,237 @@ export async function runVsinRefreshManual(
 // route layer — identical to the other /api/cron/* jobs. The in-process startup +
 // 10-minute interval callers in startVsinAutoRefresh() invoke this same function.
 export async function runMlbCycleOnce(): Promise<void> {
-    // 24/7 — no active hours gate
-    const todayStr = datePst();
-    console.log(`[MLBCycle] ► START — ${new Date().toISOString()} | date: ${todayStr}`);
+  // 24/7 — no active hours gate
+  const todayStr = datePst();
+  console.log(
+    `[MLBCycle] ► START — ${new Date().toISOString()} | date: ${todayStr}`
+  );
 
-    // Step 0: Postponed/Suspended game lifecycle tracking
-    // — Rescheduled game detection: scans MLB Stats API schedule for next 14 days
-    //   to detect when a postponed game has been assigned a new gamePk/date.
-    // — Suspended game resume detection: checks if any suspended games are now final.
-    // Non-fatal — errors are swallowed so the main cycle continues.
-    try {
-      const { detectRescheduledGames, detectResumedSuspendedGames } = await import("./mlbPostponedTracker.js");
-      const [reschedResult, resumeResult] = await Promise.allSettled([
-        detectRescheduledGames(),
-        detectResumedSuspendedGames(),
-      ]);
-      if (reschedResult.status === 'fulfilled') {
-        console.log(
-          `[MLBCycle] PostponedTracker: rescheduled=${reschedResult.value.detected}` +
+  // Step 0: Postponed/Suspended game lifecycle tracking
+  // — Rescheduled game detection: scans MLB Stats API schedule for next 14 days
+  //   to detect when a postponed game has been assigned a new gamePk/date.
+  // — Suspended game resume detection: checks if any suspended games are now final.
+  // Non-fatal — errors are swallowed so the main cycle continues.
+  try {
+    const { detectRescheduledGames, detectResumedSuspendedGames } =
+      await import("./mlbPostponedTracker.js");
+    const [reschedResult, resumeResult] = await Promise.allSettled([
+      detectRescheduledGames(),
+      detectResumedSuspendedGames(),
+    ]);
+    if (reschedResult.status === "fulfilled") {
+      console.log(
+        `[MLBCycle] PostponedTracker: rescheduled=${reschedResult.value.detected}` +
           ` | checked postponed/suspended games for reschedule in next 14 days`
-        );
-      } else {
-        console.warn("[MLBCycle] PostponedTracker rescheduled detection failed (non-fatal):", reschedResult.reason);
-      }
-      if (resumeResult.status === 'fulfilled') {
-        console.log(
-          `[MLBCycle] PostponedTracker: resumed=${resumeResult.value.resumed}` +
-          ` errors=${resumeResult.value.errors.length}`
-        );
-      } else {
-        console.warn("[MLBCycle] PostponedTracker resume detection failed (non-fatal):", resumeResult.reason);
-      }
-    } catch (err) {
-      console.warn("[MLBCycle] PostponedTracker failed (non-fatal):", err);
-    }
-
-    // Step 1: Live scores from MLB Stats API
-    // newlyFinalGamePks captures games that transitioned to 'final' this cycle
-    // — used to trigger an immediate K-Props backtest without waiting for the next tick
-    let newlyFinalGamePks: number[] = [];
-    try {
-      const scoreResult = await refreshMlbScoresNow();
-      newlyFinalGamePks = scoreResult.newlyFinalGamePks;
-    } catch (err) {
-      console.warn("[MLBCycle] Score refresh failed (non-fatal):", err);
-    }
-
-    // Step 2: VSiN betting splits (run line, total, ML percentages)
-    try {
-      const mlbSplitsResult = await refreshMlb(todayStr);
-      console.log(
-        `[MLBCycle] VSiN splits: updated=${mlbSplitsResult.updated} total=${mlbSplitsResult.total}`
       );
-    } catch (err) {
-      console.warn("[MLBCycle] VSiN splits refresh failed (non-fatal):", err);
+    } else {
+      console.warn(
+        "[MLBCycle] PostponedTracker rescheduled detection failed (non-fatal):",
+        reschedResult.reason
+      );
     }
-
-    // Step 3: AN DK NJ odds (run line spread, total, moneyline)
-    // Fetch both today AND tomorrow — MLB games are often seeded a day ahead
-    // (e.g. today=March 24 but the game is on March 25).
-    // Freeze is respected: live/final games are skipped so pre-game lines are locked.
-    const mlbTomorrowStr = (() => {
-      const d = new Date(todayStr + "T12:00:00Z");
-      d.setUTCDate(d.getUTCDate() + 1);
-      return d.toISOString().slice(0, 10);
-    })();
-    try {
-      const [anToday, anTomorrow] = await Promise.all([
-        refreshAnApiOdds(todayStr, ["mlb"], "auto"),
-        refreshAnApiOdds(mlbTomorrowStr, ["mlb"], "auto"),
-      ]);
-      const totalUpdated = anToday.updated + anTomorrow.updated;
-      const totalSkipped = anToday.skipped + anTomorrow.skipped;
-      const totalFrozen = anToday.frozen + anTomorrow.frozen;
-      const allErrors = [...anToday.errors, ...anTomorrow.errors];
+    if (resumeResult.status === "fulfilled") {
       console.log(
-        `[MLBCycle] AN DK odds: updated=${totalUpdated} skipped=${totalSkipped} ` +
+        `[MLBCycle] PostponedTracker: resumed=${resumeResult.value.resumed}` +
+          ` errors=${resumeResult.value.errors.length}`
+      );
+    } else {
+      console.warn(
+        "[MLBCycle] PostponedTracker resume detection failed (non-fatal):",
+        resumeResult.reason
+      );
+    }
+  } catch (err) {
+    console.warn("[MLBCycle] PostponedTracker failed (non-fatal):", err);
+  }
+
+  // Step 0.5: Schedule reconciliation (statsapi → games table)
+  // Root-cause repair for the 2026-07-17 doubleheader incident: inserts any
+  // provider game missing from the DB (makeup games, split doubleheaders,
+  // late schedule additions), stamps mlbGamePk/gameNumber/doubleHeader
+  // identity onto legacy rows, and alerts on any cardinality loss.
+  // Idempotent — safe every cycle. Must run BEFORE the score refresh so
+  // newly-materialized rows receive scores in the same cycle.
+  try {
+    const { syncMlbSchedule } = await import("./mlbScheduleSync.js");
+    const syncResult = await syncMlbSchedule({ source: "mlb-cycle" });
+    if (syncResult) {
+      console.log(
+        `[MLBCycle] ScheduleSync ${syncResult.ok ? "✅" : "❌"} runId=${syncResult.runId}: ` +
+          `inserted=${syncResult.inserted} updated=${syncResult.updated} unchanged=${syncResult.unchanged} ` +
+          `dhGroups=${syncResult.doubleheaders.length} missing=${syncResult.reconcile.missingGamePks.length}`
+      );
+    }
+  } catch (err) {
+    console.warn("[MLBCycle] ScheduleSync failed (non-fatal):", err);
+  }
+
+  // Step 1: Live scores from MLB Stats API
+  // newlyFinalGamePks captures games that transitioned to 'final' this cycle
+  // — used to trigger an immediate K-Props backtest without waiting for the next tick
+  let newlyFinalGamePks: number[] = [];
+  try {
+    const scoreResult = await refreshMlbScoresNow();
+    newlyFinalGamePks = scoreResult.newlyFinalGamePks;
+  } catch (err) {
+    console.warn("[MLBCycle] Score refresh failed (non-fatal):", err);
+  }
+
+  // Step 2: VSiN betting splits (run line, total, ML percentages)
+  try {
+    const mlbSplitsResult = await refreshMlb(todayStr);
+    console.log(
+      `[MLBCycle] VSiN splits: updated=${mlbSplitsResult.updated} total=${mlbSplitsResult.total}`
+    );
+  } catch (err) {
+    console.warn("[MLBCycle] VSiN splits refresh failed (non-fatal):", err);
+  }
+
+  // Step 3: AN DK NJ odds (run line spread, total, moneyline)
+  // Fetch both today AND tomorrow — MLB games are often seeded a day ahead
+  // (e.g. today=March 24 but the game is on March 25).
+  // Freeze is respected: live/final games are skipped so pre-game lines are locked.
+  const mlbTomorrowStr = (() => {
+    const d = new Date(todayStr + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  try {
+    const [anToday, anTomorrow] = await Promise.all([
+      refreshAnApiOdds(todayStr, ["mlb"], "auto"),
+      refreshAnApiOdds(mlbTomorrowStr, ["mlb"], "auto"),
+    ]);
+    const totalUpdated = anToday.updated + anTomorrow.updated;
+    const totalSkipped = anToday.skipped + anTomorrow.skipped;
+    const totalFrozen = anToday.frozen + anTomorrow.frozen;
+    const allErrors = [...anToday.errors, ...anTomorrow.errors];
+    console.log(
+      `[MLBCycle] AN DK odds: updated=${totalUpdated} skipped=${totalSkipped} ` +
         `frozen=${totalFrozen} errors=${allErrors.length}` +
         ` (today=${anToday.updated} tomorrow=${anTomorrow.updated})`
-      );
-      if (allErrors.length > 0) {
-        console.warn("[MLBCycle] AN odds errors:", allErrors);
-      }
-    } catch (err) {
-      console.warn("[MLBCycle] AN odds refresh failed (non-fatal):", err);
+    );
+    if (allErrors.length > 0) {
+      console.warn("[MLBCycle] AN odds errors:", allErrors);
     }
+  } catch (err) {
+    console.warn("[MLBCycle] AN odds refresh failed (non-fatal):", err);
+  }
 
-    // Step 4: Rotowire daily lineups (pitchers, batting orders, weather, umpire)
-    // Scrapes both today and tomorrow to catch games seeded a day ahead.
-    // After upsert, the LineupWatcher detects changes and triggers the model
-    // only for games where the lineup changed since the last model run.
-    let todayLineupGames: import("./rotowireLineupScraper").RotoLineupGame[] = [];
-    let tomorrowLineupGames: import("./rotowireLineupScraper").RotoLineupGame[] = [];
-    let todayGameIdMap = new Map<string, number>();
-    let tomorrowGameIdMap = new Map<string, number>();
-    try {
-      const { scrapeRotowireLineupsBoth, upsertLineupsToDB } = await import("./rotowireLineupScraper");
-      const lineupResult = await scrapeRotowireLineupsBoth();
-      const totalParsed = lineupResult.today.cardsParsed + lineupResult.tomorrow.cardsParsed;
-      const totalErrors = lineupResult.today.parseErrors + lineupResult.tomorrow.parseErrors;
-      console.log(
-        `[MLBCycle] Rotowire lineups: parsed=${totalParsed} ` +
+  // Step 4: Rotowire daily lineups (pitchers, batting orders, weather, umpire)
+  // Scrapes both today and tomorrow to catch games seeded a day ahead.
+  // After upsert, the LineupWatcher detects changes and triggers the model
+  // only for games where the lineup changed since the last model run.
+  let todayLineupGames: import("./rotowireLineupScraper").RotoLineupGame[] = [];
+  let tomorrowLineupGames: import("./rotowireLineupScraper").RotoLineupGame[] =
+    [];
+  let todayGameIdMap = new Map<
+    import("./rotowireLineupScraper").RotoLineupGame,
+    number
+  >();
+  let tomorrowGameIdMap = new Map<
+    import("./rotowireLineupScraper").RotoLineupGame,
+    number
+  >();
+  let rotowireTodayStr = "";
+  let rotowireTomorrowStr = "";
+  try {
+    const {
+      rotowireDateInEastern,
+      scrapeRotowireLineupsBoth,
+      upsertLineupsToDB,
+    } = await import("./rotowireLineupScraper");
+    const rotowireNow = new Date();
+    rotowireTodayStr = rotowireDateInEastern(rotowireNow);
+    rotowireTomorrowStr = rotowireDateInEastern(rotowireNow, 1);
+    const lineupResult = await scrapeRotowireLineupsBoth();
+    const totalParsed =
+      lineupResult.today.cardsParsed + lineupResult.tomorrow.cardsParsed;
+    const totalErrors =
+      lineupResult.today.parseErrors + lineupResult.tomorrow.parseErrors;
+    console.log(
+      `[MLBCycle] Rotowire lineups: parsed=${totalParsed} ` +
         `(today=${lineupResult.today.cardsParsed} tomorrow=${lineupResult.tomorrow.cardsParsed}) ` +
         `parseErrors=${totalErrors}`
-      );
-      // ── Per-game pitcher/lineup detail log (structured Rotowire watcher output) ────────────────────────────────────
-      // Emits one line per game with: matchup, pitcher names+hand, lineup status
-      const logRotowireGames = (gamesArr: import('./rotowireLineupScraper').RotoLineupGame[], scope: string) => {
-        for (const g of gamesArr) {
-          const awayP = g.awayPitcher
-            ? `${g.awayPitcher.name} (${g.awayPitcher.hand})${g.awayPitcher.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}`
-            : 'TBD';
-          const homeP = g.homePitcher
-            ? `${g.homePitcher.name} (${g.homePitcher.hand})${g.homePitcher.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}`
-            : 'TBD';
-          const awayLO = g.awayLineupConfirmed ? 'CONFIRMED' : (g.awayLineup.length > 0 ? 'EXPECTED' : 'NONE');
-          const homeLO = g.homeLineupConfirmed ? 'CONFIRMED' : (g.homeLineup.length > 0 ? 'EXPECTED' : 'NONE');
-          console.log(
-            `[MLBCycle][Roto][${scope}] ${g.awayAbbrev}@${g.homeAbbrev} | ` +
+    );
+    // ── Per-game pitcher/lineup detail log (structured Rotowire watcher output) ────────────────────────────────────
+    // Emits one line per game with: matchup, pitcher names+hand, lineup status
+    const logRotowireGames = (
+      gamesArr: import("./rotowireLineupScraper").RotoLineupGame[],
+      scope: string
+    ) => {
+      for (const g of gamesArr) {
+        const awayP = g.awayPitcher
+          ? `${g.awayPitcher.name} (${g.awayPitcher.hand ?? "?"})${g.awayPitcher.confirmed ? " [CONFIRMED]" : " [EXPECTED]"}`
+          : "TBD";
+        const homeP = g.homePitcher
+          ? `${g.homePitcher.name} (${g.homePitcher.hand ?? "?"})${g.homePitcher.confirmed ? " [CONFIRMED]" : " [EXPECTED]"}`
+          : "TBD";
+        const awayLO = g.awayLineupConfirmed
+          ? "CONFIRMED"
+          : g.awayLineup.length > 0
+            ? "EXPECTED"
+            : "NONE";
+        const homeLO = g.homeLineupConfirmed
+          ? "CONFIRMED"
+          : g.homeLineup.length > 0
+            ? "EXPECTED"
+            : "NONE";
+        console.log(
+          `[MLBCycle][Roto][${scope}] ${g.awayAbbrev}@${g.homeAbbrev} | ` +
             `away_p=${awayP} home_p=${homeP} | ` +
             `away_lo=${awayLO} home_lo=${homeLO}`
-          );
-        }
-      };
-      logRotowireGames(lineupResult.today.games, 'TODAY');
-      logRotowireGames(lineupResult.tomorrow.games, 'TOMORROW');
-      // Upsert today games (separate from tomorrow for watcher scoping)
-      // Pass targetDate=todayStr to restrict DB lookup to today's games only,
-      // preventing tomorrow's scrape from overwriting today's lineup records
-      // when the same team matchup appears on consecutive days (e.g. series games).
-      if (lineupResult.today.games.length > 0) {
-        const upsertToday = await upsertLineupsToDB(lineupResult.today.games, todayStr);
-        todayGameIdMap = upsertToday.gameIdMap;
-        todayLineupGames = lineupResult.today.games;
-        console.log(
-          `[MLBCycle] Lineup DB upsert (today): saved=${upsertToday.saved} skipped=${upsertToday.skipped} errors=${upsertToday.errors}`
         );
       }
-      // Upsert tomorrow games — pass targetDate=mlbTomorrowStr to restrict DB lookup
-      if (lineupResult.tomorrow.games.length > 0) {
-        const upsertTomorrow = await upsertLineupsToDB(lineupResult.tomorrow.games, mlbTomorrowStr);
-        tomorrowGameIdMap = upsertTomorrow.gameIdMap;
-        tomorrowLineupGames = lineupResult.tomorrow.games;
-        console.log(
-          `[MLBCycle] Lineup DB upsert (tomorrow): saved=${upsertTomorrow.saved} skipped=${upsertTomorrow.skipped} errors=${upsertTomorrow.errors}`
-        );
-      }
-    } catch (err) {
-      console.warn("[MLBCycle] Rotowire lineup scrape failed (non-fatal):", err);
+    };
+    logRotowireGames(lineupResult.today.games, "TODAY");
+    logRotowireGames(lineupResult.tomorrow.games, "TOMORROW");
+    // Upsert today games (separate from tomorrow for watcher scoping)
+    // Rotowire defines today/tomorrow in Eastern Time. These scopes may be a
+    // calendar day ahead of the cycle's Pacific date after 9 PM PT.
+    if (lineupResult.today.games.length > 0) {
+      const upsertToday = await upsertLineupsToDB(
+        lineupResult.today.games,
+        rotowireTodayStr
+      );
+      todayGameIdMap = upsertToday.gameIdMap;
+      todayLineupGames = lineupResult.today.games;
+      console.log(
+        `[MLBCycle] Lineup DB upsert (today): saved=${upsertToday.saved} skipped=${upsertToday.skipped} errors=${upsertToday.errors}`
+      );
     }
+    // Upsert tomorrow's Eastern-date scope separately.
+    if (lineupResult.tomorrow.games.length > 0) {
+      const upsertTomorrow = await upsertLineupsToDB(
+        lineupResult.tomorrow.games,
+        rotowireTomorrowStr
+      );
+      tomorrowGameIdMap = upsertTomorrow.gameIdMap;
+      tomorrowLineupGames = lineupResult.tomorrow.games;
+      console.log(
+        `[MLBCycle] Lineup DB upsert (tomorrow): saved=${upsertTomorrow.saved} skipped=${upsertTomorrow.skipped} errors=${upsertTomorrow.errors}`
+      );
+    }
+  } catch (err) {
+    console.warn("[MLBCycle] Rotowire lineup scrape failed (non-fatal):", err);
+  }
 
-    // Step 5: MLB Lineups Watcher — detects lineup changes and triggers model
-    // ─── Trigger rules ────────────────────────────────────────────────────────
-    //  CASE A — First lineup seen for a game → model triggered immediately
-    //  CASE B — Lineup changed (hash differs) AND not yet confirmed → re-model
-    //  CASE C — Lineup unchanged (hash matches) → no action
-    //  CASE D — Both lineups confirmed → stop guard, no further re-models
-    try {
-      const { runLineupWatcher } = await import("./mlbLineupsWatcher");
-      // Run watcher for today
-      if (todayLineupGames.length > 0) {
-        const watcherToday = await runLineupWatcher(todayLineupGames, todayGameIdMap, todayStr);
-        console.log(
-          `[MLBCycle] LineupWatcher (today): ` +
+  // Step 5: MLB Lineups Watcher — detects lineup changes and triggers model
+  // ─── Trigger rules ────────────────────────────────────────────────────────
+  //  CASE A — First lineup seen for a game → model triggered immediately
+  //  CASE B — Lineup changed (hash differs) AND not yet confirmed → re-model
+  //  CASE C — Lineup unchanged (hash matches) → no action
+  //  CASE D — Both lineups confirmed → stop guard, no further re-models
+  try {
+    const { runLineupWatcher } = await import("./mlbLineupsWatcher");
+    // Run watcher for today
+    if (todayLineupGames.length > 0) {
+      const watcherToday = await runLineupWatcher(
+        todayLineupGames,
+        todayGameIdMap,
+        rotowireTodayStr
+      );
+      console.log(
+        `[MLBCycle] LineupWatcher (today): ` +
           `total=${watcherToday.total} ` +
           `firstLineup=${watcherToday.firstLineup} ` +
           `changed=${watcherToday.changed} ` +
@@ -1836,13 +2434,17 @@ export async function runMlbCycleOnce(): Promise<void> {
           `confirmed=${watcherToday.confirmed} ` +
           `insufficientData=${watcherToday.insufficientData} ` +
           `modelErrors=${watcherToday.modelErrors}`
-        );
-      }
-      // Run watcher for tomorrow
-      if (tomorrowLineupGames.length > 0) {
-        const watcherTomorrow = await runLineupWatcher(tomorrowLineupGames, tomorrowGameIdMap, mlbTomorrowStr);
-        console.log(
-          `[MLBCycle] LineupWatcher (tomorrow): ` +
+      );
+    }
+    // Run watcher for tomorrow
+    if (tomorrowLineupGames.length > 0) {
+      const watcherTomorrow = await runLineupWatcher(
+        tomorrowLineupGames,
+        tomorrowGameIdMap,
+        rotowireTomorrowStr
+      );
+      console.log(
+        `[MLBCycle] LineupWatcher (tomorrow): ` +
           `total=${watcherTomorrow.total} ` +
           `firstLineup=${watcherTomorrow.firstLineup} ` +
           `changed=${watcherTomorrow.changed} ` +
@@ -1850,219 +2452,257 @@ export async function runMlbCycleOnce(): Promise<void> {
           `confirmed=${watcherTomorrow.confirmed} ` +
           `insufficientData=${watcherTomorrow.insufficientData} ` +
           `modelErrors=${watcherTomorrow.modelErrors}`
-        );
-      }
-    } catch (err) {
-      console.warn('[MLBCycle] LineupWatcher failed (non-fatal):', err);
+      );
     }
+  } catch (err) {
+    console.warn("[MLBCycle] LineupWatcher failed (non-fatal):", err);
+  }
 
-    // Step 6: Fallback full model run — catches games that were modelable before
-    // the watcher was deployed (lineupVersion=0 but pitchers+lines present).
-    // Safe to run because mlbModelRunner is idempotent.
+  // Step 6: Fallback full model run — catches games that were modelable before
+  // the watcher was deployed (lineupVersion=0 but pitchers+lines present).
+  // Safe to run because mlbModelRunner is idempotent.
+  try {
+    const { runMlbModelForDate } = await import("./mlbModelRunner");
+    // Run model for today
+    const todayResult = await runMlbModelForDate(todayStr);
+    console.log(
+      `[MLBCycle] Model fallback (today): written=${todayResult.written} skipped=${todayResult.skipped} errors=${todayResult.errors} ` +
+        `validation=${todayResult.validation.passed ? "\u2705 PASSED" : "\u274c FAILED (" + todayResult.validation.issues.length + " issues)"}`
+    );
+    if (!todayResult.validation.passed) {
+      console.error(
+        "[MLBCycle] Validation issues (today):",
+        todayResult.validation.issues
+      );
+    }
+    // Run model for tomorrow (games seeded a day ahead)
+    const tomorrowResult = await runMlbModelForDate(mlbTomorrowStr);
+    console.log(
+      `[MLBCycle] Model fallback (tomorrow): written=${tomorrowResult.written} skipped=${tomorrowResult.skipped} errors=${tomorrowResult.errors} ` +
+        `validation=${tomorrowResult.validation.passed ? "\u2705 PASSED" : "\u274c FAILED (" + tomorrowResult.validation.issues.length + " issues)"}`
+    );
+    if (!tomorrowResult.validation.passed) {
+      console.error(
+        "[MLBCycle] Validation issues (tomorrow):",
+        tomorrowResult.validation.issues
+      );
+    }
+  } catch (err) {
+    console.warn("[MLBCycle] MLB model fallback run failed (non-fatal):", err);
+  }
+  // ── K-Props: fetch live AN lines + run backtest for completed games ────────
+  try {
+    const { fetchANKProps, formatANDate } = await import("./anKPropsService");
+    const { runKPropsBacktest } = await import("./kPropsBacktestService");
+
+    // 1. Fetch today's AN K-prop lines
+    const anDateStr = formatANDate(new Date());
+    const anResult = await fetchANKProps(anDateStr);
+    console.log(
+      `[MLBCycle] AN K-Props: fetched ${anResult.props.length} lines for ${anDateStr}`
+    );
+
+    // 2. Update bookLine, bookOverOdds, bookUnderOdds, anNoVigOverPct, anPlayerId
+    //    in mlb_strikeout_props rows that match by pitcherName + gameDate
+    if (anResult.props.length > 0) {
+      const { upsertKPropsFromAN } = await import("./kPropsDbHelpers");
+      const upsertResult = await upsertKPropsFromAN(anResult, todayStr);
+      console.log(
+        `[MLBCycle] K-Props upsert: inserted=${upsertResult.inserted} updated=${upsertResult.updated} skipped=${upsertResult.skipped} errors=${upsertResult.errors}`
+      );
+    } else {
+      console.log(`[MLBCycle] K-Props upsert: skipped (0 AN props fetched)`);
+    }
+    // Run K-Props model EV unconditionally every cycle — not gated on AN scrape success.
+    // This ensures EV is recalculated even when AN returns 0 props (network error, empty slate).
+    // modelKPropsForDate is idempotent: it re-scores existing mlb_strikeout_props rows.
+    const { modelKPropsForDate, resolveKPropsMlbamIdsForDate } =
+      await import("./mlbKPropsModelService");
+    const kModelResult = await modelKPropsForDate(todayStr);
+    console.log(
+      `[MLBCycle] K-Props model EV: modeled=${kModelResult.modeled} edges=${kModelResult.edges} skipped=${kModelResult.skipped} errors=${kModelResult.errors}`
+    );
+    // Auto-resolve MLBAM IDs for pitcher headshots — fires every cycle, no-ops if all IDs present
     try {
-      const { runMlbModelForDate } = await import("./mlbModelRunner");
-      // Run model for today
-      const todayResult = await runMlbModelForDate(todayStr);
+      const mlbamResult = await resolveKPropsMlbamIdsForDate(todayStr);
       console.log(
-        `[MLBCycle] Model fallback (today): written=${todayResult.written} skipped=${todayResult.skipped} errors=${todayResult.errors} ` +
-        `validation=${todayResult.validation.passed ? '\u2705 PASSED' : '\u274c FAILED (' + todayResult.validation.issues.length + ' issues)'}`
+        `[MLBCycle] [MLBAM_BACKFILL] resolved=${mlbamResult.resolved} alreadyHad=${mlbamResult.alreadyHad} unresolved=${mlbamResult.unresolved} errors=${mlbamResult.errors}`
       );
-      if (!todayResult.validation.passed) {
-        console.error('[MLBCycle] Validation issues (today):', todayResult.validation.issues);
-      }
-      // Run model for tomorrow (games seeded a day ahead)
-      const tomorrowResult = await runMlbModelForDate(mlbTomorrowStr);
-      console.log(
-        `[MLBCycle] Model fallback (tomorrow): written=${tomorrowResult.written} skipped=${tomorrowResult.skipped} errors=${tomorrowResult.errors} ` +
-        `validation=${tomorrowResult.validation.passed ? '\u2705 PASSED' : '\u274c FAILED (' + tomorrowResult.validation.issues.length + ' issues)'}`
+    } catch (mlbamErr) {
+      console.warn(
+        "[MLBCycle] [MLBAM_BACKFILL] MLBAM ID resolution failed (non-fatal):",
+        mlbamErr
       );
-      if (!tomorrowResult.validation.passed) {
-        console.error('[MLBCycle] Validation issues (tomorrow):', tomorrowResult.validation.issues);
-      }
-    } catch (err) {
-      console.warn('[MLBCycle] MLB model fallback run failed (non-fatal):', err);
-    }
-    // ── K-Props: fetch live AN lines + run backtest for completed games ────────
-    try {
-      const { fetchANKProps, formatANDate } = await import("./anKPropsService");
-      const { runKPropsBacktest } = await import("./kPropsBacktestService");
-
-      // 1. Fetch today's AN K-prop lines
-      const anDateStr = formatANDate(new Date());
-      const anResult = await fetchANKProps(anDateStr);
-      console.log(
-        `[MLBCycle] AN K-Props: fetched ${anResult.props.length} lines for ${anDateStr}`
-      );
-
-      // 2. Update bookLine, bookOverOdds, bookUnderOdds, anNoVigOverPct, anPlayerId
-      //    in mlb_strikeout_props rows that match by pitcherName + gameDate
-      if (anResult.props.length > 0) {
-        const { upsertKPropsFromAN } = await import("./kPropsDbHelpers");
-        const upsertResult = await upsertKPropsFromAN(anResult, todayStr);
-        console.log(
-          `[MLBCycle] K-Props upsert: inserted=${upsertResult.inserted} updated=${upsertResult.updated} skipped=${upsertResult.skipped} errors=${upsertResult.errors}`
-        );
-      } else {
-        console.log(`[MLBCycle] K-Props upsert: skipped (0 AN props fetched)`);
-      }
-      // Run K-Props model EV unconditionally every cycle — not gated on AN scrape success.
-      // This ensures EV is recalculated even when AN returns 0 props (network error, empty slate).
-      // modelKPropsForDate is idempotent: it re-scores existing mlb_strikeout_props rows.
-      const { modelKPropsForDate, resolveKPropsMlbamIdsForDate } = await import('./mlbKPropsModelService');
-      const kModelResult = await modelKPropsForDate(todayStr);
-      console.log(
-        `[MLBCycle] K-Props model EV: modeled=${kModelResult.modeled} edges=${kModelResult.edges} skipped=${kModelResult.skipped} errors=${kModelResult.errors}`
-      );
-      // Auto-resolve MLBAM IDs for pitcher headshots — fires every cycle, no-ops if all IDs present
-      try {
-        const mlbamResult = await resolveKPropsMlbamIdsForDate(todayStr);
-        console.log(
-          `[MLBCycle] [MLBAM_BACKFILL] resolved=${mlbamResult.resolved} alreadyHad=${mlbamResult.alreadyHad} unresolved=${mlbamResult.unresolved} errors=${mlbamResult.errors}`
-        );
-      } catch (mlbamErr) {
-        console.warn('[MLBCycle] [MLBAM_BACKFILL] MLBAM ID resolution failed (non-fatal):', mlbamErr);
-      }
-
-      // 3. Run backtest for today's completed games
-      // If games just went final this cycle, log for traceability (backtest runs regardless)
-      if (newlyFinalGamePks.length > 0) {
-        console.log(
-          `[MLBCycle] 🏁 IMMEDIATE BACKTEST TRIGGER: ${newlyFinalGamePks.length} game(s) just went FINAL` +
-          ` | gamePks=[${newlyFinalGamePks.join(',')}] | running backtest now`
-        );
-      }
-       await runKPropsBacktest(todayStr);
-      // 4. Fetch actual HR results for completed games (populates actualHr in mlb_hr_props)
-      try {
-        const { fetchAndStoreActualHrResults } = await import('./mlbHrPropsBacktestService');
-        const hrBacktestResult = await fetchAndStoreActualHrResults(todayStr);
-        console.log(
-          `[MLBCycle] HR Props backtest: gamesProcessed=${hrBacktestResult.gamesProcessed} propsUpdated=${hrBacktestResult.propsUpdated} skipped=${hrBacktestResult.propsSkipped} errors=${hrBacktestResult.errors}`
-        );
-      } catch (hrErr) {
-        console.warn('[MLBCycle] HR Props backtest failed (non-fatal):', hrErr);
-      }
-    } catch (err) {
-      console.warn('[MLBCycle] K-Props pipeline failed (non-fatal):', err);
     }
 
-    // ── Multi-Market Backtest: fires on FINAL transition for all markets ──────
-    // Markets: FG ML/RL/Total, F5 ML/RL/Total, NRFI/YRFI, HR Props
-    // Only runs when at least one game just transitioned to FINAL this cycle.
+    // 3. Run backtest for today's completed games
+    // If games just went final this cycle, log for traceability (backtest runs regardless)
     if (newlyFinalGamePks.length > 0) {
-      try {
-        const { runMultiMarketBacktest } = await import('./mlbMultiMarketBacktest');
-        const { getDb }                  = await import('./db');
-        const { games }                  = await import('../drizzle/schema');
-        const { inArray }                = await import('drizzle-orm');
-        const db = await getDb();
-        const finalGameRows = await db
-          .select({ id: games.id, awayTeam: games.awayTeam, homeTeam: games.homeTeam, mlbGamePk: games.mlbGamePk })
-          .from(games)
-          .where(inArray(games.mlbGamePk as any, newlyFinalGamePks.map(String)));
-        console.log(
-          `[MLBCycle] 🏁 MULTI-MARKET BACKTEST: ${newlyFinalGamePks.length} game(s) FINAL` +
+      console.log(
+        `[MLBCycle] 🏁 IMMEDIATE BACKTEST TRIGGER: ${newlyFinalGamePks.length} game(s) just went FINAL` +
+          ` | gamePks=[${newlyFinalGamePks.join(",")}] | running backtest now`
+      );
+    }
+    await runKPropsBacktest(todayStr);
+    // 4. Fetch actual HR results for completed games (populates actualHr in mlb_hr_props)
+    try {
+      const { fetchAndStoreActualHrResults } =
+        await import("./mlbHrPropsBacktestService");
+      const hrBacktestResult = await fetchAndStoreActualHrResults(todayStr);
+      console.log(
+        `[MLBCycle] HR Props backtest: gamesProcessed=${hrBacktestResult.gamesProcessed} propsUpdated=${hrBacktestResult.propsUpdated} skipped=${hrBacktestResult.propsSkipped} errors=${hrBacktestResult.errors}`
+      );
+    } catch (hrErr) {
+      console.warn("[MLBCycle] HR Props backtest failed (non-fatal):", hrErr);
+    }
+  } catch (err) {
+    console.warn("[MLBCycle] K-Props pipeline failed (non-fatal):", err);
+  }
+
+  // ── Multi-Market Backtest: fires on FINAL transition for all markets ──────
+  // Markets: FG ML/RL/Total, F5 ML/RL/Total, NRFI/YRFI, HR Props
+  // Only runs when at least one game just transitioned to FINAL this cycle.
+  if (newlyFinalGamePks.length > 0) {
+    try {
+      const { runMultiMarketBacktest } =
+        await import("./mlbMultiMarketBacktest");
+      const { getDb } = await import("./db");
+      const { games } = await import("../drizzle/schema");
+      const { inArray } = await import("drizzle-orm");
+      const db = await getDb();
+      const finalGameRows = await db
+        .select({
+          id: games.id,
+          awayTeam: games.awayTeam,
+          homeTeam: games.homeTeam,
+          mlbGamePk: games.mlbGamePk,
+        })
+        .from(games)
+        .where(inArray(games.mlbGamePk as any, newlyFinalGamePks.map(String)));
+      console.log(
+        `[MLBCycle] 🏁 MULTI-MARKET BACKTEST: ${newlyFinalGamePks.length} game(s) FINAL` +
           ` | resolved ${finalGameRows.length} DB rows | markets: FG+F5+NRFI+HR`
-        );
-        for (const g of finalGameRows) {
-          try {
-            console.log(`[MLBCycle]   ↳ Running backtest: ${g.awayTeam}@${g.homeTeam} (id=${g.id})`);
-            const summary = await runMultiMarketBacktest(g.id, false);
-            const wins    = summary.markets.filter(m => m.result === 'WIN').length;
-            const losses  = summary.markets.filter(m => m.result === 'LOSS').length;
-            const acc     = wins + losses > 0 ? ((wins / (wins + losses)) * 100).toFixed(1) : 'N/A';
-            console.log(
-              `[MLBCycle]   ✅ ${g.awayTeam}@${g.homeTeam}: ${summary.markets.length} markets | ` +
+      );
+      for (const g of finalGameRows) {
+        try {
+          console.log(
+            `[MLBCycle]   ↳ Running backtest: ${g.awayTeam}@${g.homeTeam} (id=${g.id})`
+          );
+          const summary = await runMultiMarketBacktest(g.id, false);
+          const wins = summary.markets.filter(m => m.result === "WIN").length;
+          const losses = summary.markets.filter(
+            m => m.result === "LOSS"
+          ).length;
+          const acc =
+            wins + losses > 0
+              ? ((wins / (wins + losses)) * 100).toFixed(1)
+              : "N/A";
+          console.log(
+            `[MLBCycle]   ✅ ${g.awayTeam}@${g.homeTeam}: ${summary.markets.length} markets | ` +
               `WIN=${wins} LOSS=${losses} ACC=${acc}% | driftFlags=${summary.driftFlags.length}`
-            );
-            if (summary.driftFlags.length > 0) {
-              for (const flag of summary.driftFlags) {
-                console.warn(
-                  `[MLBCycle]   ⚠️  DRIFT DETECTED: market=${flag.market} ` +
+          );
+          if (summary.driftFlags.length > 0) {
+            for (const flag of summary.driftFlags) {
+              console.warn(
+                `[MLBCycle]   ⚠️  DRIFT DETECTED: market=${flag.market} ` +
                   `acc7d=${(flag.rolling7Acc * 100).toFixed(1)}% acc30d=${(flag.rolling30Acc * 100).toFixed(1)}% ` +
                   `z=${flag.zScore.toFixed(2)} | ${flag.message}`
-                );
-              }
+              );
             }
-          } catch (gameErr) {
-            console.error(`[MLBCycle]   ❌ Multi-market backtest failed for game ${g.id}: ${gameErr}`);
           }
+        } catch (gameErr) {
+          console.error(
+            `[MLBCycle]   ❌ Multi-market backtest failed for game ${g.id}: ${gameErr}`
+          );
         }
-      } catch (err) {
-        console.warn('[MLBCycle] Multi-market backtest pipeline failed (non-fatal):', err);
       }
-    }
-
-    // ── Step 7: F5/NRFI odds scrape (FanDuel NJ) ────────────────────────────────
-    // Runs every 10-minute cycle BUT only after 7:00 AM EST (12:00 UTC).
-    // FanDuel NJ does not post F5/NRFI markets until morning of game day.
-    // Day-prior seeding is intentionally excluded — these markets are same-day only.
-    if (!isAfter7amEst()) {
-      console.log(
-        `[MLBCycle] F5/NRFI SKIPPED — before 7:00 AM EST (UTC hour=${new Date().getUTCHours()}) ` +
-        `— FanDuel NJ F5/NRFI markets not yet posted`
+    } catch (err) {
+      console.warn(
+        "[MLBCycle] Multi-market backtest pipeline failed (non-fatal):",
+        err
       );
-    } else {
-      try {
-        const { scrapeAndStoreF5Nrfi } = await import('./mlbF5NrfiScraper');
-        const f5Result = await scrapeAndStoreF5Nrfi(todayStr);
-        console.log(
-          `[MLBCycle] F5/NRFI (FanDuel NJ): processed=${f5Result.processed} ` +
+    }
+  }
+
+  // ── Step 7: F5/NRFI odds scrape (FanDuel NJ) ────────────────────────────────
+  // Runs every 10-minute cycle BUT only after 7:00 AM EST (12:00 UTC).
+  // FanDuel NJ does not post F5/NRFI markets until morning of game day.
+  // Day-prior seeding is intentionally excluded — these markets are same-day only.
+  if (!isAfter7amEst()) {
+    console.log(
+      `[MLBCycle] F5/NRFI SKIPPED — before 7:00 AM EST (UTC hour=${new Date().getUTCHours()}) ` +
+        `— FanDuel NJ F5/NRFI markets not yet posted`
+    );
+  } else {
+    try {
+      const { scrapeAndStoreF5Nrfi } = await import("./mlbF5NrfiScraper");
+      const f5Result = await scrapeAndStoreF5Nrfi(todayStr);
+      console.log(
+        `[MLBCycle] F5/NRFI (FanDuel NJ): processed=${f5Result.processed} ` +
           `matched=${f5Result.matched} unmatched=${f5Result.unmatched.length} ` +
           `errors=${f5Result.errors.length}`
-        );
-        if (f5Result.errors.length > 0) {
-          console.warn('[MLBCycle] F5/NRFI scrape errors:', f5Result.errors.slice(0, 3));
-        }
-      } catch (err) {
-        console.warn('[MLBCycle] F5/NRFI scrape failed (non-fatal):', err);
-      }
-    }
-
-    // ── Step 8: HR Props scrape (Consensus) + model EV computation ───────────────────────
-    // Runs every 10-minute cycle BUT only after 7:00 AM EST (12:00 UTC).
-    // AN/consensus HR prop markets do not post until morning of game day.
-    // Day-prior seeding is intentionally excluded — these markets are same-day only.
-    if (!isAfter7amEst()) {
-      console.log(
-        `[MLBCycle] HR Props SKIPPED — before 7:00 AM EST (UTC hour=${new Date().getUTCHours()}) ` +
-        `— AN/consensus HR prop markets not yet posted`
       );
-    } else {
+      if (f5Result.errors.length > 0) {
+        console.warn(
+          "[MLBCycle] F5/NRFI scrape errors:",
+          f5Result.errors.slice(0, 3)
+        );
+      }
+    } catch (err) {
+      console.warn("[MLBCycle] F5/NRFI scrape failed (non-fatal):", err);
+    }
+  }
+
+  // ── Step 8: HR Props scrape (Consensus) + model EV computation ───────────────────────
+  // Runs every 10-minute cycle BUT only after 7:00 AM EST (12:00 UTC).
+  // AN/consensus HR prop markets do not post until morning of game day.
+  // Day-prior seeding is intentionally excluded — these markets are same-day only.
+  if (!isAfter7amEst()) {
+    console.log(
+      `[MLBCycle] HR Props SKIPPED — before 7:00 AM EST (UTC hour=${new Date().getUTCHours()}) ` +
+        `— AN/consensus HR prop markets not yet posted`
+    );
+  } else {
     // Upserts consensus HR prop odds from Action Network,
     // then resolves mlbamId for each player and computes modelPHr, modelOverOdds,
     // edgeOver, evOver, verdict using the HR Props model service.
     try {
-      const { scrapeHrPropsForDate } = await import('./mlbHrPropsScraper');
+      const { scrapeHrPropsForDate } = await import("./mlbHrPropsScraper");
       const hrResult = await scrapeHrPropsForDate(todayStr);
       console.log(
         `[MLBCycle] HR Props (Consensus): inserted=${hrResult.inserted} ` +
-        `updated=${hrResult.updated} skipped=${hrResult.skipped} errors=${hrResult.errors}`
+          `updated=${hrResult.updated} skipped=${hrResult.skipped} errors=${hrResult.errors}`
       );
       if (hrResult.errors > 0) {
         console.warn(`[MLBCycle] HR Props scrape: ${hrResult.errors} errors`);
       }
       // Run model EV computation for all HR props on today's date
       try {
-        const { resolveAndModelHrProps } = await import('./mlbHrPropsModelService');
+        const { resolveAndModelHrProps } =
+          await import("./mlbHrPropsModelService");
         const modelResult = await resolveAndModelHrProps(todayStr);
         console.log(
           `[MLBCycle] HR Props model EV: resolved=${modelResult.resolved} ` +
-          `alreadyHad=${modelResult.alreadyHad} modeled=${modelResult.modeled} ` +
-          `edges=${modelResult.edges} errors=${modelResult.errors}`
+            `alreadyHad=${modelResult.alreadyHad} modeled=${modelResult.modeled} ` +
+            `edges=${modelResult.edges} errors=${modelResult.errors}`
         );
         if (modelResult.errors > 0) {
-          console.warn(`[MLBCycle] HR Props model: ${modelResult.errors} computation errors`);
+          console.warn(
+            `[MLBCycle] HR Props model: ${modelResult.errors} computation errors`
+          );
         }
       } catch (modelErr) {
-        console.warn('[MLBCycle] HR Props model EV computation failed (non-fatal):', modelErr);
+        console.warn(
+          "[MLBCycle] HR Props model EV computation failed (non-fatal):",
+          modelErr
+        );
       }
     } catch (err) {
-      console.warn('[MLBCycle] HR Props scrape failed (non-fatal):', err);
+      console.warn("[MLBCycle] HR Props scrape failed (non-fatal):", err);
     }
-    } // end isAfter7amEst() gate for HR Props
+  } // end isAfter7amEst() gate for HR Props
 
-    console.log(`[MLBCycle] ✅ DONE — ${new Date().toISOString()}`);
+  console.log(`[MLBCycle] ✅ DONE — ${new Date().toISOString()}`);
 }
 
 export function startVsinAutoRefresh() {
@@ -2119,7 +2759,7 @@ export function startVsinAutoRefresh() {
       const result = await seedPitcherStats();
       console.log(
         `[PitcherStats] Daily refresh: total=${result.total} inserted=${result.inserted} ` +
-        `updated=${result.updated} errors=${result.errors}`
+          `updated=${result.updated} errors=${result.errors}`
       );
     } catch (err) {
       console.warn("[PitcherStats] Daily refresh failed (non-fatal):", err);
@@ -2167,7 +2807,10 @@ export function startVsinAutoRefresh() {
         `[TeamBattingSplits] Daily refresh: total=${result.total} upserted=${result.upserted} errors=${result.errors}`
       );
     } catch (err) {
-      console.warn("[TeamBattingSplits] Daily refresh failed (non-fatal):", err);
+      console.warn(
+        "[TeamBattingSplits] Daily refresh failed (non-fatal):",
+        err
+      );
     }
   };
   void runTeamBattingSplitsRefresh();
@@ -2208,8 +2851,8 @@ export function startVsinAutoRefresh() {
 
   console.log(
     "[VSiNAutoRefresh] Scheduler started \u2014 " +
-    "ALL SPORTS (NBA/NHL/MLB): every 10 min (14:01–04:59 UTC / 6:01 AM–11:59 PM EST) | " +
-    "Score refresh: every 15 sec (NBA/NHL) | MLB: every 10 min (scores + splits + AN odds) | " +
-    "MLB seeders: pitcher/bullpen/rolling5/batting-splits=24h | park-factors/umpires=7d"
+      "ALL SPORTS (NBA/NHL/MLB): every 10 min (14:01–04:59 UTC / 6:01 AM–11:59 PM EST) | " +
+      "Score refresh: every 15 sec (NBA/NHL) | MLB: every 10 min (scores + splits + AN odds) | " +
+      "MLB seeders: pitcher/bullpen/rolling5/batting-splits=24h | park-factors/umpires=7d"
   );
 }

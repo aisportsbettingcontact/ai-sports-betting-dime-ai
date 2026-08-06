@@ -1,0 +1,68 @@
+# pi Review — manual, cost-controlled headless review through the pi harness.
+#
+# ⏸ PAUSED (owner directive 2026-08-01, LLM.md "API credit budget"): this
+# workflow is disabled_manually — API credits are reserved for Dime Chat work
+# and pi-share-hf reviews. Re-enable only on explicit owner say-so:
+#   gh workflow enable pi-review.yml
+#
+# Runs `pi -p "/review branch"` on the dispatched ref with the full project
+# wiring (227 skills, dime-guard, repo conventions from AGENTS.md). Uses the
+# ANTHROPIC_API_KEY repo secret — the only surface where that key lives, per
+# LLM.md "Auth model: subscription-first". workflow_dispatch only: model
+# spend happens exclusively when a human presses run.
+name: pi Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      instructions:
+        description: "Optional extra review focus passed to /review"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  pi-review:
+    name: pi Review
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 25
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: "[STEP] Install pi coding agent"
+        run: npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+
+      - name: "[STEP] Run pi review on this ref"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PI_SKIP_VERSION_CHECK: "1"
+          PI_TELEMETRY: "0"
+          REVIEW_INSTRUCTIONS: ${{ inputs.instructions }}
+        run: |
+          echo "[INPUT] pi $(pi --version) reviewing ${GITHUB_REF_NAME}"
+          pi -p -a "/review branch ${REVIEW_INSTRUCTIONS}" | tee pi-review-report.md
+          echo "[OUTPUT] review complete"
+
+      - name: "[OUTPUT] Upload review report as artifact"
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pi-review-report
+          path: pi-review-report.md
+          retention-days: 30

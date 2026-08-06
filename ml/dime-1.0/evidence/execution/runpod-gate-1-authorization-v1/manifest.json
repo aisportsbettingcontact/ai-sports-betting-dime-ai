@@ -1,0 +1,30 @@
+{
+  "schema_version": "dime-runpod-gate-1-authorization-evidence-v1",
+  "gate_id": "dime-llm-v1-runpod-baseline-inference",
+  "status": "BLOCKED_INCOMPLETE_NOT_AUTHORIZED",
+  "source_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+  "contains_credentials": false,
+  "contains_private_records_or_cases": false,
+  "external_actions": {
+    "credential_access": false,
+    "runpod_call": false,
+    "model_download": false,
+    "tokenizer_download": false,
+    "inference": false,
+    "benchmark_execution": false,
+    "training": false,
+    "serving": false,
+    "railway_mutation": false,
+    "deployment": false
+  },
+  "artifacts": {
+    "ml/dime-1.0/configs/runpod_gate_1_authorization_v1.json": "937e60bf7d47567d7fabb54099556684f7eb586906bf985e43ddbd6b66541142",
+    "ml/dime-1.0/docs/RUNPOD_GATE_1_AUTHORIZATION_V1.md": "3bf13872c9aa561338ede07945f6bb9c7df444e83e39cb5659e4d781983ecdbe",
+    "ml/dime-1.0/evidence/execution/dime-llm-v1-context-capsule/capsule.json": "7cae1dda373b0d2bf0c1b8bf1fa638f2565bae2d52b325e8aa379ae20c90f5d4",
+    "ml/dime-1.0/schemas/dime_llm_v1_context_capsule.schema.json": "0808e53883b92ab3ed40322c68c78897c78aedb77011f8995d2c048b7e6704b5",
+    "ml/dime-1.0/schemas/runpod_gate_1_authorization.schema.json": "14736dd07b6dc1396aae4cf592db8a9c53a112f461bd0dfffe74a3b515de330a",
+    "ml/dime-1.0/scripts/validate_runpod_gate_1.py": "ef27ccc9c9ecb653e626bf48af631d63afc0532cbc5c6d7f7b4ee60fe6a629a7",
+    "ml/dime-1.0/src/dime_ai/runpod_gate_1.py": "d3ae270cdb195b53a3412115d5db153758fa057e16ccb6b4c396fa1f8657bbb9",
+    "ml/dime-1.0/tests/test_runpod_gate_1_authorization_v1.py": "945497f42a841d2d4f342d3e90a7ec5a9bd019b3b494d419ebfd561bb17af37d"
+  }
+}

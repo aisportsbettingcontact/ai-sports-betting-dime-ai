@@ -1,0 +1,386 @@
+{
+  "schema_version": "dime-product-route-observability-audit-v1",
+  "benchmark_version": "product-route-observability-v1.0.0",
+  "control_plane_revision": "dime-composite-engineering-control-v1",
+  "generated_from": {
+    "fixture_path": "ml/dime-1.0/data/eval/product_route_observability_v1.benchmark.json",
+    "fixture_sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372",
+    "control_source_path": "server/_core/dimeEngineeringControl.ts",
+    "control_source_sha256": "3c74c63e8a8d08fb435bb48ab4fe261748268bfc9ed54a38d8df4571f528b965",
+    "deterministic_generated_at": "2026-07-29T00:00:00Z"
+  },
+  "data_governance": {
+    "classification": "synthetic",
+    "source": "reviewed_synthetic_contract_cases",
+    "contains_production_data": false
+  },
+  "aggregate": {
+    "sample_count": 18,
+    "route_accuracy": 1,
+    "route_accepted_count": 18,
+    "required_tool_policy_compatibility": 1
+  },
+  "per_route": {
+    "platform": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "matchup": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "full_slate": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "educational": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "bet_explanation": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "historical": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "account": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "live_data": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "general_sports": {
+      "sample_count": 2,
+      "precision": 1,
+      "recall": 1
+    }
+  },
+  "confusion_matrix": {
+    "platform": {
+      "platform": 2,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "matchup": {
+      "platform": 0,
+      "matchup": 2,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "full_slate": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 2,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "educational": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 2,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "bet_explanation": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 2,
+      "historical": 0,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "historical": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 2,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "account": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 2,
+      "live_data": 0,
+      "general_sports": 0
+    },
+    "live_data": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 0,
+      "live_data": 2,
+      "general_sports": 0
+    },
+    "general_sports": {
+      "platform": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "historical": 0,
+      "account": 0,
+      "live_data": 0,
+      "general_sports": 2
+    }
+  },
+  "unmeasured_until_observational_traces_exist": {
+    "entity_resolution_accuracy": null,
+    "tool_selection_accuracy": null,
+    "false_tool_call_rate": null,
+    "missed_tool_call_rate": null,
+    "context_relevance": null,
+    "latency_distributions": null,
+    "cost_distributions": null
+  },
+  "cases": [
+    {
+      "case_id": "product_route_platform_001",
+      "expected_route": "platform",
+      "accepted_alternate_routes": [],
+      "actual_route": "platform",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 0,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_platform_002",
+      "expected_route": "platform",
+      "accepted_alternate_routes": [],
+      "actual_route": "platform",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_matchup_001",
+      "expected_route": "matchup",
+      "accepted_alternate_routes": [],
+      "actual_route": "matchup",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "explicit_date",
+      "entity_count": 2,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_matchup_002",
+      "expected_route": "matchup",
+      "accepted_alternate_routes": [],
+      "actual_route": "matchup",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "missing_date",
+      "entity_count": 2,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_full_slate_001",
+      "expected_route": "full_slate",
+      "accepted_alternate_routes": [],
+      "actual_route": "full_slate",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "current",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_full_slate_002",
+      "expected_route": "full_slate",
+      "accepted_alternate_routes": [],
+      "actual_route": "full_slate",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "explicit_date",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_educational_001",
+      "expected_route": "educational",
+      "accepted_alternate_routes": [],
+      "actual_route": "educational",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 0,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_educational_002",
+      "expected_route": "educational",
+      "accepted_alternate_routes": [],
+      "actual_route": "educational",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 0,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_bet_explanation_001",
+      "expected_route": "bet_explanation",
+      "accepted_alternate_routes": [],
+      "actual_route": "bet_explanation",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_bet_explanation_002",
+      "expected_route": "bet_explanation",
+      "accepted_alternate_routes": [],
+      "actual_route": "bet_explanation",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 0,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_historical_001",
+      "expected_route": "historical",
+      "accepted_alternate_routes": [],
+      "actual_route": "historical",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "historical",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_historical_002",
+      "expected_route": "historical",
+      "accepted_alternate_routes": [],
+      "actual_route": "historical",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "ambiguous",
+      "entity_count": 2,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_account_001",
+      "expected_route": "account",
+      "accepted_alternate_routes": [],
+      "actual_route": "account",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 0,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_account_002",
+      "expected_route": "account",
+      "accepted_alternate_routes": [],
+      "actual_route": "account",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 0,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_live_data_001",
+      "expected_route": "live_data",
+      "accepted_alternate_routes": [],
+      "actual_route": "live_data",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "current",
+      "entity_count": 2,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_live_data_002",
+      "expected_route": "live_data",
+      "accepted_alternate_routes": [],
+      "actual_route": "live_data",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "current",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_general_sports_001",
+      "expected_route": "general_sports",
+      "accepted_alternate_routes": [],
+      "actual_route": "general_sports",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "historical",
+      "entity_count": 1,
+      "pass": true
+    },
+    {
+      "case_id": "product_route_general_sports_002",
+      "expected_route": "general_sports",
+      "accepted_alternate_routes": [],
+      "actual_route": "general_sports",
+      "route_accepted": true,
+      "required_tools_permitted": true,
+      "temporal_state": "not_applicable",
+      "entity_count": 1,
+      "pass": true
+    }
+  ],
+  "failures": [],
+  "authorization": {
+    "activates_routes": false,
+    "authorizes_shadow": false,
+    "authorizes_release": false
+  }
+}

@@ -22,10 +22,15 @@ describe.skipIf(IS_CI)("Gmail SMTP credentials", () => {
   it("should authenticate successfully with GMAIL_APP_PASSWORD", async () => {
     const appPassword = process.env.GMAIL_APP_PASSWORD;
 
-    console.log(`[Email][Test] [INPUT] GMAIL_APP_PASSWORD present=${!!appPassword} length=${appPassword?.length ?? 0}`);
+    console.log(
+      `[Email][Test] [INPUT] GMAIL_APP_PASSWORD present=${!!appPassword} length=${appPassword?.length ?? 0}`
+    );
 
     expect(appPassword, "GMAIL_APP_PASSWORD env var must be set").toBeTruthy();
-    expect(appPassword!.length, "App Password must be 16 characters (no spaces)").toBe(16);
+    expect(
+      appPassword!.length,
+      "App Password must be 16 characters (no spaces)"
+    ).toBe(16);
 
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
@@ -37,18 +42,25 @@ describe.skipIf(IS_CI)("Gmail SMTP credentials", () => {
       },
     });
 
-    console.log(`[Email][Test] [STEP] Verifying SMTP connection to smtp.gmail.com:465 as ${FROM_EMAIL}`);
+    console.log(
+      `[Email][Test] [STEP] Verifying SMTP connection to smtp.gmail.com:465 as ${FROM_EMAIL}`
+    );
 
     let verifyError: Error | null = null;
     try {
       await transporter.verify();
-      console.log(`[Email][Test] [OUTPUT] SMTP verify() succeeded — credentials are valid`);
+      console.log(
+        `[Email][Test] [OUTPUT] SMTP verify() succeeded — credentials are valid`
+      );
       console.log(`[Email][Test] [VERIFY] PASS`);
     } catch (err: unknown) {
       verifyError = err instanceof Error ? err : new Error(String(err));
       console.error(`[Email][Test] [VERIFY] FAIL — ${verifyError.message}`);
     }
 
-    expect(verifyError, `SMTP authentication failed: ${verifyError?.message}`).toBeNull();
+    expect(
+      verifyError,
+      `SMTP authentication failed: ${verifyError?.message}`
+    ).toBeNull();
   }, 30_000); // 30s timeout for network round-trip
 });

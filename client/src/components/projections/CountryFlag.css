@@ -2,12 +2,15 @@
 .country-flag {
   display: inline-grid;
   place-items: center;
-  inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.25rem);
-  min-inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.25rem);
-  block-size: clamp(2rem, 1.8rem + 0.5vw, 2.25rem);
+  /* 2.5x flags (owner directive 2026-07-18): glyph 1.5→3.75rem. The optical
+     box hugs the glyph (no clipping, the bare emoji may bleed slightly) so the
+     matchup line keeps its column width on narrow cards. */
+  inline-size: clamp(4.25rem, 4rem + 0.8vw, 4.75rem);
+  min-inline-size: clamp(4.25rem, 4rem + 0.8vw, 4.75rem);
+  block-size: clamp(4.25rem, 4rem + 0.8vw, 4.75rem);
   flex: none;
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: clamp(1.5rem, 1.35rem + 0.4vw, 1.9rem);
+  font-size: clamp(3.75rem, 3.4rem + 1vw, 4.75rem);
   line-height: 1;
   background: transparent;
   border: 0;

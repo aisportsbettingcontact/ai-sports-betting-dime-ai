@@ -22,8 +22,21 @@
 .theme-light .dc-app, .theme-light.dc-page .dc-app { background: #FFFFFF; } /* L:53 */
 
 .dc-sidebar { min-height: 0; } /* R2: no height declaration — exactly like the frozen sidebar (D/L:54), sized by .dc-app's flex align-items stretch; min-height 0 lets the recent list clip in short viewports */
+/* Desktop sidebar brand mark at 2.5x (owner directive 2026-07-21): the frozen
+   20px title (D/L:55) scales to 50px only where the sidebar is persistent
+   (>=1024px) — the <1024px drawer keeps the frozen size. The dime wordmark and
+   its mint coin-dot are em-derived, so both scale together. */
+@media (min-width: 1024px) {
+  .dc-sidebar-title { font-size: 50px; }
+}
 .dc-recent-list { overflow: hidden; } /* app adaptation of D/L:65 `overflow: visible` — the fixed 900px canvas never scrolled; a short viewport must clip, not overlap the profile row */
 .dc-sidebar-spacer { flex: 1; } /* Ph1: with no session chats the RECENT CHATS section hides entirely; this takes over the recent list's flex: 1 slot (D/L:65) so the profile row stays pinned to the sidebar foot */
+
+/* Owner directive 2026-07-21: the profile row is grounded to the sidebar
+   foot in EVERY state — not dependent on .dc-recent-list flex-fill or
+   .dc-sidebar-spacer being present. margin-top:auto on a flex-column child
+   is state-independent; the spacer/flex-fill remain for scroll behavior. */
+.dc-profile-row { margin-top: auto; }
 
 /* ----------------------------------------------------------------------------
    1. MAIN PANE — two states of the SAME element (spec §2, §2.7)
@@ -161,6 +174,22 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
 .theme-dark .dc-footnote { color: #FFFFFF; } /* placeholder muted D:29 */
 .theme-light .dc-footnote { color: #000000; } /* placeholder muted L:30 */
 
+.dc-chat-footer {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  padding: 0 clamp(16px, 3vw, 40px) max(12px, env(safe-area-inset-bottom));
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+.dc-main:not(.dc-main--conv) .dc-chat-footer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+}
+
 /* ----------------------------------------------------------------------------
    8. DOCKED COMPOSER ZONE (spec §2.9) — the composer element itself is the
       frozen one (.dc-composer, F:99); only its zone changes per state.
@@ -201,11 +230,102 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Account popover v2 — Theme drill-in (owner directive 2026-07-22, amends
+   the frozen D/L:89-90 rows this replaces: "Edit Profile" / "Discord
+   Connected" are cut from the popover; their content moves to Settings in
+   Step 2). Same ONE frozen curve as everything else in this file —
+   160ms cubic-bezier(0.16,1,0.3,1), no springs (MASTER.md: one curve, fixed
+   duration everywhere). Two panes sit side by side in a 200%-wide flex row;
+   a plain CSS transition on `transform` — not a keyframe `animation` — is
+   what makes this cleanly interruptible: retargeting the class mid-flight
+   makes the browser redirect from the live interpolated value, exactly the
+   apple-design §3 contract, with zero JS spring machinery. DOM order is
+   [theme pane, root pane]: the resting transform is translateX(-50%)
+   (showing the root pane, second in source order), so entering the Theme
+   pane always moves the slider RIGHTWARD — owner spec verbatim: "slides ...
+   left to right" — and Back retraces the identical path in reverse
+   (apple-design §7 spatial consistency: enter/exit share one path). */
+.dc-menu-viewport {
+  overflow: hidden;
+  transition: height 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dc-menu-slider {
+  display: flex;
+  align-items: flex-start;
+  width: 200%;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(-50%);
+}
+.dc-menu-slider--theme { transform: translateX(0%); }
+.dc-menu-pane {
+  width: 50%;
+  flex: 0 0 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Theme / Settings / Admin Dashboard rows share the frozen .dc-menu-item
+   paint (D:89,90,92 = L:89,90,92); this only adds the icon+label(+chevron)
+   layout the frozen single-line rows never needed. */
+.dc-menu-item--icon { display: flex; align-items: center; gap: 8px; }
+.dc-menu-item-label { flex: 1; }
+.dc-menu-item-chevron { flex-shrink: 0; opacity: 0.6; }
+.theme-dark .dc-menu-item-chevron { color: #FFFFFF; }
+.theme-light .dc-menu-item-chevron { color: #000000; }
+
+.dc-menu-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.theme-dark .dc-menu-back { color: #FFFFFF; }
+.theme-light .dc-menu-back { color: #000000; }
+
+.dc-theme-segment {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin: 2px 10px 6px;
+  border-radius: 10px;
+}
+.theme-dark .dc-theme-segment { background: #0A0A0A; }
+.theme-light .dc-theme-segment { background: #F2F2F2; }
+
+.dc-theme-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.theme-dark .dc-theme-option { color: #A6A6A6; }
+.theme-light .dc-theme-option { color: #595959; }
+/* Selected state reuses the sidebar nav's own active-row treatment (raised
+   fill + primary text) rather than mint — mint stays reserved for signal
+   (edge/pick/live/active-nav/focus), and MASTER.md's own tab-pill spec
+   already draws "active" as a raised background, not a hue. */
+.theme-dark .dc-theme-option.is-active { background: #1F1F1F; color: #FFFFFF; }
+.theme-light .dc-theme-option.is-active { background: #E4E4E4; color: #000000; }
+
 @media (prefers-reduced-motion: reduce) {
   .dc-ghost { display: none; }
   .dc-fade-in { animation: none; }
   .dc-composer--flip { transition: none; }
   .dc-settings-menu--enter { animation: none; }
+  .dc-menu-viewport { transition: none; }
+  .dc-menu-slider { transition: none; }
 } /* frozen reduced-motion pattern F:28: final layout in one stable frame (spec §3.3) */
 
 /* ----------------------------------------------------------------------------
@@ -339,6 +459,27 @@ button.dc-sidebar-row {
     justify-self: end;
   }
 
+  /* ── Keyboard choreography (owner directive 2026-07-31) ──────────────────
+     While the OS keyboard is up, the bar compresses toward the very top so
+     the history toggle and kebab hold the high corners, and the wordmark
+     fades in centered between them. Every value below rides
+     --dc-kb-progress — a critically-damped springSettle driven per frame
+     from the visualViewport handler, retargeted mid-flight on open/close —
+     so a dismiss during the open settle reverses in real time with no jump,
+     and reduced-motion snaps the var instead. Only compositor properties
+     (opacity/transform) animate on the logo; the bar's height ramp is one
+     fixed element. Content geometry is NOT springed: the page container and
+     scroller track the keyboard 1:1 via --dc-visual-height/--dc-kb-inset. */
+  /* The bar keeps its full height while the keyboard is up — the rise to the
+     top of the visual viewport comes from the nav-offset collapse below, so
+     compressing here too would double-shrink it and clip the 44px controls. */
+  .dc-kb-logo {
+    pointer-events: none;
+    opacity: var(--dc-kb-progress, 0);
+    transform: translateY(calc((1 - var(--dc-kb-progress, 0)) * 6px))
+      scale(calc(0.92 + 0.08 * var(--dc-kb-progress, 0)));
+  }
+
   .dc-sidebar.dc-drawer {
     position: fixed;
     z-index: 90;
@@ -397,6 +538,16 @@ button.dc-sidebar-row {
   .dc-drawer .dc-settings-menu button {
     min-height: 44px;
   }
+
+  /* Owner directive 2026-07-21 scaled the persistent (≥1024) sidebar ×1.75;
+     the drawer keeps the frozen pre-scale type — at min(82vw, 304px) wide,
+     22.75px rows guarantee truncated labels, and <768px surfaces must not
+     change (plan constraint). Icons keep the ×1.25 size (no truncation risk). */
+  .dc-drawer .dc-sidebar-row { font-size: 13px; }
+  .dc-drawer .dc-recents-label { font-size: 11px; }
+  .dc-drawer .dc-profile-row { font-size: 13px; }
+  .dc-drawer .dc-profile-name { font-size: 12px; }
+  .dc-drawer .dc-profile-tier { font-size: 11px; }
 
   .dc-drawer-scrim {
     display: block;
@@ -513,11 +664,73 @@ button.dc-sidebar-row {
     color: var(--text-secondary) !important;
   }
 
-  body.mobile-owner-tabs-active .dc-main:not(.dc-main--conv) {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
-  }
-  body.mobile-owner-tabs-active .dc-main--conv .dc-composer-zone {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  /* ── Floating nav integration (<768px; docs/plans/2026-07-18-mobile-floating-nav.md)
+     The chat page is a fixed full-viewport app anchored on --dc-visual-top /
+     --dc-visual-height (visualViewport keyboard tracking) — body padding
+     cannot reach it. Shift the whole fixed page down by the nav's measured
+     height and shrink it to match; every internal offset keeps deriving from
+     the same variables, so keyboard handling is untouched. The nav (z-40)
+     stays below the drawer stack (60-100), and the drawer/scrim intentionally
+     cover it (modal dominance). The floating logo owns the brand identity, so
+     the mobile bar's center wordmark hides and its safe-area padding drops
+     (the nav absorbs the inset). */
+  @media (max-width: 767px) {
+    /* Keyboard-aware nav offset (owner directive 2026-07-31). While typing,
+       the floating nav is not reachable anyway, so its reserved strip
+       collapses in lockstep with --dc-kb-progress: the chat shell rises to
+       the true top of the visual viewport, putting the history toggle in the
+       high top-left and the kebab in the high top-right. Interpolating the
+       OFFSET (not swapping layouts) means the same spring drives the trip in
+       both directions with no reflow — and reversal mid-flight just retargets.
+       On a real device this was the dominant bug: the 112px strip stayed
+       reserved with the keyboard up, floating the bar mid-screen. */
+    body.dime-floating-nav-active {
+      --dc-nav-offset: calc(
+        var(--dime-floating-nav-h, 112px) * (1 - var(--dc-kb-progress, 0))
+      );
+    }
+    body.dime-floating-nav-active .dc-page.dc-page--app {
+      inset: calc(
+          var(--dc-visual-top, 0px) +
+            var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
+        )
+        0 auto;
+      height: calc(
+        var(--dc-visual-height, 100dvh) -
+          var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
+      );
+    }
+    body.dime-floating-nav-active .dc-app {
+      height: calc(
+        var(--dc-visual-height, 100dvh) -
+          var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
+      );
+    }
+    body.dime-floating-nav-active .dc-mobile-bar {
+      top: calc(
+        var(--dc-visual-top, 0px) +
+          var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
+      );
+      height: calc(56px + env(safe-area-inset-top) * var(--dc-kb-progress, 0));
+      padding-top: calc(env(safe-area-inset-top) * var(--dc-kb-progress, 0));
+    }
+    /* Nav owns the mark while it is visible; once it recedes for the keyboard
+       the bar's own centered wordmark takes over (both ride one progress var,
+       so the handoff is a single crossfade, never a pop). */
+    body.dime-floating-nav-active .dc-mobile-bar .dc-mobile-title:not(.dc-kb-logo) {
+      visibility: hidden; /* keep the 3-col grid; the floating logo is the mark */
+    }
+    body.dime-floating-nav-active .dc-main {
+      padding-top: calc(56px + 28px);
+    }
+    body.dime-floating-nav-active .dc-scroller {
+      padding-top: calc(56px + 20px);
+    }
+    body.dime-floating-nav-active .dc-edge-capture {
+      top: calc(
+        var(--dc-visual-top, 0px) + var(--dime-floating-nav-h, 112px) + 56px
+      );
+    }
   }
 }
 
@@ -557,6 +770,359 @@ button.dc-sidebar-row {
   .dc-composer-input {
     min-height: 44px;
   }
+
+  /* ── Phone chat chrome (owner directive 2026-07-29) ──────────────────────
+     The "Menu" word is replaced by the PanelLeftOpen chat-history toggle, so
+     the bar sheds its full-width hairline — a lone icon over the page ground
+     needs no band divider. The icon centers in the former text button. */
+  .theme-dark .dc-mobile-bar,
+  .theme-light .dc-mobile-bar {
+    border-bottom: 0;
+  }
+  .dc-mobile-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* The drawer close swaps × for the matched PanelLeftClose glyph on phones —
+     same centering treatment. */
+  .dc-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Responsible-gaming line (owner directive 2026-07-29): ONE line, smaller
+     and dimmer — deliberate exception to the 11px floor above for this legal
+     micro-copy; the copy itself never changes (marketing-surface law). The
+     clamp keeps all 72 characters on a single line down to 320px. */
+  .dc-chat-footer {
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: clamp(8px, 2.45vw, 9.5px);
+    line-height: 1;
+    opacity: 0.55;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  /* ── Floating composer (owner directive 2026-07-29 r2) ───────────────────
+     In conversation the pill leaves document flow entirely: it floats over
+     the chat ground almost at the bottom edge, with just the one-line
+     disclaimer beneath it. The scroller runs the full height behind it; a
+     mask-image gradient makes turns SLOWLY VANISH as they flow under the
+     pill (and the bottom padding lets the last turn scroll fully clear of
+     the fade). Pure compositing — no scroll listeners, and the effect is
+     continuous with scroll position, so reduced-motion needs no fork. */
+  .dc-main--conv {
+    position: relative;
+  }
+  .dc-main--conv .dc-composer-zone {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    /* Clear of the one-line disclaimer AND the home-indicator inset — the
+       r2 fixed 34px let the pill sit on the disclaimer on notched phones. */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 26px);
+    width: auto;
+    padding: 0;
+    z-index: 5;
+  }
+  .dc-main--conv .dc-scroller {
+    padding-bottom: 176px;
+    /* Fade depth is CAPPED proportionally (r3): with the keyboard up the
+       visual viewport shrinks to ~1/3 height, and a fixed 170px fade was
+       swallowing most of the remaining conversation — the max() terms keep
+       at least the top ~55% of the scroller fully legible at any height. */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black max(55%, calc(100% - 170px)),
+      transparent max(80%, calc(100% - 70px))
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black max(55%, calc(100% - 170px)),
+      transparent max(80%, calc(100% - 70px))
+    );
+  }
+
+  /* ── Phone kebab: chat options opposite the history toggle (r3) ────────── */
+  .dc-mobile-kebab-wrap {
+    position: relative;
+    justify-self: end;
+    margin-top: -6px;
+  }
+  .dc-mobile-kebab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 0;
+  }
+  .dc-mobile-kebab-wrap .dc-thread-menu {
+    top: calc(100% + 6px);
+    right: 0;
+  }
+  .dc-thread-menu-item:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .dc-rename-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px;
+  }
+  .dc-rename-input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--text-secondary);
+    outline: none;
+  }
+  .dc-rename-input:focus {
+    box-shadow: 0 0 0 3px var(--ring);
+    border-color: transparent;
+  }
+
+  /* ── Composer theme swap (owner directive 2026-07-29 r2) ─────────────────
+     Phones run each theme's OPPOSITE composer kit: dark shows the light-kit
+     pill (white ground, black send disc, mint chevron + white plus-rect);
+     light shows the dark-kit pill (black ground, white send disc, black
+     chevron + mint plus-rect). Each pill keeps its designed button pairing
+     verbatim — only which theme wears which flips. The dime token pair is
+     the inverse in both themes, so the shared decls collapse to one rule;
+     only the glyph inks need theme scopes. A floating-surface shadow lifts
+     the pill off the chat ground. */
+  /* Theme-scoped to tie the frozen kit's 0-2-0 specificity — this file
+     imports after frozen-tokens.css, so the tie resolves here. */
+  .theme-dark .dc-composer,
+  .theme-light .dc-composer {
+    background: var(--dime-text-primary);
+    border: 1px solid var(--dime-bg);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+  }
+  .theme-dark .dc-composer:focus-within,
+  .theme-light .dc-composer:focus-within {
+    box-shadow:
+      0 0 0 3px var(--ring),
+      0 10px 28px rgba(0, 0, 0, 0.38);
+  }
+  .theme-dark .dc-composer-plus,
+  .theme-light .dc-composer-plus,
+  .theme-dark .dc-composer-input,
+  .theme-light .dc-composer-input {
+    color: var(--dime-bg);
+  }
+  .theme-dark .dc-composer-input::placeholder,
+  .theme-light .dc-composer-input::placeholder {
+    color: var(--dime-bg);
+  }
+  .theme-dark .dc-send,
+  .theme-light .dc-send {
+    background: var(--dime-bg);
+    border: 0.5px solid var(--dime-text-primary);
+  }
+  .theme-dark .dc-send-chevron {
+    stroke: var(--accent);
+  }
+  .theme-light .dc-send-chevron {
+    stroke: var(--text-primary);
+  }
+  .theme-dark .dc-send-rect {
+    fill: var(--text-primary);
+  }
+  .theme-light .dc-send-rect {
+    fill: var(--accent);
+  }
+
+  /* ── Phone drawer pass (owner directive 2026-07-29) ──────────────────────
+     The floating nav paints above the drawer (root stacking context vs the
+     fixed page's), so the drawer's own head/rows shift below the nav band —
+     nothing hides behind the pill chrome and the PanelLeftClose collapse
+     control stays visible and tappable. */
+  body.dime-floating-nav-active .dc-sidebar.dc-drawer {
+    padding-top: calc(var(--dime-floating-nav-h, 112px) + 10px);
+  }
+  /* NEW CHAT leads the panel at 1.5x the former recents-label size (11px ->
+     16.5px), icon + uppercase; RECENT CHATS steps up 1.25x (11px -> 13.75px). */
+  .dc-drawer .dc-nav-group .dc-sidebar-row {
+    font-size: 16.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .dc-drawer .dc-nav-group .dc-nav-ico {
+    width: 26px;
+    height: 26px;
+  }
+  .dc-drawer .dc-recents-label {
+    font-size: 13.75px;
+  }
+  /* Active-chat undertone: the current thread carries a solid mint inset
+     rail on top of its row fill — identifiable at a glance, mint stays the
+     single accent (THREE-COLOR-LAW). */
+  .dc-drawer .dc-recent-list .dc-sidebar-row.is-active {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  /* Graceful expand: while the spring slides the panel in (drawerMotion.ts),
+     its content cascades — one 160ms brand beat per group, small x-offset,
+     40ms stagger. aria-hidden is present only while closed, so removing it
+     on open (re)runs the animation. */
+  .dc-drawer:not([aria-hidden]) .dc-nav-group,
+  .dc-drawer:not([aria-hidden]) .dc-recents-head,
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation: dcDrawerCascade 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .dc-drawer:not([aria-hidden]) .dc-recents-head {
+    animation-delay: 40ms;
+  }
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation-delay: 80ms;
+  }
+
+  /* ── Toggle bar sizing (owner directive 2026-07-29 r2) ───────────────────
+     With the credits living solely in the floating nav pill, the bar holds
+     only the chat-history toggle — the band collapses to the button's own
+     footprint (0.9x: 44 -> 40px, icon 22.5 -> 20px), nudged up toward the
+     nav so the chrome reads as one cluster. */
+  body.dime-floating-nav-active .dc-mobile-bar {
+    /* Collapsed band at rest; with the keyboard up the nav is gone, so the
+       bar reclaims full height and the controls sit in the true corners
+       (interpolated, so the growth rides the same spring). */
+    height: calc(40px + 16px * var(--dc-kb-progress, 0));
+  }
+  body.dime-floating-nav-active .dc-scroller {
+    padding-top: calc(40px + 12px);
+  }
+  .dc-mobile-menu {
+    min-width: 40px;
+    min-height: 40px;
+    /* The -6px nudge pulls the toggle toward the floating nav above it; once
+       the nav recedes for the keyboard that reference is gone, so the offset
+       unwinds to 0 rather than clipping the button off the viewport top. */
+    margin-top: calc(-6px * (1 - var(--dc-kb-progress, 0)));
+  }
+  .dc-mobile-menu svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* ── iMessage-register bubbles (owner directive 2026-07-29) ──────────────
+     User turns: inverse-ground bubble — light bubble/black ink on dark,
+     dark bubble/white ink on light — anchored right with a bottom-right
+     tail. Dime turns: mint bubble/black ink on BOTH themes, anchored left
+     with a bottom-left tail. Depth comes from a real drop shadow beneath
+     plus a 1px inner highlight (alpha lives only in box-shadow). Edge-stat
+     blocks and footnotes keep their own card/plain registers. */
+  .dc-thread {
+    row-gap: 16px;
+  }
+  .dc-user-capsule {
+    border-radius: 20px 20px 6px 20px;
+    padding: 10px 16px;
+  }
+  /* Inverse-ground bubble via the app token pair (X-HEX-EPIDEMIC: no raw
+     hex) — --dime-text-primary/--dime-bg IS the inverse in both themes:
+     WHITE bubble/black ink on dark, black bubble/white ink on light. Theme-
+     scoped (r3 fix): the frozen kit's .theme-* rules are 0-2-0 and were
+     silently winning over an unscoped 0-1-0 override — which is why dark
+     showed the old outline capsule instead of the white bubble. */
+  .theme-dark .dc-user-capsule,
+  .theme-light .dc-user-capsule {
+    background: var(--dime-text-primary);
+    color: var(--dime-bg);
+    border: 0;
+  }
+  .theme-dark .dc-user-capsule {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.45),
+      0 10px 22px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .theme-light .dc-user-capsule {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.16),
+      0 10px 22px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  /* 3D pop-in: each bubble rises and settles as it is populated — one 160ms
+     brand beat, origin at the tail edge. Collapsed under reduced motion. */
+  .dc-turn--user .dc-user-capsule,
+  .dc-turn--assistant .dc-prose {
+    animation: dcBubbleIn 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: 50% 100%;
+  }
+  /* Conversation reads top-down (owner directive 2026-07-29 r3): the thread
+     anchors to the TOP of the viewport — the first-send FLIP carries the
+     opening message up to the top of the page, not to a centered float. */
+  .dc-thread {
+    margin-block-start: 0;
+  }
+  .dc-turn--assistant {
+    align-items: flex-start;
+  }
+  .dc-turn--assistant .dc-prose {
+    max-width: 85%;
+    /* Mint bubble both themes; --mint-on-light is the law's contrast ink
+       (near-black) — exactly the readable ink on the mint ground. */
+    background: var(--accent);
+    color: var(--mint-on-light);
+    border-radius: 20px 20px 20px 6px;
+    padding: 10px 16px;
+    line-height: 1.5;
+  }
+  .theme-dark .dc-turn--assistant .dc-prose {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.45),
+      0 10px 22px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .theme-light .dc-turn--assistant .dc-prose {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.16),
+      0 10px 22px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  /* Links inside the mint bubble: mint-on-mint would vanish — black ink,
+     underline carries the affordance (never color alone). */
+  .dc-turn--assistant .dc-prose a,
+  .theme-light .dc-turn--assistant .dc-prose a {
+    color: var(--mint-on-light);
+    text-decoration: underline;
+  }
+}
+
+@keyframes dcDrawerCascade {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dcBubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 430px) {
@@ -582,6 +1148,17 @@ button.dc-sidebar-row {
   }
   .dc-jump.dc-pressable:active {
     transform: translateX(-50%);
+  }
+  /* Drawer content cascade collapses with the rest of the motion system. */
+  .dc-drawer:not([aria-hidden]) .dc-nav-group,
+  .dc-drawer:not([aria-hidden]) .dc-recents-head,
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation: none;
+  }
+  /* Bubble pop-in likewise. */
+  .dc-turn--user .dc-user-capsule,
+  .dc-turn--assistant .dc-prose {
+    animation: none;
   }
 }
 
@@ -686,4 +1263,583 @@ button.dc-sidebar-row {
   font-size: 11px;
   color: #45e0a8;
 }
+
+/* ----------------------------------------------------------------------------
+   13. SIDEBAR RAIL + CHAT MANAGEMENT (owner directive 2026-07-21)
+       Desktop-only collapse-to-rail with the TextSearch/PanelLeft* header
+       pair, Lucide nav icons, per-chat "…" menus, an owner-only clear-all,
+       scrollable recents with fade edges, and the enlarged profile row that
+       collapses to just the avatar. 160ms single brand curve throughout.
+   -------------------------------------------------------------------------- */
+
+/* Header icon buttons (search + collapse; also the recents clear-all).
+   A right-aligned row UNDER the wordmark — the 2.5x mark owns the head's
+   width, so overlaying controls beside it would collide. */
+.dc-sidebar-head { position: relative; }
+.dc-sidebar-actions { display: flex; gap: 2px; justify-content: flex-end; padding: 0 2px 10px; }
+.dc-icon-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.dc-icon-btn--sm { width: 26px; height: 26px; border-radius: 7px; }
+.theme-dark .dc-icon-btn { color: #ffffff; }
+.theme-light .dc-icon-btn { color: #000000; }
+
+/* Inline chat search (opens from the TextSearch header button). */
+.dc-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 8px 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+.theme-dark .dc-sidebar-search { border: 1px solid #ffffff; color: #ffffff; }
+.theme-light .dc-sidebar-search { border: 1px solid #000000; color: #000000; }
+.dc-sidebar-search:focus-within { box-shadow: 0 0 0 3px rgba(69, 224, 168, 0.36); }
+.dc-sidebar-search-ico { flex-shrink: 0; }
+.dc-sidebar-search-input {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.dc-sidebar-search-input:focus { outline: none; }
+.dc-sidebar-search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* Nav rows carry one 18px/1.8-stroke Lucide mark each; the active row tints
+   its mark mint exactly as the frozen `＋` icon did (D/L:27 parity). */
+.dc-nav-ico { flex-shrink: 0; }
+.dc-sidebar-row.is-active .dc-nav-ico,
+.dc-sidebar-row[aria-current="page"] .dc-nav-ico { color: var(--accent); }
+
+/* Recents head: frozen label + the owner-only clear-all eraser. */
+.dc-recents-head { display: flex; align-items: center; justify-content: space-between; padding-right: 6px; }
+.dc-recents-head .dc-recents-label { padding-right: 0; }
+
+/* Recent chat rows: title link + "…" menu. The more-button reserves its slot
+   (opacity reveal only — no layout shift on hover, HIG-stable bounds). */
+.dc-recent-row { position: relative; display: flex; align-items: center; }
+.dc-recent-row .dc-sidebar-row { flex: 1; min-width: 0; }
+.dc-recent-more {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.theme-dark .dc-recent-more { color: #ffffff; }
+.theme-light .dc-recent-more { color: #000000; }
+.dc-recent-row:hover .dc-recent-more,
+.dc-recent-row:focus-within .dc-recent-more,
+.dc-recent-row.is-menu-open .dc-recent-more { opacity: 1; }
+@media (pointer: coarse) {
+  .dc-recent-more { opacity: 1; min-width: 44px; min-height: 44px; }
+}
+.dc-recent-menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 4px;
+  z-index: 30;
+  min-width: 150px;
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.theme-dark .dc-recent-menu { background: #000000; border: 1px solid #ffffff; }
+.theme-light .dc-recent-menu { background: #ffffff; border: 1px solid #000000; }
+.dc-recent-menu .dc-menu-item { display: flex; align-items: center; gap: 8px; }
+.dc-recent-empty { font-size: 12px; padding: 10px; }
+.theme-dark .dc-recent-empty { color: #ffffff; }
+.theme-light .dc-recent-empty { color: #000000; }
+
+/* Avatar doubles as the account-menu trigger (sole affordance in the rail). */
+.dc-avatar-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  /* Width animates on the brand curve; labels ellipsize (never wrap) so the
+     shrink reads as one motion, not a reflow. */
+  .dc-sidebar {
+    transition: width 160ms cubic-bezier(0.16, 1, 0.3, 1),
+      padding 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dc-sidebar-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  /* Scrollable recents with fade edges (overrides the app-adaptation
+     `overflow: hidden` clip — long histories scroll instead of truncating). */
+  .dc-recent-list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  }
+  .theme-dark .dc-recent-list { scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+  .theme-light .dc-recent-list { scrollbar-color: rgba(0, 0, 0, 0.25) transparent; }
+
+  /* Enlarged profile row (frozen 30px avatar / 12px name -> 48px / 15px). */
+  .dc-profile-row { min-height: 76px; padding: 14px 10px; }
+  .dc-profile-row .dc-avatar { width: 48px; height: 48px; }
+  .dc-profile-name { font-size: 26.25px; } /* owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+  .dc-profile-tier { font-size: 21px; } /* owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+
+  /* The rail: 68px column of icons; wordmark, labels, search, recents, and
+     the identity text all yield — only the marks and the avatar remain. */
+  .dc-sidebar--rail { width: 68px; padding: 20px 8px; }
+  .dc-sidebar--rail .dc-sidebar-title,
+  .dc-sidebar--rail .dc-sidebar-text,
+  .dc-sidebar--rail .dc-sidebar-search,
+  .dc-sidebar--rail .dc-recents-head,
+  .dc-sidebar--rail .dc-recent-list,
+  .dc-sidebar--rail .dc-recent-star,
+  .dc-sidebar--rail .dc-profile-id,
+  .dc-sidebar--rail .dc-settings-trigger { display: none; }
+  .dc-sidebar--rail .dc-sidebar-head { display: flex; justify-content: center; padding: 0 0 10px; }
+  .dc-sidebar--rail .dc-sidebar-actions {
+    position: static;
+    flex-direction: column-reverse; /* expand control on top */
+    align-items: center;
+    gap: 6px;
+  }
+  .dc-sidebar--rail .dc-sidebar-row { justify-content: center; padding: 10px 0; }
+  .dc-sidebar--rail .dc-profile-row {
+    margin-top: auto;
+    justify-content: center;
+    padding: 12px 0;
+    min-height: 0;
+  }
+  /* Account menu escapes the 68px column: it opens beside the rail. */
+  .dc-sidebar--rail .dc-settings-menu { left: calc(100% + 10px); right: auto; bottom: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-sidebar { transition: none; }
+  .dc-recent-more { transition: none; }
+}
+
+/* ----------------------------------------------------------------------------
+   11. SETTINGS MODAL (Round 3 Step 2, owner directive 2026-07-22) — the
+       centered dialog opened from the account popover's Settings row. A new
+       surface, not part of the frozen D/L chat mockup, so it follows
+       design-system/dime-ai/MASTER.md directly rather than a D/L citation:
+       --shadow-menu depth, the same --row-active "raised, not mint" active
+       treatment the popover's own Theme options already use, and the ONE
+       160ms cubic-bezier(0.16, 1, 0.3, 1) curve for the enter beat
+       (apple-design §14: reduced motion collapses it to an instant frame,
+       never removes the dialog's arrival outright).
+   -------------------------------------------------------------------------- */
+
+.dc-sm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+} /* apple-design §12: "dim to focus" — a modal task pairs the surface with a scrim */
+.theme-dark .dc-sm-scrim { background: rgba(0, 0, 0, 0.6); }
+.theme-light .dc-sm-scrim { background: rgba(11, 11, 15, 0.4); }
+
+.dc-sm-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(640px, 100%);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow-menu);
+} /* radius scaled up from --radius-menu (14px, MASTER.md) for a larger dialog surface — this is the app's first full modal, not a small popover */
+.theme-dark .dc-sm-dialog { background: #141414; border: 1px solid #262626; }
+.theme-light .dc-sm-dialog { background: #FFFFFF; border: 1px solid #D9D9D9; }
+
+.dc-sm-dialog--enter { animation: dcSettingsModalIn 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes dcSettingsModalIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dc-sm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  flex-shrink: 0;
+}
+.theme-dark .dc-sm-header { border-bottom: 1px solid #262626; }
+.theme-light .dc-sm-header { border-bottom: 1px solid #D9D9D9; }
+
+.dc-sm-title { margin: 0; font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.dc-sm-subtitle { margin-top: 2px; font-size: 12px; color: var(--text-secondary); }
+
+.dc-sm-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.dc-sm-body { display: flex; flex: 1; min-height: 0; }
+
+.dc-sm-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 176px;
+  flex-shrink: 0;
+  padding: 12px;
+}
+.theme-dark .dc-sm-nav { border-right: 1px solid #262626; }
+.theme-light .dc-sm-nav { border-right: 1px solid #D9D9D9; }
+
+/* Rows reuse the sidebar-row shape verbatim (MASTER.md "Sidebar row" spec):
+   same padding/radius/font-size, --row-active for the selected state — not
+   mint, mint stays reserved for signal (edge/pick/live/active-nav/focus). */
+.dc-sm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dc-sm-nav-item.is-active { background: var(--row-active); color: var(--text-primary); font-weight: 600; }
+
+.dc-sm-nav-spacer { flex: 1; }
+
+.dc-sm-nav-logout { margin-top: 6px; padding-top: 15px; }
+.theme-dark .dc-sm-nav-logout { border-top: 1px solid #262626; }
+.theme-light .dc-sm-nav-logout { border-top: 1px solid #D9D9D9; }
+
+.dc-sm-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  /* Keeps the dialog from visibly shrink-wrapping around the thin Billing
+     stub — a real Step 4 pane will naturally fill this; until then the
+     shell holds a stable size instead of resizing on every section click. */
+  min-height: 280px;
+}
+
+.dc-sm-section + .dc-sm-section { margin-top: 20px; }
+
+/* Micro-label spec (MASTER.md): IBM Plex Mono, 10px, uppercase, 0.08em —
+   the same pairing profile.css's .pf-label already uses for this exact
+   "account settings" surface on mobile. */
+.dc-sm-section-label {
+  font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0 0 8px 2px;
+}
+
+.dc-sm-card { border-radius: 14px; overflow: hidden; }
+.theme-dark .dc-sm-card { background: #0A0A0A; border: 1px solid #262626; }
+.theme-light .dc-sm-card { background: #F7F7F9; border: 1px solid #D9D9D9; }
+
+.dc-sm-field,
+.dc-sm-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+.theme-dark .dc-sm-field + .dc-sm-field,
+.theme-dark .dc-sm-field + .dc-sm-action-row,
+.theme-dark .dc-sm-action-row + .dc-sm-field { border-top: 1px solid #262626; }
+.theme-light .dc-sm-field + .dc-sm-field,
+.theme-light .dc-sm-field + .dc-sm-action-row,
+.theme-light .dc-sm-action-row + .dc-sm-field { border-top: 1px solid #D9D9D9; }
+
+.dc-sm-action-row {
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.dc-sm-action-row:disabled { cursor: default; opacity: 0.7; }
+
+.dc-sm-field-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dc-sm-field-label { font-size: 12px; color: var(--text-secondary); }
+.dc-sm-field-value { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.dc-sm-field-value--muted { font-weight: 400; color: var(--text-secondary); }
+.dc-sm-field-note { flex-shrink: 0; font-size: 11px; color: var(--text-secondary); opacity: 0.75; }
+
+/* Official Discord branding. Discord platform exception (owner-approved
+   2026-07-24): controls that represent Discord carry Discord's current
+   blurple (#5865F2 via --discord-blurple; white on it = 4.61:1, AA small)
+   and Discord's GG Sans. Mint stays Dime's only accent — these tokens are
+   platform attribution and must not appear on any non-Discord surface.
+   Rules: dime-ai/THREE-COLOR-LAW.md §"Discord platform exception". */
+.dc-sm-discord-pill,
+.dc-sm-discord-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-family: var(--font-discord);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--discord-blurple);
+  color: var(--discord-on-blurple);
+  text-decoration: none;
+  width: fit-content;
+}
+.dc-sm-discord-connect:hover { background: var(--discord-blurple-hover); }
+.dc-sm-discord-pill { cursor: default; }
+.dc-sm-discord-connect { cursor: pointer; }
+
+.dc-sm-billing-stub { padding: 20px 16px; }
+.dc-sm-billing-stub-text { margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+/* ----------------------------------------------------------------------------
+   11b. BILLING PANE (Round 3 Step 4, owner directive 2026-07-22) — the real
+        content that replaces the Step 2 TODO(step-4) stub
+        (BillingSection.tsx). Reuses every existing dc-sm-* primitive above
+        (.dc-sm-card, .dc-sm-section-label, .dc-sm-field*) rather than
+        inventing a parallel vocabulary; the only new primitives are the pill
+        actions, the billing-history table, the loading skeleton, and the
+        cancel-confirm panel.
+   -------------------------------------------------------------------------- */
+
+/* Destructive-only danger token — an owner-directed, explicitly scoped
+   exception to MASTER.md's "no red" rule (round3-constraints.md: "Red danger
+   token for the cancel confirm is an owner-directed destructive-only
+   exception, documented in MASTER.md"; owner spec verbatim: "Cancel confirm
+   copy ... with a red cancel button"). Used by EXACTLY ONE rule below
+   (.dc-sm-pill--danger, the cancel-plan confirm button) — never reused for
+   negative edges, error copy, or any other "attention" color in this app.
+   Errors/empty states elsewhere stay grey, per MASTER.md's own "negative/
+   no-edge states are grey, never red" anti-pattern rule. */
+:root { --dime-danger: #E5484D; }
+
+.dc-sm-section-label--spaced { margin-top: 20px; }
+
+/* Plan card */
+.dc-sm-plan-card { padding: 16px; display: flex; flex-direction: column; gap: 10px; min-height: 92px; box-sizing: border-box; }
+.dc-sm-plan-headline { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.dc-sm-plan-sub { font-size: 12px; color: var(--text-secondary); }
+.dc-sm-plan-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+
+/* Pills — MASTER.md's pill spec (radius/weight/160ms opacity hover), scaled
+   down slightly (32px vs. the 36px CTA spec) for this denser action row. */
+.dc-sm-pill {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dc-sm-pill:disabled { cursor: default; opacity: 0.6; }
+/* Mint CTA — same treatment as the frozen .dc-btn-upgrade (D:85=L:85: #45E0A8 fill, black text), reused here for Upgrade. */
+.dc-sm-pill--mint { background: #45E0A8; color: #000000; }
+.theme-dark .dc-sm-pill--ghost { background: transparent; border: 1px solid #2E2E38; color: var(--text-primary); }
+.theme-light .dc-sm-pill--ghost { background: transparent; border: 1px solid #D9D9D9; color: var(--text-primary); }
+.dc-sm-pill--danger { background: var(--dime-danger); color: #FFFFFF; }
+
+/* Cancel confirm — inline (not a nested modal), reserves its own space below
+   the plan card. Enters on MASTER.md's ONE 160ms curve; no exit animation,
+   matching the dialog's own established precedent (r3-task-2-report.md). */
+.dc-sm-cancel-confirm { margin-top: 10px; padding: 14px; border-radius: 12px; box-sizing: border-box; }
+.theme-dark .dc-sm-cancel-confirm { background: #0A0A0A; border: 1px solid #262626; }
+.theme-light .dc-sm-cancel-confirm { background: #F7F7F9; border: 1px solid #D9D9D9; }
+.dc-sm-cancel-confirm--enter { animation: dcBillingPanelIn 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes dcBillingPanelIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dc-sm-cancel-copy { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--text-primary); }
+.dc-sm-cancel-actions { display: flex; gap: 8px; }
+
+/* Billing history table */
+/* No hardcoded min-width: the four columns' real content (a short date, a
+   dollar amount, a status word, a receipt link) comfortably fits the
+   dialog's ~317px content column at 1440px — forcing a wider table than
+   that just to hit a round number caused an undiscoverable horizontal
+   scroll (caught in the visual smoke pass: the Receipt column silently
+   clipped with no visible scrollbar). overflow-x: auto stays as a safety
+   net for real overflow (long currency amounts, narrow single-column
+   breakpoint), never as a hidden crutch to admit the layout no longer fits. */
+.dc-sm-bill-table-wrap { padding: 4px; overflow-x: auto; } /* horizontal scroll only, never the page (MASTER.md checklist) */
+.dc-sm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dc-sm-table th {
+  text-align: left;
+  font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: 10px 8px;
+}
+.dc-sm-table td { padding: 10px 8px; color: var(--text-primary); }
+.theme-dark .dc-sm-table tbody tr + tr td { border-top: 1px solid #262626; }
+.theme-light .dc-sm-table tbody tr + tr td { border-top: 1px solid #D9D9D9; }
+.dc-sm-table-status { color: var(--text-secondary); text-transform: capitalize; }
+.dc-sm-receipt-link { text-decoration: none; font-weight: 600; }
+.dc-sm-receipt-link:hover { opacity: 0.85; }
+.theme-dark .dc-sm-receipt-link { color: var(--mint); }
+.theme-light .dc-sm-receipt-link { color: var(--mint-on-light); } /* raw mint fails contrast on light text — MASTER.md */
+
+/* Payment methods */
+.dc-sm-pm-row { align-items: center; }
+.dc-sm-pm-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.dc-sm-pm-default {
+  font-size: 9px;
+  font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+}
+.theme-dark .dc-sm-pm-default { background: rgba(255, 255, 255, 0.08); }
+.theme-light .dc-sm-pm-default { background: rgba(11, 11, 15, 0.06); }
+
+/* Billing information + generic empty/error copy */
+.dc-sm-billing-info { padding: 0; }
+
+/* Loading skeleton — static, no shimmer (MASTER.md's motion dial is 2/10
+   "Subtle" and reserves motion for the live/typing indicators only; a new
+   pulsing shimmer here would be a third, uncited motion pattern). */
+.dc-sm-plan-card[role="status"],
+.dc-sm-bill-table-wrap[role="status"],
+.dc-sm-pm-list[role="status"],
+.dc-sm-billing-info[role="status"] { padding: 16px; }
+.dc-sm-skel-line { display: block; height: 12px; border-radius: 6px; margin: 6px 0; }
+.dc-sm-skel-line--short { width: 55%; }
+.theme-dark .dc-sm-skel-line { background: #1E1E26; }
+.theme-light .dc-sm-skel-line { background: #E4E4E9; }
+
+/* Error/empty copy — grey, never red (MASTER.md: "negative/no-edge states
+   are grey"; the cancel-plan button above is the app's one documented
+   exception, not this). */
+.dc-sm-billing-error,
+.dc-sm-billing-empty-text { margin: 0; padding: 16px; font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.dc-sm-billing-empty-text--inline { padding: 0; }
+
+/* "Manage in Stripe" escape hatch — plain mint text link, the same treatment
+   the frozen .dc-link/.dc-menu-accent already use for text-level CTAs in
+   this app (D/L:13-14, L:90). */
+.dc-sm-manage-stripe {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.dc-sm-manage-stripe:disabled { cursor: default; opacity: 0.6; }
+.theme-dark .dc-sm-manage-stripe { color: var(--mint); }
+.theme-light .dc-sm-manage-stripe { color: var(--mint-on-light); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-sm-dialog--enter { animation: none; }
+  .dc-sm-cancel-confirm--enter { animation: none; }
+}
+
+/* Single-column stack: the nav|content two-column shell collapses into one
+   column — nav becomes a horizontal row on top, content below. Log Out
+   gets flex-basis: 100% so it always wraps onto its own row instead of
+   being squeezed inline next to the section tabs, where its label would
+   clip against .dc-sm-dialog's overflow:hidden edge at narrow widths. */
+@media (max-width: 600px) {
+  .dc-sm-body { flex-direction: column; }
+  .dc-sm-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    border-right: none;
+    padding: 10px 12px;
+  }
+  .theme-dark .dc-sm-nav { border-bottom: 1px solid #262626; }
+  .theme-light .dc-sm-nav { border-bottom: 1px solid #D9D9D9; }
+  .dc-sm-nav-spacer { display: none; }
+  .dc-sm-nav-logout {
+    flex-basis: 100%;
+    margin-top: 8px;
+    margin-left: 0;
+    padding-top: 8px;
+  }
+  .theme-dark .dc-sm-nav-logout { border-top: 1px solid #262626; }
+  .theme-light .dc-sm-nav-logout { border-top: 1px solid #D9D9D9; }
+  .dc-sm-dialog { max-height: min(88vh, 640px); }
+}
 .theme-light .dc-recent-star { color: #000000; }
+
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): the chat
+   surface carried its own System-mode neutral-grey chrome overrides (page/
+   frame/sidebar/mobile-bar; exact values in git history) — the third of four
+   System-palette sites, flagged by automated review after the index.css and
+   mobile-remap twins were removed. System follows Dark everywhere: chat now
+   falls through to the frozen pure-black ground. Do not reintroduce. */

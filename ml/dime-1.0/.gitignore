@@ -1,15 +1,77 @@
-# Model artifacts never belong in git — they live in the private HF repo.
-out/
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+.venv/
+venv/
+*.egg-info/
+
+# Local model and experiment output. Reviewed, sanitized evidence belongs in
+# evidence/ and is deliberately separate from these generated paths.
+artifacts/
+outputs/
+output/
+runs/
 checkpoints/
 merged/
-awq/
+quantized/
+wandb/
+tensorboard/
+lightning_logs/
+
+# Local caches.
+.cache/
+.huggingface/
+hf-cache/
+transformers-cache/
+datasets-cache/
+
+# Raw, private, hidden, or otherwise non-public data.
+data/raw/
+data/private/
+data/hidden/
+data/locked/
+data/provider/
+*.incomplete
+provisioning-bundle/
+candidate-reviewer-registry.json
+*.challenge.bin
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.der
+*.cer
+*.crt
+
+# Local AWS SAM and CloudFormation deployment output. The reviewed source
+# template is tracked; packaged templates, stack output, and local deployment
+# configuration are not.
+.aws-sam/
+samconfig.toml
+packaged-template.yaml
+cloudformation-change-set*.json
+cloudformation-stack-output*.json
+
+# Model weights, optimizer state, and export formats.
 *.safetensors
-*.gguf
 *.bin
 *.pt
-eval-report*.json
-# Real training data stays out of the repo (samples are committed explicitly).
-data/train.jsonl
-data/val.jsonl
-data/dataset_manifest.json
-data/games*.json
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+
+# Packaging bundles are never source artifacts in this public repository.
+*.zip
+*.tar
+*.tar.gz
+*.tgz

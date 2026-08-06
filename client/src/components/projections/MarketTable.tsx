@@ -1,14 +1,16 @@
 import { scoreMarketSide } from "@/lib/gameInsight";
-import { formatEdge } from "./EdgeIndicator";
 import type { ProjectionMarket } from "./types";
 
 /**
  * MarketTable — one market rendered as a semantic <table> (Law v3 §markets):
- * SIDE, Sportsbook price, Model fair price. Explicit column terminology
- * replaces the ambiguous BOOK / MODEL. Numeric cells are tabular-nums. The
- * model column goes mint ONLY on the side that actually carries the edge — a
- * tinted mint cell with the accessible foreground, never small mint text. One
- * existing result row is preserved. No nested frames: the table is flat.
+ * SIDE, BOOK, MODEL. Compact column terminology is the owner directive
+ * (2026-07-17) across mobile, tablet, and desktop feeds. Numeric cells are
+ * tabular-nums, values left-aligned; the market title centers above the table
+ * (owner directive 2026-07-18). The model column goes mint ONLY on the side
+ * that actually carries the edge; the edge PERCENTAGE lives in the footer
+ * ("Spain ML · +3.1%"), never inline beside the model price. Participant-bound
+ * sides carry their country flag before the label. No nested frames: the
+ * table is flat.
  */
 function fmtPrice(p: number | null | undefined): string {
   if (typeof p !== "number" || !Number.isFinite(p)) return "—";
@@ -17,7 +19,7 @@ function fmtPrice(p: number | null | undefined): string {
 
 export function MarketTable({ market }: { market: ProjectionMarket }) {
   // Which side (if any) is the signal? Highest positive edge among this market's sides.
-  const scored = market.sides.map((s) => scoreMarketSide(s));
+  const scored = market.sides.map(s => scoreMarketSide(s));
   let signalIdx = -1;
   let best = 0;
   scored.forEach((m, i) => {
@@ -29,27 +31,37 @@ export function MarketTable({ market }: { market: ProjectionMarket }) {
 
   return (
     <table className="market-table">
-      <caption className="market-table__caption ds-label">{market.label}</caption>
+      <caption className="market-table__caption ds-label">
+        {market.label}
+      </caption>
       <thead>
         <tr>
           <th scope="col">Side</th>
-          <th scope="col">Sportsbook price</th>
-          <th scope="col">Model fair price</th>
+          <th scope="col">Book</th>
+          <th scope="col">Model</th>
         </tr>
       </thead>
       <tbody>
         {market.sides.map((side, i) => {
           const isSignal = i === signalIdx;
-          const s = scored[i];
           return (
-            <tr key={side.sideLabel} className={isSignal ? "market-table__row--signal" : undefined}>
-              <th scope="row" className="market-table__side">{side.sideLabel}</th>
-              <td className="odds-value">{fmtPrice(side.bookPrice)}</td>
-              <td className={`odds-value${isSignal ? " market-table__model--signal" : ""}`}>
-                {fmtPrice(side.modelPrice)}
-                {isSignal && s && (
-                  <span className="market-table__edge"> {formatEdge(s.edgePP)}</span>
+            <tr
+              key={side.sideLabel}
+              className={isSignal ? "market-table__row--signal" : undefined}
+            >
+              <th scope="row" className="market-table__side">
+                {side.flag && (
+                  <span className="market-table__flag" aria-hidden="true">
+                    {side.flag}
+                  </span>
                 )}
+                {side.sideLabel}
+              </th>
+              <td className="odds-value">{fmtPrice(side.bookPrice)}</td>
+              <td
+                className={`odds-value${isSignal ? " market-table__model--signal" : ""}`}
+              >
+                {fmtPrice(side.modelPrice)}
               </td>
             </tr>
           );
@@ -58,7 +70,12 @@ export function MarketTable({ market }: { market: ProjectionMarket }) {
       {market.resultLabel && (
         <tfoot>
           <tr>
-            <td colSpan={3} className="market-table__result ds-label">{market.resultLabel}</td>
+            <td
+              colSpan={3}
+              className={`market-table__result ds-label${market.resultIsEdge ? " market-table__result--edge" : ""}`}
+            >
+              {market.resultLabel}
+            </td>
           </tr>
         </tfoot>
       )}

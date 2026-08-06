@@ -35,7 +35,8 @@ function mlToProb(ml: number): number {
   return Math.abs(ml) / (Math.abs(ml) + 100);
 }
 function noVigProb(ml1: number, ml2: number): number {
-  const p1 = mlToProb(ml1), p2 = mlToProb(ml2);
+  const p1 = mlToProb(ml1),
+    p2 = mlToProb(ml2);
   return p1 / (p1 + p2);
 }
 function calcEdge(modelP: number, nvP: number): number {
@@ -46,7 +47,10 @@ function calcEV(modelP: number, bookOdds: number): number {
   return modelP * payout - (1 - modelP);
 }
 function brierScore(probs: number[], outcomes: number[]): number {
-  return probs.reduce((acc, p, i) => acc + Math.pow(p - outcomes[i], 2), 0) / probs.length;
+  return (
+    probs.reduce((acc, p, i) => acc + Math.pow(p - outcomes[i], 2), 0) /
+    probs.length
+  );
 }
 function roi(wins: number, losses: number): number {
   const profit = wins * (100 / 110) - losses;
@@ -61,7 +65,11 @@ function evalFgMlSide(
   bookOddsOpp: number | null,
   won: boolean,
   edgeThresh: number
-): { result: "WIN" | "LOSS" | "NO_ACTION"; edge: number | null; ev: number | null } {
+): {
+  result: "WIN" | "LOSS" | "NO_ACTION";
+  edge: number | null;
+  ev: number | null;
+} {
   if (modelPctRaw === null || bookOdds === null || bookOddsOpp === null)
     return { result: "NO_ACTION", edge: null, ev: null };
   const modelP = modelPctRaw / 100;
@@ -101,18 +109,28 @@ function evalFgTotal(
   overOdds: number | null,
   underOdds: number | null,
   probThresh: number
-): { overResult: "WIN" | "LOSS" | "NO_ACTION"; underResult: "WIN" | "LOSS" | "NO_ACTION" } {
-  if (modelOverRateRaw === null || bookTotal === null) return { overResult: "NO_ACTION", underResult: "NO_ACTION" };
+): {
+  overResult: "WIN" | "LOSS" | "NO_ACTION";
+  underResult: "WIN" | "LOSS" | "NO_ACTION";
+} {
+  if (modelOverRateRaw === null || bookTotal === null)
+    return { overResult: "NO_ACTION", underResult: "NO_ACTION" };
   const modelOverP = modelOverRateRaw / 100;
   const modelUnderP = 1 - modelOverP;
   const actual = awayScore + homeScore;
   const wentOver = actual > bookTotal;
-  const overResult = modelOverP >= probThresh && overOdds !== null
-    ? (wentOver ? "WIN" : "LOSS")
-    : "NO_ACTION";
-  const underResult = modelUnderP >= probThresh && underOdds !== null
-    ? (!wentOver ? "WIN" : "LOSS")
-    : "NO_ACTION";
+  const overResult =
+    modelOverP >= probThresh && overOdds !== null
+      ? wentOver
+        ? "WIN"
+        : "LOSS"
+      : "NO_ACTION";
+  const underResult =
+    modelUnderP >= probThresh && underOdds !== null
+      ? !wentOver
+        ? "WIN"
+        : "LOSS"
+      : "NO_ACTION";
   return { overResult, underResult };
 }
 
@@ -162,14 +180,14 @@ describe("Math helpers", () => {
     expect(noVigProb(-200, 170)).toBeCloseTo(0.6429, 3);
   });
   it("calcEdge returns model minus no-vig", () => {
-    expect(calcEdge(0.60, 0.50)).toBeCloseTo(0.10, 3);
-    expect(calcEdge(0.45, 0.50)).toBeCloseTo(-0.05, 3);
+    expect(calcEdge(0.6, 0.5)).toBeCloseTo(0.1, 3);
+    expect(calcEdge(0.45, 0.5)).toBeCloseTo(-0.05, 3);
   });
   it("calcEV computes expected value correctly", () => {
     // modelP=0.55, odds=-110 → payout=100/110=0.909 → EV=0.55*0.909 - 0.45 = 0.5 - 0.45 = 0.05
     expect(calcEV(0.55, -110)).toBeCloseTo(0.05, 2);
     // modelP=0.60, odds=+120 → payout=1.2 → EV=0.60*1.2 - 0.40 = 0.72 - 0.40 = 0.32
-    expect(calcEV(0.60, 120)).toBeCloseTo(0.32, 3);
+    expect(calcEV(0.6, 120)).toBeCloseTo(0.32, 3);
   });
   it("brierScore computes mean squared error", () => {
     // Perfect predictions → BS=0
@@ -206,7 +224,7 @@ describe("FG ML evaluator", () => {
     // model=60%, nv=50% → edge=10% >= 5%
     const r = evalFgMlSide(60, -110, -110, true, 0.05);
     expect(r.result).toBe("WIN");
-    expect(r.edge).toBeCloseTo(0.10, 2);
+    expect(r.edge).toBeCloseTo(0.1, 2);
     expect(r.ev).toBeGreaterThan(0);
   });
   it("returns LOSS when edge meets threshold but team loses", () => {
@@ -275,16 +293,16 @@ describe("NRFI/YRFI evaluator", () => {
     expect(evalNrfi(null, "NRFI", 0.52)).toBe("NO_ACTION");
   });
   it("returns NO_ACTION when actual result is null", () => {
-    expect(evalNrfi(0.60, null, 0.52)).toBe("NO_ACTION");
+    expect(evalNrfi(0.6, null, 0.52)).toBe("NO_ACTION");
   });
   it("returns NO_ACTION when model prob is below threshold", () => {
-    expect(evalNrfi(0.50, "NRFI", 0.58)).toBe("NO_ACTION");
+    expect(evalNrfi(0.5, "NRFI", 0.58)).toBe("NO_ACTION");
   });
   it("returns WIN when model prob >= threshold and NRFI occurs", () => {
-    expect(evalNrfi(0.60, "NRFI", 0.58)).toBe("WIN");
+    expect(evalNrfi(0.6, "NRFI", 0.58)).toBe("WIN");
   });
   it("returns LOSS when model prob >= threshold but YRFI occurs", () => {
-    expect(evalNrfi(0.60, "YRFI", 0.58)).toBe("LOSS");
+    expect(evalNrfi(0.6, "YRFI", 0.58)).toBe("LOSS");
   });
   it("WIN at exactly the threshold boundary", () => {
     expect(evalNrfi(0.58, "NRFI", 0.58)).toBe("WIN");
@@ -294,49 +312,62 @@ describe("NRFI/YRFI evaluator", () => {
 describe("K-Props calibration metrics", () => {
   it("computes bias correctly (mean error)", () => {
     const projected = [8.5, 7.0, 9.0, 6.5];
-    const actual    = [9.0, 7.5, 9.5, 7.0];
+    const actual = [9.0, 7.5, 9.5, 7.0];
     const errors = projected.map((p, i) => p - actual[i]);
     const bias = errors.reduce((a, b) => a + b, 0) / errors.length;
     // errors: -0.5, -0.5, -0.5, -0.5 → bias = -0.5
     expect(bias).toBeCloseTo(-0.5, 3);
-    console.log("[VERIFY] K-Props bias = -0.5 (under-projecting by 0.5 Ks/start) PASS");
+    console.log(
+      "[VERIFY] K-Props bias = -0.5 (under-projecting by 0.5 Ks/start) PASS"
+    );
   });
   it("computes MAE correctly", () => {
     const projected = [8.5, 7.0, 9.0, 6.5];
-    const actual    = [9.0, 7.5, 9.5, 7.0];
-    const mae = projected.reduce((acc, p, i) => acc + Math.abs(p - actual[i]), 0) / projected.length;
+    const actual = [9.0, 7.5, 9.5, 7.0];
+    const mae =
+      projected.reduce((acc, p, i) => acc + Math.abs(p - actual[i]), 0) /
+      projected.length;
     expect(mae).toBeCloseTo(0.5, 3);
   });
   it("computes RMSE correctly", () => {
     const projected = [8.5, 7.0, 9.0, 6.5];
-    const actual    = [9.0, 7.5, 9.5, 7.0];
-    const mse = projected.reduce((acc, p, i) => acc + Math.pow(p - actual[i], 2), 0) / projected.length;
+    const actual = [9.0, 7.5, 9.5, 7.0];
+    const mse =
+      projected.reduce((acc, p, i) => acc + Math.pow(p - actual[i], 2), 0) /
+      projected.length;
     const rmse = Math.sqrt(mse);
     expect(rmse).toBeCloseTo(0.5, 3);
   });
   it("detects positive bias (over-projecting Ks)", () => {
     const projected = [9.5, 8.0, 10.0, 7.5];
-    const actual    = [8.5, 7.0, 9.0, 6.5];
-    const bias = projected.reduce((acc, p, i) => acc + (p - actual[i]), 0) / projected.length;
+    const actual = [8.5, 7.0, 9.0, 6.5];
+    const bias =
+      projected.reduce((acc, p, i) => acc + (p - actual[i]), 0) /
+      projected.length;
     expect(bias).toBeGreaterThan(0);
-    console.log(`[VERIFY] Positive K-Props bias detected: ${bias.toFixed(3)} PASS`);
+    console.log(
+      `[VERIFY] Positive K-Props bias detected: ${bias.toFixed(3)} PASS`
+    );
   });
 });
 
 describe("HR Props calibration metrics", () => {
   it("detects over-prediction bias in HR rate", () => {
     const modelRates = [0.14, 0.13, 0.15, 0.12, 0.14];
-    const actualRates = [0.10, 0.09, 0.11, 0.08, 0.10];
-    const avgModel  = modelRates.reduce((a, b) => a + b, 0) / modelRates.length;
-    const avgActual = actualRates.reduce((a, b) => a + b, 0) / actualRates.length;
+    const actualRates = [0.1, 0.09, 0.11, 0.08, 0.1];
+    const avgModel = modelRates.reduce((a, b) => a + b, 0) / modelRates.length;
+    const avgActual =
+      actualRates.reduce((a, b) => a + b, 0) / actualRates.length;
     const bias = avgModel - avgActual;
     expect(bias).toBeGreaterThan(0);
     expect(bias).toBeCloseTo(0.04, 2);
-    console.log(`[VERIFY] HR Props over-prediction bias: +${(bias * 100).toFixed(2)}pp PASS`);
+    console.log(
+      `[VERIFY] HR Props over-prediction bias: +${(bias * 100).toFixed(2)}pp PASS`
+    );
   });
   it("computes Brier score for binary HR outcomes", () => {
     // 5 players, model P(HR)=0.14 for each, 1 actually hits HR
-    const probs    = [0.14, 0.14, 0.14, 0.14, 0.14];
+    const probs = [0.14, 0.14, 0.14, 0.14, 0.14];
     const outcomes = [1, 0, 0, 0, 0];
     const bs = brierScore(probs, outcomes);
     // (0.86^2 + 4*0.14^2) / 5 = (0.7396 + 4*0.0196) / 5 = (0.7396+0.0784)/5 = 0.818/5 = 0.1636
@@ -344,62 +375,78 @@ describe("HR Props calibration metrics", () => {
   });
   it("HR calibration factor 0.720 reduces over-prediction", () => {
     const rawModelP = 0.1366; // avg model P(HR) before calibration
-    const calibFactor = 0.720;
+    const calibFactor = 0.72;
     const calibratedP = rawModelP * calibFactor;
     const actualRate = 0.1009;
     const oldBias = rawModelP - actualRate;
     const newBias = calibratedP - actualRate;
     expect(Math.abs(newBias)).toBeLessThan(Math.abs(oldBias));
-    console.log(`[VERIFY] HR calibration: old bias=${(oldBias*100).toFixed(2)}pp → new bias=${(newBias*100).toFixed(2)}pp PASS`);
+    console.log(
+      `[VERIFY] HR calibration: old bias=${(oldBias * 100).toFixed(2)}pp → new bias=${(newBias * 100).toFixed(2)}pp PASS`
+    );
   });
 });
 
 describe("Threshold sensitivity", () => {
   it("higher edge threshold reduces sample size and improves accuracy", () => {
     const bets = [
-      { edge: 0.03, won: true  },
+      { edge: 0.03, won: true },
       { edge: 0.04, won: false },
-      { edge: 0.06, won: true  },
-      { edge: 0.07, won: true  },
-      { edge: 0.08, won: true  },
+      { edge: 0.06, won: true },
+      { edge: 0.07, won: true },
+      { edge: 0.08, won: true },
       { edge: 0.09, won: false },
     ];
-    const lowThresh  = bets.filter(b => b.edge >= 0.03);
+    const lowThresh = bets.filter(b => b.edge >= 0.03);
     const highThresh = bets.filter(b => b.edge >= 0.06);
-    const accLow  = lowThresh.filter(b => b.won).length / lowThresh.length;
+    const accLow = lowThresh.filter(b => b.won).length / lowThresh.length;
     const accHigh = highThresh.filter(b => b.won).length / highThresh.length;
     expect(highThresh.length).toBeLessThan(lowThresh.length);
     expect(accHigh).toBeGreaterThanOrEqual(accLow);
-    console.log(`[VERIFY] Low thresh acc=${(accLow*100).toFixed(1)}% n=${lowThresh.length} | High thresh acc=${(accHigh*100).toFixed(1)}% n=${highThresh.length} PASS`);
+    console.log(
+      `[VERIFY] Low thresh acc=${(accLow * 100).toFixed(1)}% n=${lowThresh.length} | High thresh acc=${(accHigh * 100).toFixed(1)}% n=${highThresh.length} PASS`
+    );
   });
   it("NRFI at 0.58 threshold achieves 72.7% accuracy in 2026 data", () => {
     // Validated from live backtest: 8W 3L at prob>=0.58
-    const w = 8, l = 3;
+    const w = 8,
+      l = 3;
     const acc = w / (w + l);
     expect(acc).toBeCloseTo(0.727, 2);
-    expect(acc).toBeGreaterThanOrEqual(0.70);
-    console.log(`[VERIFY] NRFI@0.58 acc=${(acc*100).toFixed(1)}% PASS — ≥70% target met`);
+    expect(acc).toBeGreaterThanOrEqual(0.7);
+    console.log(
+      `[VERIFY] NRFI@0.58 acc=${(acc * 100).toFixed(1)}% PASS — ≥70% target met`
+    );
   });
   it("YRFI at 0.62 threshold achieves 78.9% accuracy in 2026 data", () => {
-    const w = 15, l = 4;
+    const w = 15,
+      l = 4;
     const acc = w / (w + l);
     expect(acc).toBeCloseTo(0.789, 2);
-    expect(acc).toBeGreaterThanOrEqual(0.70);
-    console.log(`[VERIFY] YRFI@0.62 acc=${(acc*100).toFixed(1)}% PASS — ≥70% target met`);
+    expect(acc).toBeGreaterThanOrEqual(0.7);
+    console.log(
+      `[VERIFY] YRFI@0.62 acc=${(acc * 100).toFixed(1)}% PASS — ≥70% target met`
+    );
   });
   it("FG Under at 0.72 threshold achieves 77.8% accuracy in 2026 data", () => {
-    const w = 7, l = 2;
+    const w = 7,
+      l = 2;
     const acc = w / (w + l);
     expect(acc).toBeCloseTo(0.778, 2);
-    expect(acc).toBeGreaterThanOrEqual(0.70);
-    console.log(`[VERIFY] FG Under@0.72 acc=${(acc*100).toFixed(1)}% PASS — ≥70% target met`);
+    expect(acc).toBeGreaterThanOrEqual(0.7);
+    console.log(
+      `[VERIFY] FG Under@0.72 acc=${(acc * 100).toFixed(1)}% PASS — ≥70% target met`
+    );
   });
   it("F5 Under at 0.75 threshold achieves 75.0% accuracy in 2026 data", () => {
-    const w = 6, l = 2;
+    const w = 6,
+      l = 2;
     const acc = w / (w + l);
-    expect(acc).toBeCloseTo(0.750, 2);
-    expect(acc).toBeGreaterThanOrEqual(0.70);
-    console.log(`[VERIFY] F5 Under@0.75 acc=${(acc*100).toFixed(1)}% PASS — ≥70% target met`);
+    expect(acc).toBeCloseTo(0.75, 2);
+    expect(acc).toBeGreaterThanOrEqual(0.7);
+    console.log(
+      `[VERIFY] F5 Under@0.75 acc=${(acc * 100).toFixed(1)}% PASS — ≥70% target met`
+    );
   });
 });
 

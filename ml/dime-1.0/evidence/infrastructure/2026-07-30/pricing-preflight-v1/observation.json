@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "dime-pricing-preflight-evidence-v1",
+  "evidenceId": "railway-production-pricing-preflight-2026-07-29",
+  "classification": "sanitized_production_configuration_evidence",
+  "observedAt": "2026-07-30T04:29:11Z",
+  "verdict": "REVISE",
+  "registry": {
+    "repositoryPath": "ml/dime-1.0/configs/dime_observability_pricing_v1.json",
+    "requiredProductionPath": "/app/ml/dime-1.0/configs/dime_observability_pricing_v1.json",
+    "repositorySha256": "54d0cd7e20bf60079149441126392c4e0520628f136dd88bcb9a07baf03028c2",
+    "schemaVersion": "dime-observability-pricing-registry-v1",
+    "registryRevision": "dime-pricing-review-required-2026-07-29",
+    "status": "review_required",
+    "entryCount": 0,
+    "allowedStatusProgression": [
+      "review_required",
+      "independently_reviewed",
+      "approved"
+    ]
+  },
+  "productionConfiguration": {
+    "DIME_PRICING_REGISTRY_PATH": null,
+    "DIME_CHAT_MODEL": null,
+    "DIME_MODEL_VERSION": "meta-llama/Llama-3.1-8B-Instruct",
+    "DIME_MODEL_BASE_URL_CONFIGURED": false,
+    "RUNPOD_ENDPOINT_ID_CONFIGURED": true,
+    "DIME_MODEL_API_SECRET_CONFIGURED": false,
+    "RUNPOD_API_KEY_CONFIGURED": true,
+    "secretsCaptured": false
+  },
+  "runtimeIdentity": {
+    "provider": "frozen",
+    "model": "no-provider",
+    "modelRevision": "no-provider",
+    "deploymentTier": "disabled",
+    "currency": "USD",
+    "zeroCostRuntime": true,
+    "state": "limited",
+    "observationMethod": "named Railway production variables evaluated through the secret-safe runtime-readiness contract",
+    "dormantRunpodConfiguration": {
+      "configured": true,
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "activeForDimeChat": false,
+      "eligibleForPricingEntry": false
+    },
+    "reviewablePricedRuntimeIdentityAvailable": false
+  },
+  "deployedRegistryChecksum": {
+    "expectedFromDeployedSourceCommit": "54d0cd7e20bf60079149441126392c4e0520628f136dd88bcb9a07baf03028c2",
+    "directlyObserved": null,
+    "verificationStatus": "BLOCKED",
+    "reason": "registry_path_absent_and_current_deployment_predates_runtime_attestation",
+    "productionMutationAttempted": false
+  },
+  "localAttestationImplementation": {
+    "sourceCommit": "c31fd9cc6427ec3b6739545091cb35650360f327",
+    "startupLog": "implemented",
+    "ownerOnlyInspection": "dimeRuntime.observability",
+    "registryChecksumPinning": "implemented",
+    "activeRuntimeTuple": "implemented",
+    "deployed": false,
+    "authorizesDeployment": false
+  },
+  "unknownPricingContract": {
+    "verdict": "PASS",
+    "unknownPricingStatus": "cost_unavailable",
+    "unknownPricingDollarValue": null,
+    "zeroDollarFallbackPermitted": false,
+    "implementation": [
+      "server/_core/dimePricingGovernance.ts",
+      "server/_core/dimePricingAttestation.ts",
+      "server/_core/dimeTraceObservability.ts"
+    ],
+    "tests": [
+      "server/_core/dimePricingGovernance.test.ts",
+      "server/_core/dimePricingAttestation.test.ts",
+      "server/_core/dimeTraceObservability.test.ts"
+    ]
+  },
+  "blockers": [
+    "DIME_PRICING_REGISTRY_PATH is absent in production.",
+    "The checksum-pinned registry status is review_required.",
+    "The checksum-pinned registry contains no reviewed provider and model pricing entries.",
+    "The active Dime Chat runtime is frozen and makes no model-provider call, so there is no truthful priced production tuple for an initial entry.",
+    "The configured RunPod model belongs to a dormant lane and cannot be treated as the active Dime Chat pricing identity.",
+    "The startup and owner-only checksum attestation exists only in the unmerged draft PR and is not deployed."
+  ],
+  "requiredNextEvidence": [
+    "A separately authorized active provider decision that yields an exact nonsecret provider, model, model revision, and deployment tier; no current decision exists.",
+    "One independently reviewed registry entry for that exact active tuple, with official price provenance, effective interval, explicit cached-token treatment, and tamper-evident checksums.",
+    "An authorized production configuration change setting DIME_PRICING_REGISTRY_PATH to the checksum-pinned packaged path.",
+    "Startup and owner-only observations from the same deployed process showing the exact reviewed registry checksum and exact runtime match.",
+    "A repeat of the unknown and ambiguous pricing tests showing cost_unavailable with null dollar values."
+  ],
+  "authorizations": {
+    "environmentVariableChange": false,
+    "pricingApproval": false,
+    "traceActivation": false,
+    "shadowObservation": false,
+    "routeActivation": false,
+    "modelTraining": false,
+    "researchAlphaActivation": false
+  },
+  "productionMutationsPerformed": []
+}

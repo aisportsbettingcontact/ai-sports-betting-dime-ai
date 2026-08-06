@@ -8,21 +8,21 @@
  *
  * Tailwind lg breakpoint = 1024px.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 const BREAKPOINT = 1024;
 
 // Module-level singleton state — shared across all hook instances
 let listeners: ((v: boolean) => void)[] = [];
 let currentValue =
-  typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINT : false;
+  typeof window !== "undefined" ? window.innerWidth >= BREAKPOINT : false;
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   const mql = window.matchMedia(`(min-width: ${BREAKPOINT}px)`);
-  mql.addEventListener('change', (e) => {
+  mql.addEventListener("change", e => {
     currentValue = e.matches;
     // Notify all mounted hook instances simultaneously
-    listeners.forEach((fn) => fn(currentValue));
+    listeners.forEach(fn => fn(currentValue));
   });
 }
 
@@ -34,7 +34,7 @@ export function useIsDesktop(): boolean {
     setIsDesktop(currentValue);
     listeners.push(setIsDesktop);
     return () => {
-      listeners = listeners.filter((fn) => fn !== setIsDesktop);
+      listeners = listeners.filter(fn => fn !== setIsDesktop);
     };
   }, []);
 

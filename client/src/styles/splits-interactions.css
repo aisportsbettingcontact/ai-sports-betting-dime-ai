@@ -1,0 +1,311 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Splits-surface interaction layer — LAZY, chunk-local.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Imported by GameCard.tsx and BettingSplits.tsx so it ships with the splits/
+ * feed route chunks. It must NOT be imported from anything on the chat
+ * critical path (main.tsx, DimeAppShell) — the chat-critical-path bundle
+ * budget (scripts/check-bundle-budget.mjs) has near-zero headroom, and these
+ * rules only style surfaces the chat path never renders.
+ * Token vocabulary comes from dime-mobile.css (--dime-*), which is global.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Split bars: one-accent discipline — away side mint, home side raised
+ * grey. Side identity comes from the labels, not team paint. */
+.bsp-bar {
+  border-color: var(--dime-border-strong) !important;
+}
+/* Mobile compact bars square off slightly; desktop bars keep their pill. */
+.bsp-bar:not(.bsp-bar--pill) {
+  border-radius: 6px !important;
+}
+.bsp-seg--away {
+  background: var(--dime-mint) !important;
+}
+/* Home side reads as the black track — the pill border + divider carry the
+ * edge; the label is full-weight primary text, never white-on-grey. */
+.bsp-seg--home {
+  background: transparent !important;
+}
+.bsp-div {
+  background: var(--dime-border-strong) !important;
+}
+/* 2026-08-05 (desktop refinement): the inline desktopSegMinPx guarantee
+ * (46/54px) went stale — the vw-scaled label font reaches its 17px cap at
+ * >=1417px viewports, where an "NN%" label (~43px) plus segment padding
+ * exceeds 46px, so small segments clipped the label's leading digit against
+ * their own overflow:hidden ("13%" could scan as "3%" — a wrong number on a
+ * betting surface). max-content tracks the real label width at every
+ * viewport; the printed number stays the truth while the bar remains
+ * indicative (the same readability-over-precision rule the shipped minWidth
+ * guarantee already encodes). */
+.bsp-seg {
+  min-width: max-content !important;
+}
+.bsp-seg span {
+  text-shadow: none !important;
+  font-weight: 700 !important;
+  /* 2026-08-05: cap the bar-label ceiling at 15px (was 17px via 1.2vw) — at
+   * the old ceiling a two-digit label + segment padding outgrew the 46px
+   * minimum (the fusion fixed above), and bar labels out-shouted the 14px
+   * history-table data they sit beside. */
+  font-size: clamp(12px, 1.05vw, 15px) !important;
+}
+
+/* 2026-08-05: the dark-tuned crest recipe (screen-blend + brightness lift)
+ * resolves to white-on-white on the light theme — team crests and search
+ * badges vanished entirely. Neutralize blend + filter on light; logo art
+ * renders as-authored (licensed-logo exception; same principle as the
+ * projections page's light treatment). Attribute match follows the existing
+ * img[style*="invert(1)"] precedent below. */
+html:not(.dark) .bs-page img[style*="mix-blend-mode: screen"],
+html:not(.dark) .bs-page img[style*="mix-blend-mode:screen"] {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+}
+
+/* 2026-08-05: the favorite star was the one interactive control on the
+ * surface without a visible keyboard focus treatment (pills/toggles/results
+ * already have rings below). */
+.bs-page .gc-star:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
+  border-radius: 8px;
+}
+.bsp-seg--away span {
+  color: var(--dime-ink-on-mint) !important;
+}
+.bsp-seg--home span {
+  color: var(--dime-text-primary) !important;
+}
+.bsp-hdr span {
+  color: var(--dime-text-secondary) !important;
+}
+.bsp-hdr span:nth-child(2) {
+  font-family: var(--dime-font-mono);
+  color: var(--dime-text-secondary) !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Market toggle: mono micro-labels on the standard pill states. */
+.bsp-toggle {
+  font-family: var(--dime-font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--dime-border) !important;
+  background: transparent !important;
+  color: var(--dime-text-secondary) !important;
+}
+.bsp-toggle[data-active="true"] {
+  background: var(--dime-surface-raised) !important;
+  border-color: var(--dime-border-strong) !important;
+  color: var(--dime-text-primary) !important;
+}
+.bsp-toggle:disabled {
+  color: var(--dime-text-muted) !important;
+}
+
+/* Odds & Splits History toggle row: brand curve hover, visible focus. */
+.ohp-toggle {
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--dime-t) var(--dime-ease);
+}
+.ohp-toggle:hover {
+  background: var(--dime-row-hover);
+}
+.ohp-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--dime-ring);
+}
+.bs-pill:focus-visible,
+.bsp-toggle:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
+}
+
+/* One motion curve everywhere (MASTER.md: 160ms, single curve). */
+.bs-page .bs-pill,
+.bs-page .bs-search,
+.bs-page .cal-trigger,
+.bs-page .cal-day,
+.bs-page .gc-star,
+.bsp-seg,
+.bsp-toggle {
+  transition-duration: var(--dime-t) !important;
+  transition-timing-function: var(--dime-ease) !important;
+}
+
+/* Disclosure chevron: one glyph rotating in place — expand and collapse
+ * travel the same path (spatial consistency), on the one brand curve. */
+.ohp-chevron {
+  transition: transform var(--dime-t) var(--dime-ease);
+}
+.ohp-chevron[data-open="true"] {
+  transform: rotate(180deg);
+}
+/* Disclosure body: content arrives from the toggle that revealed it —
+ * a 4px settle + fade on the brand curve, never a hard pop. */
+.ohp-body {
+  animation: ohp-reveal var(--dime-t) var(--dime-ease);
+}
+@keyframes ohp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search dropdown rows: standard row states + quiet hairline separation
+ * (replaces the old hard-white borders). */
+.bs-result {
+  border-bottom: 1px solid var(--dime-border);
+  transition:
+    background var(--dime-t) var(--dime-ease),
+    transform var(--dime-t) var(--dime-ease);
+  cursor: pointer;
+}
+.bs-result:last-child {
+  border-bottom: none;
+}
+.bs-result:hover {
+  background: var(--dime-row-hover);
+}
+.bs-result:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--dime-ring);
+}
+
+/* Market toggle needs its own transition property (colors live in the
+ * dime-mobile.css brand layer) so the shared duration/curve rules there
+ * have something to run. */
+.bsp-toggle {
+  transition:
+    background var(--dime-t) var(--dime-ease),
+    color var(--dime-t) var(--dime-ease),
+    border-color var(--dime-t) var(--dime-ease),
+    transform var(--dime-t) var(--dime-ease);
+}
+
+/* Press response on pointer-down (never only on release): a 0.97 settle on
+ * every tappable control of the splits surface. Reduced motion zeroes it via
+ * the transition kill below. */
+.bs-pill:active,
+.bsp-toggle:not(:disabled):active,
+.ohp-toggle:active,
+.bs-result:active,
+.bs-page .cal-trigger:active,
+.bs-page .gc-star:active {
+  transform: scale(0.97);
+}
+
+/* Tailwind family remap for the splits surface's satellite panels (user
+ * menu, Last-5-Games, Trends): same one-accent discipline as the tracker. */
+.bs-page [class*="text-emerald-"],
+.bs-page [class*="text-green-"] {
+  color: var(--dime-mint-text) !important;
+}
+.bs-page [class*="text-red-"] {
+  color: var(--dime-text-secondary) !important;
+}
+.bs-page [class*="text-yellow-"],
+.bs-page [class*="text-amber-"],
+.bs-page [class*="text-blue-"] {
+  color: var(--dime-text-body) !important;
+}
+.bs-page [class*="bg-emerald-"] {
+  background-color: var(--dime-mint-dim) !important;
+  color: var(--dime-mint-text) !important;
+}
+.bs-page [class*="bg-red-"],
+.bs-page [class*="bg-yellow-"] {
+  background-color: var(--dime-surface-raised) !important;
+  color: var(--dime-text-secondary) !important;
+}
+.bs-page [class*="bg-zinc-7"],
+.bs-page [class*="bg-zinc-8"] {
+  background-color: var(--dime-surface-raised) !important;
+}
+.bs-page .font-mono {
+  font-family: var(--dime-font-mono) !important;
+}
+.bs-page [class*="duration-"] {
+  transition-duration: var(--dime-t) !important;
+  transition-timing-function: var(--dime-ease) !important;
+}
+
+/* Light theme: white-on-dark CDN art needs inversion on light surfaces. */
+html:not(.dark) .bs-page img[style*="invert(1)"] {
+  filter: invert(0.35) !important;
+}
+html:not(.dark) .bs-pill img,
+html:not(.dark) .cal-trigger img {
+  filter: invert(1) !important;
+}
+
+/* MASTER.md motion law: reveals fall back to a static cut under reduced
+ * motion — no travel, no rotation, no press settle. */
+@media (prefers-reduced-motion: reduce) {
+  .ohp-body {
+    animation: none !important;
+  }
+  .ohp-chevron,
+  .bs-result,
+  .bsp-toggle {
+    transition: none !important;
+  }
+}
+
+/* ── 2026-08-05 (mobile refinement): phone tier ──────────────────────────
+ * Measured under true mobile emulation (iPhone UA + touch + DPR2). */
+@media (max-width: 767.98px) {
+  /* Market toggles: tighter tracking so all three complete labels fit the
+   * equal-thirds row (the 0.08em tracking clipped "MONEYLINE" to "MONEYLIN"
+   * at 375-390 before the mobile chip label moved to "ML"). */
+  .bsp-toggle {
+    letter-spacing: 0.03em !important;
+  }
+  /* History disclosure row: 44px touch floor. */
+  .ohp-toggle {
+    min-height: 44px;
+  }
+  /* History tables: the desktop clamp padding spends width the phone does
+   * not have — 4px cells keep seven columns legible without sideways loss,
+   * and the TIME column may wrap to two lines instead of forcing the whole
+   * table wider (its nowrap is inline, hence the important). */
+  .ohp-body table th,
+  .ohp-body table td {
+    padding: 4px !important;
+  }
+  .ohp-body table th:first-child,
+  .ohp-body table td:first-child {
+    white-space: normal !important;
+    max-width: 3.6rem;
+  }
+  /* Scroll panes that remain after the pane-width repair (history tables
+   * wider than seven 4px columns): a thin scrollbar is the affordance —
+   * gradient fades are banned by brand law. */
+  .ohp-body [role="group"],
+  .bs-page .gc-splitgrid [role="group"] {
+    scrollbar-width: thin;
+  }
+  /* Favorite star: visual size stays, the hit area grows to the 44px floor. */
+  .bs-page .gc-star {
+    position: relative;
+  }
+  .bs-page .gc-star::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+  /* Date header: the "·" separator orphans onto its own line when the date
+   * and sport labels wrap at narrow widths — the gap already separates them. */
+  .bs-page .bs-datehdr + span {
+    display: none;
+  }
+}

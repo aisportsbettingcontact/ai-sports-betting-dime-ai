@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ChevronLeft } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  ClipboardPaste,
+} from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -62,7 +68,7 @@ export default function IngestAnOdds() {
   const [sport, setSport] = useState<"NBA" | "NHL">("NBA");
 
   const ingestMutation = trpc.games.ingestAnHtml.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       if (data.errors.length > 0) {
         toast.warning(
           `Ingested ${data.updated} games — ${data.skipped} skipped. See details below.`
@@ -71,7 +77,7 @@ export default function IngestAnOdds() {
         toast.success(`Successfully ingested odds for ${data.updated} games!`);
       }
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(`Ingestion failed: ${err.message}`);
     },
   });
@@ -79,7 +85,9 @@ export default function IngestAnOdds() {
   // Auth guard — MUST be useEffect, never render body (render-phase navigate crashes React 19)
   useEffect(() => {
     if (!authLoading && (!appUser || !isOwner)) {
-      console.warn(`[IngestAnOdds] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting`);
+      console.warn(
+        `[IngestAnOdds] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting`
+      );
       navigate(appUser ? "/feed/model/mlb" : "/");
     }
   }, [authLoading, appUser, isOwner, navigate]);
@@ -100,22 +108,15 @@ export default function IngestAnOdds() {
   const isLoading = ingestMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/admin/publish")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold tracking-tight">Ingest AN Odds</h1>
-            <p className="text-xs text-muted-foreground">
+    <AdminShell active="ingest">
+      <div className="admin-container py-6 space-y-6">
+        {/* Page header */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Ingest AN Odds
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Action Network — All Markets (Open + DK NJ)
             </p>
           </div>
@@ -123,9 +124,7 @@ export default function IngestAnOdds() {
             Owner Only
           </Badge>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Instructions */}
         <Card className="border-border bg-card">
           <CardHeader className="pb-3">
@@ -148,15 +147,21 @@ export default function IngestAnOdds() {
                 </a>
               </li>
               <li>
-                Select <strong>All Markets</strong> from the market type dropdown
+                Select <strong>All Markets</strong> from the market type
+                dropdown
               </li>
               <li>
-                Right-click the odds table → <strong>Inspect</strong> → select the{" "}
-                <code className="bg-muted px-1 rounded text-xs">&lt;tbody&gt;</code> element →{" "}
-                <strong>Copy → Copy outerHTML</strong>
+                Right-click the odds table → <strong>Inspect</strong> → select
+                the{" "}
+                <code className="bg-muted px-1 rounded text-xs">
+                  &lt;tbody&gt;
+                </code>{" "}
+                element → <strong>Copy → Copy outerHTML</strong>
               </li>
               <li>Paste the HTML into the textarea below</li>
-              <li>Confirm the date and sport, then click <strong>Ingest</strong></li>
+              <li>
+                Confirm the date and sport, then click <strong>Ingest</strong>
+              </li>
             </ol>
           </CardContent>
         </Card>
@@ -171,7 +176,7 @@ export default function IngestAnOdds() {
               id="gameDate"
               type="date"
               value={gameDate}
-              onChange={(e) => setGameDate(e.target.value)}
+              onChange={e => setGameDate(e.target.value)}
               className="font-mono text-sm"
             />
           </div>
@@ -179,7 +184,7 @@ export default function IngestAnOdds() {
             <Label className="text-sm font-medium">Sport</Label>
             <Select
               value={sport}
-              onValueChange={(v) => setSport(v as "NBA" | "NHL")}
+              onValueChange={v => setSport(v as "NBA" | "NHL")}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -201,7 +206,7 @@ export default function IngestAnOdds() {
             id="html-paste"
             placeholder="Paste the Action Network All Markets <tbody> HTML here..."
             value={html}
-            onChange={(e) => setHtml(e.target.value)}
+            onChange={e => setHtml(e.target.value)}
             className="font-mono text-xs min-h-[200px] resize-y bg-muted border-border"
           />
           {html && (
@@ -236,16 +241,16 @@ export default function IngestAnOdds() {
           <Card
             className={`border-2 ${
               result.errors.length === 0
-                ? "border-[#45E0A8] bg-[#45E0A8]"
-                : "border-white bg-white"
+                ? "border-primary bg-primary"
+                : "border-border bg-card"
             }`}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 {result.errors.length === 0 ? (
-                  <CheckCircle2 className="h-4 w-4 text-[#45E0A8]" />
+                  <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-white" />
+                  <AlertCircle className="h-4 w-4 text-foreground" />
                 )}
                 Ingestion Result
               </CardTitle>
@@ -254,7 +259,7 @@ export default function IngestAnOdds() {
               <div className="flex gap-4 text-sm">
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Updated:</span>
-                  <Badge className="bg-[#45E0A8] text-[#45E0A8] border-[#45E0A8]">
+                  <Badge className="bg-primary text-primary-foreground border-primary">
                     {result.updated}
                   </Badge>
                 </div>
@@ -263,7 +268,7 @@ export default function IngestAnOdds() {
                   <Badge
                     className={
                       result.skipped > 0
-                        ? "bg-white text-white border-white"
+                        ? "bg-card text-foreground border-border"
                         : "bg-muted text-muted-foreground"
                     }
                   >
@@ -274,12 +279,12 @@ export default function IngestAnOdds() {
 
               {result.errors.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-white">
+                  <p className="text-xs font-semibold text-foreground">
                     Errors ({result.errors.length}):
                   </p>
                   <div className="bg-muted rounded p-2 space-y-0.5 max-h-48 overflow-y-auto">
                     {result.errors.map((e, i) => (
-                      <p key={i} className="text-xs font-mono text-white">
+                      <p key={i} className="text-xs font-mono text-foreground">
                         {e}
                       </p>
                     ))}
@@ -294,7 +299,10 @@ export default function IngestAnOdds() {
                   </p>
                   <div className="bg-muted rounded p-2 space-y-0.5 max-h-32 overflow-y-auto">
                     {result.warnings.map((w, i) => (
-                      <p key={i} className="text-xs font-mono text-muted-foreground">
+                      <p
+                        key={i}
+                        className="text-xs font-mono text-muted-foreground"
+                      >
                         {w}
                       </p>
                     ))}
@@ -305,6 +313,6 @@ export default function IngestAnOdds() {
           </Card>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }

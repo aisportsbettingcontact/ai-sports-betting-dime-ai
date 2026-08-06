@@ -5,9 +5,9 @@
  *
  * WHY THIS EXISTS (systematic-debugging finding):
  *   The legacy /api/scheduled/* endpoints authenticate via sdk.authenticateRequest()
- *   → verifySession() against the Manus OAuth server, and only accept a session whose
- *   openId is prefixed "cron_" (issued exclusively by the Manus Heartbeat platform).
- *   GitHub Actions has NO Manus cron cookie, so it can never satisfy that guard.
+ *   → verifySession() against the legacy OAuth server, and only accept a session whose
+ *   openId is prefixed "cron_" (issued exclusively by the legacy heartbeat platform).
+ *   GitHub Actions has NO legacy cron cookie, so it can never satisfy that guard.
  *   Moving background jobs to "GitHub Actions on a timer" therefore REQUIRES a
  *   host-independent shared-secret guard. That is what verifyCronSecret provides.
  *
@@ -58,7 +58,9 @@ describe("verifyCronSecret — fail closed", () => {
 });
 
 describe("verifyCronSecret — rejects bad credentials with 401", () => {
-  beforeEach(() => { process.env.CRON_SECRET = SECRET; });
+  beforeEach(() => {
+    process.env.CRON_SECRET = SECRET;
+  });
 
   it("rejects when no auth header is present", () => {
     const r = verifyCronSecret(headers({}));
@@ -87,7 +89,9 @@ describe("verifyCronSecret — rejects bad credentials with 401", () => {
 });
 
 describe("verifyCronSecret — accepts a valid secret", () => {
-  beforeEach(() => { process.env.CRON_SECRET = SECRET; });
+  beforeEach(() => {
+    process.env.CRON_SECRET = SECRET;
+  });
 
   it("accepts Authorization: Bearer <secret>", () => {
     const r = verifyCronSecret(headers({ authorization: `Bearer ${SECRET}` }));
@@ -100,7 +104,39 @@ describe("verifyCronSecret — accepts a valid secret", () => {
   });
 
   it("tolerates extra whitespace in the Bearer value", () => {
-    const r = verifyCronSecret(headers({ authorization: `Bearer   ${SECRET}` }));
+    const r = verifyCronSecret(
+      headers({ authorization: `Bearer   ${SECRET}` })
+    );
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("Bearer parsing is linear (ReDoS regression)", () => {
+  it("still extracts the token from a well-formed header", () => {
+    process.env.CRON_SECRET = SECRET;
+    const r = verifyCronSecret({
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("accepts tabs and multiple spaces after the scheme", () => {
+    process.env.CRON_SECRET = SECRET;
+    const r = verifyCronSecret({
+      headers: { authorization: `Bearer \t  ${SECRET}` },
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("does not blow up on a long whitespace run — the old regex backtracked quadratically here", () => {
+    process.env.CRON_SECRET = SECRET;
+    const started = Date.now();
+    const r = verifyCronSecret({
+      headers: { authorization: `Bearer ${" ".repeat(50_000)}` },
+    });
+    const elapsed = Date.now() - started;
+    expect(r.ok).toBe(false);
+    // The vulnerable /^Bearer\s+(.+)$/ took seconds on this input.
+    expect(elapsed).toBeLessThan(250);
   });
 });

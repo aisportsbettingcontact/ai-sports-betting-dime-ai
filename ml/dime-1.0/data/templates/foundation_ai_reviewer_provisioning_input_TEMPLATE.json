@@ -1,0 +1,59 @@
+{
+  "schema_version": "dime-foundation-ai-reviewer-provisioning-input-v1",
+  "source_registry_sha256": "REPLACE_WITH_SHA256_OF_CONFIGS_FOUNDATION_REVIEWER_REGISTRY_JSON",
+  "target_registry_version": "dime-foundation-reviewers-v0.0.0",
+  "reviewers": [
+    {
+      "reviewer_id": "REPLACE_WITH_EXISTING_REVIEWER_ID",
+      "profile_id": "REPLACE_WITH_EXISTING_AGENT_PROFILE_ID",
+      "model_provider": "REPLACE_WITH_PINNED_PROVIDER",
+      "model_id": "REPLACE_WITH_PINNED_MODEL_ID",
+      "model_revision": "REPLACE_WITH_FULL_40_OR_64_HEX_MODEL_REVISION",
+      "runtime_version": "REPLACE_WITH_FULL_40_OR_64_HEX_RUNTIME_DIGEST",
+      "model_lineage_id": "REPLACE_WITH_OWNER_APPROVED_MODEL_LINEAGE_ID",
+      "policy_lineage_id": "REPLACE_WITH_OWNER_APPROVED_POLICY_LINEAGE_ID",
+      "workload_identity_id": "REPLACE_WITH_OPAQUE_WORKLOAD_IDENTITY_ID",
+      "system_instruction_path": "reviewer-one/system-instruction.md",
+      "tool_contract_path": "reviewer-one/tool-contract.json",
+      "inference_policy_path": "reviewer-one/inference-policy.json",
+      "conflict_policy_path": "reviewer-one/conflict-policy.json",
+      "recusal_policy_path": "reviewer-one/recusal-policy.json",
+      "receipt_verification_key": {
+        "algorithm": "ed25519",
+        "encoding": "raw-base64",
+        "public_key_base64": "REPLACE_WITH_RAW_32_BYTE_PUBLIC_KEY_IN_CANONICAL_BASE64",
+        "public_key_sha256": "REPLACE_WITH_SHA256_OF_RAW_PUBLIC_KEY",
+        "status": "active",
+        "valid_from_utc": "REPLACE_WITH_WHOLE_SECOND_UTC_TIMESTAMP",
+        "valid_until_or_open_ended": null
+      },
+      "possession_proof_signature_base64": null
+    },
+    {
+      "reviewer_id": "REPLACE_WITH_SECOND_EXISTING_REVIEWER_ID",
+      "profile_id": "REPLACE_WITH_SECOND_EXISTING_AGENT_PROFILE_ID",
+      "model_provider": "REPLACE_WITH_SECOND_PINNED_PROVIDER",
+      "model_id": "REPLACE_WITH_SECOND_PINNED_MODEL_ID",
+      "model_revision": "REPLACE_WITH_SECOND_FULL_40_OR_64_HEX_MODEL_REVISION",
+      "runtime_version": "REPLACE_WITH_SECOND_FULL_40_OR_64_HEX_RUNTIME_DIGEST",
+      "model_lineage_id": "REPLACE_WITH_DISTINCT_MODEL_LINEAGE_ID",
+      "policy_lineage_id": "REPLACE_WITH_DISTINCT_POLICY_LINEAGE_ID",
+      "workload_identity_id": "REPLACE_WITH_DISTINCT_OPAQUE_WORKLOAD_IDENTITY_ID",
+      "system_instruction_path": "reviewer-two/system-instruction.md",
+      "tool_contract_path": "reviewer-two/tool-contract.json",
+      "inference_policy_path": "reviewer-two/inference-policy.json",
+      "conflict_policy_path": "reviewer-two/conflict-policy.json",
+      "recusal_policy_path": "reviewer-two/recusal-policy.json",
+      "receipt_verification_key": {
+        "algorithm": "ed25519",
+        "encoding": "raw-base64",
+        "public_key_base64": "REPLACE_WITH_SECOND_RAW_32_BYTE_PUBLIC_KEY_IN_CANONICAL_BASE64",
+        "public_key_sha256": "REPLACE_WITH_SHA256_OF_SECOND_RAW_PUBLIC_KEY",
+        "status": "active",
+        "valid_from_utc": "REPLACE_WITH_WHOLE_SECOND_UTC_TIMESTAMP",
+        "valid_until_or_open_ended": null
+      },
+      "possession_proof_signature_base64": null
+    }
+  ]
+}

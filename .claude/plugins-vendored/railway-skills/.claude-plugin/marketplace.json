@@ -1,0 +1,20 @@
+{
+  "name": "railway-skills",
+  "description": "Railway agent skills and hosted MCP server for deploying, configuring, monitoring, and troubleshooting apps and infrastructure on Railway from Claude Code.",
+  "owner": {
+    "name": "Railway",
+    "email": "contact@railway.com"
+  },
+  "plugins": [
+    {
+      "name": "railway",
+      "description": "Railway agent skills and hosted MCP server for deploying, configuring, monitoring, and troubleshooting apps and infrastructure on Railway from Claude Code. Manage services, environments, deployments, databases, object storage, networking, and observability.",
+      "author": {
+        "name": "Railway"
+      },
+      "category": "deployment",
+      "homepage": "https://docs.railway.com/agents",
+      "source": "./plugins/railway"
+    }
+  ]
+}

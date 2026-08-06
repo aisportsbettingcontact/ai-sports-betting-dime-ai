@@ -1,16 +1,11 @@
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: (() => {
     const v = process.env.APP_SESSION_SECRET;
     if (!v) throw new Error("[BOOT] APP_SESSION_SECRET is not set");
     return v;
   })(),
   databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   vsinEmail: process.env.VSIN_EMAIL ?? "",
   vsinPassword: process.env.VSIN_PASSWORD ?? "",
   // ── Canonical public origin for OAuth redirect URIs ────────────────────────
@@ -29,9 +24,6 @@ export const ENV = {
   discordPublicKey: process.env.DISCORD_PUBLIC_KEY ?? "",
   discordGuildId: process.env.DISCORD_GUILD_ID ?? "",
   discordRoleAiModelSub: process.env.DISCORD_ROLE_AI_MODEL_SUB ?? "",
-  // Google Sheets IDs — non-secret but kept in env for configurability
-  // Must be set via NBA_SHEET_ID env var — no hardcoded fallback permitted
-  nbaSheetId: process.env.NBA_SHEET_ID ?? "",
   // ─── Stripe ──────────────────────────────────────────────────────────────────
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",

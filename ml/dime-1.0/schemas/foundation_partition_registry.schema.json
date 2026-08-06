@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_partition_registry.schema.json",
+  "title": "Dime Foundation v1 Global Partition Registry",
+  "description": "Immutable, pre-prose group-to-shard and split assignments. The committed seed may be empty before private records exist.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_id",
+    "dataset_version",
+    "status",
+    "assignment_algorithm",
+    "group_dimensions",
+    "assignments"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-partition-registry-v1"
+    },
+    "registry_id": {
+      "const": "dime-foundation-v1-global-partitions"
+    },
+    "dataset_version": {
+      "const": "dime-sft-foundation-v1"
+    },
+    "status": {
+      "const": "FROZEN"
+    },
+    "assignment_algorithm": {
+      "const": {
+        "assignment_basis": "scenario_family_sha256_mod_10",
+        "assignment_revision": "dime-foundation-partition-v1",
+        "assignment_seed": 0,
+        "hash_algorithm": "sha256",
+        "input_encoding": "utf8_seed_colon_scenario_family_id",
+        "bucket_modulus": 10,
+        "validation_buckets": [
+          0
+        ]
+      }
+    },
+    "group_dimensions": {
+      "const": [
+        "scenario_family_id",
+        "template_family_id",
+        "source_event_id",
+        "conversation_family_id",
+        "quantitative_scenario_id",
+        "entity_set_temporal_bucket"
+      ]
+    },
+    "assignments": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/assignment"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group_dimension",
+        "group_key_sha256",
+        "shard_id",
+        "split"
+      ],
+      "properties": {
+        "group_dimension": {
+          "enum": [
+            "scenario_family_id",
+            "template_family_id",
+            "source_event_id",
+            "conversation_family_id",
+            "quantitative_scenario_id",
+            "entity_set_temporal_bucket"
+          ]
+        },
+        "group_key_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "shard_id": {
+          "type": "string",
+          "pattern": "^foundation-v1-[a-z0-9][a-z0-9._-]{3,95}$"
+        },
+        "split": {
+          "enum": [
+            "train",
+            "validation"
+          ]
+        }
+      }
+    }
+  }
+}

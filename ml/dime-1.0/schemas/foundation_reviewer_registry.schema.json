@@ -1,0 +1,667 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_reviewer_registry.schema.json",
+  "title": "Dime Foundation Trusted Reviewer Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_version",
+    "status",
+    "reviewers"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "dime-foundation-reviewer-registry-v3",
+        "dime-foundation-reviewer-registry-v4"
+      ]
+    },
+    "registry_version": {
+      "type": "string",
+      "pattern": "^dime-foundation-reviewers-v[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Immutable semantic version for one exact registry byte revision."
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "active",
+        "retired"
+      ],
+      "default": "proposed"
+    },
+    "receipt_verifier": {
+      "$ref": "#/$defs/receiptVerifier"
+    },
+    "reviewers": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Reviewer IDs must be unique, stable across versions, and never reassigned.",
+      "items": {
+        "$ref": "#/$defs/reviewer"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "dime-foundation-reviewer-registry-v4"
+          }
+        },
+        "required": [
+          "schema_version"
+        ]
+      },
+      "then": {
+        "required": [
+          "receipt_verifier"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reviewers": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "principal_type": {
+                  "const": "ai_agent"
+                },
+                "active": {
+                  "const": true
+                }
+              },
+              "required": [
+                "principal_type",
+                "active"
+              ]
+            }
+          }
+        },
+        "required": [
+          "reviewers"
+        ]
+      },
+      "then": {
+        "required": [
+          "receipt_verifier"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "dime-foundation-reviewer-registry-v4"
+          },
+          "receipt_verifier": {
+            "properties": {
+              "activation_authorized": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "active"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reviewers": {
+            "type": "array",
+            "minItems": 1,
+            "contains": {
+              "type": "object",
+              "properties": {
+                "active": {
+                  "const": true
+                }
+              },
+              "required": [
+                "active"
+              ]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "proposed",
+              "retired"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reviewers": {
+            "type": "array",
+            "not": {
+              "contains": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "active"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_id",
+        "principal_type",
+        "active",
+        "roles",
+        "independence_group_id",
+        "effective_start",
+        "effective_end_or_open_ended"
+      ],
+      "properties": {
+        "reviewer_id": {
+          "type": "string",
+          "pattern": "^dime-reviewer-[a-z0-9][a-z0-9._-]{7,63}$",
+          "description": "Stable opaque authority ID; never a name, email address, or reusable placeholder.",
+          "not": {
+            "pattern": "(?:replace|placeholder|example|sample|test|tbd|todo|unknown|anonymous|reviewer[-_.]?[ab])"
+          }
+        },
+        "principal_type": {
+          "enum": [
+            "human",
+            "ai_agent"
+          ],
+          "description": "Authority principal type. AI agents receive no authority unless their immutable agent profile is fully pinned."
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "agent_profile": {
+          "$ref": "#/$defs/agentProfile"
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "domain",
+              "numeric",
+              "coaching",
+              "simulation",
+              "safety",
+              "privacy",
+              "rights",
+              "semantic-audit",
+              "evaluation-audit",
+              "locked-evaluation",
+              "dataset-approver"
+            ]
+          }
+        },
+        "independence_group_id": {
+          "type": "string",
+          "pattern": "^dime-independence-group-[a-z0-9][a-z0-9._-]{3,63}$",
+          "description": "Stable opaque independence boundary. Multiple reviewer IDs in one group count once and the identifier must never be reassigned.",
+          "not": {
+            "pattern": "(?:replace|placeholder|example|sample|test|tbd|todo|unknown|anonymous|group[-_.]?[ab])"
+          }
+        },
+        "effective_start": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          "description": "Inclusive start of reviewer authority as a canonical UTC timestamp ending in Z."
+        },
+        "effective_end_or_open_ended": {
+          "description": "Exclusive end of reviewer authority as a canonical UTC timestamp ending in Z; null means open-ended.",
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "principal_type": {
+                "const": "ai_agent"
+              }
+            },
+            "required": [
+              "principal_type"
+            ]
+          },
+          "then": {
+            "required": [
+              "agent_profile"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "agent_profile"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "principal_type": {
+                "const": "ai_agent"
+              },
+              "active": {
+                "const": true
+              }
+            },
+            "required": [
+              "principal_type",
+              "active"
+            ]
+          },
+          "then": {
+            "properties": {
+              "agent_profile": {
+                "$ref": "#/$defs/activeAgentProfile"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "agent_profile": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "provisioned"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "agent_profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "active": {
+                "const": false
+              },
+              "agent_profile": {
+                "$ref": "#/$defs/provisionedAgentProfile"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "agentProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "status",
+        "model_provider",
+        "model_id",
+        "model_revision",
+        "runtime_version",
+        "system_instruction_sha256",
+        "tool_contract_sha256",
+        "inference_policy_sha256",
+        "receipt_issuer_key_id",
+        "receipt_verification_key"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "pattern": "^dime-agent-profile-[a-z0-9][a-z0-9._-]{7,63}$",
+          "not": {
+            "pattern": "(?:replace|placeholder|example|sample|test|tbd|todo|unknown|latest)"
+          }
+        },
+        "status": {
+          "enum": [
+            "configuration_pending",
+            "provisioned",
+            "active",
+            "retired"
+          ]
+        },
+        "model_provider": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "model_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "model_revision": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "runtime_version": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "model_lineage_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "policy_lineage_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "workload_identity_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "system_instruction_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "tool_contract_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "inference_policy_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "conflict_policy_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "recusal_policy_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "revocation_status": {
+          "enum": [
+            "configuration_pending",
+            "clear",
+            "revoked",
+            "retired"
+          ]
+        },
+        "receipt_issuer_key_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "receipt_verification_key": {
+          "$ref": "#/$defs/receiptVerificationKeyOrNull"
+        }
+      }
+    },
+    "fullyPinnedAgentProfile": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/agentProfile"
+        },
+        {
+          "required": [
+            "model_lineage_id",
+            "policy_lineage_id",
+            "workload_identity_id",
+            "conflict_policy_sha256",
+            "recusal_policy_sha256",
+            "revocation_status"
+          ],
+          "properties": {
+            "model_provider": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "model_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "model_revision": {
+              "$ref": "#/$defs/immutableRevision"
+            },
+            "runtime_version": {
+              "$ref": "#/$defs/immutableRevision"
+            },
+            "model_lineage_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "policy_lineage_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "workload_identity_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "system_instruction_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "tool_contract_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "inference_policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "conflict_policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "recusal_policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "revocation_status": {
+              "const": "clear"
+            },
+            "receipt_issuer_key_id": {
+              "$ref": "#/$defs/immutableKeyId"
+            },
+            "receipt_verification_key": {
+              "$ref": "#/$defs/activeReceiptVerificationKey"
+            }
+          }
+        }
+      ]
+    },
+    "activeAgentProfile": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fullyPinnedAgentProfile"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "active"
+            }
+          }
+        }
+      ]
+    },
+    "provisionedAgentProfile": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fullyPinnedAgentProfile"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "provisioned"
+            }
+          }
+        }
+      ]
+    },
+    "pinnedIdentity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "not": {
+        "pattern": "(?:^|[-_.:/])(?:replace|placeholder|example|sample|test|tbd|todo|unknown|latest|unassigned|main|master|stable|current|head)(?:$|[-_.:/])"
+      }
+    },
+    "pinnedIdentityOrNull": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/pinnedIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "immutableRevision": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+      "description": "A full content-addressed commit or artifact digest. Tags, aliases, dates, and semantic versions are prohibited."
+    },
+    "immutableKeyId": {
+      "type": "string",
+      "pattern": "^key-[0-9a-f]{64}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "sha256OrNull": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "receiptVerifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_schema_version",
+        "receipt_schema_path",
+        "verifier_id",
+        "verifier_version",
+        "canonicalization",
+        "signature_algorithm",
+        "activation_authorized"
+      ],
+      "properties": {
+        "receipt_schema_version": {
+          "const": "dime-agent-decision-receipt-v1"
+        },
+        "receipt_schema_path": {
+          "const": "schemas/foundation_agent_decision_receipt.schema.json"
+        },
+        "verifier_id": {
+          "const": "dime-ed25519-decision-receipt-verifier"
+        },
+        "verifier_version": {
+          "const": "1.0.0"
+        },
+        "canonicalization": {
+          "const": "dime-canonical-json-v1"
+        },
+        "signature_algorithm": {
+          "const": "ed25519"
+        },
+        "activation_authorized": {
+          "type": "boolean"
+        }
+      }
+    },
+    "receiptVerificationKeyOrNull": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/receiptVerificationKey"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "receiptVerificationKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "encoding",
+        "public_key_base64",
+        "public_key_sha256",
+        "status",
+        "valid_from_utc",
+        "valid_until_or_open_ended"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "encoding": {
+          "const": "raw-base64"
+        },
+        "public_key_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        },
+        "public_key_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "revoked",
+            "retired"
+          ]
+        },
+        "valid_from_utc": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+        },
+        "valid_until_or_open_ended": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "activeReceiptVerificationKey": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/receiptVerificationKey"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "active"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

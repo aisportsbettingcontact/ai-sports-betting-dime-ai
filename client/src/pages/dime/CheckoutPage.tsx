@@ -1,6 +1,13 @@
 /**
- * /checkout?plan=pro|sharp|operator|monthly|annual — in-domain, Dime-branded
- * Stripe checkout.
+ * /checkout?plan=<slug>[&price=<id>] — in-domain, Dime-branded Stripe checkout.
+ *
+ * `plan` is either one of the five legacy ids (pro|sharp|operator|monthly|annual,
+ * which keep their curated PLAN_COPY) or an owner-created DB plan slug, whose
+ * display copy is fetched from stripe.publicGetCheckoutPlan. The optional `price`
+ * selects one interval of a multi-interval DB plan (a plan_prices row id, from a
+ * checkout link the owner copied for a specific interval — including "Lifetime",
+ * which checks out as a one-time payment). The Stripe elements flow is identical
+ * regardless of plan source.
  *
  * ONLY path: Checkout Sessions ui_mode:"elements" consumed by
  * stripe.initCheckoutElementsSdk + a Payment Element themed with the
@@ -11,8 +18,8 @@
  *
  * Publishable-key resolution: build-time VITE_STRIPE_PUBLISHABLE_KEY when
  * present, otherwise fetched at runtime from stripe.publicGetConfig — so the
- * form works on builds that had no env vars (Railway Docker image, Vercel
- * without project env). If no key is available at all, the page shows an
+ * form works on builds that had no env vars (Railway Docker image, or a build
+ * with no env vars). If no key is available at all, the page shows an
  * explicit error with retry — never a redirect.
  *
  * Flow: session created on page-load (the un-awaited clientSecret promise is
@@ -50,14 +57,36 @@ interface PlanCopy {
   heading: string;
   price: string;
   period: string;
-  perDay: string;
-  /** v2 ladder rail rows — legacy plans keep their existing compact rail. */
+  /** "Works out to" per-day line — omitted (empty) for owner-created DB plans. */
+  perDay?: string;
+  /** v2 ladder rail rows — legacy plans keep their existing compact rail.
+   *  Withheld while the tiered Analyst models are not live: no plan sets it, so
+   *  the "Model access" row does not render. Kept for the day the tiers ship. */
   modelAccess?: string;
+  /** Withheld until the credit ledger grants and meters credits (PROD-001). */
   credits?: string;
   features?: string[];
   payLabel: string;
   renewal: string;
   chargeCadence: "monthly" | "annually";
+  /** false → a one-time ("Lifetime") purchase — no renewal, no cancellation row.
+   *  undefined/true → recurring (all legacy plans). */
+  recurring?: boolean;
+}
+
+/** Public display shape returned by stripe.publicGetCheckoutPlan (DB plans). */
+interface DbCheckoutPlan {
+  slug: string;
+  name: string;
+  description: string | null;
+  amountCents: number;
+  currency: string;
+  interval: "day" | "week" | "month" | "year" | null;
+  intervalCount: number | null;
+  recurring: boolean;
+  trialPeriodDays: number | null;
+  label: string | null;
+  soldOut: boolean;
 }
 
 const PLAN_COPY: Record<PlanId, PlanCopy> = {
@@ -67,12 +96,9 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$99",
     period: "/month",
     perDay: "≈ $3.30 / day",
-    modelAccess: "Standard + Pro Analyst",
-    credits: "1,000 / mo",
     features: [
       "Full AI Model Projections board — every game, priced",
-      "Dime Chat — Standard + Pro Analyst (Sonnet + Opus)",
-      "1,000 AI Analyst credits / month",
+      "Dime Chat on any game the model prices",
       "Live edge grades, honest PASS signals",
     ],
     payLabel: "Start Pro — $99/mo",
@@ -86,14 +112,7 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$249",
     period: "/month",
     perDay: "≈ $8.30 / day",
-    modelAccess: "Pro + MAX (capped)",
-    credits: "3,000 / mo",
-    features: [
-      "Everything in Pro",
-      "MAX Analyst access — monthly cap",
-      "3,000 AI Analyst credits / month",
-      "Priority access to new model markets",
-    ],
+    features: ["Everything in Pro", "Priority access to new model markets"],
     payLabel: "Start Sharp — $249/mo",
     renewal:
       "Auto-renews monthly at $249 until cancelled. Cancel anytime before renewal — access runs through the period you've paid for.",
@@ -105,12 +124,8 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$499",
     period: "/month",
     perDay: "≈ $16.63 / day",
-    modelAccess: "Full MAX",
-    credits: "8,000 / mo",
     features: [
       "Everything in Sharp",
-      "Full MAX Analyst access — no cap",
-      "8,000 AI Analyst credits / month",
       "Early access to new markets and model releases",
     ],
     payLabel: "Start Operator — $499/mo",
@@ -125,7 +140,8 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/ month",
     perDay: "≈ $3.30 / day",
     payLabel: "Start Pro — $99.99/mo",
-    renewal: "Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.",
+    renewal:
+      "Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.",
     chargeCadence: "monthly",
   },
   annual: {
@@ -135,19 +151,122 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/ year",
     perDay: "≈ $1.37 / day · save 58% vs monthly",
     payLabel: "Start Elite — $499.99/yr",
-    renewal: "Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.",
+    renewal:
+      "Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.",
     chargeCadence: "annually",
   },
 };
 
-const PUBLISHABLE_KEY = (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined) ?? "";
+const PUBLISHABLE_KEY =
+  (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined) ?? "";
 
-function parsePlan(search: string): PlanId {
-  const plan = new URLSearchParams(search).get("plan");
-  if (plan === "pro" || plan === "sharp" || plan === "operator" || plan === "annual" || plan === "monthly") {
-    return plan;
+/** The five hardcoded legacy plans keep their curated PLAN_COPY. */
+function isLegacyPlan(slug: string): slug is PlanId {
+  return (
+    slug === "pro" ||
+    slug === "sharp" ||
+    slug === "operator" ||
+    slug === "monthly" ||
+    slug === "annual"
+  );
+}
+
+/**
+ * The plan slug from ?plan= — a legacy id OR an owner-created DB plan slug. Only
+ * safe slug characters are accepted; anything else falls back to "pro" — the
+ * plan the whole site sells at $99 (audit D-CHECKOUT-99: the old "monthly"
+ * fallback quoted the retired $99.99 plan to anyone who reached /checkout
+ * without a query param). Links that explicitly name "monthly" still get it.
+ */
+function parsePlanSlug(search: string): string {
+  const plan = new URLSearchParams(search).get("plan")?.trim();
+  return plan && /^[a-z0-9-]{1,64}$/i.test(plan) ? plan : "pro";
+}
+
+/** The optional ?price= — a plan_prices row id selecting one interval of a DB plan. */
+function parsePriceId(search: string): number | undefined {
+  const raw = new URLSearchParams(search).get("price");
+  if (!raw) return undefined;
+  const n = parseInt(raw, 10);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
+function formatMoney(cents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
   }
-  return "monthly"; // legacy default for unknown/missing values
+}
+
+/** Human cadence phrase for a recurring DB interval (e.g. "monthly", "every 2 weeks"). */
+function cadencePhrase(
+  interval: DbCheckoutPlan["interval"],
+  count: number | null
+): string {
+  const n = count && count > 1 ? count : 1;
+  if (n === 1) {
+    if (interval === "day") return "daily";
+    if (interval === "week") return "weekly";
+    if (interval === "month") return "monthly";
+    if (interval === "year") return "annually";
+  }
+  return `every ${n} ${interval}${n > 1 ? "s" : ""}`;
+}
+
+/** Build the checkout display copy for an owner-created DB plan/interval. */
+function buildDbCopy(d: DbCheckoutPlan): PlanCopy {
+  const priceStr = formatMoney(d.amountCents, d.currency);
+  if (!d.recurring) {
+    return {
+      name: d.name,
+      heading: `Activate ${d.name}`,
+      price: priceStr,
+      period: "one-time",
+      payLabel: `Get lifetime access — ${priceStr}`,
+      renewal: "One-time payment — lifetime access. No renewals.",
+      chargeCadence: "monthly",
+      recurring: false,
+    };
+  }
+  const n = d.intervalCount && d.intervalCount > 1 ? `${d.intervalCount} ` : "";
+  const unit = d.interval ?? "month";
+  const period = `/ ${n}${unit}${d.intervalCount && d.intervalCount > 1 ? "s" : ""}`;
+  const phrase = cadencePhrase(d.interval, d.intervalCount);
+  return {
+    name: d.name,
+    heading: `Activate ${d.name}`,
+    price: priceStr,
+    period,
+    payLabel: `Subscribe — ${priceStr}`,
+    renewal: `Auto-renews ${phrase} at ${priceStr} until cancelled. Cancel anytime before renewal.`,
+    chargeCadence: d.interval === "year" ? "annually" : "monthly",
+    recurring: true,
+  };
+}
+
+/** Placeholder shown in the rail while the DB plan's display info loads. */
+const LOADING_COPY: PlanCopy = {
+  name: "Loading…",
+  heading: "Activate your plan",
+  price: "—",
+  period: "",
+  payLabel: "Continue to payment",
+  renewal: "",
+  chargeCadence: "monthly",
+  recurring: true,
+};
+
+/** Renewal/authorization legal line under the pay button — recurring vs one-time. */
+function buildLegalLine(copy: PlanCopy): string {
+  if (copy.recurring === false) {
+    return "Charged once today — lifetime access, no renewals. Secure processing by Stripe — card details never touch our servers.";
+  }
+  const cadence = copy.chargeCadence === "annually" ? "annually" : "monthly";
+  return `Charged today, then ${cadence} until you cancel. Secure processing by Stripe — card details never touch our servers.`;
 }
 
 // ─── Stripe Appearance API — Dime token mapping (design spec §B, verbatim) ────
@@ -204,7 +323,11 @@ const APPEARANCE: Appearance = {
       color: "#FFFFFF",
     },
     ".Error": { color: "#FFFFFF", fontSize: "13px" },
-    ".Tab": { backgroundColor: "transparent", border: "1px solid #FFFFFF", color: "#FFFFFF" },
+    ".Tab": {
+      backgroundColor: "transparent",
+      border: "1px solid #FFFFFF",
+      color: "#FFFFFF",
+    },
     ".Tab:hover": { color: "#FFFFFF" },
     ".Tab--selected": {
       backgroundColor: "#000000",
@@ -212,7 +335,11 @@ const APPEARANCE: Appearance = {
       color: "#FFFFFF",
     },
     ".TabIcon--selected": { fill: "#45E0A8" },
-    ".Block": { backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: "12px" },
+    ".Block": {
+      backgroundColor: "#000000",
+      border: "1px solid #FFFFFF",
+      borderRadius: "12px",
+    },
   },
 };
 
@@ -234,8 +361,22 @@ type Phase = "active" | "processing" | "success" | "expired" | "error";
 
 export default function CheckoutPage() {
   const [, navigate] = useLocation();
-  const plan = parsePlan(typeof window !== "undefined" ? window.location.search : "");
-  const copy = PLAN_COPY[plan];
+  const search = typeof window !== "undefined" ? window.location.search : "";
+  const plan = parsePlanSlug(search);
+  const priceId = parsePriceId(search);
+  const legacyCopy = isLegacyPlan(plan) ? PLAN_COPY[plan] : null;
+
+  // Owner-created DB plans fetch their display copy (name / price / cadence) from
+  // the public endpoint; the five legacy plans keep their curated PLAN_COPY. The
+  // Stripe checkout flow below is identical either way — only the rail copy and
+  // the {planId, priceId} passed to the session mutation differ.
+  const dbPlanQuery = trpc.stripe.publicGetCheckoutPlan.useQuery(
+    { slug: plan, ...(priceId ? { priceId } : {}) },
+    { enabled: !legacyCopy, staleTime: 60_000, retry: false }
+  );
+  const copy: PlanCopy =
+    legacyCopy ??
+    (dbPlanQuery.data ? buildDbCopy(dbPlanQuery.data) : LOADING_COPY);
 
   const [phase, setPhase] = useState<Phase>("active");
   const [peReady, setPeReady] = useState(false);
@@ -256,7 +397,8 @@ export default function CheckoutPage() {
   const genRef = useRef(0);
   const startedRef = useRef(false);
 
-  const embedded = trpc.stripe.publicCreateEmbeddedCheckoutSession.useMutation();
+  const embedded =
+    trpc.stripe.publicCreateEmbeddedCheckoutSession.useMutation();
   const attachIdentity = trpc.stripe.publicAttachCheckoutIdentity.useMutation();
   const utils = trpc.useUtils();
 
@@ -270,17 +412,23 @@ export default function CheckoutPage() {
     actionsRef.current = null;
 
     try {
-      console.log(`[Checkout] [INPUT] plan=${plan} ui=elements buildTimeKey=${PUBLISHABLE_KEY ? "present" : "absent"}`);
+      console.log(
+        `[Checkout] [INPUT] plan=${plan} ui=elements buildTimeKey=${PUBLISHABLE_KEY ? "present" : "absent"}`
+      );
       // Key resolution: build-time env first, runtime config endpoint second.
       // NEVER a hosted redirect — the elements-mode form is the only path.
       let publishableKey = PUBLISHABLE_KEY;
       if (!publishableKey) {
         const config = await utils.stripe.publicGetConfig.fetch();
         publishableKey = config.publishableKey;
-        console.log(`[Checkout] [STEP] runtime key fetch → ${publishableKey ? "present" : "ABSENT"}`);
+        console.log(
+          `[Checkout] [STEP] runtime key fetch → ${publishableKey ? "present" : "ABSENT"}`
+        );
       }
       if (!publishableKey) {
-        throw new Error("Payments are temporarily unavailable (configuration). Please try again shortly.");
+        throw new Error(
+          "Payments are temporarily unavailable (configuration). Please try again shortly."
+        );
       }
 
       const { loadStripe } = await import("@stripe/stripe-js");
@@ -291,10 +439,16 @@ export default function CheckoutPage() {
       // Session created NOW; the un-awaited clientSecret promise goes straight
       // into initCheckoutElementsSdk (synchronous, not awaited) for the fastest mount.
       const clientSecretPromise = embedded
-        .mutateAsync({ planId: plan, origin: window.location.origin })
-        .then((session) => {
+        .mutateAsync({
+          planId: plan,
+          ...(priceId ? { priceId } : {}),
+          origin: window.location.origin,
+        })
+        .then(session => {
           sessionIdRef.current = session.sessionId;
-          console.log(`[Checkout] [STEP] elements session created session_id=${session.sessionId}`);
+          console.log(
+            `[Checkout] [STEP] elements session created session_id=${session.sessionId}`
+          );
           return session.clientSecret;
         });
       // Our own rejection observer — Stripe consumes the same promise.
@@ -310,7 +464,7 @@ export default function CheckoutPage() {
       });
       checkoutRef.current = checkout;
 
-      checkout.on("change", (session) => {
+      checkout.on("change", session => {
         if (gen !== genRef.current) return;
         if (session.status.type === "expired") {
           console.warn("[Checkout] [STATE] session expired (change event)");
@@ -321,40 +475,58 @@ export default function CheckoutPage() {
       // terms: never — Stripe's auto mandate line wraps to 3 lines at 390px and
       // clipped (live audit 2026-07-10); the equivalent renewal/authorization
       // copy is our own legal line directly under the pay button.
-      const paymentElement = checkout.createPaymentElement({ layout: "tabs", terms: { card: "never" } });
+      const paymentElement = checkout.createPaymentElement({
+        layout: "tabs",
+        terms: { card: "never" },
+      });
       peRef.current = paymentElement;
       paymentElement.on("ready", () => {
         if (gen !== genRef.current) return;
         setPeReady(true);
-        console.log("[Checkout] [VERIFY] PASS — themed Payment Element mounted on-domain");
+        console.log(
+          "[Checkout] [VERIFY] PASS — themed Payment Element mounted on-domain"
+        );
       });
 
       // The mount node may not exist yet right after a phase switch — wait for React.
       let node = mountRef.current;
       for (let i = 0; i < 20 && !node; i++) {
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 50));
         node = mountRef.current;
       }
       if (gen !== genRef.current) return;
-      if (!node) throw new Error("Checkout form failed to render. Please try again.");
+      if (!node)
+        throw new Error("Checkout form failed to render. Please try again.");
       paymentElement.mount(node);
 
       const result = await checkout.loadActions();
       if (gen !== genRef.current) return;
       if (result.type !== "success") {
-        throw new Error(result.error.message || "Could not establish a secure session.");
+        throw new Error(
+          result.error.message || "Could not establish a secure session."
+        );
       }
       actionsRef.current = result.actions;
       setActionsReady(true);
-      console.log("[Checkout] [STEP] checkout actions loaded — form is confirmable");
+      console.log(
+        "[Checkout] [STEP] checkout actions loaded — form is confirmable"
+      );
     } catch (err) {
       if (gen !== genRef.current) return;
-      setErrorMsg(err instanceof Error ? err.message : "Could not start checkout.");
+      setErrorMsg(
+        err instanceof Error ? err.message : "Could not start checkout."
+      );
       setPhase("error");
-      console.error(`[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`);
+      console.error(
+        `[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan]);
+  }, [plan, priceId]);
+
+  useEffect(() => {
+    document.title = "Checkout — dıme";
+  }, []);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -400,8 +572,14 @@ export default function CheckoutPage() {
       setEmailErr("Enter a valid email address.");
       invalid = true;
     }
-    if (usernameTrim.length < 3 || usernameTrim.length > 64 || !USERNAME_RE.test(usernameTrim)) {
-      setUsernameErr("3–64 characters — letters, numbers, spaces, underscores, dots or hyphens.");
+    if (
+      usernameTrim.length < 3 ||
+      usernameTrim.length > 64 ||
+      !USERNAME_RE.test(usernameTrim)
+    ) {
+      setUsernameErr(
+        "3–64 characters — letters, numbers, spaces, underscores, dots or hyphens."
+      );
       invalid = true;
     }
     const actions = actionsRef.current;
@@ -409,14 +587,25 @@ export default function CheckoutPage() {
     if (invalid || !actions || !sessionId) return;
 
     setPhase("processing");
-    console.log(`[Checkout] [STEP] pay clicked plan=${plan} session_id=${sessionId}`);
+    console.log(
+      `[Checkout] [STEP] pay clicked plan=${plan} session_id=${sessionId}`
+    );
 
     // 1. Attach desired username to the session server-side (metadata).
     try {
-      await attachIdentity.mutateAsync({ sessionId, desiredUsername: usernameTrim });
-      console.log("[Checkout] [STEP] desired_username attached to session metadata");
+      await attachIdentity.mutateAsync({
+        sessionId,
+        desiredUsername: usernameTrim,
+      });
+      console.log(
+        "[Checkout] [STEP] desired_username attached to session metadata"
+      );
     } catch (err) {
-      setUsernameErr(err instanceof Error ? err.message : "Could not save your username. Please try again.");
+      setUsernameErr(
+        err instanceof Error
+          ? err.message
+          : "Could not save your username. Please try again."
+      );
       setPhase("active");
       return;
     }
@@ -425,7 +614,9 @@ export default function CheckoutPage() {
       // 2. Buyer email → Stripe session.
       const emailResult = await actions.updateEmail(emailTrim);
       if (emailResult.type === "error") {
-        console.warn(`[Checkout] [STATE] updateEmail rejected: ${emailResult.error.code}`);
+        console.warn(
+          `[Checkout] [STATE] updateEmail rejected: ${emailResult.error.code}`
+        );
         setEmailErr(emailResult.error.message);
         setPhase("active");
         return;
@@ -433,7 +624,10 @@ export default function CheckoutPage() {
 
       // 3. Confirm — cards resolve IN-PAGE; returnUrl only for redirect-based methods.
       const returnUrl = `${window.location.origin}/subscribe/success?session_id=${sessionId}&plan=${plan}`;
-      const confirmed = await actions.confirm({ redirect: "if_required", returnUrl });
+      const confirmed = await actions.confirm({
+        redirect: "if_required",
+        returnUrl,
+      });
 
       if (confirmed.type === "error") {
         if (actions.getSession().status.type === "expired") {
@@ -441,7 +635,9 @@ export default function CheckoutPage() {
           setPhase("expired");
           return;
         }
-        console.error(`[Checkout] [VERIFY] FAIL — confirm error: ${confirmed.error.message}`);
+        console.error(
+          `[Checkout] [VERIFY] FAIL — confirm error: ${confirmed.error.message}`
+        );
         setPayErr(confirmed.error.message);
         setPhase("active");
         return;
@@ -450,23 +646,33 @@ export default function CheckoutPage() {
       if (confirmed.session.status.type === "complete") {
         setConfirmedEmail(confirmed.session.email ?? emailTrim);
         setPhase("success");
-        console.log("[Checkout] [VERIFY] PASS — payment confirmed on-domain, session complete");
+        console.log(
+          "[Checkout] [VERIFY] PASS — payment confirmed on-domain, session complete"
+        );
         return;
       }
 
       // Redirect-based method took over navigation, or an in-between status.
-      console.log(`[Checkout] [STATE] post-confirm status=${confirmed.session.status.type}`);
+      console.log(
+        `[Checkout] [STATE] post-confirm status=${confirmed.session.status.type}`
+      );
       setPhase("active");
     } catch (err) {
-      console.error(`[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`);
-      setPayErr(err instanceof Error ? err.message : "Payment could not be processed. Please try again.");
+      console.error(
+        `[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`
+      );
+      setPayErr(
+        err instanceof Error
+          ? err.message
+          : "Payment could not be processed. Please try again."
+      );
       setPhase("active");
     }
   }, [phase, email, username, plan, attachIdentity]);
 
   const processing = phase === "processing";
   const canPay = phase === "active" && peReady && actionsReady;
-  const legalLine = `Charged today, then ${copy.chargeCadence === "annually" ? "annually" : "monthly"} until you cancel. Secure processing by Stripe — card details never touch our servers.`;
+  const legalLine = buildLegalLine(copy);
 
   const backLink = (
     <Link
@@ -482,13 +688,19 @@ export default function CheckoutPage() {
   );
 
   return (
-    <div className="dlv2" style={{ minHeight: "100vh" }}>
+    <div className="dlv2" style={{ minHeight: "100dvh" }}>
       <nav className="nav" aria-label="Checkout">
         <div className="wrap nav-inner">
-          <Link href="/" aria-label="dime home" style={{ textDecoration: "none" }}>
+          <Link
+            href="/"
+            aria-label="dime home"
+            style={{ textDecoration: "none" }}
+          >
             <Wordmark />
           </Link>
-          <span className="mono" style={{ marginLeft: "auto" }}>SECURE CHECKOUT · STRIPE</span>
+          <span className="mono" style={{ marginLeft: "auto" }}>
+            SECURE CHECKOUT · STRIPE
+          </span>
         </div>
       </nav>
 
@@ -501,13 +713,17 @@ export default function CheckoutPage() {
             <div className="rowline">
               <span>Price</span>
               <span className="lead" aria-hidden="true" />
-              <b className="num">{copy.price} {copy.period}</b>
+              <b className="num">
+                {copy.price} {copy.period}
+              </b>
             </div>
-            <div className="rowline">
-              <span>Works out to</span>
-              <span className="lead" aria-hidden="true" />
-              <b className="num">{copy.perDay}</b>
-            </div>
+            {copy.perDay && (
+              <div className="rowline">
+                <span>Works out to</span>
+                <span className="lead" aria-hidden="true" />
+                <b className="num">{copy.perDay}</b>
+              </div>
+            )}
             {copy.modelAccess && (
               <div className="rowline rowline--detail">
                 <span>Model access</span>
@@ -522,14 +738,16 @@ export default function CheckoutPage() {
                 <b className="num">{copy.credits}</b>
               </div>
             )}
-            <div className="rowline rowline--detail">
-              <span>Cancellation</span>
-              <span className="lead" aria-hidden="true" />
-              <b>Anytime, 2 clicks</b>
-            </div>
+            {copy.recurring !== false && (
+              <div className="rowline rowline--detail">
+                <span>Cancellation</span>
+                <span className="lead" aria-hidden="true" />
+                <b>Anytime, 2 clicks</b>
+              </div>
+            )}
             {copy.features && (
               <ul className="checkout-features">
-                {copy.features.map((f) => (
+                {copy.features.map(f => (
                   <li key={f}>
                     <MintCheck muted />
                     {f}
@@ -541,12 +759,21 @@ export default function CheckoutPage() {
           <div className="cs-legal">
             <span className="fine">{copy.renewal}</span>
             <span className="fine">
-              By subscribing you agree to the <Link href="/terms" style={{ color: "var(--text-secondary)" }}>Terms</Link> and{" "}
-              <Link href="/privacy" style={{ color: "var(--text-secondary)" }}>Privacy Policy</Link>.
+              By continuing you agree to the{" "}
+              <Link href="/terms" style={{ color: "var(--text-secondary)" }}>
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" style={{ color: "var(--text-secondary)" }}>
+                Privacy Policy
+              </Link>
+              .
             </span>
             <span className="fine">
-              dime is analytical software — statistical model projections, no guaranteed outcomes. 21+ (or legal betting
-              age in your jurisdiction). Bet responsibly. Gambling problem? Call 1-800-GAMBLER.
+              dime is analytical software — statistical model projections, no
+              guaranteed outcomes. 21+ (or legal betting age in your
+              jurisdiction). Bet responsibly. Gambling problem? Call
+              1-800-GAMBLER.
             </span>
             {backLink}
           </div>
@@ -556,6 +783,7 @@ export default function CheckoutPage() {
         <div className="checkout-right">
           {phase === "error" ? (
             <div className="checkout-status" role="alert">
+              <h1 className="checkout-heading">Checkout unavailable</h1>
               <span>Checkout couldn't start: {errorMsg}</span>
               <button
                 type="button"
@@ -568,7 +796,11 @@ export default function CheckoutPage() {
               >
                 Try again
               </button>
-              <Link href="/#pricing" className="mono" style={{ color: "var(--text-muted)" }}>
+              <Link
+                href="/#pricing"
+                className="mono"
+                style={{ color: "var(--text-muted)" }}
+              >
                 ← Back to pricing
               </Link>
             </div>
@@ -582,13 +814,16 @@ export default function CheckoutPage() {
                   </div>
                   <h2>You're in.</h2>
                   <p>
-                    {copy.name} is active on this account. A receipt is on its way to {confirmedEmail}.
+                    {copy.name} is active on this account. A receipt is on its
+                    way to {confirmedEmail}.
                   </p>
                   <button
                     type="button"
                     className="btn btn--mint btn--wide btn--pay"
                     onClick={() =>
-                      navigate(`/subscribe/success?session_id=${sessionIdRef.current ?? ""}&plan=${plan}`)
+                      navigate(
+                        `/subscribe/success?session_id=${sessionIdRef.current ?? ""}&plan=${plan}`
+                      )
                     }
                     data-cta-id="checkout-success-continue"
                     data-cta-location="checkout"
@@ -601,7 +836,10 @@ export default function CheckoutPage() {
               ) : phase === "expired" ? (
                 <div className="checkout-panel" role="alert">
                   <span className="mono checkout-stamp">SESSION EXPIRED</span>
-                  <p>Secure sessions time out to protect your card. Nothing was charged.</p>
+                  <p>
+                    Secure sessions time out to protect your card. Nothing was
+                    charged.
+                  </p>
                   <button
                     type="button"
                     className="btn btn--mint btn--wide btn--pay"
@@ -618,14 +856,17 @@ export default function CheckoutPage() {
               ) : (
                 <form
                   className="checkout-form"
-                  onSubmit={(e) => {
+                  onSubmit={e => {
                     e.preventDefault();
                     void handlePay();
                   }}
                 >
                   <div>
                     <h1 className="checkout-heading">{copy.heading}</h1>
-                    <p className="checkout-sub">Two fields and a card. Access is live the moment payment clears.</p>
+                    <p className="checkout-sub">
+                      Two fields and a card. Access is live the moment payment
+                      clears.
+                    </p>
                   </div>
 
                   <div className="checkout-field">
@@ -637,9 +878,11 @@ export default function CheckoutPage() {
                       placeholder="you@example.com"
                       value={email}
                       disabled={processing}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={e => setEmail(e.target.value)}
                       aria-invalid={emailErr ? true : undefined}
-                      aria-describedby={emailErr ? "checkout-email-err" : undefined}
+                      aria-describedby={
+                        emailErr ? "checkout-email-err" : undefined
+                      }
                     />
                     {emailErr && (
                       <span className="field-err" id="checkout-email-err">
@@ -658,11 +901,17 @@ export default function CheckoutPage() {
                       placeholder="your_handle"
                       value={username}
                       disabled={processing}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={e => setUsername(e.target.value)}
                       aria-invalid={usernameErr ? true : undefined}
-                      aria-describedby={usernameErr ? "checkout-username-err" : "checkout-username-help"}
+                      aria-describedby={
+                        usernameErr
+                          ? "checkout-username-err"
+                          : "checkout-username-help"
+                      }
                     />
-                    <span className="field-help" id="checkout-username-help">Your handle inside dime.</span>
+                    <span className="field-help" id="checkout-username-help">
+                      Your handle inside dime.
+                    </span>
                     {usernameErr && (
                       <span className="field-err" id="checkout-username-err">
                         <span className="stamp">ERROR</span>
@@ -674,16 +923,28 @@ export default function CheckoutPage() {
                   <div className="checkout-pe-block">
                     <span className="mono">PAYMENT</span>
                     {!peReady && (
-                      <div className="pe-skeleton" role="status" aria-live="polite">
+                      <div
+                        className="pe-skeleton"
+                        role="status"
+                        aria-live="polite"
+                      >
                         <span className="bar" aria-hidden="true" />
                         <span className="bar" aria-hidden="true" />
                         <span className="bar" aria-hidden="true" />
                         <span className="mono pe-status">
-                          <span className="pulse" aria-hidden="true" /> ESTABLISHING SECURE SESSION
+                          <span className="pulse" aria-hidden="true" />{" "}
+                          ESTABLISHING SECURE SESSION
                         </span>
                       </div>
                     )}
-                    <div ref={mountRef} className={peReady ? "checkout-pe" : "checkout-pe checkout-pe--hidden"} />
+                    <div
+                      ref={mountRef}
+                      className={
+                        peReady
+                          ? "checkout-pe"
+                          : "checkout-pe checkout-pe--hidden"
+                      }
+                    />
                     {payErr && (
                       <span className="field-err" role="alert">
                         <span className="stamp">ERROR</span>
@@ -704,7 +965,8 @@ export default function CheckoutPage() {
                   >
                     {processing ? (
                       <>
-                        <span className="pulse" aria-hidden="true" /> Processing payment…
+                        <span className="pulse" aria-hidden="true" /> Processing
+                        payment…
                       </>
                     ) : (
                       copy.payLabel

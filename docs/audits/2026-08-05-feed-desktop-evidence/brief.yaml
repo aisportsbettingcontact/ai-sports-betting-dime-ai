@@ -1,0 +1,82 @@
+# Federated UI brief — AI Model Projections feed, desktop refinement pass.
+# Filled before touching code; copied into the evidence bundle and attached to the PR.
+
+id: feed-refine-2026-08-05
+
+surface:
+  name: "ai-model-projections-feed"
+  kind: feed
+  mode: operate
+  change: refine
+
+lead: "impeccable"
+advisors:
+  - "ui-ux-pro-max:ui-ux-pro-max (research, terminal-only — NO --persist: surface is governed by pages/ai-model-projections.md)"
+  - "emil-design-eng (hover/press craft within brand motion law)"
+  - "frontend-design via Read (distinctiveness critic, read-only)"
+  - "review-animations via Read (motion gate — Block/Approve if diff touches motion; must not Block THREE-COLOR-LAW v3 grants)"
+  # taste v2 NOT invoked — out of scope on product UI by its own Section 13.
+
+product:
+  audience: "Sports bettors scanning the day's MLB slate for model edges (desktop-first product users)"
+  single_job: "Find tonight's actionable model edges in under 3 seconds per game"
+  business_goal: "Trust in the model's signal — the feed is the product's core value surface"
+  evidence:
+    - "Owner directives 2026-07-17 → 2026-08-02 legislated in design-system/dime-ai/pages/ai-model-projections.md"
+    - "projection_evaluation_viewed analytics event (D1) fires on complete slates — the scan is the value moment"
+    - "/ui-loop invocation 2026-08-05: full brand-law compliance + product-UI craft (hierarchy, spacing, tables, hover/press) — refinement, not redesign"
+
+content:
+  source:
+    - "client/src/pages/DimeModelFeed.tsx (tRPC games.list / wc2026.matchesByDate / games.mlbLineups adapters)"
+    - "client/src/components/projections/* (ProjectionCard system)"
+  responsible_gaming: true   # product surface; marketing language lives on landing
+  invented_claims: false
+
+law:
+  - design-system/dime-ai/pages/ai-model-projections.md   # GOVERNS — overrides MASTER
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md                            # wins over MASTER wherever they disagree, incl. v3 motion grants
+  - design-system/dime-ai/TYPOGRAPHY.md                   # size/rhythm/measure/wrap, orthogonal
+law_constraints_pinned:  # owner directives already legislated — obey, do not re-derive
+  - "Columns from dmf-league container queries ONLY (2-up >=622px, 3-up >=940px of league-body width); no viewport media query may set a column rule"
+  - "PASS cards: opacity 0.82, zero mint anywhere in the card"
+  - "LIVE lifecycle compaction: opacity 0.72 — never the PASS treatment"
+  - "Mint via tokens only (--brand-mint / --mint-ink); raw #45E0A8 legal only as var() fallback"
+  - "CONFIRMED pitcher labels are NOT mint (data freshness, not signal)"
+  - "40px main-pane gutters (desktop)"
+  - "Plex Mono NOT loaded — Familjen-only with mono-style treatment (2026-07-24 supersede note)"
+
+data_contract:  # do not violate — pages/ai-model-projections.md §data + DIME-FEED-MIGRATION-DRAFT §4
+  - "games.list takes exact {sport, gameDate} synced to games.getCurrentDate (11:00 UTC cutoff)"
+  - "Honor ETag/304 (empty 304 body ≠ no games); 0-games auto-retry ×3 + auto-advance"
+  - "60s polling with placeholderData: prev"
+  - "Feed data public; only favorites.* and Last-5 need the session"
+
+direction:
+  adjectives: ["precise", "quiet", "dimensional", "scan-first", "trustworthy"]
+  anti_references: ["sportsbook promo clutter", "neon dashboard", "generic admin template"]
+  signature_element: "The mint edge cell (EdgeIndicator) as the ONLY loud object on an otherwise achromatic card — refinement protects and sharpens that contrast; no new signature is introduced"
+
+dials: {}   # lead is impeccable, not a taste skill — dials n/a
+
+engineering:
+  stack: React + Vite (client/src), Express server, pnpm only
+  component_reuse_first: true
+  branch: feat/feed-desktop-refine   # worktree off main; PR, no merge (owner sign-off gates merge)
+  css_first: true                     # TSX only where structure demands it
+  no_new_dependencies: true
+  preserve: ["tRPC wiring + data contract", "analytics (useTrackAction, data-cta-id/location)", "AgeModal + auth gating", "favorites", "sonner toasts", "mobile nav config (features/mobileNav)", "mobile layouts (dime-mobile.css) — out of scope, must not regress"]
+  viewports_primary: [1280x800, 1440x900, 1680x1050]
+  viewports_regression: [1024x768, 375x812]   # no horizontal scroll (MASTER checklist)
+  reduced_motion: required
+  dark_and_light: required
+
+acceptance:
+  required_states: ["loading", "0-games empty", "LIVE card", "PASS card", "hover", "press", "focus-visible", "reduced-motion", "markets popover open"]
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto      # diff touches motion -> review-animations Block/Approve in bundle
+  detector: "node .claude/skills/impeccable/scripts/detect.mjs --json client/src/components/projections client/src/pages/DimeModelFeed.tsx"
+  delivery_gate: "MASTER.md Pre-Delivery Checklist item-by-item (Plex Mono item scored per 2026-07-24 supersede: pass = Familjen-only) + evidence bundle at docs/audits/2026-08-05-feed-desktop-evidence/"
+  stop_rule: "Bounded repair — one batched fix round + at most one confirm round"

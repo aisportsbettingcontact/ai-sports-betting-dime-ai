@@ -27,7 +27,8 @@ describe("simulation-count claim consistency", () => {
   const userFacingFiles = [
     "client/src/pages/dime/landing/landing-content.ts",
     "client/src/pages/dime/landing/components/Hero.tsx",
-    "client/src/pages/dime/landing/components/MarketConsole.tsx",
+    // MarketConsole.tsx was deleted 2026-07-31 (owner directive); the guard
+    // below still covers landing-content.ts, which owns every stat string.
     // 2026-07-13 audit: these two SEO surfaces drifted to "10,000" because the
     // guard didn't cover them. Crawlers index them — they must match the engine.
     "client/index.html",

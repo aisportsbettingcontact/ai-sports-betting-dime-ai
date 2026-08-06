@@ -28,6 +28,12 @@ sed -i '' "s|/private/tmp/[^\"']*/mlb-modeling-2021-2026-run|$YOUR_RUN_DIR|g" <s
 | 12 | `12_trace_baseline_discrepancy.py` | Traced why the P5 report's headline metrics did not match its own per-fold result files | yes (needs P5 artifacts) |
 | 13 | `13_reconcile_prior_run_baselines.py` | **The reconciliation that produced the erratum.** Recomputed pooled log loss directly from the P5 per-game prediction files for all five binary markets; those artifact-verified values became the v2 baselines (ledger event 39) | yes (needs P5 predictions) |
 | 14 | `14_build_deliverables.py` | Built `SIMULATION-MANIFEST.parquet` (80,193 rows), the convergence-drift statistics, the three `SIM-DISTRIBUTIONS-*.parquet` files, and the experiment-registry update | yes (needs v2 artifacts) |
+| 15 | `15_patch_calibrator_close.py` | **Source patch, audit phase (P5 replay).** Added the missing `close()` method to the `SafeConn` reconnect wrapper in `tools/replay/calibrate_and_grade.py` — the TiDB-serverless connection hardening. Chronologically this ran *before* 01 | **no — already applied** |
+| 16 | `16_rebuild_experiment_registry.py` | Rebuilt `EXPERIMENT-REGISTRY.csv` from the P5 per-market `results_*.csv` files. Ran at P5 consolidation, alongside 07 | yes (needs P5 result CSVs) |
+
+Scripts 15 and 16 were written with a shell heredoc that interpolated `$WT`, `$RUN`, and
+`$D` at execution time; the transcript preserves the pre-interpolation text, so those
+variables appear literally. Substitute your worktree, run, and deliverables directories.
 
 ## Why the patches are committed but not runnable
 

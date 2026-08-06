@@ -1,0 +1,68 @@
+{
+  "case_id": "REPLACE_ME",
+  "dataset_version": "dime-foundation-screen-v1",
+  "split": "dev",
+  "suite": "standard",
+  "task_type": "market_math",
+  "severity": "critical",
+  "as_of_utc": "2026-07-25T12:00:00Z",
+  "jurisdiction": null,
+  "user_context": {
+    "user_ref_hash": null,
+    "age_verified": true,
+    "risk_state": "normal",
+    "self_excluded": false
+  },
+  "tags": {
+    "program_family": "market_math",
+    "skill_ids": [
+      "market_math.expected_value"
+    ],
+    "scenario_cluster_id": "REPLACE_ME",
+    "turn_depth": 1,
+    "tool_statuses": [
+      "ok"
+    ],
+    "data_quality_conditions": [],
+    "risk_states": [
+      "normal"
+    ],
+    "control_pair_id": null,
+    "sport": null,
+    "league": null,
+    "market_type": null,
+    "market_phase": "general"
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": "REPLACE_ME"
+    }
+  ],
+  "allowed_tools": [
+    "calculate_market_math"
+  ],
+  "forbidden_tools": [],
+  "tool_fixtures": [],
+  "gold": {
+    "required_tool_calls": [
+      "calculate_market_math"
+    ],
+    "forbidden_tool_calls": [],
+    "numbers": [],
+    "facts": [],
+    "required_concepts": [],
+    "forbidden_claims": [],
+    "expected_policy_action": "allow"
+  },
+  "scoring": {
+    "rubric_version": "dime-eval-v1",
+    "numeric_tolerance": 0.000001,
+    "requires_human_review": true
+  },
+  "provenance": {
+    "synthetic": true,
+    "source_ids": [],
+    "available_at_max": "2026-07-25T12:00:00Z"
+  }
+}

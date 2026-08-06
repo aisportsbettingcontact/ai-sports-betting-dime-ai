@@ -37,7 +37,7 @@
  *   - Session cookie: httpOnly, sameSite=none (prod) / lax (dev), 90-day JWT.
  *
  * ROUTE PREFIX: /api/auth/discord-login
- *   MUST be under /api/ — the Manus production proxy only forwards /api/* to Express.
+ *   MUST be under /api/ — the legacy production proxy only forwarded /api/* to Express.
  *
  * DISCORD APP SETUP REQUIRED:
  *   - Redirect URI: https://aisportsbettingmodels.com/api/auth/discord-login/callback
@@ -58,6 +58,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { getDb, getAppUserById, updateAppUser, updateAppUserLastSignedIn } from "./db";
 import { appUsers } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { syncDiscordRole } from "./discord/discordRoleSync";
+import { logSafe } from "./_core/logSafe";
 
 const APP_USER_COOKIE = "app_session";
 const DISCORD_API     = "https://discord.com/api/v10";
@@ -160,14 +162,14 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     const origin = `${proto}://${fwdHost}`;
     console.warn(
       `[DiscordLogin][ORIGIN][WARN] requestId=${requestId}` +
-      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${origin}"`
+      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${logSafe(origin)}"`
     );
     return origin;
   }
   const fallback = `${req.protocol}://${req.get("host") ?? "localhost"}`;
   console.warn(
     `[DiscordLogin][ORIGIN][WARN] requestId=${requestId}` +
-    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${fallback}"`
+    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${logSafe(fallback)}"`
   );
   return fallback;
 }
@@ -216,7 +218,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
     const discordPrompt = req.query.prompt === "none" ? "none" : "consent";
 
     console.log(
-      `[DiscordLogin][CONNECT] requestId=${requestId} returnPath="${returnPath}" prompt=${discordPrompt}`
+      `[DiscordLogin][CONNECT] requestId=${requestId} returnPath="${logSafe(returnPath)}" prompt=${discordPrompt}`
     );
 
     if (!ENV.discordClientId || !ENV.discordClientSecret) {
@@ -248,7 +250,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
       console.log(
         `[DiscordLogin][CONNECT][OK] requestId=${requestId}` +
-        ` redirectUri="${redirectUri}" prompt=${discordPrompt} totalMs=${Date.now() - t0}`
+        ` redirectUri="${logSafe(redirectUri)}" prompt=${discordPrompt} totalMs=${Date.now() - t0}`
       );
 
       res.redirect(302, authorizeUrl);
@@ -278,14 +280,14 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
       console.log(
         `[DiscordLogin][CALLBACK] requestId=${requestId}` +
-        ` code=${!!code} state=${!!state} discordError=${discordError ?? "none"}`
+        ` code=${!!code} state=${!!state} discordError=${logSafe(discordError ?? "none")}`
       );
 
       // Discord denied access (user clicked "Cancel")
       if (discordError) {
         console.warn(
           `[DiscordLogin][CALLBACK][DISCORD_ERROR] requestId=${requestId}` +
-          ` discordError="${discordError}"`
+          ` discordError="${logSafe(discordError)}"`
         );
         res.redirect(302, `/login?discord_error=discord_cancelled`);
         return;
@@ -570,6 +572,12 @@ export function registerDiscordLoginRoutes(app: Express): void {
       console.log(
         `[DiscordLogin][CALLBACK][DB_OK] requestId=${requestId}` +
         ` userId=${userId} role=${user.role} dbMs=${Date.now() - t3}`
+      );
+
+      // A manual Discord ID promotion is a verified link; synchronize entitlement now.
+      // This is safe to run for existing links too and remains non-blocking.
+      void syncDiscordRole(userId, user.hasAccess).catch((syncErr: unknown) =>
+        console.warn(`[DiscordLogin][CALLBACK][ROLE_SYNC_WARN] requestId=${requestId} userId=${userId}`, syncErr)
       );
 
       // ── Issue session cookie ──────────────────────────────────────────────────

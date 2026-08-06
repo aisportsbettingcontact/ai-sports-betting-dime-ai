@@ -51,7 +51,7 @@
  */
 export function americanToImplied(odds: number): number {
   if (isNaN(odds)) return NaN;
-  if (odds < 0) return (-odds) / (-odds + 100);
+  if (odds < 0) return -odds / (-odds + 100);
   return 100 / (odds + 100);
 }
 
@@ -61,7 +61,7 @@ export function americanToImplied(odds: number): number {
  */
 export function americanToDecimal(odds: number): number {
   if (isNaN(odds)) return NaN;
-  if (odds < 0) return 1 + 100 / (-odds);
+  if (odds < 0) return 1 + 100 / -odds;
   return 1 + odds / 100;
 }
 
@@ -77,7 +77,7 @@ export function americanToDecimal(odds: number): number {
  * @returns edge in percentage points (e.g. +1.0 or -1.5), or NaN if invalid.
  */
 export function calculateEdge(bookOdds: number, modelOdds: number): number {
-  const bookImplied  = americanToImplied(bookOdds);
+  const bookImplied = americanToImplied(bookOdds);
   const modelImplied = americanToImplied(modelOdds);
   if (isNaN(bookImplied) || isNaN(modelImplied)) return NaN;
   return (modelImplied - bookImplied) * 100;
@@ -89,7 +89,10 @@ export function calculateEdge(bookOdds: number, modelOdds: number): number {
  * modelPct: Model's win probability as a percentage (e.g. 54.2 for 54.2%).
  * Returns edge in percentage points.
  */
-export function calculateEdgeFromPct(bookOdds: number, modelPct: number): number {
+export function calculateEdgeFromPct(
+  bookOdds: number,
+  modelPct: number
+): number {
   const bookImplied = americanToImplied(bookOdds);
   if (isNaN(bookImplied) || isNaN(modelPct)) return NaN;
   return (modelPct / 100 - bookImplied) * 100;
@@ -97,13 +100,13 @@ export function calculateEdgeFromPct(bookOdds: number, modelPct: number): number
 
 /** 6-tier verdict from edge pp value. */
 export function getVerdict(edge: number): string {
-  if (isNaN(edge)) return '—';
-  if (edge >= 8) return 'ELITE';
-  if (edge >= 5) return 'STRONG';
-  if (edge >= 2.5) return 'PLAYABLE';
-  if (edge >= 0.5) return 'SMALL';
-  if (edge >= -1) return 'NEUTRAL';
-  return 'FADE';
+  if (isNaN(edge)) return "—";
+  if (edge >= 8) return "ELITE";
+  if (edge >= 5) return "STRONG";
+  if (edge >= 2.5) return "PLAYABLE";
+  if (edge >= 0.5) return "SMALL";
+  if (edge >= -1) return "NEUTRAL";
+  return "FADE";
 }
 
 /** Color for a given edge pp value — Dime brand law (MASTER.md):
@@ -113,11 +116,11 @@ export function getVerdict(edge: number): string {
 export function getEdgeColor(edge: number): string {
   // Three-Color Law: mint is the one signal; everything without signal is white
   // ink (no grey tiers). Tokens resolve to #FFFFFF/#000000; fallbacks match.
-  if (isNaN(edge)) return 'var(--dime-text-faint, #FFFFFF)';
-  if (edge >= 2.5) return 'var(--dime-mint-text, #45E0A8)'; // ELITE/STRONG/PLAYABLE — signal
-  if (edge >= 0.5) return 'var(--dime-text-secondary, #FFFFFF)'; // SMALL
-  if (edge >= -1) return 'var(--dime-text-faint, #FFFFFF)'; // NEUTRAL
-  return 'var(--dime-text-secondary, #FFFFFF)'; // FADE — plain ink, never red
+  if (isNaN(edge)) return "var(--dime-text-faint, #FFFFFF)";
+  if (edge >= 2.5) return "var(--dime-mint-text, #45E0A8)"; // ELITE/STRONG/PLAYABLE — signal
+  if (edge >= 0.5) return "var(--dime-text-secondary, #FFFFFF)"; // SMALL
+  if (edge >= -1) return "var(--dime-text-faint, #FFFFFF)"; // NEUTRAL
+  return "var(--dime-text-secondary, #FFFFFF)"; // FADE — plain ink, never red
 }
 
 /**
@@ -199,7 +202,7 @@ export function calculateRoi(
   if (isNaN(modelML) || isNaN(bookML) || isNaN(bookOppML)) return NaN;
   const modelImplied = americanToImplied(modelML);
   const rawBook = americanToImplied(bookML);
-  const rawOpp  = americanToImplied(bookOppML);
+  const rawOpp = americanToImplied(bookOppML);
   const vigTotal = rawBook + rawOpp;
   if (vigTotal <= 0 || isNaN(vigTotal)) return NaN;
   const bookNoVigProb = rawBook / vigTotal;
@@ -224,7 +227,7 @@ export function calculateRoiFromProb(
   if (isNaN(modelWinProb) || isNaN(bookML) || isNaN(bookOppML)) return NaN;
   if (modelWinProb <= 0 || modelWinProb >= 1) return NaN;
   const rawBook = americanToImplied(bookML);
-  const rawOpp  = americanToImplied(bookOppML);
+  const rawOpp = americanToImplied(bookOppML);
   const vigTotal = rawBook + rawOpp;
   if (vigTotal <= 0 || isNaN(vigTotal)) return NaN;
   const bookNoVigProb = rawBook / vigTotal;
@@ -237,8 +240,8 @@ export function calculateRoiFromProb(
  * e.g. 4.44 → "+4.44% ROI", -2.1 → "-2.10% ROI"
  */
 export function formatRoi(roi: number): string {
-  if (isNaN(roi)) return '';
-  const sign = roi >= 0 ? '+' : '';
+  if (isNaN(roi)) return "";
+  const sign = roi >= 0 ? "+" : "";
   return `${sign}${roi.toFixed(2)}% ROI`;
 }
 
@@ -289,7 +292,11 @@ export interface ThreeWaySideResult {
 export function calculate3WayResult(
   book: ThreeWayOdds,
   model: ThreeWayOdds
-): { home: ThreeWaySideResult; draw: ThreeWaySideResult; away: ThreeWaySideResult } {
+): {
+  home: ThreeWaySideResult;
+  draw: ThreeWaySideResult;
+  away: ThreeWaySideResult;
+} {
   // [STEP] Convert to raw implied probabilities
   const bHome = americanToImplied(book.home);
   const bDraw = americanToImplied(book.draw);
@@ -311,9 +318,14 @@ export function calculate3WayResult(
 
   // [STEP] Compute per-side edge and ROI
   function sideResult(modelFair: number, bookFair: number): ThreeWaySideResult {
-    const edgePP = !isNaN(modelFair) && !isNaN(bookFair) ? (modelFair - bookFair) * 100 : NaN;
-    const roiPct = (!isNaN(modelFair) && !isNaN(bookFair) && bookFair > 0)
-      ? (modelFair / bookFair - 1) * 100 : NaN;
+    const edgePP =
+      !isNaN(modelFair) && !isNaN(bookFair)
+        ? (modelFair - bookFair) * 100
+        : NaN;
+    const roiPct =
+      !isNaN(modelFair) && !isNaN(bookFair) && bookFair > 0
+        ? (modelFair / bookFair - 1) * 100
+        : NaN;
     return {
       modelFairProb: modelFair,
       bookFairProb: bookFair,
@@ -330,13 +342,13 @@ export function calculate3WayResult(
   };
 
   console.log(
-    '[calculate3WayResult]' +
-    ` | [INPUT] book=${JSON.stringify(book)} model=${JSON.stringify(model)}` +
-    ` | [STATE] bookFair H=${(bookFairHome*100).toFixed(2)}% D=${(bookFairDraw*100).toFixed(2)}% A=${(bookFairAway*100).toFixed(2)}%` +
-    ` | [STATE] modelFair H=${(modelFairHome*100).toFixed(2)}% D=${(modelFairDraw*100).toFixed(2)}% A=${(modelFairAway*100).toFixed(2)}%` +
-    ` | [OUTPUT] edgePP H=${result.home.edgePP.toFixed(2)}pp D=${result.draw.edgePP.toFixed(2)}pp A=${result.away.edgePP.toFixed(2)}pp` +
-    ` | [OUTPUT] roi H=${result.home.roiPct.toFixed(2)}% D=${result.draw.roiPct.toFixed(2)}% A=${result.away.roiPct.toFixed(2)}%` +
-    ` | [VERIFY] hasEdge H=${result.home.hasEdge} D=${result.draw.hasEdge} A=${result.away.hasEdge}`
+    "[calculate3WayResult]" +
+      ` | [INPUT] book=${JSON.stringify(book)} model=${JSON.stringify(model)}` +
+      ` | [STATE] bookFair H=${(bookFairHome * 100).toFixed(2)}% D=${(bookFairDraw * 100).toFixed(2)}% A=${(bookFairAway * 100).toFixed(2)}%` +
+      ` | [STATE] modelFair H=${(modelFairHome * 100).toFixed(2)}% D=${(modelFairDraw * 100).toFixed(2)}% A=${(modelFairAway * 100).toFixed(2)}%` +
+      ` | [OUTPUT] edgePP H=${result.home.edgePP.toFixed(2)}pp D=${result.draw.edgePP.toFixed(2)}pp A=${result.away.edgePP.toFixed(2)}pp` +
+      ` | [OUTPUT] roi H=${result.home.roiPct.toFixed(2)}% D=${result.draw.roiPct.toFixed(2)}% A=${result.away.roiPct.toFixed(2)}%` +
+      ` | [VERIFY] hasEdge H=${result.home.hasEdge} D=${result.draw.hasEdge} A=${result.away.hasEdge}`
   );
 
   return result;
@@ -350,10 +362,9 @@ export function calculate3WayResult(
  * @returns ROI % for the specified side, or NaN if invalid.
  */
 export function calculate3WayRoi(
-  side: 'home' | 'draw' | 'away',
+  side: "home" | "draw" | "away",
   book: ThreeWayOdds,
   model: ThreeWayOdds
 ): number {
   return calculate3WayResult(book, model)[side].roiPct;
 }
-

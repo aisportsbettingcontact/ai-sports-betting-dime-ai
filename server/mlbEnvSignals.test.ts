@@ -65,7 +65,7 @@ describe("Park Factor Classification", () => {
   });
 
   it("PF=1.00 → NEUTRAL park", () => {
-    expect(classifyParkFactor(1.00)).toBe("NEUTRAL");
+    expect(classifyParkFactor(1.0)).toBe("NEUTRAL");
   });
 
   it("PF=0.95 (at lower threshold) → NEUTRAL park", () => {
@@ -87,11 +87,11 @@ describe("Park Factor Color Coding", () => {
   });
 
   it("PITCHER park → green (#39FF14)", () => {
-    expect(parkFactorColor(0.90)).toBe("#39FF14");
+    expect(parkFactorColor(0.9)).toBe("#39FF14");
   });
 
   it("NEUTRAL park → yellow (#FFCC00)", () => {
-    expect(parkFactorColor(1.00)).toBe("#FFCC00");
+    expect(parkFactorColor(1.0)).toBe("#FFCC00");
   });
 });
 
@@ -105,7 +105,7 @@ describe("Umpire Modifier Arrow Logic", () => {
   });
 
   it("kModifier=1.00 (neutral) → dash", () => {
-    expect(umpireArrow(1.00)).toBe("─");
+    expect(umpireArrow(1.0)).toBe("─");
   });
 
   it("bbModifier=1.12 (>1.05) → up arrow (more BBs)", () => {
@@ -127,15 +127,15 @@ describe("Umpire Modifier Arrow Logic", () => {
 
 describe("Umpire Modifier Color Coding", () => {
   it("high kMod → red (more Ks = pitcher-favoring)", () => {
-    expect(umpireColor(1.10)).toBe("#FF5C5C");
+    expect(umpireColor(1.1)).toBe("#FF5C5C");
   });
 
   it("low kMod → green (fewer Ks = hitter-favoring)", () => {
-    expect(umpireColor(0.90)).toBe("#39FF14");
+    expect(umpireColor(0.9)).toBe("#39FF14");
   });
 
   it("neutral kMod → yellow", () => {
-    expect(umpireColor(1.00)).toBe("#FFCC00");
+    expect(umpireColor(1.0)).toBe("#FFCC00");
   });
 });
 
@@ -184,7 +184,9 @@ describe("getMlbGameEnvSignals structure", () => {
     const pf2025 = null;
     const pf2026 = null;
     // When only one year available, 3yr = that year's value
-    const available = [pf2024, pf2025, pf2026].filter((v) => v != null) as number[];
+    const available = [pf2024, pf2025, pf2026].filter(
+      v => v != null
+    ) as number[];
     const avg = available.reduce((s, v) => s + v, 0) / available.length;
     expect(avg).toBeCloseTo(1.31);
   });

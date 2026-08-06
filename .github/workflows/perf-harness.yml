@@ -5,18 +5,22 @@
 # budgets + a regression guard (perf/baseline.json). Fails the run on any
 # violation so a slow deploy is caught. See perf/README.md.
 #
-# Required repo secret:
-#   RAILWAY_APP_URL — public app URL, no trailing slash.
+# Required repo variable / secret:
+#   RAILWAY_APP_URL (var)          — public Cloudflare-fronted app URL, no trailing slash.
+#   EDGE_AGENT_BYPASS_KEY (secret) — trusted-agent bypass so headless document-route
+#     loads are waved past the armed edge's Super Bot Fight Mode; without it the
+#     harness would score a 403 bot-block page (see perf/harness.ts). The job binds
+#     environment:Production, satisfying the repo GHA security contract for secrets.
 #
-# Manual + scheduled. workflow_dispatch exposes `update_baseline` to reseed the
-# committed baseline from a known-good run (artifact is uploaded either way).
+# Manual + scheduled. workflow_dispatch exposes `update_baseline` to generate a
+# reviewable candidate artifact; the committed baseline changes only through PR.
 name: Perf harness
 
 on:
   workflow_dispatch:
     inputs:
       update_baseline:
-        description: "Reseed perf/baseline.json from this run instead of gating"
+        description: "Generate a reviewable baseline candidate instead of gating"
         required: false
         default: "false"
         type: choice
@@ -35,13 +39,14 @@ jobs:
   measure:
     name: Measure live routes
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: "[STEP] Preflight — RAILWAY_APP_URL present"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
         run: |
           set -euo pipefail
           if [ -z "${RAILWAY_APP_URL:-}" ]; then
@@ -50,10 +55,10 @@ jobs:
           echo "[PREFLIGHT] target secret present"
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: pnpm
@@ -64,12 +69,20 @@ jobs:
       - name: "[STEP] Install Chromium for Playwright"
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: "[VERIFY] Run focused real-browser harness tests"
+        run: pnpm exec vitest run perf/harness.smoke.test.ts --reporter=verbose
+
       - name: "[STEP] Run perf harness"
         env:
-          PERF_TARGET_URL: ${{ secrets.RAILWAY_APP_URL }}
+          PERF_TARGET_URL: ${{ vars.RAILWAY_APP_URL }}
+          # Trusted-agent bypass: waves the headless browser past the armed edge's
+          # Super Bot Fight Mode on document routes. Stays in GitHub; host-scoped to
+          # the target origin by perf/harness.ts (never leaks to third parties).
+          EDGE_AGENT_BYPASS_KEY: ${{ secrets.EDGE_AGENT_BYPASS_KEY }}
+          UPDATE_BASELINE: ${{ github.event.inputs.update_baseline }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
+          if [ "$UPDATE_BASELINE" = "true" ]; then
             pnpm exec tsx perf/harness.ts --update-baseline
           else
             pnpm exec tsx perf/harness.ts
@@ -77,8 +90,19 @@ jobs:
 
       - name: "[OUTPUT] Upload raw metrics artifact"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: perf-results
           path: perf-results.json
           if-no-files-found: ignore
+
+      - name: "[OUTPUT] Upload reviewable baseline candidate"
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && github.event.inputs.update_baseline == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: perf-baseline-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            perf-baseline-candidate.json
+            perf-results.json
+          if-no-files-found: error
+          retention-days: 30

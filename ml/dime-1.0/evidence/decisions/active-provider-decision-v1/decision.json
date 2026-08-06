@@ -1,0 +1,175 @@
+{
+  "schemaVersion": "dime-active-provider-decision-v1",
+  "decisionId": "dime-llm-v1-active-provider-2026-07-29",
+  "createdAt": "2026-07-30T04:57:39.529Z",
+  "status": "evidence_collection_required",
+  "verdict": "REVISE",
+  "selection": null,
+  "decisionAuthority": null,
+  "decisionTuple": {
+    "provider": null,
+    "endpoint": null,
+    "baseModel": null,
+    "modelRevision": null,
+    "adapterRevision": null,
+    "deploymentTier": null,
+    "contextLimit": null,
+    "maximumOutputTokens": null,
+    "timeoutMs": null,
+    "retryPolicy": null,
+    "concurrencyLimit": null,
+    "fallbackBehavior": null,
+    "pricingSource": null,
+    "effectivePricingDate": null,
+    "rollbackTarget": null
+  },
+  "productionBaseline": {
+    "provider": "frozen",
+    "model": "no-provider",
+    "modelRevision": "no-provider",
+    "deploymentTier": "disabled",
+    "externalModelInvocations": 0,
+    "zeroCostRuntime": true,
+    "exactPriceAvailable": false,
+    "traceEnabled": false,
+    "generativeRouteActivation": false,
+    "rollbackTarget": {
+      "applicationDeploymentId": "0fd3a068-7aa4-4280-8656-79069d1e2721",
+      "backendDeploymentId": "7cc68958-961e-4ae2-94ce-5a5875ad7a7c",
+      "commitSha": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b"
+    }
+  },
+  "candidateEvidence": [
+    {
+      "candidateId": "frozen-no-provider",
+      "provider": "frozen",
+      "endpointClass": "none",
+      "baseModel": "no-provider",
+      "modelRevision": "no-provider",
+      "adapterRevision": null,
+      "currentlyActive": true,
+      "configured": true,
+      "credentialConfigured": false,
+      "externalInvocationAuthorized": false,
+      "exactPricingEvidenceAvailable": true,
+      "pricingInterpretation": "Zero cost is valid only because no external model invocation occurs.",
+      "benchmarkStatus": "baseline_required"
+    },
+    {
+      "candidateId": "dormant-runpod-dime1",
+      "provider": "dime1",
+      "endpointClass": "runpod_serverless_openai_compatible",
+      "baseModel": "meta-llama/Llama-3.1-8B-Instruct",
+      "modelRevision": null,
+      "adapterRevision": null,
+      "currentlyActive": false,
+      "configured": true,
+      "credentialConfigured": true,
+      "externalInvocationAuthorized": false,
+      "exactPricingEvidenceAvailable": false,
+      "pricingInterpretation": "The dormant endpoint is not the active Dime Chat tuple and cannot receive a pricing entry before selection and revision validation.",
+      "benchmarkStatus": "not_run"
+    },
+    {
+      "candidateId": "existing-anthropic-integration",
+      "provider": "anthropic",
+      "endpointClass": "anthropic_sdk_direct_or_compatible_gateway",
+      "baseModel": "claude-fable-5",
+      "modelRevision": null,
+      "adapterRevision": null,
+      "currentlyActive": false,
+      "configured": true,
+      "credentialConfigured": true,
+      "externalInvocationAuthorized": false,
+      "exactPricingEvidenceAvailable": false,
+      "pricingInterpretation": "The existing code path and credential presence do not establish an approved model revision, endpoint, price, or activation.",
+      "benchmarkStatus": "not_run"
+    }
+  ],
+  "comparisonDimensions": [
+    "sports_reasoning_quality",
+    "instruction_adherence",
+    "tool_use_reliability",
+    "latency",
+    "context_handling",
+    "output_stability",
+    "cost",
+    "operational_reliability",
+    "data_privacy",
+    "rollback_speed"
+  ],
+  "candidateScores": {
+    "frozen-no-provider": null,
+    "dormant-runpod-dime1": null,
+    "existing-anthropic-integration": null
+  },
+  "scoringRule": {
+    "scale": "1_to_5",
+    "minimumEvidencePerDimension": "measured_result_or_documented_authoritative_source",
+    "unmeasuredScore": null,
+    "selectionRule": "No candidate may be selected while any correctness, reliability, privacy, rollback, or exact-identity gate is unmeasured."
+  },
+  "requiredBenchmark": {
+    "executionEnvironment": "nonproduction_or_isolated_production_equivalent",
+    "frozenEvaluationSuiteRequired": true,
+    "routes": [
+      "platform",
+      "account",
+      "educational",
+      "matchup",
+      "tool_use",
+      "missing_data"
+    ],
+    "requiredMeasurements": [
+      "correctness",
+      "groundedness",
+      "instruction_adherence",
+      "tool_selection_accuracy",
+      "tool_execution_reliability",
+      "unsupported_assertion_rate",
+      "calibration",
+      "time_to_first_token_ms",
+      "end_to_end_latency_ms",
+      "input_tokens",
+      "output_tokens",
+      "estimated_cost_usd",
+      "timeout_rate",
+      "error_rate",
+      "output_schema_compliance"
+    ],
+    "endpointCallsAuthorized": false,
+    "benchmarkRunAuthorized": false
+  },
+  "requiredIndependentEvidence": [
+    "Exact endpoint identity without capturing a secret.",
+    "Exact base model and immutable model revision.",
+    "Exact adapter revision or explicit null.",
+    "Measured benchmark results against the frozen baseline.",
+    "Official pricing evidence for the exact selected tuple and effective date.",
+    "Data-retention and privacy terms for the selected execution lane.",
+    "Bounded timeout, retry, concurrency, fallback, and rollback behavior.",
+    "Independent approval of the completed decision tuple."
+  ],
+  "pricing": {
+    "registryPath": "ml/dime-1.0/configs/dime_observability_pricing_v1.json",
+    "currentRegistryStatus": "review_required",
+    "currentEntryCount": 0,
+    "pricingEntryAuthorized": false,
+    "selectionMustPrecedePricingEntry": true,
+    "independentValidationMustPrecedePricingEntry": true
+  },
+  "authorizationBoundary": {
+    "providerSelection": false,
+    "endpointInvocation": false,
+    "pricingEntryCreation": false,
+    "environmentVariableChange": false,
+    "providerActivation": false,
+    "traceActivation": false,
+    "shadowTraffic": false,
+    "generativeRouteActivation": false,
+    "modelTraining": false,
+    "researchAlphaActivation": false
+  },
+  "nextAction": "An independent decision authority must authorize isolated candidate benchmarking or select a candidate only after the required identity and evidence are available.",
+  "productionMutationsPerformed": []
+}

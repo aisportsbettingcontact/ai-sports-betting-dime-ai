@@ -1,4 +1,12 @@
 import { TRPCError } from "@trpc/server";
+import { gamesListInput } from "./gamesListInput";
+import {
+  isRequestAuthenticated,
+  setGatedCacheHeaders,
+  stripGameModelFields,
+  stripHrPropModelFields,
+  stripStrikeoutPropModelFields,
+} from "./feedGating";
 import { z } from "zod";
 import {
   zodGameDate,
@@ -7,24 +15,16 @@ import {
   zodDbSlug,
   zodFilePath,
   zodPitcherRsId,
-  zodBase64File,
   zodHtmlPaste,
   zodGameIdArray,
   MAX_GAME_IDS_PER_REQUEST,
 } from "./securityMiddleware";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { wc2026Router } from "./wc2026/wc2026Router";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 import {
-  deleteModelFile,
-  getModelFileById,
   insertGames,
-  insertModelFile,
   listGames,
-  listModelFiles,
-  updateModelFileStatus,
   listStagingGames,
   listStagingGamesRange,
   updateGameProjections,
@@ -35,28 +35,25 @@ import {
   getActiveSports,
   getAvailableDates,
 } from "./db";
-import { storagePut } from "./storage";
-import { parseFileBuffer, detectSportFromFilename, detectDateFromFilename } from "./fileParser";
-import { nanoid } from "nanoid";
 import { appUsersRouter, ownerProcedure, appUserProcedure } from "./routers/appUsers";
 import { betTrackerRouter } from "./routers/betTracker";
 import { dimeChatsRouter } from "./routers/dimeChats";
 import { securityRouter } from "./routers/security";
 import { metricsRouter } from "./routers/metrics";
+import { analyticsRouter } from "./routers/analytics";
 import { mlbScheduleRouter } from "./routers/mlbSchedule";
 import { nbaScheduleRouter } from "./routers/nbaSchedule";
 import { nhlScheduleRouter } from "./routers/nhlSchedule";
-// jackMacRouter removed
 import { stripeRouter } from "./routers/stripe";
+import { subscriptionPlansRouter } from "./routers/subscriptionPlans";
 import { claudeRouter } from "./claudeRouter";
 import { waitlistRouter } from "./routers/waitlist";
+import { dimeRuntimeRouter } from "./routers/dimeRuntime";
 import { listNbaTeams, getNbaTeamByDbSlug, getGameTeamColors, deleteGameById, getFavoriteGameIds, getFavoriteGamesWithDates, toggleFavoriteGame, updateAnOdds, listGamesByDate, listOddsHistory, getBracketGames, auditAndAdvanceAllBracketWinners, getMlbLineupsByGameIds, getStrikeoutPropsByGame, getStrikeoutPropsByGames, getMlbGameEnvSignals, getHrPropsByGame, getHrPropsByGames } from "./db";
 import { runStrikeoutModel, type StrikeoutRunnerInput } from "./strikeoutModelRunner";
 import { getLastRefreshResult, runVsinRefreshManual, refreshAllScoresNow } from "./vsinAutoRefresh";
-import { syncNbaModelFromSheet, getLastNbaModelSyncResult } from "./nbaModelSync";
 import { syncNhlModelForToday, getLastNhlSyncResult } from "./nhlModelSync";
 import { runMlbModelForDate, validateMlbModelResults } from "./mlbModelRunner";
-import { loadMlbMarketGates } from "./mlbPublicationGate";
 import { checkGoalieChanges, getLastGoalieWatchResult } from "./nhlGoalieWatcher";
 import { MARCH_MADNESS_DB_SLUGS } from "@shared/marchMadnessTeams";
 import { parseAnAllMarketsHtml, type AnSport } from "./anHtmlParser";
@@ -170,6 +167,32 @@ function isValidGame(awayTeam: string, homeTeam: string, sport?: string | null):
   return MARCH_MADNESS_DB_SLUGS.has(awayTeam) && MARCH_MADNESS_DB_SLUGS.has(homeTeam);
 }
 
+/**
+ * The single pinned game the public landing-page odds sample may show:
+ * a COMPLETED MLB matchup, resolved by date + teams rather than a hardcoded
+ * row id so it survives re-ingests. Nothing about this is caller-controlled.
+ */
+const DEMO_GAME = {
+  gameDate: "2026-07-24",
+  sport: "MLB",
+  teams: ["CHC", "PIT"],
+} as const;
+
+async function findDemoGame() {
+  try {
+    const slate = await listGamesByDate(DEMO_GAME.gameDate, DEMO_GAME.sport);
+    const isDemoTeam = (name: string) =>
+      (DEMO_GAME.teams as readonly string[]).includes(name);
+    const match = slate.find(
+      g => isDemoTeam(g.awayTeam) && isDemoTeam(g.homeTeam)
+    );
+    return match ?? null;
+  } catch (err) {
+    console.warn(`[oddsHistory.listForDemoGame] demo lookup failed:`, err);
+    return null;
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
   appUsers: appUsersRouter,
@@ -177,116 +200,16 @@ export const appRouter = router({
   dimeChats: dimeChatsRouter,
   security: securityRouter,
   metrics: metricsRouter,
+  analytics: analyticsRouter,
   mlbSchedule: mlbScheduleRouter,
   nbaSchedule: nbaScheduleRouter,
   nhlSchedule: nhlScheduleRouter,
-  // jackMac router removed
   stripe: stripeRouter,
+  subscriptionPlans: subscriptionPlansRouter,
   wc2026: wc2026Router,
   claude: claudeRouter,
   waitlist: waitlistRouter,
-
-  // ─── Auth ──────────────────────────────────────────────────────────────────
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
-
-  // ─── Files ─────────────────────────────────────────────────────────────────
-  files: router({
-    /**
-     * Upload a CSV or XLSX model file to S3 and ingest rows into the games table.
-     */
-    upload: protectedProcedure
-      .input(
-        z.object({
-          filename: z.string().min(1).max(255).regex(/^[\w\-. ]+$/, "Invalid filename"),
-          contentBase64: zodBase64File,
-          sizeBytes: z.number().int().positive().max(2_000_000, "File too large (max 2MB)"),
-          sport: zodSport.optional(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const sport = input.sport ?? detectSportFromFilename(input.filename);
-        const gameDate = detectDateFromFilename(input.filename);
-
-        const buffer = Buffer.from(input.contentBase64, "base64");
-        const suffix = nanoid(10);
-        const fileKey = `model-files/${ctx.user.id}/${suffix}-${input.filename}`;
-
-        const mimeType = input.filename.toLowerCase().endsWith(".xlsx")
-          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          : "text/csv";
-        const { url: fileUrl } = await storagePut(fileKey, buffer, mimeType);
-
-        await insertModelFile({
-          uploadedBy: ctx.user.id,
-          filename: input.filename,
-          fileKey,
-          fileUrl,
-          mimeType,
-          sizeBytes: input.sizeBytes,
-          sport,
-          gameDate: gameDate ?? undefined,
-          status: "processing",
-          rowsImported: 0,
-        });
-
-        const files = await listModelFiles(ctx.user.id);
-        const fileRecord = files.find((f: { fileKey: string }) => f.fileKey === fileKey);
-        if (!fileRecord) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "File record not found after insert",
-          });
-        }
-
-        try {
-          const gameRows = parseFileBuffer(buffer, input.filename, fileRecord.id, sport);
-          if (gameRows.length > 0) {
-            await insertGames(gameRows);
-          }
-          await updateModelFileStatus(fileRecord.id, "done", gameRows.length);
-
-          return {
-            success: true,
-            fileId: fileRecord.id,
-            filename: input.filename,
-            sport,
-            rowsImported: gameRows.length,
-            fileUrl,
-          };
-        } catch (err) {
-          await updateModelFileStatus(fileRecord.id, "error", 0);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `File uploaded but parsing failed: ${err instanceof Error ? err.message : String(err)}`,
-          });
-        }
-      }),
-
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return listModelFiles(ctx.user.id);
-    }),
-
-    delete: protectedProcedure
-      .input(z.object({ fileId: z.number().int().positive() }))
-      .mutation(async ({ ctx, input }) => {
-        const file = await getModelFileById(input.fileId);
-        if (!file) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "File not found" });
-        }
-        if (file.uploadedBy !== ctx.user.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Not your file" });
-        }
-        await deleteModelFile(input.fileId);
-        return { success: true };
-      }),
-  }),
+  dimeRuntime: dimeRuntimeRouter,
 
   // ─── NBA Teams ─────────────────────────────────────────────────────
   nbaTeams: router({
@@ -310,16 +233,9 @@ export const appRouter = router({
      * PUBLIC — feed is now fully public; unauthenticated users can view projections.
      */
     list: publicProcedure
-      .input(
-        z
-          .object({
-            sport: zodSport.optional(),
-            gameDate: zodGameDate.optional(),
-            gameStatus: z.enum(['upcoming', 'live', 'final']).optional(),
-            forceRefresh: z.boolean().optional(),
-          })
-          .optional()
-      )
+      // SEC: input contract lives in gamesListInput — it deliberately has no
+      // forceRefresh field (public cache-bypass amplification lever, removed).
+      .input(gamesListInput)
       .query(async ({ input, ctx }) => {
         // [tRPC][games.list] — hot path log silenced (fires every 60s per user)
         const games = await listGames(input ?? {});
@@ -336,25 +252,46 @@ export const appRouter = router({
         // Cache stores full Game objects; stripping happens at the wire layer only.
         const stripped = filtered.map(g => stripSportNullFields(g));
 
-        // Performance: Cache-Control + ETag for public feed (eliminates redundant DB queries)
+        // IP gating (Phase 3): the model projections/edges are the paid product.
+        // Anonymous callers get commodity fields only (schedule, book lines,
+        // splits) — the model fields are nulled at the wire layer. Authenticated
+        // callers get the full payload. The feed SURFACE is already RequireAuth
+        // -gated, so logged-in UX is unchanged; this closes the anonymous API
+        // scrape of the model IP.
+        const authed = await isRequestAuthenticated(ctx.req);
+        const gated = authed ? stripped : stripped.map(g => stripGameModelFields(g));
+
+        // Cache-Control + ETag. Authed responses carry the model IP and MUST NOT
+        // be shared-cached (a CDN/edge could serve them to an anon); anon
+        // responses are commodity and may be shared-cached. ETag over the
+        // GATED shape so authed/anon never collide on the same validator.
+        //
+        // Authed = `private, no-store` (NOT max-age): (1) closes this endpoint's
+        // own edge-cache exposure of MLB model IP under a Cloudflare
+        // "Override-TTL / Cache Everything" rule that ignores `private`+`Vary`;
+        // (2) games.list and wc2026.matchesByDate co-batch into ONE tRPC HTTP
+        // response sharing one `ctx.res` — last-writer-wins on Cache-Control.
+        // Making BOTH authed model endpoints emit `no-store` makes that race
+        // benign (uniform no-store) regardless of which procedure resolves last.
+        // Fast-follow: a responseMeta hook that emits the most-restrictive
+        // Cache-Control across an arbitrary batch removes the race entirely.
         try {
           const etag = createHash('md5')
-            .update(JSON.stringify(filtered.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
+            .update(JSON.stringify(gated.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
             .digest('hex')
             .slice(0, 16);
-          ctx.res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+          ctx.res.setHeader(
+            'Cache-Control',
+            authed ? 'private, no-store' : 'public, max-age=30, stale-while-revalidate=60'
+          );
+          ctx.res.setHeader('Vary', 'Cookie');
           ctx.res.setHeader('ETag', `"${etag}"`);
-          ctx.res.setHeader('X-Games-Count', String(stripped.length));
+          ctx.res.setHeader('X-Games-Count', String(gated.length));
           ctx.res.setHeader('X-Cache-Status', 'MISS'); // overridden by cache layer if HIT
-          const ifNoneMatch = (ctx.req as import('express').Request).headers['if-none-match'];
-          if (ifNoneMatch === `"${etag}"`) {
-            ctx.res.status(304).end();
-            return [] as typeof stripped;
-          }
         } catch {
           // Non-fatal: header setting can fail in some edge cases
         }
-        return stripped;
+        return gated;
       }),
 
     /**
@@ -428,18 +365,6 @@ export const appRouter = router({
       ].join('-');
       // [tRPC][games.getCurrentDate] — hot path log silenced (fires every 5min per user)
       return { effectiveDate, utcHour: nowUtc.getUTCHours(), isBeforeCutoff };
-    }),
-
-    /**
-     * M-201: Per-market MLB publication gates.
-     * Reads publish_* rows from mlb_calibration_constants (written by the
-     * audit's Phase 7 PUBLISH / BACKTEST-ONLY verdicts). A missing row fails
-     * open to true, so behavior is unchanged until verdicts land.
-     * PUBLIC — the client uses this map to hide gated market sections.
-     * Server-side cached 5 minutes (see loadMlbMarketGates).
-     */
-    mlbMarketGates: publicProcedure.query(async () => {
-      return loadMlbMarketGates();
     }),
 
     /**
@@ -619,23 +544,6 @@ export const appRouter = router({
         await deleteGameById(input.id);
         return { success: true, deletedId: input.id };
       }),
-
-    /**
-     * Returns the result of the last NBA model sheet sync (null if never run).
-     * Owner-only.
-     */
-    lastNbaModelSync: ownerProcedure.query(() => {
-      return getLastNbaModelSyncResult();
-    }),
-
-    /**
-     * Manually trigger an immediate NBA model sheet sync.
-     * Owner-only.
-     */
-    triggerNbaModelSync: ownerProcedure.mutation(async () => {
-      const result = await syncNbaModelFromSheet();
-      return result;
-    }),
 
     /**
      * Ingest Action Network "All Markets" HTML paste.
@@ -959,9 +867,7 @@ export const appRouter = router({
   }),
 
   // ─── Favorites ──────────────────────────────────────────────────────────────
-  // NOTE: Uses appUserProcedure (custom app_session cookie auth), NOT protectedProcedure
-  // (Manus OAuth). Custom-auth users have ctx.user = null, so protectedProcedure would
-  // always throw UNAUTHORIZED for them.
+  // Uses appUserProcedure (the real app_session cookie auth).
   favorites: router({
     /** Get all favorited game IDs for the current user. */
     getMyFavorites: appUserProcedure.query(async ({ ctx }) => {
@@ -1156,6 +1062,32 @@ export const appRouter = router({
         const rows = await listOddsHistory(input.gameId);
         return { history: rows };
       }),
+
+    /**
+     * Landing-page marketing sample (owner directive 2026-07-31).
+     *
+     * SECURITY NOTE: odds movement is premium content and `listForGame`
+     * above stays gated. This procedure is a deliberately narrow carve-out:
+     * it takes NO caller input and can only ever resolve ONE pinned,
+     * already-completed game (DEMO_GAME below) — a visitor cannot pivot it
+     * to today's slate or to any other matchup. That is the whole product
+     * sample the public landing page is allowed to show.
+     */
+    listForDemoGame: publicProcedure.query(async () => {
+      const game = await findDemoGame();
+      if (!game) {
+        console.log(`[tRPC][oddsHistory.listForDemoGame] PUBLIC — demo game not found; serving empty`);
+        return { history: [], game: null };
+      }
+      const rows = await listOddsHistory(game.id);
+      console.log(
+        `[tRPC][oddsHistory.listForDemoGame] PUBLIC gameId=${game.id} rows=${rows.length}`
+      );
+      return {
+        history: rows,
+        game: { id: game.id, awayTeam: game.awayTeam, homeTeam: game.homeTeam },
+      };
+    }),
   }),
   // ─── MLB Strikeout Props ──────────────────────────────────────────────────────────────────────
   strikeoutProps: router({
@@ -1166,10 +1098,13 @@ export const appRouter = router({
      */
     getByGame: publicProcedure
       .input(z.object({ gameId: z.number().int().positive() }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][strikeoutProps.getByGame] PUBLIC gameId=${input.gameId}`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][strikeoutProps.getByGame] gameId=${input.gameId}`);
         const rows = await getStrikeoutPropsByGame(input.gameId);
-        return { props: rows };
+        // IP gating: anon gets book lines only, model projections/edges nulled.
+        const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
+        return { props: authed ? rows : rows.map(r => stripStrikeoutPropModelFields(r)) };
       }),
 
     /**
@@ -1179,13 +1114,17 @@ export const appRouter = router({
      */
     getByGames: publicProcedure
       .input(z.object({ gameIds: z.array(z.number().int().positive()) }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][strikeoutProps.getByGames] PUBLIC gameIds=[${input.gameIds.join(',')}]`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][strikeoutProps.getByGames] gameIds=[${input.gameIds.join(',')}]`);
         const map = await getStrikeoutPropsByGames(input.gameIds);
-        // Convert Map to plain object for serialization
+        const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
+        // Convert Map to plain object for serialization; gate rows for anon.
         const result: Record<number, typeof map extends Map<number, infer V> ? V : never> = {};
         Array.from(map.entries()).forEach(([k, v]) => {
-          result[k] = v;
+          result[k] = (authed
+            ? v
+            : (v as unknown[]).map(r => stripStrikeoutPropModelFields(r as Record<string, unknown>))) as typeof v;
         });
         return { propsByGame: result };
       }),
@@ -1422,10 +1361,12 @@ export const appRouter = router({
      */
     getByGame: publicProcedure
       .input(z.object({ gameId: z.number().int().positive() }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][hrProps.getByGame] PUBLIC gameId=${input.gameId}`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][hrProps.getByGame] gameId=${input.gameId}`);
         const rows = await getHrPropsByGame(input.gameId);
-        return { props: rows };
+        const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
+        return { props: authed ? rows : rows.map(r => stripHrPropModelFields(r)) };
       }),
 
     /**
@@ -1435,11 +1376,17 @@ export const appRouter = router({
      */
     getByGames: publicProcedure
       .input(z.object({ gameIds: zodGameIdArray }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][hrProps.getByGames] PUBLIC gameIds=[${input.gameIds.join(',')}]`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][hrProps.getByGames] gameIds=[${input.gameIds.join(',')}]`);
         const map = await getHrPropsByGames(input.gameIds);
+        const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
         const result: Record<number, Awaited<ReturnType<typeof getHrPropsByGame>>> = {};
-        Array.from(map.entries()).forEach(([k, v]) => { result[k] = v; });
+        Array.from(map.entries()).forEach(([k, v]) => {
+          result[k] = (authed
+            ? v
+            : (v as unknown[]).map(r => stripHrPropModelFields(r as Record<string, unknown>))) as typeof v;
+        });
         return { propsByGame: result };
       }),
   }),
@@ -1473,7 +1420,7 @@ export const appRouter = router({
     /**
      * Get rolling backtest accuracy per market for the last N days.
      */
-    getRollingAccuracy: protectedProcedure
+    getRollingAccuracy: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(90).default(30) }))
       .query(async ({ input }) => {
         const { getMultiMarketRollingAccuracy } = await import('./mlbMultiMarketBacktest');
@@ -1483,7 +1430,7 @@ export const appRouter = router({
     /**
      * Get drift log entries (model learning events) for the last N days.
      */
-    getDriftLog: protectedProcedure
+    getDriftLog: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(90).default(30) }))
       .query(async ({ input }) => {
         const { getDb }              = await import('./db');
@@ -1526,7 +1473,7 @@ export const appRouter = router({
      * Get full backtest report: per-market stats, ROI curve, calibration, edge distribution.
      * Used by the Backtest UI page.
      */
-    getFullReport: protectedProcedure
+    getFullReport: ownerProcedure
       .input(z.object({
         days:        z.number().int().min(1).max(365).default(60),
         minEdge:     z.number().min(0).max(1).default(0),
@@ -1539,7 +1486,7 @@ export const appRouter = router({
     /**
      * Get per-day accuracy time series for ROI curve chart.
      */
-    getDailyTimeSeries: protectedProcedure
+    getDailyTimeSeries: ownerProcedure
       .input(z.object({
         days:   z.number().int().min(1).max(365).default(60),
         market: z.string().default('all'),
@@ -1551,7 +1498,7 @@ export const appRouter = router({
     /**
      * Get edge-bucket accuracy breakdown (calibration chart data).
      */
-    getEdgeBuckets: protectedProcedure
+    getEdgeBuckets: ownerProcedure
       .input(z.object({
         days:   z.number().int().min(1).max(365).default(60),
         market: z.string().default('all'),
@@ -1563,7 +1510,7 @@ export const appRouter = router({
     /**
      * Get K-Props detailed backtest: MAE, bias, RMSE, per-line accuracy.
      */
-    getKPropsReport: protectedProcedure
+    getKPropsReport: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(365).default(60) }))
       .query(async ({ input }) => {
         const { getKPropsBacktestReport } = await import('./mlbFullBacktestEngine');
@@ -1572,7 +1519,7 @@ export const appRouter = router({
     /**
      * Get HR Props detailed backtest: calibration, P(HR) distribution, accuracy by odds tier.
      */
-    getHrPropsReport: protectedProcedure
+    getHrPropsReport: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(365).default(60) }))
       .query(async ({ input }) => {
         const { getHrPropsBacktestReport } = await import('./mlbFullBacktestEngine');
@@ -1604,4 +1551,3 @@ export const appRouter = router({
   }),
 });
 export type AppRouter = typeof appRouter;
-

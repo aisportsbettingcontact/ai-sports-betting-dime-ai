@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_build.schema.json",
+  "title": "Dime Foundation Build v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_version",
+    "tool_contract_bundle_sha256",
+    "contract_registry",
+    "release_directory",
+    "release_inventory",
+    "source_policy",
+    "record_policy",
+    "development_evaluation_policy",
+    "review_policy",
+    "external_audit_policy",
+    "evidence_freshness_policy",
+    "freeze_policy"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-foundation-build-v2"},
+    "dataset_version": {"const": "dime-sft-foundation-v1"},
+    "tool_contract_bundle_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "contract_registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "contracts"],
+      "properties": {
+        "schema_version": {"const": "dime-foundation-contract-registry-v1"},
+        "contracts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "taxonomy",
+            "stage_profiles",
+            "numeric_policy",
+            "separation_of_duties"
+          ],
+          "properties": {
+            "taxonomy": {"$ref": "#/$defs/taxonomyRegistry"},
+            "stage_profiles": {"$ref": "#/$defs/stageRegistry"},
+            "numeric_policy": {"$ref": "#/$defs/numericRegistry"},
+            "separation_of_duties": {"$ref": "#/$defs/separationRegistry"}
+          }
+        }
+      }
+    },
+    "release_directory": {"const": "foundation-v1"},
+    "release_inventory": {
+      "const": [
+        "train.jsonl",
+        "validation.jsonl",
+        "dataset_manifest.json",
+        "dataset_card.md",
+        "checksums.json"
+      ]
+    },
+    "source_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_source_classes",
+        "contains_user_data",
+        "contains_provider_derived_data",
+        "teacher_generated_allowed",
+        "unknown_sources_allowed",
+        "expired_rights_allowed"
+      ],
+      "properties": {
+        "allowed_source_classes": {
+          "const": ["human-authored", "synthetic", "teacher-generated"]
+        },
+        "contains_user_data": {"const": false},
+        "contains_provider_derived_data": {"const": false},
+        "teacher_generated_allowed": {"const": true},
+        "unknown_sources_allowed": {"const": false},
+        "expired_rights_allowed": {"const": false}
+      }
+    },
+    "record_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_system_prompt_in_records",
+        "canonical_system_prompt_injected_by_trainer",
+        "dataset_version",
+        "required_group_keys",
+        "require_nonempty_source_ids",
+        "require_numeric_assertions_for_all_assistant_numeric_tokens",
+        "require_successful_tool_result_evidence_for_numeric_assertions",
+        "recompute_calculate_market_math_results",
+        "exact_duplicate_normalization",
+        "semantic_shingle_size",
+        "semantic_similarity_threshold",
+        "development_prompt_similarity_threshold",
+        "numeric_tolerance_maximums"
+      ],
+      "properties": {
+        "canonical_system_prompt_in_records": {"const": false},
+        "canonical_system_prompt_injected_by_trainer": {"const": true},
+        "dataset_version": {"const": "dime-sft-foundation-v1"},
+        "required_group_keys": {
+          "const": [
+            "source_snapshot_partition_key",
+            "conversation_partition_key",
+            "scenario_cluster_id"
+          ]
+        },
+        "require_nonempty_source_ids": {"const": true},
+        "require_numeric_assertions_for_all_assistant_numeric_tokens": {"const": true},
+        "require_successful_tool_result_evidence_for_numeric_assertions": {"const": true},
+        "recompute_calculate_market_math_results": {"const": true},
+        "exact_duplicate_normalization": {"const": "dime-normalized-messages-v1"},
+        "semantic_shingle_size": {"const": 5},
+        "semantic_similarity_threshold": {"const": 0.92},
+        "development_prompt_similarity_threshold": {"const": 0.8},
+        "numeric_tolerance_maximums": {"$ref": "#/$defs/tolerances"}
+      }
+    },
+    "development_evaluation_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_schema_version",
+        "repo_type",
+        "repo_id",
+        "private_repository_required",
+        "exact_40_character_commit_required",
+        "manifest_path",
+        "case_root",
+        "exhaustive_recursive_jsonl_inventory_required",
+        "explicit_hf_token_required",
+        "local_remote_byte_equality_required",
+        "local_fallback_allowed"
+      ],
+      "properties": {
+        "identity_schema_version": {
+          "const": "dime-foundation-development-eval-identity-v2"
+        },
+        "repo_type": {"const": "dataset"},
+        "repo_id": {"const": "taileredsports/dime-eval-development"},
+        "private_repository_required": {"const": true},
+        "exact_40_character_commit_required": {"const": true},
+        "manifest_path": {"const": "evaluation_manifest.json"},
+        "case_root": {"const": "cases"},
+        "exhaustive_recursive_jsonl_inventory_required": {"const": true},
+        "explicit_hf_token_required": {"const": true},
+        "local_remote_byte_equality_required": {"const": true},
+        "local_fallback_allowed": {"const": false}
+      }
+    },
+    "review_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rubric_id",
+        "rubric_path",
+        "standard_reviewer_minimum",
+        "elevated_reviewer_minimum",
+        "elevated_task_families",
+        "elevated_policy_actions",
+        "author_may_review_own_record",
+        "required_specialist_roles"
+      ],
+      "properties": {
+        "rubric_id": {"const": "dime-answer-v1"},
+        "rubric_path": {"const": "docs/DIME_ANSWER_RUBRIC_V1.md"},
+        "standard_reviewer_minimum": {"const": 1},
+        "elevated_reviewer_minimum": {"const": 2},
+        "elevated_task_families": {
+          "const": [
+            "market_math",
+            "bet_tracker_coaching",
+            "simulation_analysis",
+            "safety_privacy_security"
+          ]
+        },
+        "elevated_policy_actions": {
+          "const": [
+            "privacy_block",
+            "age_block",
+            "jurisdiction_block",
+            "self_exclusion_block",
+            "protective_block",
+            "acute_distress_block"
+          ]
+        },
+        "author_may_review_own_record": {"const": false},
+        "required_specialist_roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "market_math",
+            "bet_tracker_coaching",
+            "simulation_analysis",
+            "safety_privacy_security"
+          ],
+          "properties": {
+            "market_math": {"const": "numeric"},
+            "bet_tracker_coaching": {"const": "coaching"},
+            "simulation_analysis": {"const": "simulation"},
+            "safety_privacy_security": {"const": "safety"}
+          }
+        }
+      }
+    },
+    "external_audit_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantic_deduplication",
+        "privacy_and_identifiers",
+        "rights",
+        "development_evaluation_contamination",
+        "locked_evaluation_contamination",
+        "numeric_traceability"
+      ],
+      "properties": {
+        "semantic_deduplication": {
+          "$ref": "#/$defs/semanticAudit"
+        },
+        "privacy_and_identifiers": {
+          "$ref": "#/$defs/privacyAudit"
+        },
+        "rights": {"$ref": "#/$defs/rightsAudit"},
+        "development_evaluation_contamination": {
+          "$ref": "#/$defs/developmentAudit"
+        },
+        "locked_evaluation_contamination": {
+          "$ref": "#/$defs/lockedAudit"
+        },
+        "numeric_traceability": {"$ref": "#/$defs/numericAudit"}
+      }
+    },
+    "evidence_freshness_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_audit_max_age_hours",
+        "external_audit_max_age_hours",
+        "approval_max_age_hours",
+        "maximum_release_validity_days"
+      ],
+      "properties": {
+        "candidate_audit_max_age_hours": {"const": 24},
+        "external_audit_max_age_hours": {"const": 72},
+        "approval_max_age_hours": {"const": 24},
+        "maximum_release_validity_days": {"const": 30}
+      }
+    },
+    "freeze_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_schema_version",
+        "private_visibility_required",
+        "exact_inventory_required",
+        "atomic_new_directory_only",
+        "external_audit_reports",
+        "dataset_card_required_sections"
+      ],
+      "properties": {
+        "manifest_schema_version": {"const": "dime-dataset-manifest-v4"},
+        "private_visibility_required": {"const": true},
+        "exact_inventory_required": {"const": true},
+        "atomic_new_directory_only": {"const": true},
+        "external_audit_reports": {
+          "const": [
+            "semantic_deduplication",
+            "privacy_and_identifiers",
+            "rights",
+            "development_evaluation_contamination",
+            "locked_evaluation_contamination",
+            "numeric_traceability"
+          ]
+        },
+        "dataset_card_required_sections": {
+          "const": [
+            "# Dime Foundation SFT",
+            "## Intended use",
+            "## Source classes and rights",
+            "## Privacy and consent",
+            "## Splits and counts",
+            "## Known limitations",
+            "## Retirement and deletion"
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "taxonomyRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config_path", "schema_path", "schema_version"],
+      "properties": {
+        "config_path": {"const": "configs/foundation_taxonomy_v1.yaml"},
+        "schema_path": {"const": "schemas/foundation_taxonomy.schema.json"},
+        "schema_version": {"const": "dime-foundation-taxonomy-v1"}
+      }
+    },
+    "stageRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config_path", "schema_path", "schema_version"],
+      "properties": {
+        "config_path": {"const": "configs/foundation_stage_profiles_v1.yaml"},
+        "schema_path": {"const": "schemas/foundation_stage_profiles.schema.json"},
+        "schema_version": {"const": "dime-foundation-stage-profiles-v1"}
+      }
+    },
+    "numericRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config_path", "schema_path", "schema_version"],
+      "properties": {
+        "config_path": {"const": "configs/foundation_numeric_policy_v1.yaml"},
+        "schema_path": {"const": "schemas/foundation_numeric_policy.schema.json"},
+        "schema_version": {"const": "dime-foundation-numeric-policy-v1"}
+      }
+    },
+    "separationRegistry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["config_path", "schema_path", "schema_version"],
+      "properties": {
+        "config_path": {"const": "configs/foundation_separation_of_duties_v1.yaml"},
+        "schema_path": {
+          "const": "schemas/foundation_separation_of_duties.schema.json"
+        },
+        "schema_version": {"const": "dime-foundation-separation-of-duties-v1"}
+      }
+    },
+    "tolerances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probability",
+        "percentage_points",
+        "decimal_odds",
+        "american_odds",
+        "units",
+        "roi",
+        "count"
+      ],
+      "properties": {
+        "probability": {"const": 0.000000001},
+        "percentage_points": {"const": 0.000001},
+        "decimal_odds": {"const": 0.000000001},
+        "american_odds": {"const": 0},
+        "units": {"const": 0.000001},
+        "roi": {"const": 0.000000001},
+        "count": {"const": 0}
+      }
+    },
+    "semanticAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_id", "tool_version"],
+      "properties": {
+        "tool_id": {"const": "dime-semantic-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "privacyAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_id", "tool_version"],
+      "properties": {
+        "tool_id": {"const": "dime-privacy-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "rightsAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_id", "tool_version"],
+      "properties": {
+        "tool_id": {"const": "dime-rights-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "developmentAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_id", "tool_version"],
+      "properties": {
+        "tool_id": {"const": "dime-development-contamination-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "lockedAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_id", "tool_version"],
+      "properties": {
+        "tool_id": {"const": "dime-locked-contamination-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "numericAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_id", "tool_version"],
+      "properties": {
+        "tool_id": {"const": "dime-numeric-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    }
+  }
+}

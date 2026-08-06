@@ -1,5 +1,10 @@
 import type { MarketSideInput } from "@/lib/gameInsight";
-import type { ProjectionGame, ProjectionMarket, ProjectionTeam, GameStatus } from "./types";
+import type {
+  ProjectionGame,
+  ProjectionMarket,
+  ProjectionTeam,
+  GameStatus,
+} from "./types";
 
 /**
  * Adapter: DimeModelFeed's normalized FeedCardSpec → ProjectionGame.
@@ -11,18 +16,37 @@ import type { ProjectionGame, ProjectionMarket, ProjectionTeam, GameStatus } fro
  * engine uses the same calculateEdge as the feed, the derived edges match.
  */
 
-interface CrestLike { url?: string | null; code: string; bg?: string }
-interface TeamLike { name: string; crest: CrestLike; score?: string | null }
-interface RowLike { label: string; book: string; model: string }
-interface MarketLike { title: string; rows: RowLike[]; foot: { label: string; edge: boolean } }
+interface CrestLike {
+  url?: string | null;
+  code: string;
+  bg?: string;
+}
+interface TeamLike {
+  name: string;
+  crest: CrestLike;
+  score?: string | null;
+}
+interface RowLike {
+  label: string;
+  book: string;
+  model: string;
+}
+interface MarketLike {
+  title: string;
+  rows: RowLike[];
+  foot: { label: string; edge: boolean };
+}
 export interface FeedSpecLike {
   id: string;
+  /** Explicit source status when available; without it postponed and suspended
+   *  games fall through the score-based inference and read as scheduled/final
+   *  (mirrors presentation.ts's FeedEventLike). */
+  status?: GameStatus;
   liveLabel?: string | null;
   timeLabel: string;
   away: TeamLike;
   home: TeamLike;
   meta: string;
-  pitchers?: { away: string; home: string } | null;
   venueLine?: string | null;
   markets: MarketLike[];
 }
@@ -42,12 +66,18 @@ function parseScore(s: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function feedSpecToProjectionGame(g: FeedSpecLike, league: string): ProjectionGame {
-  const status: GameStatus = g.liveLabel
-    ? "live"
-    : g.away.score != null || g.home.score != null
-      ? "final"
-      : "scheduled";
+export function feedSpecToProjectionGame(
+  g: FeedSpecLike,
+  league: string
+): ProjectionGame {
+  const status: GameStatus =
+    g.status ??
+    (g.liveLabel
+      ? "live"
+      : g.away.score != null || g.home.score != null
+        ? "final"
+        : "scheduled");
+  const isPregame = status === "scheduled";
 
   const team = (t: TeamLike): ProjectionTeam => ({
     abbr: t.crest.code,
@@ -57,7 +87,7 @@ export function feedSpecToProjectionGame(g: FeedSpecLike, league: string): Proje
     score: parseScore(t.score),
   });
 
-  const markets: ProjectionMarket[] = g.markets.map((m) => {
+  const markets: ProjectionMarket[] = g.markets.map(m => {
     const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const sides: MarketSideInput[] = m.rows.map((row, i) => ({
       marketKey: key,
@@ -68,7 +98,12 @@ export function feedSpecToProjectionGame(g: FeedSpecLike, league: string): Proje
       bookOppPrice: parseAmerican(m.rows[m.rows.length - 1 - i]?.book),
       modelPrice: parseAmerican(row.model),
     }));
-    return { key, label: m.title, sides, resultLabel: m.foot.edge ? undefined : m.foot.label };
+    return {
+      key,
+      label: m.title,
+      sides,
+      resultLabel: m.foot.edge ? undefined : m.foot.label,
+    };
   });
 
   return {
@@ -78,10 +113,13 @@ export function feedSpecToProjectionGame(g: FeedSpecLike, league: string): Proje
     statusLabel: g.liveLabel || g.timeLabel,
     away: team(g.away),
     home: team(g.home),
-    matchupContext: g.meta || undefined,
-    awayPitcher: g.pitchers?.away,
-    homePitcher: g.pitchers?.home,
-    venue: g.venueLine ?? undefined,
+    // Ballpark + first pitch are PREGAME-ONLY (owner directive 2026-08-05).
+    // This adapter feeds team-sport cards, where the context line IS the
+    // ballpark, so all three lifecycle-gate together; the centered card header
+    // carries the status at every state.
+    matchupContext: isPregame ? g.meta || undefined : undefined,
+    venue: isPregame ? (g.venueLine ?? undefined) : undefined,
+    startTime: isPregame ? g.timeLabel || undefined : undefined,
     markets,
   };
 }

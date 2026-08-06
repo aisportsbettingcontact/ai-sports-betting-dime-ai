@@ -1,22 +1,44 @@
-import { and, desc, eq, gte, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  APP_USER_DEPENDENT_TABLES,
+  AppUserHasDataError,
+  describeDeletionBlock,
+  type DependentCounts,
+} from "./appUserDeletion";
+import {
+  METRIC_DEFINITION_VERSION,
+  REPORTING_TIMEZONE,
+  ACTIVE_USER_DEFINITION_V1,
+  deriveActiveUserPoint,
+  deriveAvgDurationPoint,
+  dbUnavailablePoint,
+  reconcileMembership,
+  ok as okPoint,
+  notMeasured,
+  unknown as unknownPoint,
+  type MetricPoint,
+  type MetricState,
+  type MembershipBreakdown,
+} from "./analytics/metricDefinitions";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
-  games, modelFiles, users, nbaTeams, ncaamTeams, nhlTeams, mlbTeams,
+  games, nbaTeams, ncaamTeams, nhlTeams, mlbTeams,
   appUsers as appUsersTable, appUsers,
   oddsHistory, mlbLineups, mlbStrikeoutProps, mlbParkFactors, mlbBullpenStats,
   mlbUmpireModifiers, mlbHrProps, securityEvents,
   userFavoriteGames, userSessions,
-  type Game, type AppUser, type InsertGame, type InsertModelFile, type InsertUser,
+  type Game, type AppUser, type InsertGame,
   type InsertNbaTeam, type InsertNhlTeam, type OddsHistoryRow,
   type MlbLineupRow, type InsertMlbLineup, type MlbStrikeoutPropRow,
   type InsertMlbStrikeoutProp, type MlbParkFactorRow, type MlbBullpenStatsRow,
   type MlbUmpireModifierRow, type MlbHrPropRow, type InsertSecurityEvent, type SecurityEventRow,
   type InsertAppUser, type UserSession, type InsertUserSession,
 } from "../drizzle/schema";
-import { ENV } from './_core/env';
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 import { debugLog } from './_core/debugLogger';
+import { recordFailure, type AccountLockoutConfig } from './accountLockout';
+import { logSafe } from "./_core/logSafe";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
@@ -142,26 +164,6 @@ export function forceInvalidateGamesCache(): void {
   console.log(`[GamesCache] Force invalidation: cleared ${count} games.list + ${datesCount} availableDates + activeSports`);
 }
 
-// ─── User lookup cache ─────────────────────────────────────────────────────────────────
-//
-// PROBLEM: getUserByOpenId fires on EVERY tRPC request (in createContext).
-// On initial page load, the batch fires 5 procedures simultaneously — each
-// calling getUserByOpenId for the same user. That's 5 identical DB reads.
-//
-// SOLUTION: Cache user rows by openId with a 30s TTL. The first lookup in
-// a batch pays the DB cost; all subsequent lookups in the same batch (and
-// for the next 30 seconds) are served from memory in <1ms.
-//
-// Cache is invalidated on upsertUser so role/email changes propagate immediately.
-
-// User type is already imported from drizzle/schema at the top of this file
-const _userCache = new Map<string, CacheEntry<import('../drizzle/schema').User | null>>();
-const USER_CACHE_TTL_MS = 30_000; // 30 seconds
-
-export function invalidateUserCache(openId: string): void {
-  _userCache.delete(openId);
-}
-
 // Lazily create the drizzle instance with a proper connection pool.
 // Pool settings: 10 connections max, 30s acquire timeout, 10s idle timeout.
 export async function getDb() {
@@ -194,135 +196,6 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-    // Invalidate user cache so role/email changes propagate immediately
-    invalidateUserCache(user.openId);
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
-}
-
-export async function getUserByOpenId(openId: string) {
-  // ─── Cache lookup: eliminates duplicate DB reads within the same tRPC batch ───
-  const cached = _userCache.get(openId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data ?? undefined;
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  const user = result.length > 0 ? result[0] : null;
-
-  // Cache the result (including null = user not found)
-  _userCache.set(openId, { data: user, expiresAt: Date.now() + USER_CACHE_TTL_MS });
-
-  return user ?? undefined;
-}
-
-// ─── Model Files ─────────────────────────────────────────────────────────────
-
-export async function insertModelFile(file: InsertModelFile) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(modelFiles).values(file);
-  return result;
-}
-
-export async function listModelFiles(userId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db
-    .select()
-    .from(modelFiles)
-    .where(eq(modelFiles.uploadedBy, userId))
-    .orderBy(desc(modelFiles.createdAt));
-}
-
-export async function getModelFileById(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const result = await db.select().from(modelFiles).where(eq(modelFiles.id, id)).limit(1);
-  return result[0] ?? null;
-}
-
-export async function updateModelFileStatus(
-  id: number,
-  status: "pending" | "processing" | "done" | "error",
-  rowsImported?: number
-) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db
-    .update(modelFiles)
-    .set({ status, ...(rowsImported !== undefined ? { rowsImported } : {}) })
-    .where(eq(modelFiles.id, id));
-}
-
-export async function deleteModelFile(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db.delete(games).where(eq(games.fileId, id));
-  await db.delete(modelFiles).where(eq(modelFiles.id, id));
-}
-
 // ─── Games ───────────────────────────────────────────────────────────────────
 
 /**
@@ -331,7 +204,7 @@ export async function deleteModelFile(id: number) {
  * by the TiDB driver. DB-level sort by sortOrder is done first, then this
  * stable sort applies start-time ordering on top.
  */
-function sortGamesByStartTime<T extends { gameDate: string; startTimeEst: string | null; sortOrder: number | null }>(rows: T[]): T[] {
+function sortGamesByStartTime<T extends { id?: number; gameDate: string; startTimeEst: string | null; sortOrder: number | null }>(rows: T[]): T[] {
   return rows.slice().sort((a, b) => {
     // Primary: gameDate ascending
     if (a.gameDate < b.gameDate) return -1;
@@ -342,7 +215,12 @@ function sortGamesByStartTime<T extends { gameDate: string; startTimeEst: string
     if (timeA < timeB) return -1;
     if (timeA > timeB) return 1;
     // Tertiary: sortOrder ascending (VSiN page order)
-    return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+    const byOrder = (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+    if (byOrder !== 0) return byOrder;
+    // Quaternary: row id — a stable, deterministic tie-breaker so equal-time
+    // rows (e.g. doubleheader games with TBD times) never reorder between
+    // requests/caches (canonical-identity contract: deterministic sorting).
+    return (a.id ?? 0) - (b.id ?? 0);
   });
 }
 
@@ -425,8 +303,13 @@ export async function listGames(opts?: { sport?: string; gameDate?: string; forc
   // ALWAYS exclude postponed/suspended/cancelled games from the feed — they were never played
   // This covers MLB postponements (e.g. HOU@BAL, SF@PHI on 2026-04-29) that the MLB Stats API
   // returns as valid schedule entries but with detailedState='Postponed'.
+  // 'suspended' needs its own condition since 2026-07-17: the score refresh and
+  // schedule sync now both write the distinct 'suspended' status (previously the
+  // refresh collapsed it into 'postponed', which broke the postponed-tracker's
+  // suspended-resume scan). Suspended games reappear when they resume → 'final'.
   conditions.push(ne(games.gameStatus, 'postponed'));
-  console.log('[DB][listGames] Excluding postponed games from feed');
+  conditions.push(ne(games.gameStatus, 'suspended'));
+  console.log('[DB][listGames] Excluding postponed/suspended games from feed');
 
   // Public feed: show all games that have live VSiN odds (regardless of publishedToFeed)
   // MLB games are seeded from the schedule and may not have odds yet — show them regardless
@@ -661,6 +544,116 @@ export function invalidateAppUserByIdCache(id: number): void {
   _appUserByIdCache.delete(id);
 }
 
+export type AppUserLookupResult =
+  | { status: "found"; user: AppUser }
+  | { status: "not_found" }
+  | { status: "unavailable"; error: unknown };
+
+/**
+ * Read an app user directly from the database and preserve the distinction
+ * between a missing row and an unavailable database. Privileged authorization
+ * must not use getAppUserById(), whose legacy null return intentionally merges
+ * those two states for non-privileged callers.
+ */
+export async function lookupAppUserByIdFresh(id: number): Promise<AppUserLookupResult> {
+  const db = await getDb();
+  if (!db) {
+    return { status: "unavailable", error: new Error("Database not available") };
+  }
+
+  try {
+    const rows = await withCircuitBreaker(async () =>
+      db.select().from(appUsers).where(and(eq(appUsers.id, id), isNull(appUsers.deletedAt))).limit(1)
+    );
+    const user = rows[0];
+    if (!user) return { status: "not_found" };
+
+    _appUserByIdCache.set(id, {
+      data: user,
+      expiresAt: Date.now() + APP_USER_CACHE_TTL_MS,
+    });
+    return { status: "found", user };
+  } catch (error) {
+    return { status: "unavailable", error };
+  }
+}
+
+/**
+ * MySQL/TiDB error codes that mean "the QUERY is wrong", not "the row is absent".
+ *
+ * [2026-07-31 login outage] app_users.planPriceId shipped in the Drizzle schema
+ * before its migration ran. Drizzle enumerates every declared column, so every
+ * lookup failed with ER_BAD_FIELD_ERROR — and the blanket `catch { return null }`
+ * below turned that into "user not found". Logins broke platform-wide while the
+ * logs said `USER_NOT_FOUND ... DB inconsistency`, pointing at the data instead
+ * of at the schema. Swallowing a structural error as an empty result is how a
+ * five-second fix became an outage.
+ *
+ * These specific codes are re-thrown so the caller fails loudly. Transient
+ * faults (connection resets, timeouts, circuit-breaker trips) keep the previous
+ * fail-soft behaviour — those genuinely should degrade rather than 500.
+ */
+const SCHEMA_ERROR_CODES = new Set([
+  "ER_BAD_FIELD_ERROR",   // unknown column — schema is behind the code
+  "ER_NO_SUCH_TABLE",     // missing table — migration not applied
+  "ER_PARSE_ERROR",       // malformed SQL
+  "ER_WRONG_FIELD_SPEC",
+  "ER_BAD_TABLE_ERROR",
+]);
+
+/**
+ * The driver error code behind a failure, looked up THROUGH any wrapper.
+ *
+ * drizzle-orm (>=0.4x) raises `DrizzleQueryError`, whose own `.code` is
+ * `undefined` and whose message is `"Failed query: <sql> params: …"`. The mysql2
+ * error carrying `code: "ER_…"` / `errno` hangs off `.cause`. Classifying on the
+ * top-level `.code` alone therefore matches NOTHING for any query issued through
+ * drizzle — verified against drizzle-orm 0.45.2:
+ *
+ *   duplicate key  → DrizzleQueryError { code: undefined, cause: { code: "ER_DUP_ENTRY",      errno: 1062 } }
+ *   unknown column → DrizzleQueryError { code: undefined, cause: { code: "ER_BAD_FIELD_ERROR", errno: 1054 } }
+ *
+ * This shipped as two live defects: duplicate webhook deliveries were rethrown
+ * as processing failures (answered 5xx, so Stripe redelivered, so it failed
+ * again — a self-sustaining retry storm), and isSchemaError() never fired, so
+ * the fail-loud drift detection could not see the very error class it was
+ * written for. Walk the chain; do not read `.code` directly.
+ */
+export function driverErrorCode(err: unknown): string | null {
+  let current: unknown = err;
+  // Bounded: a malformed or self-referential cause chain must not spin.
+  for (let depth = 0; current != null && depth < 5; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string" && code.length > 0) return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return null;
+}
+
+/** True when the failure means the query itself is invalid against this schema. */
+export function isSchemaError(err: unknown): boolean {
+  const code = driverErrorCode(err);
+  return code !== null && SCHEMA_ERROR_CODES.has(code);
+}
+
+/**
+ * True when the failure is a unique-constraint collision.
+ *
+ * Load-bearing for insert-first idempotency claims: a duplicate is the SUCCESS
+ * signal ("someone already processed this"), not an error. Misreading it as a
+ * failure turns every redelivery into a 5xx.
+ */
+export function isDuplicateKeyError(err: unknown): boolean {
+  if (driverErrorCode(err) === "ER_DUP_ENTRY") return true;
+  // errno survives some driver/proxy layers that drop the string code.
+  let current: unknown = err;
+  for (let depth = 0; current != null && depth < 5; depth += 1) {
+    if ((current as { errno?: unknown }).errno === 1062) return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 export async function getAppUserById(id: number) {
   // Cache hit: skip DB round-trip
   const cached = _appUserByIdCache.get(id);
@@ -671,14 +664,126 @@ export async function getAppUserById(id: number) {
   if (!db) return null;
   try {
     const result = await withCircuitBreaker(async () => {
-      const rows = await db.select().from(appUsers).where(eq(appUsers.id, id)).limit(1);
+      const rows = await db.select().from(appUsers).where(and(eq(appUsers.id, id), isNull(appUsers.deletedAt))).limit(1);
       return rows[0] ?? null;
     });
     // Cache result (including null = user not found)
     _appUserByIdCache.set(id, { data: result, expiresAt: Date.now() + APP_USER_CACHE_TTL_MS });
     return result;
-  } catch {
+  } catch (err) {
+    // A schema mismatch is NOT "no such user" — say so loudly rather than
+    // silently reporting every account as missing.
+    if (isSchemaError(err)) {
+      console.error(
+        `[DB][getAppUserById] SCHEMA ERROR — the app_users query is invalid against the live schema. ` +
+        `This usually means code deployed ahead of its migration. id=${id} code=${(err as { code?: string }).code} ` +
+        `message=${err instanceof Error ? err.message : String(err)}`
+      );
+      throw err;
+    }
     return null;
+  }
+}
+
+export type AppUsersSchemaVerdict = "ok" | "schema_mismatch" | "unknown";
+
+/**
+ * Classify a probe-query failure into a schema verdict.
+ *
+ * ONLY a missing COLUMN (`ER_BAD_FIELD_ERROR`, errno 1054) is a `schema_mismatch`
+ * — that is the exact #370 / 2026-07-31 class: code SELECTs an app_users column
+ * its migration has not added yet. It fails the health gate so the deploy is
+ * kept off production.
+ *
+ * A missing TABLE (`ER_NO_SUCH_TABLE`) is deliberately NOT a mismatch → "unknown"
+ * (non-blocking). This repo runs the same server image on two services; the
+ * secondary `ai-sports-betting-backend` connects to a database WITHOUT the
+ * app_users table, so its probe legitimately raises ER_NO_SUCH_TABLE. Failing
+ * health there would (and did, 2026-08-05) block that service's deploys forever
+ * for no real drift. On the primary DB app_users is the core table and is never
+ * absent from a normal column-adding migration; a genuinely vanished table is a
+ * catastrophic state that "run db-push" would not repair and must not freeze
+ * deploys. This narrowing also makes the gate SELF-SCOPING: it can only fail a
+ * service that actually owns app_users (and is missing a column) — exactly the
+ * intended target. Everything else (connection reset/timeout/circuit) is
+ * transient → "unknown".
+ */
+export function classifyAppUsersProbeError(err: unknown): AppUsersSchemaVerdict {
+  return driverErrorCode(err) === "ER_BAD_FIELD_ERROR"
+    ? "schema_mismatch"
+    : "unknown";
+}
+
+/**
+ * Boot/health probe: does the LIVE app_users schema satisfy the CURRENT code's
+ * column set? Runs the real Drizzle column enumeration (`select()` names every
+ * declared column) against a row that never matches (id=0), so it transfers no
+ * rows but still forces the database to validate every column at plan time.
+ *
+ * Unlike getAppUserById (whose null return is load-bearing for callers), this
+ * SURFACES the schema error as a verdict — that swallowing is exactly how the
+ * #370 / 2026-07-31 outages stayed silent. Returns:
+ *   - "ok"               every declared column exists on the live table
+ *   - "schema_mismatch"  a missing COLUMN (ER_BAD_FIELD_ERROR) — code is ahead
+ *                        of its migration (the deploy that must NOT go live)
+ *   - "unknown"          missing table / DB unavailable / transient — caller
+ *                        must NOT treat this as a failure (see
+ *                        classifyAppUsersProbeError)
+ * Never throws. No cache — always reads the live schema.
+ */
+export async function probeAppUsersSchema(): Promise<AppUsersSchemaVerdict> {
+  const db = await getDb();
+  if (!db) return "unknown";
+  try {
+    await db.select().from(appUsers).where(eq(appUsers.id, 0)).limit(1);
+    return "ok";
+  } catch (err) {
+    const verdict = classifyAppUsersProbeError(err);
+    if (verdict === "schema_mismatch") {
+      console.error(
+        `[DB][probeAppUsersSchema] SCHEMA MISMATCH — app_users is missing a column ` +
+          `the code SELECTs. Code deployed ahead of its migration? ` +
+          `code=${driverErrorCode(err)} message=${err instanceof Error ? err.message : String(err)}`
+      );
+    } else if (driverErrorCode(err) === "ER_NO_SUCH_TABLE") {
+      // Expected on a service that does not own the app schema (the zombie
+      // backend). Observability only — does not fail the gate.
+      console.warn(
+        `[DB][probeAppUsersSchema] app_users table not found (ER_NO_SUCH_TABLE) — ` +
+          `this service does not own the app schema; treating as unknown (non-blocking).`
+      );
+    }
+    // schema_mismatch only for a missing column; everything else is unknown.
+    return verdict;
+  }
+}
+
+/**
+ * Batch identity lookup for the analytics profiling read-time join (owner-only).
+ * Returns ONLY display fields (no email/password) for the given app-user ids.
+ * Runs on the web instance (TiDB = app_users); never throws — a failure just
+ * leaves the analytics rows pseudonymous.
+ */
+export async function getAppUsersByIds(
+  ids: number[],
+): Promise<Array<{ id: number; username: string; discordUsername: string | null; role: string }>> {
+  if (!ids.length) return [];
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await withCircuitBreaker(async () =>
+      db
+        .select({
+          id: appUsers.id,
+          username: appUsers.username,
+          discordUsername: appUsers.discordUsername,
+          role: appUsers.role,
+        })
+        .from(appUsers)
+        .where(inArray(appUsers.id, ids)),
+    );
+  } catch {
+    return [];
   }
 }
 
@@ -687,7 +792,7 @@ export async function getAppUserByEmail(email: string) {
   if (!db) return null;
   try {
     return await withCircuitBreaker(async () => {
-      const rows = await db.select().from(appUsers).where(eq(appUsers.email, email)).limit(1);
+      const rows = await db.select().from(appUsers).where(and(eq(appUsers.email, email), isNull(appUsers.deletedAt))).limit(1);
       return rows[0] ?? null;
     });
   } catch {
@@ -700,11 +805,98 @@ export async function getAppUserByUsername(username: string) {
   if (!db) return null;
   try {
     return await withCircuitBreaker(async () => {
-      const rows = await db.select().from(appUsers).where(eq(appUsers.username, username)).limit(1);
+      const rows = await db.select().from(appUsers).where(and(eq(appUsers.username, username), isNull(appUsers.deletedAt))).limit(1);
       return rows[0] ?? null;
     });
   } catch {
     return null;
+  }
+}
+
+/**
+ * Absolute-write of the lockout counters — used ONLY to CLEAR state (set to
+ * 0/null) on successful login. Clearing is idempotent, so a plain last-writer
+ * -wins SET is race-safe here (unlike incrementing — see recordAccountLoginFailure).
+ * FAIL-OPEN: a write failure degrades the control, never blocks/crashes login.
+ */
+export async function updateAccountLockoutState(
+  id: number,
+  state: { failedLoginCount: number; firstFailedLoginAt: number | null; lockedUntil: number | null }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await withCircuitBreaker(async () => {
+      await db.update(appUsers).set(state).where(eq(appUsers.id, id));
+    });
+    invalidateAppUserByIdCache(id);
+    invalidateCachedAppUser(id);
+  } catch (err) {
+    console.error(
+      `[AccountLockout] state write failed for user ${id}: ${(err as Error).message}`
+    );
+  }
+}
+
+/**
+ * Atomically record ONE failed login against an account and return the new
+ * lock decision. The count is an increment, so it MUST be atomic: reading the
+ * count in JS and writing an absolute value (as a plain update would) lets N
+ * concurrent failures all read the same N and each write N+1 — the exact
+ * botnet/credential-stuffing case this feature exists to stop would slip the
+ * cap. We serialize on the row with `SELECT … FOR UPDATE` inside a transaction
+ * (the repo's double-spend pattern), run the tested pure `recordFailure`
+ * decision on the freshly-locked row, and write the result.
+ *
+ * FAIL-OPEN: any DB failure returns `{ justLocked:false, lockedUntil:null }`
+ * without throwing — the per-IP limiter remains the backstop and a login is
+ * never blocked by a lockout-write fault.
+ */
+export async function recordAccountLoginFailure(
+  id: number,
+  now: number,
+  config: AccountLockoutConfig
+): Promise<{ justLocked: boolean; lockedUntil: number | null }> {
+  if (config.disabled) return { justLocked: false, lockedUntil: null };
+  const db = await getDb();
+  if (!db) return { justLocked: false, lockedUntil: null };
+  try {
+    const result = await withCircuitBreaker(async () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      db.transaction(async (tx: any) => {
+        const rows = await tx
+          .select({
+            failedLoginCount: appUsers.failedLoginCount,
+            firstFailedLoginAt: appUsers.firstFailedLoginAt,
+            lockedUntil: appUsers.lockedUntil,
+          })
+          .from(appUsers)
+          .where(eq(appUsers.id, id))
+          .for("update")
+          .limit(1);
+        const before = rows[0];
+        if (!before) return { justLocked: false, lockedUntil: null };
+        const { next, justLocked } = recordFailure(
+          {
+            failedLoginCount: before.failedLoginCount,
+            firstFailedLoginAt: before.firstFailedLoginAt,
+            lockedUntil: before.lockedUntil,
+          },
+          now,
+          config
+        );
+        await tx.update(appUsers).set(next).where(eq(appUsers.id, id));
+        return { justLocked, lockedUntil: next.lockedUntil };
+      })
+    );
+    invalidateAppUserByIdCache(id);
+    invalidateCachedAppUser(id);
+    return result;
+  } catch (err) {
+    console.error(
+      `[AccountLockout] atomic failure-record failed for user ${id}: ${(err as Error).message}`
+    );
+    return { justLocked: false, lockedUntil: null };
   }
 }
 
@@ -720,7 +912,88 @@ export async function updateAppUser(id: number, data: Partial<InsertAppUser>) {
   invalidateCachedAppUser(id);
 }
 
+/**
+ * Count every row across the schema that points at this app_users.id.
+ * See APP_USER_DEPENDENT_TABLES for why the list is explicit rather than
+ * derived from foreign keys: there are no foreign keys on app_users.
+ */
+export async function countAppUserDependents(id: number): Promise<DependentCounts> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const counts: DependentCounts = {};
+  await withCircuitBreaker(async () => {
+    for (const { table, column, label } of APP_USER_DEPENDENT_TABLES) {
+      try {
+        const rows = await db.execute(
+          sql.raw(`SELECT COUNT(*) AS n FROM \`${table}\` WHERE \`${column}\` = ${Number(id)}`)
+        );
+        const first = (rows as unknown as Array<Array<{ n: number }>>)[0]?.[0]
+          ?? (rows as unknown as Array<{ n: number }>)[0];
+        const n = Number((first as { n: number } | undefined)?.n ?? 0);
+        if (n > 0) counts[label] = (counts[label] ?? 0) + n;
+      } catch (err) {
+        // A table that does not exist in this environment is not a dependency.
+        // Anything else is: fail closed rather than under-report and orphan.
+        const msg = (err as Error)?.message ?? String(err);
+        if (!/doesn't exist|Unknown table|no such table/i.test(msg)) throw err;
+      }
+    }
+  });
+  return counts;
+}
+
+/**
+ * Retire an account without destroying anything it owns.
+ *
+ * THE DEFAULT, and what the admin UI should call. Sets `deletedAt`, which every
+ * account-resolution path excludes, so the account can no longer authenticate,
+ * cannot be found by email or username, and disappears from the app — while its
+ * bets, sessions and edit requests stay intact and attributed.
+ *
+ * This is the operation that was missing when account 60002 was removed. A hard
+ * DELETE stranded 278 verified bets; this would have been a flag flip, fully
+ * reversible.
+ */
+export async function softDeleteAppUser(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await withCircuitBreaker(async () => {
+    await db.update(appUsers).set({ deletedAt: Date.now() }).where(eq(appUsers.id, id));
+  });
+  invalidateAppUserByIdCache(id);
+  invalidateCachedAppUser(id);
+  console.log(`[AppAdmin] softDeleteAppUser: userId=${id} retired (data preserved)`);
+}
+
+/** Undo a soft delete. */
+export async function restoreAppUser(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await withCircuitBreaker(async () => {
+    await db.update(appUsers).set({ deletedAt: null }).where(eq(appUsers.id, id));
+  });
+  invalidateAppUserByIdCache(id);
+  invalidateCachedAppUser(id);
+  console.log(`[AppAdmin] restoreAppUser: userId=${id} restored`);
+}
+
+/**
+ * Permanently remove an app_users row. Rarely what you want.
+ *
+ * Still REFUSES when anything references the account, because nothing would
+ * clean those rows up. With soft delete available, that refusal is no longer an
+ * obstacle — it just means "retire it instead", which preserves the history.
+ * Reserve this for accounts that own nothing, or for a genuine erasure request
+ * where the dependent rows have already been dealt with deliberately.
+ */
 export async function deleteAppUser(id: number) {
+  const counts = await countAppUserDependents(id);
+  const block = describeDeletionBlock(id, counts);
+  if (block) {
+    console.log(`[AppAdmin] deleteAppUser: REFUSED userId=${id} — ${JSON.stringify(counts)}`);
+    throw new AppUserHasDataError(id, counts, block);
+  }
+
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await withCircuitBreaker(async () => {
@@ -1031,7 +1304,7 @@ export async function updateNcaaStartTime(
   data: {
     startTimeEst: string;
     ncaaContestId: string;
-    gameStatus?: 'upcoming' | 'live' | 'final' | 'postponed';
+    gameStatus?: 'upcoming' | 'live' | 'final' | 'postponed' | 'suspended';
     awayScore?: number | null;
     homeScore?: number | null;
     gameClock?: string | null;
@@ -2417,7 +2690,7 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
   const tag = "[DB][insertSecurityEvent]";
   const db = await getDb();
   if (!db) {
-    console.warn(`${tag} DB not available — event not persisted | type=${event.eventType} ip=${event.ip}`);
+    console.warn(`${tag} DB not available — event not persisted | type=${logSafe(event.eventType)} ip=${logSafe(event.ip)}`);
     return;
   }
   try {
@@ -2432,12 +2705,12 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
       occurredAt: event.occurredAt,
     });
     console.log(
-      `${tag} Inserted | type=${event.eventType} ip=${event.ip}` +
-      ` path=${event.trpcPath ?? "N/A"} origin=${event.blockedOrigin ?? "N/A"}`
+      `${tag} Inserted | type=${logSafe(event.eventType)} ip=${logSafe(event.ip)}` +
+      ` path=${logSafe(event.trpcPath ?? "N/A")} origin=${logSafe(event.blockedOrigin ?? "N/A")}`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Insert failed (non-critical) | type=${event.eventType} ip=${event.ip} | error="${msg}"`);
+    console.error(`${tag} Insert failed (non-critical) | type=${logSafe(event.eventType)} ip=${logSafe(event.ip)} | error="${logSafe(msg)}"`);
   }
 }
 
@@ -2699,84 +2972,125 @@ export async function closeIdleSessions(): Promise<number> {
  * [OUTPUT] { dau, wau, mau, avgSessionDurationMs }
  */
 export async function getSessionMetrics(): Promise<{
-  dau: number; wau: number; mau: number; avgSessionDurationMs: number;
+  dau: MetricPoint;
+  wau: MetricPoint;
+  mau: MetricPoint;
+  avgSessionDurationMs: MetricPoint;
+  meta: { definitionVersion: string; timezone: string; refreshedAtUtc: number; activeUserDefinition: string };
 }> {
   const tag = "[DB][getSessionMetrics]";
-  const db = await getDb();
-  const fallback = { dau: 0, wau: 0, mau: 0, avgSessionDurationMs: 0 };
-  if (!db) { console.warn(`${tag} DB not available`); return fallback; }
   const now = Date.now();
+  const meta = {
+    definitionVersion: METRIC_DEFINITION_VERSION,
+    timezone: REPORTING_TIMEZONE,
+    refreshedAtUtc: now,
+    activeUserDefinition: ACTIVE_USER_DEFINITION_V1,
+  };
+  const db = await getDb();
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    const p = dbUnavailablePoint();
+    return { dau: p, wau: p, mau: p, avgSessionDurationMs: p, meta };
+  }
+  // Opportunistically finalize sessions abandoned past the idle cutoff (no cron
+  // in this monolith) so their engaged durations get recorded before we
+  // aggregate. Best-effort: a failure here must never break the read.
+  await closeIdleSessions().catch(() => { /* non-fatal — metrics still compute */ });
   const DAY_MS = 24 * 60 * 60 * 1000;
   const since24h = now - DAY_MS;
   const since7d  = now - 7  * DAY_MS;
   const since30d = now - 30 * DAY_MS;
+  // [STEP] Cap at 4 hours to exclude outlier rows created before the
+  // lastHeartbeat-based duration fix (wall-clock instead of active time).
+  const MAX_REALISTIC_SESSION_MS = 4 * 60 * 60 * 1000;
+  // Eligible-user contract: exclude staff (owner/admin) from engagement metrics.
+  const notStaff = and(ne(appUsersTable.role, "owner"), ne(appUsersTable.role, "admin"));
   try {
-    // DAU
-    const [dauRow] = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
+    // Active user = distinct ELIGIBLE user with a FOREGROUND (heartbeat-bearing)
+    // session whose most-recent heartbeat lands in the rolling window. Windowing
+    // on lastHeartbeat (not startedAt) counts genuine in-window activity, and the
+    // join to app_users drops staff. This is engagement, not login-alone.
+    const activeInWindow = async (since: number): Promise<number> => {
+      const [row] = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
+        .from(userSessions)
+        .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
+        .where(and(isNotNull(userSessions.lastHeartbeat), gte(userSessions.lastHeartbeat, since), notStaff));
+      return Number(row?.count ?? 0);
+    };
+    const [dauC, wauC, mauC] = await Promise.all([
+      activeInWindow(since24h),
+      activeInWindow(since7d),
+      activeInWindow(since30d),
+    ]);
+    // Have we EVER recorded an engaged (heartbeat-bearing) non-staff session? If
+    // not, a windowed 0 is "not measured" (nothing instrumented), never a real 0.
+    const [everRow] = await db
+      .select({ count: sql<number>`COUNT(*)` })
       .from(userSessions)
-      .where(gte(userSessions.startedAt, since24h));
-    // WAU
-    const [wauRow] = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
-      .from(userSessions)
-      .where(gte(userSessions.startedAt, since7d));
-    // MAU
-    const [mauRow] = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
-      .from(userSessions)
-      .where(gte(userSessions.startedAt, since30d));
-    // Avg session duration (closed sessions in last 30 days only).
-    // [STEP] Cap at 4 hours (14_400_000 ms) to exclude outlier rows created before
-    // the lastHeartbeat-based duration fix was deployed (sessions closed by force-logout
-    // or idle cleanup that recorded wall-clock time instead of active time).
-    const MAX_REALISTIC_SESSION_MS = 4 * 60 * 60 * 1000; // 4 hours
+      .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
+      .where(and(isNotNull(userSessions.lastHeartbeat), notStaff));
+    const totalEngagedEver = Number(everRow?.count ?? 0);
+    // Average engaged duration over valid closed non-staff sessions in last 30d.
     const [avgRow] = await db
-      .select({ avg: sql<number>`AVG(${userSessions.durationMs})` })
+      .select({ avg: sql<number>`AVG(${userSessions.durationMs})`, n: sql<number>`COUNT(*)` })
       .from(userSessions)
+      .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
       .where(and(
         isNotNull(userSessions.durationMs),
         gte(userSessions.startedAt, since30d),
         sql`${userSessions.durationMs} <= ${MAX_REALISTIC_SESSION_MS}`,
         sql`${userSessions.durationMs} > 0`,
+        notStaff,
       ));
+    const closedCount = Number(avgRow?.n ?? 0);
+    const avgMs = Number(avgRow?.avg ?? 0);
     const result = {
-      dau: Number(dauRow?.count ?? 0),
-      wau: Number(wauRow?.count ?? 0),
-      mau: Number(mauRow?.count ?? 0),
-      avgSessionDurationMs: Number(avgRow?.avg ?? 0),
+      dau: deriveActiveUserPoint(dauC, totalEngagedEver),
+      wau: deriveActiveUserPoint(wauC, totalEngagedEver),
+      mau: deriveActiveUserPoint(mauC, totalEngagedEver),
+      avgSessionDurationMs: deriveAvgDurationPoint(avgMs, closedCount),
+      meta,
     };
-    console.log(`${tag} [OUTPUT] dau=${result.dau} wau=${result.wau} mau=${result.mau} avgDurMs=${Math.round(result.avgSessionDurationMs)}`);
+    console.log(`${tag} [OUTPUT] dauState=${result.dau.state} dau=${result.dau.value} engagedEver=${totalEngagedEver} closed=${closedCount}`);
     return result;
   } catch (err: unknown) {
     console.error(`${tag} Failed | error=${err instanceof Error ? err.message : String(err)}`);
-    return fallback;
+    const p = unknownPoint("Session metric query failed — see server logs.");
+    return { dau: p, wau: p, mau: p, avgSessionDurationMs: p, meta };
   }
 }
 
 /**
- * Compute member tier counts and Discord connection count.
+ * Compute a RECONCILED membership breakdown (never overlapping totals).
  *
- * TOTAL_PAYING     = users with hasAccess=true AND (expiryDate IS NULL OR expiryDate > now)
- * LIFETIME_MEMBERS = users with hasAccess=true AND expiryDate IS NULL
- * NON_PAYING       = users with hasAccess=false OR (expiryDate IS NOT NULL AND expiryDate <= now)
- * DISCORD_CONNECTED = users with discordId IS NOT NULL
+ * Raw queries: payingActive = hasAccess && (expiry NULL OR expiry>now); this is
+ * a SUPERSET of lifetime (hasAccess && expiry NULL). reconcileMembership() then
+ * splits into mutually-exclusive buckets — lifetime + recurringPaid + noAccess =
+ * totalMembers — plus a cross-cutting discordConnected that is NEVER summed in.
  *
- * [OUTPUT] { totalPaying, lifetimeMembers, nonPaying, discordConnected, totalUsers }
+ * Returns a `state` so the UI can render "Not measured" instead of a fabricated
+ * 0 when the DB is unavailable or the query fails.
+ * [OUTPUT] { totalMembers, lifetime, recurringPaid, noAccess, discordConnected, overlapNote, state, reason, meta }
  */
-export async function getMemberMetrics(): Promise<{
-  totalPaying: number; lifetimeMembers: number; nonPaying: number;
-  discordConnected: number; totalUsers: number;
-}> {
+export async function getMemberMetrics(): Promise<
+  MembershipBreakdown & { state: MetricState; reason: string | null; meta: { definitionVersion: string; timezone: string; refreshedAtUtc: number } }
+> {
   const tag = "[DB][getMemberMetrics]";
-  const db = await getDb();
-  const fallback = { totalPaying: 0, lifetimeMembers: 0, nonPaying: 0, discordConnected: 0, totalUsers: 0 };
-  if (!db) { console.warn(`${tag} DB not available`); return fallback; }
   const now = Date.now();
+  const meta = { definitionVersion: METRIC_DEFINITION_VERSION, timezone: REPORTING_TIMEZONE, refreshedAtUtc: now };
+  const db = await getDb();
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    const p = dbUnavailablePoint();
+    return { ...reconcileMembership(0, 0, 0, 0), state: p.state, reason: p.reason, meta };
+  }
   try {
     const [totalRow] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(appUsersTable);
+    // payingActive ⊇ lifetime (both require hasAccess); reconcileMembership below
+    // splits them into mutually-exclusive buckets so nothing double-counts.
     const [payingRow] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(appUsersTable)
@@ -2792,17 +3106,18 @@ export async function getMemberMetrics(): Promise<{
       .select({ count: sql<number>`COUNT(*)` })
       .from(appUsersTable)
       .where(isNotNull(appUsersTable.discordId));
-    const total = Number(totalRow?.count ?? 0);
-    const paying = Number(payingRow?.count ?? 0);
-    const lifetime = Number(lifetimeRow?.count ?? 0);
-    const discord = Number(discordRow?.count ?? 0);
-    const nonPaying = total - paying;
-    const result = { totalPaying: paying, lifetimeMembers: lifetime, nonPaying, discordConnected: discord, totalUsers: total };
-    console.log(`${tag} [OUTPUT] total=${total} paying=${paying} lifetime=${lifetime} nonPaying=${nonPaying} discord=${discord}`);
-    return result;
+    const breakdown = reconcileMembership(
+      Number(totalRow?.count ?? 0),
+      Number(payingRow?.count ?? 0),
+      Number(lifetimeRow?.count ?? 0),
+      Number(discordRow?.count ?? 0),
+    );
+    console.log(`${tag} [OUTPUT] total=${breakdown.totalMembers} lifetime=${breakdown.lifetime} recurring=${breakdown.recurringPaid} noAccess=${breakdown.noAccess} discord=${breakdown.discordConnected}`);
+    return { ...breakdown, state: "ok", reason: null, meta };
   } catch (err: unknown) {
     console.error(`${tag} Failed | error=${err instanceof Error ? err.message : String(err)}`);
-    return fallback;
+    const p = unknownPoint("Member metric query failed — see server logs.");
+    return { ...reconcileMembership(0, 0, 0, 0), state: p.state, reason: p.reason, meta };
   }
 }
 
@@ -2826,11 +3141,17 @@ export async function getDurationHistogram(): Promise<{
   m30to120: number;
   h2to4: number;
   total: number;
+  state: MetricState;
+  reason: string | null;
 }> {
   const tag = "[DB][getDurationHistogram]";
   const db = await getDb();
-  const fallback = { under5m: 0, m5to30: 0, m30to120: 0, h2to4: 0, total: 0 };
-  if (!db) { console.warn(`${tag} DB not available`); return fallback; }
+  const empty = { under5m: 0, m5to30: 0, m30to120: 0, h2to4: 0, total: 0 };
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    const p = dbUnavailablePoint();
+    return { ...empty, state: p.state, reason: p.reason };
+  }
 
   const now = Date.now();
   const since30d = now - 30 * 24 * 60 * 60 * 1000;
@@ -2841,18 +3162,23 @@ export async function getDurationHistogram(): Promise<{
   const B_120M = 120 * 60 * 1000;   // 120 minutes (2 hours)
   const B_4H   = 240 * 60 * 1000;   // 240 minutes (4 hours) — cap
 
+  // Exclude staff (owner/admin) so the distribution reflects real users only.
+  const notStaff = and(ne(appUsersTable.role, "owner"), ne(appUsersTable.role, "admin"));
+
   try {
-    // Fetch all qualifying session durations in last 30 days.
-    // Using application-level bucketing (vs SQL CASE WHEN) for full portability
-    // across MySQL / TiDB dialects and to keep the query simple and auditable.
+    // Fetch all qualifying non-staff session durations in last 30 days.
+    // Application-level bucketing (vs SQL CASE WHEN) keeps this portable across
+    // MySQL / TiDB dialects and auditable.
     const rows = await db
       .select({ dur: userSessions.durationMs })
       .from(userSessions)
+      .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
       .where(and(
         isNotNull(userSessions.durationMs),
         gte(userSessions.startedAt, since30d),
         sql`${userSessions.durationMs} > 0`,
         sql`${userSessions.durationMs} <= ${B_4H}`,
+        notStaff,
       ));
 
     let under5m = 0, m5to30 = 0, m30to120 = 0, h2to4 = 0;
@@ -2866,11 +3192,17 @@ export async function getDurationHistogram(): Promise<{
     }
 
     const total = under5m + m5to30 + m30to120 + h2to4;
-    console.log(`${tag} [OUTPUT] under5m=${under5m} m5to30=${m5to30} m30to120=${m30to120} h2to4=${h2to4} total=${total}`);
-    return { under5m, m5to30, m30to120, h2to4, total };
+    // Zero closed sessions ⇒ not measured (nothing to distribute), never a
+    // fabricated all-zero chart.
+    const point = total > 0
+      ? okPoint(total)
+      : notMeasured("No valid closed foreground sessions in the last 30 days — distribution cannot be measured.");
+    console.log(`${tag} [OUTPUT] under5m=${under5m} m5to30=${m5to30} m30to120=${m30to120} h2to4=${h2to4} total=${total} state=${point.state}`);
+    return { under5m, m5to30, m30to120, h2to4, total, state: point.state, reason: point.reason };
   } catch (err: unknown) {
     console.error(`${tag} Failed | error=${err instanceof Error ? err.message : String(err)}`);
-    return fallback;
+    const p = unknownPoint("Session duration histogram query failed — see server logs.");
+    return { ...empty, state: p.state, reason: p.reason };
   }
 }
 

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE } from "./dimeModelAccess";
+import {
+  canAccessDimeModel,
+  canAccessDimeResearchAlpha,
+  DIME_MODEL_ACCESS_MESSAGE,
+} from "./dimeModelAccess";
 
 /**
  * Owner-only Dime Chat entitlement (restored per plan A1, 2026-07-12).
@@ -51,18 +55,46 @@ describe("canAccessDimeModel — owner-only decision", () => {
   it("denies lookalike role strings — exact match only", () => {
     expect(canAccessDimeModel({ role: "Owner", hasAccess: true })).toBe(false);
     expect(canAccessDimeModel({ role: "owner ", hasAccess: true })).toBe(false);
-    expect(canAccessDimeModel({ role: "co-owner", hasAccess: true })).toBe(false);
+    expect(canAccessDimeModel({ role: "co-owner", hasAccess: true })).toBe(
+      false
+    );
   });
 
   it("exposes the hardcoded non-owner copy", () => {
-    expect(DIME_MODEL_ACCESS_MESSAGE).toBe("AI Model access will be available soon");
+    expect(DIME_MODEL_ACCESS_MESSAGE).toBe(
+      "AI Model access will be available soon"
+    );
+  });
+});
+
+describe("canAccessDimeResearchAlpha — isolated temporary access", () => {
+  it.each(["owner", "admin"])(
+    "grants enabled role=%s temporary alpha access",
+    role => {
+      expect(canAccessDimeResearchAlpha({ role, hasAccess: true })).toBe(true);
+    }
+  );
+
+  it.each(["handicapper", "user", "Owner", "admin ", "co-owner"])(
+    "denies role=%s",
+    role => {
+      expect(canAccessDimeResearchAlpha({ role, hasAccess: true })).toBe(false);
+    }
+  );
+
+  it("denies disabled and missing accounts", () => {
+    expect(
+      canAccessDimeResearchAlpha({ role: "owner", hasAccess: false })
+    ).toBe(false);
+    expect(canAccessDimeResearchAlpha(null)).toBe(false);
+    expect(canAccessDimeResearchAlpha(undefined)).toBe(false);
   });
 });
 
 describe("POST /api/dime/chat — route wiring", () => {
   it("derives entitlement from the shared policy against the DB user (not the JWT role)", () => {
     expect(chatRouteSrc).toMatch(
-      /import \{ canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE \} from "\.\/dimeModelAccess"/
+      /import \{[\s\S]*?canAccessDimeModel,[\s\S]*?DIME_MODEL_ACCESS_MESSAGE,[\s\S]*?\} from "\.\/dimeModelAccess"/
     );
     expect(chatRouteSrc).toMatch(
       /async function checkDimeChatEntitlement\(userId: number\): Promise<boolean> \{\s*const user = await getAppUserById\(userId\);\s*return canAccessDimeModel\(user\);/
@@ -93,6 +125,29 @@ describe("POST /api/dime/chat — route wiring", () => {
     expect(rateIdx).toBeGreaterThan(entitlementIdx);
     // Non-owners must 403 BEFORE the frozen-notice stream can answer them.
     expect(freezeIdx).toBeGreaterThan(entitlementIdx);
+  });
+
+  it("keeps the temporary alpha branch after safety and before every production provider path", () => {
+    const safetyIdx = chatRouteSrc.indexOf(
+      "assessDimeResponsibleGamblingSafety",
+      chatRouteSrc.indexOf('dimeChatRouter.post("/chat"')
+    );
+    const alphaIdx = chatRouteSrc.indexOf(
+      "if (researchAlphaGate.active)",
+      safetyIdx
+    );
+    const dime1Idx = chatRouteSrc.indexOf(
+      'if (DIME_CHAT_LLM_PROVIDER === "dime1")',
+      alphaIdx
+    );
+    const freezeIdx = chatRouteSrc.indexOf(
+      'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")',
+      dime1Idx
+    );
+    expect(safetyIdx).toBeGreaterThan(-1);
+    expect(alphaIdx).toBeGreaterThan(safetyIdx);
+    expect(dime1Idx).toBeGreaterThan(alphaIdx);
+    expect(freezeIdx).toBeGreaterThan(dime1Idx);
   });
 });
 

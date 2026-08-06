@@ -1,0 +1,31 @@
+[
+  {
+    "gamePk": 449244,
+    "season": 2016,
+    "officialDate": "2016-09-29",
+    "gameDate": "2016-09-29T23:05:00Z",
+    "gameType": "R",
+    "seriesDescription": "Regular Season",
+    "doubleHeader": "N",
+    "gameNumber": 1,
+    "status": "Final",
+    "codedState": "F",
+    "away": "Chicago Cubs",
+    "awayId": 112,
+    "awayScore": 1,
+    "home": "Pittsburgh Pirates",
+    "homeId": 134,
+    "homeScore": 1,
+    "winner": null,
+    "loser": null,
+    "save": null,
+    "innings": 6,
+    "venue": "PNC Park",
+    "dayNight": "night",
+    "seriesGameNumber": 4,
+    "gamesInSeries": 4,
+    "isTie": true,
+    "resumeDate": null,
+    "rescheduleDate": null
+  }
+]

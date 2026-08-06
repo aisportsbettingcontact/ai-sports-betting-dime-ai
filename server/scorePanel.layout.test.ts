@@ -18,9 +18,14 @@
  * Desktop: all values unchanged (wider panels, no overflow risk).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
-function evalClamp(min: number, vwFactor: number, max: number, vw: number): number {
+function evalClamp(
+  min: number,
+  vwFactor: number,
+  max: number,
+  vw: number
+): number {
   return Math.min(max, Math.max(min, (vwFactor / 100) * vw));
 }
 
@@ -34,22 +39,25 @@ function teamRowUsableWidth(vw: number, isDesktop: boolean): number {
 }
 
 // logo + gap(5) + abbrev(3ch * 0.65 * fontSize) + gap(4) + score(2ch * 0.65 * fontSize)
-function teamRowRequiredWidth(logoSize: number, abbrFont: number, scoreFont: number): number {
+function teamRowRequiredWidth(
+  logoSize: number,
+  abbrFont: number,
+  scoreFont: number
+): number {
   return logoSize + 5 + 3 * 0.65 * abbrFont + 4 + 2 * 0.65 * scoreFont;
 }
 
-describe('ScorePanel layout fix — bulletproof score display', () => {
-
-  describe('NEW mobile score font: clamp(13px, 3.8vw, 19px)', () => {
-    it('resolves to 14.25px at 375px (iPhone SE/14)', () => {
+describe("ScorePanel layout fix — bulletproof score display", () => {
+  describe("NEW mobile score font: clamp(13px, 3.8vw, 19px)", () => {
+    it("resolves to 14.25px at 375px (iPhone SE/14)", () => {
       expect(evalClamp(13, 3.8, 19, 375)).toBeCloseTo(14.25, 1);
     });
-    it('never exceeds 19px on any mobile viewport', () => {
+    it("never exceeds 19px on any mobile viewport", () => {
       for (const vw of [320, 375, 390, 414, 430, 480]) {
         expect(evalClamp(13, 3.8, 19, vw)).toBeLessThanOrEqual(19);
       }
     });
-    it('is always smaller than OLD font (22px) on mobile viewports', () => {
+    it("is always smaller than OLD font (22px) on mobile viewports", () => {
       for (const vw of [320, 375, 390, 414]) {
         const oldFont = evalClamp(22, 2.5, 44, vw); // always 22px on mobile
         const newFont = evalClamp(13, 3.8, 19, vw);
@@ -58,24 +66,24 @@ describe('ScorePanel layout fix — bulletproof score display', () => {
     });
   });
 
-  describe('OLD mobile score font confirms the bug', () => {
-    it('always resolves to 22px minimum on all mobile viewports', () => {
+  describe("OLD mobile score font confirms the bug", () => {
+    it("always resolves to 22px minimum on all mobile viewports", () => {
       for (const vw of [320, 375, 390, 414]) {
         expect(evalClamp(22, 2.5, 44, vw)).toBe(22);
       }
     });
   });
 
-  describe('Layout space validation — NEW layout fits at all mobile viewports', () => {
+  describe("Layout space validation — NEW layout fits at all mobile viewports", () => {
     const MOBILE_LOGO = 28;
     const DESKTOP_LOGO = 36;
 
     const viewports = [
-      { vw: 320, name: 'small Android' },
-      { vw: 375, name: 'iPhone SE/14' },
-      { vw: 390, name: 'iPhone 15 Pro' },
-      { vw: 414, name: 'iPhone Plus' },
-      { vw: 430, name: 'iPhone 15 Plus' },
+      { vw: 320, name: "small Android" },
+      { vw: 375, name: "iPhone SE/14" },
+      { vw: 390, name: "iPhone 15 Pro" },
+      { vw: 414, name: "iPhone Plus" },
+      { vw: 430, name: "iPhone 15 Plus" },
     ];
 
     for (const { vw, name } of viewports) {
@@ -89,7 +97,7 @@ describe('ScorePanel layout fix — bulletproof score display', () => {
       });
     }
 
-    it('OLD layout OVERFLOWS at 375px — confirms the bug was real', () => {
+    it("OLD layout OVERFLOWS at 375px — confirms the bug was real", () => {
       const vw = 375;
       const col = Math.min(180, Math.max(140, 0.38 * vw));
       const usable = col - 16 - 44; // old star: 44px
@@ -99,7 +107,7 @@ describe('ScorePanel layout fix — bulletproof score display', () => {
       expect(required).toBeGreaterThan(usable); // overflows
     });
 
-    it('desktop layout unchanged — fits at 1440px with original sizes', () => {
+    it("desktop layout unchanged — fits at 1440px with original sizes", () => {
       const vw = 1440;
       const usable = teamRowUsableWidth(vw, true);
       const abbrFont = evalClamp(11, 3.5, 14, vw);
@@ -109,42 +117,44 @@ describe('ScorePanel layout fix — bulletproof score display', () => {
     });
   });
 
-  describe('minWidth: 2ch guarantee', () => {
-    it('2ch at 13px font ≥ 14px — enough for single-digit scores', () => {
+  describe("minWidth: 2ch guarantee", () => {
+    it("2ch at 13px font ≥ 14px — enough for single-digit scores", () => {
       expect(2 * 0.65 * 13).toBeGreaterThanOrEqual(14);
     });
-    it('2ch at 19px font ≥ 20px — enough for 2-digit MLB scores', () => {
+    it("2ch at 19px font ≥ 20px — enough for 2-digit MLB scores", () => {
       expect(2 * 0.65 * 19).toBeGreaterThanOrEqual(20);
     });
   });
 
-  describe('Mobile star button reduction', () => {
-    it('mobile star 32px < old 44px — frees 12px', () => {
+  describe("Mobile star button reduction", () => {
+    it("mobile star 32px < old 44px — frees 12px", () => {
       expect(32).toBeLessThan(44);
       expect(44 - 32).toBe(12);
     });
-    it('mobile star 32px is still accessible (≥ 28px minimum)', () => {
+    it("mobile star 32px is still accessible (≥ 28px minimum)", () => {
       expect(32).toBeGreaterThanOrEqual(28);
     });
   });
 
-  describe('Mobile logo reduction', () => {
-    it('mobile logo 28px < old 36px — frees 8px', () => {
+  describe("Mobile logo reduction", () => {
+    it("mobile logo 28px < old 36px — frees 8px", () => {
       expect(28).toBeLessThan(36);
       expect(36 - 28).toBe(8);
     });
-    it('mobile logo 28px is still recognizable (≥ 24px minimum)', () => {
+    it("mobile logo 28px is still recognizable (≥ 24px minimum)", () => {
       expect(28).toBeGreaterThanOrEqual(24);
     });
   });
 
-  describe('NBA mobile score font: clamp(12px, 3.5vw, 17px)', () => {
-    it('is ≤ MLB mobile font at all mobile viewports', () => {
+  describe("NBA mobile score font: clamp(12px, 3.5vw, 17px)", () => {
+    it("is ≤ MLB mobile font at all mobile viewports", () => {
       for (const vw of [320, 375, 390, 414]) {
-        expect(evalClamp(12, 3.5, 17, vw)).toBeLessThanOrEqual(evalClamp(13, 3.8, 19, vw));
+        expect(evalClamp(12, 3.5, 17, vw)).toBeLessThanOrEqual(
+          evalClamp(13, 3.8, 19, vw)
+        );
       }
     });
-    it('never exceeds 17px — safe for 3-digit NBA scores', () => {
+    it("never exceeds 17px — safe for 3-digit NBA scores", () => {
       for (const vw of [320, 375, 390, 414, 480]) {
         expect(evalClamp(12, 3.5, 17, vw)).toBeLessThanOrEqual(17);
       }

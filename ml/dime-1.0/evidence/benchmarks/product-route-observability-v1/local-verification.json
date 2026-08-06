@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "dime-phase1-local-verification-v1",
+  "verifiedAt": "2026-07-29T13:05:15Z",
+  "sourceCommit": "47e338fbbcb10e30f63fc048ac366f85a9a18f72",
+  "sourceCommitStatus": "uncommitted_local_changes",
+  "results": [
+    {
+      "check": "phase1_targeted_vitest",
+      "status": "pass",
+      "passed": 85,
+      "failed": 0,
+      "notes": "Nine Dime migration, observability, provenance, pricing, traffic, context, routing, trace, and audit test files."
+    },
+    {
+      "check": "typescript_no_emit",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "notes": "tsc --noEmit completed successfully."
+    },
+    {
+      "check": "production_build",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "notes": "Client preview guard and bundled server build completed successfully."
+    },
+    {
+      "check": "bundle_budget",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "notes": "Chat critical-path gzip remained 689 bytes under the configured ceiling."
+    },
+    {
+      "check": "product_route_evidence_audit",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "notes": "Frozen synthetic route evidence matches its source and control hashes."
+    },
+    {
+      "check": "mysql8_migration_0122",
+      "status": "pass",
+      "passed": 5,
+      "failed": 0,
+      "notes": "First apply, second apply, historical-null preservation, guarded rollback, and second rollback passed in a disposable MySQL 8 container. The pre-existing full migration history still fails before 0122 on duplicate wc2026_matches creation."
+    },
+    {
+      "check": "railway_pricing_registry_docker_context",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "notes": "A minimal Docker build proved the bounded pricing registry is included by the production .dockerignore rules."
+    },
+    {
+      "check": "dime_ml_pytest",
+      "status": "pass",
+      "passed": 782,
+      "failed": 0,
+      "notes": "Full ml/dime-1.0 CPU test suite."
+    },
+    {
+      "check": "dime_ml_ruff",
+      "status": "pass",
+      "passed": 1,
+      "failed": 0,
+      "notes": "Ruff lint and format checks completed successfully."
+    },
+    {
+      "check": "repository_vitest_non_gating",
+      "status": "environment_blocked",
+      "passed": 2544,
+      "failed": 65,
+      "notes": "Five tests were pending. One sandbox-only perf-harness failure passed when rerun with local IPC/browser permission; the remaining failures require unavailable databases, credentials, or live APIs. This result is not represented as a repository-wide pass."
+    }
+  ],
+  "authorizationEffect": {
+    "authorizesProductionAccess": false,
+    "authorizesDeployment": false,
+    "authorizesShadow": false,
+    "authorizesRelease": false
+  }
+}

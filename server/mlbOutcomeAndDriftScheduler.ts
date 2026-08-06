@@ -49,7 +49,9 @@ interface PstTime {
 
 function nowPst(): PstTime {
   const now = new Date();
-  const pstStr = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+  const pstStr = now.toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles",
+  });
   const pst = new Date(pstStr);
   const y = pst.getFullYear();
   const m = String(pst.getMonth() + 1).padStart(2, "0");
@@ -65,7 +67,9 @@ function nowPst(): PstTime {
 
 function yesterdayPst(): string {
   const now = new Date();
-  const pstStr = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
+  const pstStr = now.toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles",
+  });
   const pst = new Date(pstStr);
   pst.setDate(pst.getDate() - 1);
   const y = pst.getFullYear();
@@ -96,14 +100,18 @@ let pipelineRunning = false;
  */
 async function runNightlyPipeline(dateStr: string): Promise<void> {
   if (pipelineRunning) {
-    console.log(`${TAG} [STATE] Pipeline already running — skipping duplicate trigger for ${dateStr}`);
+    console.log(
+      `${TAG} [STATE] Pipeline already running — skipping duplicate trigger for ${dateStr}`
+    );
     return;
   }
 
   pipelineRunning = true;
   const startMs = Date.now();
 
-  console.log(`\n${TAG} ══════════════════════════════════════════════════════`);
+  console.log(
+    `\n${TAG} ══════════════════════════════════════════════════════`
+  );
   console.log(`${TAG} [INPUT] Nightly pipeline starting for date=${dateStr}`);
 
   try {
@@ -113,16 +121,18 @@ async function runNightlyPipeline(dateStr: string): Promise<void> {
 
     console.log(
       `${TAG} [STATE] Ingestion complete:` +
-      ` total=${ingestSummary.totalGames}` +
-      ` written=${ingestSummary.written}` +
-      ` skipped_ingested=${ingestSummary.skippedAlreadyIngested}` +
-      ` skipped_not_final=${ingestSummary.skippedNotFinal}` +
-      ` skipped_no_match=${ingestSummary.skippedNoApiMatch}` +
-      ` errors=${ingestSummary.errors}`
+        ` total=${ingestSummary.totalGames}` +
+        ` written=${ingestSummary.written}` +
+        ` skipped_ingested=${ingestSummary.skippedAlreadyIngested}` +
+        ` skipped_not_final=${ingestSummary.skippedNotFinal}` +
+        ` skipped_no_match=${ingestSummary.skippedNoApiMatch}` +
+        ` errors=${ingestSummary.errors}`
     );
 
     if (ingestSummary.errors > 0) {
-      console.warn(`${TAG} [WARN] ${ingestSummary.errors} ingestion errors — drift check will still run`);
+      console.warn(
+        `${TAG} [WARN] ${ingestSummary.errors} ingestion errors — drift check will still run`
+      );
     }
 
     // ── Step 2: Drift Detection ─────────────────────────────────────────────
@@ -131,36 +141,45 @@ async function runNightlyPipeline(dateStr: string): Promise<void> {
 
     console.log(
       `${TAG} [STATE] Drift check:` +
-      ` rolling=${driftResult.rollingF5Share ?? "null"}` +
-      ` delta=${driftResult.delta ?? "null"}` +
-      ` driftDetected=${driftResult.driftDetected}` +
-      ` recalibrationTriggered=${driftResult.recalibrationTriggered}` +
-      ` cooldownSkipped=${driftResult.cooldownSkipped}`
+        ` rolling=${driftResult.rollingF5Share ?? "null"}` +
+        ` delta=${driftResult.delta ?? "null"}` +
+        ` driftDetected=${driftResult.driftDetected}` +
+        ` recalibrationTriggered=${driftResult.recalibrationTriggered}` +
+        ` cooldownSkipped=${driftResult.cooldownSkipped}`
     );
 
     const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
 
     if (driftResult.driftDetected && driftResult.recalibrationTriggered) {
-      console.log(`${TAG} [OUTPUT] DRIFT DETECTED + RECALIBRATED — ${driftResult.message} | elapsed=${elapsed}s`);
+      console.log(
+        `${TAG} [OUTPUT] DRIFT DETECTED + RECALIBRATED — ${driftResult.message} | elapsed=${elapsed}s`
+      );
     } else if (driftResult.driftDetected) {
-      console.log(`${TAG} [OUTPUT] DRIFT DETECTED (no recal) — ${driftResult.message} | elapsed=${elapsed}s`);
+      console.log(
+        `${TAG} [OUTPUT] DRIFT DETECTED (no recal) — ${driftResult.message} | elapsed=${elapsed}s`
+      );
     } else {
-      console.log(`${TAG} [OUTPUT] PASS — no drift | ${driftResult.message} | elapsed=${elapsed}s`);
+      console.log(
+        `${TAG} [OUTPUT] PASS — no drift | ${driftResult.message} | elapsed=${elapsed}s`
+      );
     }
 
     // ── Verify ──────────────────────────────────────────────────────────────
     const verifyPass = ingestSummary.errors === 0;
     console.log(
       `${TAG} [VERIFY] ${verifyPass ? "PASS" : "WARN"} — ingestion_errors=${ingestSummary.errors}` +
-      ` written=${ingestSummary.written} drift_detected=${driftResult.driftDetected}`
+        ` written=${ingestSummary.written} drift_detected=${driftResult.driftDetected}`
     );
-
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG} [ERROR] Nightly pipeline failed for date=${dateStr}: ${msg}`);
+    console.error(
+      `${TAG} [ERROR] Nightly pipeline failed for date=${dateStr}: ${msg}`
+    );
   } finally {
     pipelineRunning = false;
-    console.log(`${TAG} ══════════════════════════════════════════════════════\n`);
+    console.log(
+      `${TAG} ══════════════════════════════════════════════════════\n`
+    );
   }
 }
 
@@ -172,8 +191,12 @@ async function runNightlyPipeline(dateStr: string): Promise<void> {
  * Runs regardless of drift detection — ensures constants stay current.
  */
 async function runMonthlyRecalibration(monthKey: string): Promise<void> {
-  console.log(`\n${TAG} ══════════════════════════════════════════════════════`);
-  console.log(`${TAG} [INPUT] Monthly recalibration starting for month=${monthKey}`);
+  console.log(
+    `\n${TAG} ══════════════════════════════════════════════════════`
+  );
+  console.log(
+    `${TAG} [INPUT] Monthly recalibration starting for month=${monthKey}`
+  );
 
   try {
     const result = await triggerRecalibration("SCHEDULED");
@@ -181,14 +204,18 @@ async function runMonthlyRecalibration(monthKey: string): Promise<void> {
     if (result.success) {
       console.log(
         `${TAG} [OUTPUT] Monthly recalibration COMPLETE:` +
-        ` newF5Share=${result.newF5Share}` +
-        ` newNrfiRate=${result.newNrfiRate}` +
-        ` constantsPatched=${result.constantsPatched}` +
-        ` elapsed=${result.elapsedSec.toFixed(1)}s`
+          ` newF5Share=${result.newF5Share}` +
+          ` newNrfiRate=${result.newNrfiRate}` +
+          ` constantsPatched=${result.constantsPatched}` +
+          ` elapsed=${result.elapsedSec.toFixed(1)}s`
       );
-      console.log(`${TAG} [VERIFY] PASS — ${result.constantsPatched} constants updated in MLBAIModel.py`);
+      console.log(
+        `${TAG} [VERIFY] PASS — ${result.constantsPatched} constants updated in MLBAIModel.py`
+      );
     } else {
-      console.error(`${TAG} [ERROR] Monthly recalibration FAILED: ${result.error}`);
+      console.error(
+        `${TAG} [ERROR] Monthly recalibration FAILED: ${result.error}`
+      );
       console.log(`${TAG} [VERIFY] FAIL — recalibration did not complete`);
     }
   } catch (err) {
@@ -196,7 +223,9 @@ async function runMonthlyRecalibration(monthKey: string): Promise<void> {
     console.error(`${TAG} [ERROR] Monthly recalibration threw: ${msg}`);
   }
 
-  console.log(`${TAG} ══════════════════════════════════════════════════════\n`);
+  console.log(
+    `${TAG} ══════════════════════════════════════════════════════\n`
+  );
 }
 
 // ─── Scheduler Tick ──────────────────────────────────────────────────────────
@@ -219,10 +248,14 @@ async function schedulerTick(): Promise<void> {
     lastMonthlyRecalMonth !== monthKey
   ) {
     lastMonthlyRecalMonth = monthKey;
-    console.log(`${TAG} [INPUT] Monthly recalibration trigger: month=${monthKey}`);
+    console.log(
+      `${TAG} [INPUT] Monthly recalibration trigger: month=${monthKey}`
+    );
     // Run async — don't await to avoid blocking the tick
     runMonthlyRecalibration(monthKey).catch(err => {
-      console.error(`${TAG} [ERROR] Monthly recalibration uncaught: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `${TAG} [ERROR] Monthly recalibration uncaught: ${err instanceof Error ? err.message : String(err)}`
+      );
     });
     return;
   }
@@ -236,10 +269,14 @@ async function schedulerTick(): Promise<void> {
     lastNightlyRunDate = pst.dateStr;
     // Ingest yesterday's games (games from the previous calendar day in PST)
     const targetDate = yesterdayPst();
-    console.log(`${TAG} [INPUT] Nightly pipeline trigger: pst=${pst.dateStr} 00:30 → ingesting date=${targetDate}`);
+    console.log(
+      `${TAG} [INPUT] Nightly pipeline trigger: pst=${pst.dateStr} 00:30 → ingesting date=${targetDate}`
+    );
     // Run async — don't await to avoid blocking the tick
     runNightlyPipeline(targetDate).catch(err => {
-      console.error(`${TAG} [ERROR] Nightly pipeline uncaught: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `${TAG} [ERROR] Nightly pipeline uncaught: ${err instanceof Error ? err.message : String(err)}`
+      );
     });
   }
 }
@@ -254,22 +291,30 @@ let schedulerInterval: ReturnType<typeof setInterval> | null = null;
  */
 export function startMlbOutcomeAndDriftScheduler(): void {
   if (schedulerInterval) {
-    console.log(`${TAG} [WARN] Scheduler already running — ignoring duplicate start`);
+    console.log(
+      `${TAG} [WARN] Scheduler already running — ignoring duplicate start`
+    );
     return;
   }
 
   console.log(`${TAG} [INPUT] startMlbOutcomeAndDriftScheduler: STARTING`);
-  console.log(`${TAG} [STATE] Nightly pipeline: 12:30 AM PST | Monthly recal: 1st of month 3:00 AM PST`);
+  console.log(
+    `${TAG} [STATE] Nightly pipeline: 12:30 AM PST | Monthly recal: 1st of month 3:00 AM PST`
+  );
 
   // Run tick immediately on start (catches up if server restarted mid-window)
   schedulerTick().catch(err => {
-    console.error(`${TAG} [ERROR] Initial tick failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `${TAG} [ERROR] Initial tick failed: ${err instanceof Error ? err.message : String(err)}`
+    );
   });
 
   // Then tick every 60 seconds — .unref() prevents this from keeping the process alive
   schedulerInterval = setInterval(() => {
     schedulerTick().catch(err => {
-      console.error(`${TAG} [ERROR] Tick failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(
+        `${TAG} [ERROR] Tick failed: ${err instanceof Error ? err.message : String(err)}`
+      );
     });
   }, 60_000).unref();
 
@@ -293,7 +338,9 @@ function stopMlbOutcomeAndDriftScheduler(): void {
  * Used by tRPC admin procedures and backfill scripts.
  */
 async function manualRunNightlyPipeline(dateStr: string): Promise<void> {
-  console.log(`${TAG} [INPUT] Manual nightly pipeline trigger: date=${dateStr}`);
+  console.log(
+    `${TAG} [INPUT] Manual nightly pipeline trigger: date=${dateStr}`
+  );
   await runNightlyPipeline(dateStr);
 }
 
@@ -302,6 +349,8 @@ async function manualRunNightlyPipeline(dateStr: string): Promise<void> {
  * Returns the drift check result for diagnostics.
  */
 async function manualDriftCheck(triggerRecal = false) {
-  console.log(`${TAG} [INPUT] Manual drift check: triggerRecal=${triggerRecal}`);
+  console.log(
+    `${TAG} [INPUT] Manual drift check: triggerRecal=${triggerRecal}`
+  );
   return checkF5ShareDrift(triggerRecal);
 }

@@ -1,0 +1,17 @@
+{
+  "_comment": "Claims this mission has refuted or resolved. scripts/os/artifacts.test.ts fails the required Vitest job if any LIVE /os/ artifact still asserts one without marking it corrected. Appendices are exempt \u2014 they are immutable point-in-time evidence. Add a claim here the moment it is refuted; that is what makes the correction enforceable instead of aspirational.",
+  "claims": [
+    {
+      "term": "RAILPACK",
+      "refutedOn": "2026-08-05",
+      "correctedBy": "os/audits/2026-08-05-builder-resolution.md",
+      "truth": "The Dockerfile is the builder. The RAILPACK value in Railway's service config is stale persisted dashboard state that railway.json overrides at deploy time.",
+      "exemptPaths": [
+        "os/audits/2026-08-05-builder-resolution.md",
+        "os/memory/lessons/config-api-is-not-runtime-truth.md",
+        "os/memory/lessons/README.md"
+      ],
+      "exemptReason": "These three artifacts have the error itself as their subject: the audit that corrected it, the lesson that narrates it, and the lessons index row naming that lesson. Each is named explicitly so an exemption is a visible decision, not a silent widening of the rule."
+    }
+  ]
+}

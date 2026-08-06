@@ -4,7 +4,7 @@
  * Validates that all required GitHub Actions secrets are correctly injected
  * into the CI test environment. This test is the canary that catches missing
  * or misconfigured secrets before they cause cryptic failures in downstream
- * tests (e.g., database connection errors, auth failures, NBA sync failures).
+ * tests (e.g., database connection errors, auth failures).
  *
  * [INPUT]  Environment variables injected from GitHub repository secrets
  * [STEP]   Validate each required secret: present, non-empty, correct format
@@ -24,22 +24,6 @@
  *   PUBLIC_ORIGIN     — Canonical public origin for CSRF Origin check
  *                       Format: https://aisportsbettingmodels.com (no trailing slash)
  *                       Used by: discordAuth.test.ts, CSRF middleware
- *
- *   VITE_APP_ID       — Manus OAuth application ID
- *                       Format: alphanumeric string
- *                       Used by: OAuth flow tests
- *
- *   OAUTH_SERVER_URL  — Manus OAuth backend base URL
- *                       Format: https://api.manus.im (no trailing slash)
- *                       Used by: OAuth flow tests
- *
- *   OWNER_OPEN_ID     — Owner's Manus open ID
- *                       Format: alphanumeric string
- *                       Used by: owner-gated procedure tests
- *
- *   NBA_SHEET_ID      — Google Sheets ID for NBA model sync
- *                       Format: 44-char alphanumeric string (base64url)
- *                       Used by: nbaSheetId.test.ts
  *
  * How to add these secrets to GitHub:
  *   1. Go to: https://github.com/<owner>/<repo>/settings/secrets/actions
@@ -93,43 +77,23 @@ const REQUIRED_SECRETS: SecretDescriptor[] = [
     format: /^https?:\/\/[a-zA-Z0-9\-\.]+[^/]$/,
     formatDescription: "https://aisportsbettingmodels.com (no trailing slash)",
   },
-  {
-    key: "VITE_APP_ID",
-    description: "Manus OAuth application ID",
-    minLength: 1,
-  },
-  {
-    key: "OAUTH_SERVER_URL",
-    description: "Manus OAuth backend base URL",
-    minLength: 10,
-    format: /^https?:\/\/.+/,
-    formatDescription: "https://api.manus.im",
-  },
-  {
-    key: "OWNER_OPEN_ID",
-    description: "Owner's Manus open ID",
-    minLength: 1,
-  },
-  {
-    key: "NBA_SHEET_ID",
-    description: "Google Sheets ID for NBA model sync",
-    minLength: 20,
-    format: /^[A-Za-z0-9_\-]+$/,
-    formatDescription: "44-char alphanumeric base64url string",
-  },
 ];
 
 // ─── Helper: safe secret preview (never logs full value) ─────────────────────
 function safePreview(value: string): string {
   if (value.length === 0) return "(EMPTY)";
   if (value.length <= 8) return "*".repeat(value.length);
-  return value.substring(0, 4) + "*".repeat(Math.min(value.length - 4, 8)) + `...(len=${value.length})`;
+  return (
+    value.substring(0, 4) +
+    "*".repeat(Math.min(value.length - 4, 8)) +
+    `...(len=${value.length})`
+  );
 }
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
 // Skipped in CI because the repository does not actually configure the secret
 // set this file documents (verified 2026-07-12: 7 Actions secrets exist;
-// DATABASE_URL, PUBLIC_ORIGIN, NBA_SHEET_ID and the OAuth/Discord/VSIN values
+// DATABASE_URL, PUBLIC_ORIGIN and the OAuth/Discord/VSIN values
 // are absent). Until those secrets are provisioned this suite can only
 // validate a real operator environment; once they exist, remove this guard so
 // the suite becomes the CI canary its header describes. The skip is declared
@@ -139,7 +103,9 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
   it("All required GitHub Actions secrets are present and correctly formatted", () => {
     console.log("[INPUT] Validating CI secrets in test environment...");
     console.log(`[INPUT] NODE_ENV: ${process.env.NODE_ENV ?? "(not set)"}`);
-    console.log("─────────────────────────────────────────────────────────────");
+    console.log(
+      "─────────────────────────────────────────────────────────────"
+    );
 
     const failures: string[] = [];
 
@@ -164,7 +130,9 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
         const msg =
           `${secret.key} is too short (${value.length} chars, min ${secret.minLength}) — ` +
           `${secret.description}`;
-        console.error(`[FAIL]  ${secret.key}: TOO_SHORT | preview=${preview} | ${msg}`);
+        console.error(
+          `[FAIL]  ${secret.key}: TOO_SHORT | preview=${preview} | ${msg}`
+        );
         failures.push(msg);
         continue;
       }
@@ -174,7 +142,9 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
         const msg =
           `${secret.key} has invalid format — expected: ${secret.formatDescription ?? secret.format.toString()} — ` +
           `${secret.description}`;
-        console.error(`[FAIL]  ${secret.key}: INVALID_FORMAT | preview=${preview} | ${msg}`);
+        console.error(
+          `[FAIL]  ${secret.key}: INVALID_FORMAT | preview=${preview} | ${msg}`
+        );
         failures.push(msg);
         continue;
       }
@@ -185,7 +155,9 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
       );
     }
 
-    console.log("─────────────────────────────────────────────────────────────");
+    console.log(
+      "─────────────────────────────────────────────────────────────"
+    );
 
     if (failures.length > 0) {
       console.error(`[OUTPUT] ${failures.length} secret(s) failed validation:`);
@@ -194,17 +166,24 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
       }
       console.error(
         "[OUTPUT] Action required: add missing secrets to GitHub repository secrets.\n" +
-        "  Go to: https://github.com/<owner>/<repo>/settings/secrets/actions\n" +
-        "  Add each missing secret listed above."
+          "  Go to: https://github.com/<owner>/<repo>/settings/secrets/actions\n" +
+          "  Add each missing secret listed above."
       );
     } else {
-      console.log(`[OUTPUT] All ${REQUIRED_SECRETS.length} required secrets are present and valid`);
+      console.log(
+        `[OUTPUT] All ${REQUIRED_SECRETS.length} required secrets are present and valid`
+      );
     }
 
-    console.log(`[VERIFY] ${failures.length === 0 ? "PASS" : "FAIL"} — CI secrets validation`);
+    console.log(
+      `[VERIFY] ${failures.length === 0 ? "PASS" : "FAIL"} — CI secrets validation`
+    );
 
     // Fail the test with a clear diagnostic message listing all missing secrets
-    expect(failures, `Missing or invalid CI secrets:\n${failures.map(f => `  - ${f}`).join("\n")}`).toHaveLength(0);
+    expect(
+      failures,
+      `Missing or invalid CI secrets:\n${failures.map(f => `  - ${f}`).join("\n")}`
+    ).toHaveLength(0);
   });
 
   // ─── Individual secret tests for granular CI failure attribution ───────────
@@ -226,31 +205,27 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
     const value = process.env.APP_SESSION_SECRET ?? "";
     console.log(`[INPUT] APP_SESSION_SECRET: ${safePreview(value)}`);
     expect(value.length, "APP_SESSION_SECRET is not set").toBeGreaterThan(0);
-    expect(value.length, `APP_SESSION_SECRET too short (${value.length} chars, min 44)`).toBeGreaterThanOrEqual(44);
-    console.log(`[VERIFY] PASS — APP_SESSION_SECRET is set, length=${value.length}`);
+    expect(
+      value.length,
+      `APP_SESSION_SECRET too short (${value.length} chars, min 44)`
+    ).toBeGreaterThanOrEqual(44);
+    console.log(
+      `[VERIFY] PASS — APP_SESSION_SECRET is set, length=${value.length}`
+    );
   });
 
   it("PUBLIC_ORIGIN is set and has no trailing slash", () => {
     const value = process.env.PUBLIC_ORIGIN ?? "";
     console.log(`[INPUT] PUBLIC_ORIGIN: ${safePreview(value)}`);
     expect(value.length, "PUBLIC_ORIGIN is not set").toBeGreaterThan(0);
-    expect(value.endsWith("/"), "PUBLIC_ORIGIN must not have a trailing slash").toBe(false);
+    expect(
+      value.endsWith("/"),
+      "PUBLIC_ORIGIN must not have a trailing slash"
+    ).toBe(false);
     expect(
       /^https?:\/\/.+/.test(value),
       "PUBLIC_ORIGIN must start with http:// or https://"
     ).toBe(true);
     console.log("[VERIFY] PASS — PUBLIC_ORIGIN is set and format-valid");
-  });
-
-  it("NBA_SHEET_ID is set and matches Google Sheets ID format", () => {
-    const value = process.env.NBA_SHEET_ID ?? "";
-    console.log(`[INPUT] NBA_SHEET_ID: ${safePreview(value)}`);
-    expect(value.length, "NBA_SHEET_ID is not set").toBeGreaterThan(0);
-    expect(value.length, `NBA_SHEET_ID too short (${value.length} chars, min 20)`).toBeGreaterThanOrEqual(20);
-    expect(
-      /^[A-Za-z0-9_\-]+$/.test(value),
-      "NBA_SHEET_ID must be alphanumeric (base64url characters only)"
-    ).toBe(true);
-    console.log(`[VERIFY] PASS — NBA_SHEET_ID is set, length=${value.length}`);
   });
 });

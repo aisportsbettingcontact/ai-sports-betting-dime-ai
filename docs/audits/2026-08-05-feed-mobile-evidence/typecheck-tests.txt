@@ -1,0 +1,10 @@
+== npx tsc --noEmit (2026-08-05, post-rebase onto main @ 5395204) ==
+PASS — no errors
+
+== npx vitest run client/src ==
+
+ Test Files  55 passed (55)
+      Tests  767 passed (767)
+   Start at  13:55:28
+   Duration  6.01s (transform 1.97s, setup 0ms, import 4.95s, tests 1.18s, environment 10ms)
+

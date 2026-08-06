@@ -1,0 +1,100 @@
+{
+  "schema_version": "dime-foundation-approval-v1",
+  "dataset_version": "dime-sft-foundation-v1",
+  "approved": true,
+  "approved_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+  "evidence_valid_until_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+  "approver_ids": [
+    "REPLACE_WITH_DATASET_APPROVER_A",
+    "REPLACE_WITH_DATASET_APPROVER_B"
+  ],
+  "agent_decision_receipts": {},
+  "train_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "validation_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "source_registry_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "source_artifacts_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "review_ledger_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "reviewer_registry_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "candidate_audit_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "dataset_card_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "curriculum_config_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "system_prompt_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "chat_template_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "tool_catalog_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "foundation_build_config_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "development_eval_repo_id": "taileredsports/dime-eval-development",
+  "development_eval_revision": "REPLACE_WITH_FULL_40_CHARACTER_HF_COMMIT_SHA",
+  "development_eval_manifest_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "development_eval_identity_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "audit_reports": {
+    "semantic_deduplication": {
+      "passed": true,
+      "report_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "tool_id": "REPLACE_WITH_TOOL_ID",
+      "tool_version": "REPLACE_WITH_TOOL_VERSION",
+      "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "reviewer_ids": [
+        "REPLACE_WITH_REVIEWER_ID"
+      ],
+      "agent_decision_receipts": {}
+    },
+    "privacy_and_identifiers": {
+      "passed": true,
+      "report_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "tool_id": "REPLACE_WITH_TOOL_ID",
+      "tool_version": "REPLACE_WITH_TOOL_VERSION",
+      "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "reviewer_ids": [
+        "REPLACE_WITH_REVIEWER_ID"
+      ],
+      "agent_decision_receipts": {}
+    },
+    "rights": {
+      "passed": true,
+      "report_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "tool_id": "REPLACE_WITH_TOOL_ID",
+      "tool_version": "REPLACE_WITH_TOOL_VERSION",
+      "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "reviewer_ids": [
+        "REPLACE_WITH_REVIEWER_ID"
+      ],
+      "agent_decision_receipts": {}
+    },
+    "development_evaluation_contamination": {
+      "passed": true,
+      "report_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "tool_id": "REPLACE_WITH_TOOL_ID",
+      "tool_version": "REPLACE_WITH_TOOL_VERSION",
+      "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "reviewer_ids": [
+        "REPLACE_WITH_REVIEWER_ID"
+      ],
+      "agent_decision_receipts": {}
+    },
+    "locked_evaluation_contamination": {
+      "passed": true,
+      "report_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "tool_id": "REPLACE_WITH_RESTRICTED_EVALUATOR_TOOL_ID",
+      "tool_version": "REPLACE_WITH_TOOL_VERSION",
+      "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "reviewer_ids": [
+        "REPLACE_WITH_LOCKED_EVALUATOR_REVIEWER_ID"
+      ],
+      "agent_decision_receipts": {}
+    },
+    "numeric_traceability": {
+      "passed": true,
+      "report_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "tool_id": "REPLACE_WITH_TOOL_ID",
+      "tool_version": "REPLACE_WITH_TOOL_VERSION",
+      "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "reviewer_ids": [
+        "REPLACE_WITH_REVIEWER_ID"
+      ],
+      "agent_decision_receipts": {}
+    }
+  },
+  "locked_evaluation_reference": "locked-eval-approval:REPLACE_WITH_OPAQUE_REFERENCE",
+  "deletion_policy_id": "REPLACE_WITH_DELETION_POLICY_ID",
+  "limitations_notes": "REPLACE_WITH_REVIEWED_LIMITATIONS"
+}

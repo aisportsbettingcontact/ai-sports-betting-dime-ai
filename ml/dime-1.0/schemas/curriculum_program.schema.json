@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/curriculum_program.schema.json",
+  "title": "Dime Curriculum Program",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "parent_model",
+    "dataset",
+    "task_families",
+    "interaction_modes",
+    "cross_cutting_minimums",
+    "distribution_caps",
+    "distribution_aliases",
+    "metadata_requirements",
+    "answer_length_distribution",
+    "market_math_operation_quotas",
+    "safety_subfamily_minimums",
+    "control_pair_minimums",
+    "control_pair_policy",
+    "tool_single_call_minimums",
+    "required_curriculum_labels",
+    "admission",
+    "stages"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^dime-curriculum-v[1-9][0-9]*$"
+    },
+    "status": {
+      "enum": ["proposed", "approved", "frozen", "retired"]
+    },
+    "parent_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+        }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "target_records",
+        "splits",
+        "research_alpha_below_records"
+      ],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "target_records": {"type": "integer", "minimum": 2},
+        "splits": {"$ref": "#/$defs/positiveSplitCounts"},
+        "research_alpha_below_records": {"type": "integer", "minimum": 1}
+      }
+    },
+    "task_families": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/canonicalIdentifier"},
+      "additionalProperties": {"$ref": "#/$defs/nonnegativeSplitCounts"}
+    },
+    "interaction_modes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "successful_tool_assisted",
+        "degraded_tool_assisted",
+        "direct_no_tool",
+        "clarification",
+        "abstention",
+        "protective_response"
+      ],
+      "properties": {
+        "successful_tool_assisted": {"$ref": "#/$defs/positiveSplitCounts"},
+        "degraded_tool_assisted": {"$ref": "#/$defs/positiveSplitCounts"},
+        "direct_no_tool": {"$ref": "#/$defs/positiveSplitCounts"},
+        "clarification": {"$ref": "#/$defs/positiveSplitCounts"},
+        "abstention": {"$ref": "#/$defs/positiveSplitCounts"},
+        "protective_response": {"$ref": "#/$defs/positiveSplitCounts"}
+      }
+    },
+    "cross_cutting_minimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "multi_turn_records",
+        "multi_tool_records",
+        "adversarial_or_contradictory_records",
+        "sport_neutral_records_when_traffic_unknown"
+      ],
+      "properties": {
+        "multi_turn_records": {"type": "integer", "minimum": 0},
+        "multi_tool_records": {"type": "integer", "minimum": 0},
+        "adversarial_or_contradictory_records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sport_neutral_records_when_traffic_unknown": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "distribution_caps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "league_fraction",
+        "market_type_fraction",
+        "provider_fraction"
+      ],
+      "properties": {
+        "league_fraction": {"$ref": "#/$defs/fraction"},
+        "market_type_fraction": {"$ref": "#/$defs/fraction"},
+        "provider_fraction": {"$ref": "#/$defs/fraction"}
+      }
+    },
+    "distribution_aliases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sports", "leagues", "league_sports"],
+      "properties": {
+        "sports": {"$ref": "#/$defs/aliasGroups"},
+        "leagues": {"$ref": "#/$defs/aliasGroups"},
+        "league_sports": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"$ref": "#/$defs/canonicalIdentifier"},
+          "additionalProperties": {"$ref": "#/$defs/canonicalIdentifier"}
+        }
+      }
+    },
+    "metadata_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "market_type_required_task_families",
+        "provider_id_required_tools"
+      ],
+      "properties": {
+        "market_type_required_task_families": {
+          "$ref": "#/$defs/nonemptyCanonicalIdentifierArray"
+        },
+        "provider_id_required_tools": {
+          "$ref": "#/$defs/nonemptyCanonicalIdentifierArray"
+        }
+      }
+    },
+    "answer_length_distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["concise", "normal", "detailed"],
+      "properties": {
+        "concise": {"$ref": "#/$defs/answerLengthQuota"},
+        "normal": {"$ref": "#/$defs/answerLengthQuota"},
+        "detailed": {"$ref": "#/$defs/answerLengthQuota"}
+      }
+    },
+    "market_math_operation_quotas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implied_probability",
+        "remove_vig",
+        "market_hold",
+        "expected_value",
+        "settled_profit",
+        "roi",
+        "probability_clv"
+      ],
+      "properties": {
+        "implied_probability": {"$ref": "#/$defs/positiveSplitCounts"},
+        "remove_vig": {"$ref": "#/$defs/positiveSplitCounts"},
+        "market_hold": {"$ref": "#/$defs/positiveSplitCounts"},
+        "expected_value": {"$ref": "#/$defs/positiveSplitCounts"},
+        "settled_profit": {"$ref": "#/$defs/positiveSplitCounts"},
+        "roi": {"$ref": "#/$defs/positiveSplitCounts"},
+        "probability_clv": {"$ref": "#/$defs/positiveSplitCounts"}
+      }
+    },
+    "safety_subfamily_minimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "responsible_gaming",
+        "privacy",
+        "security",
+        "eligibility",
+        "acute_distress"
+      ],
+      "properties": {
+        "responsible_gaming": {"$ref": "#/$defs/positiveSplitCounts"},
+        "privacy": {"$ref": "#/$defs/positiveSplitCounts"},
+        "security": {"$ref": "#/$defs/positiveSplitCounts"},
+        "eligibility": {"$ref": "#/$defs/positiveSplitCounts"},
+        "acute_distress": {"$ref": "#/$defs/positiveSplitCounts"}
+      }
+    },
+    "control_pair_minimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "distinct_pairs"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 2},
+        "distinct_pairs": {"type": "integer", "minimum": 1}
+      }
+    },
+    "control_pair_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shared_fields",
+        "difference_axes",
+        "required_difference_count",
+        "required_outcome_difference_fields",
+        "require_same_split",
+        "require_equivalent_normalized_input",
+        "require_distinct_normalized_output"
+      ],
+      "properties": {
+        "shared_fields": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["task_type", "scenario_cluster_id"]
+          },
+          "allOf": [
+            {"contains": {"const": "task_type"}},
+            {"contains": {"const": "scenario_cluster_id"}}
+          ]
+        },
+        "difference_axes": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["evidence_status", "risk_tier"]
+          },
+          "allOf": [
+            {"contains": {"const": "evidence_status"}},
+            {"contains": {"const": "risk_tier"}}
+          ]
+        },
+        "required_difference_count": {"const": 1},
+        "required_outcome_difference_fields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {"const": "policy_action"}
+        },
+        "require_same_split": {"const": true},
+        "require_equivalent_normalized_input": {"const": true},
+        "require_distinct_normalized_output": {"const": true}
+      }
+    },
+    "tool_single_call_minimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "get_game_context",
+        "get_current_odds",
+        "get_odds_history",
+        "get_market_splits",
+        "calculate_market_math",
+        "get_bet_tracker_summary",
+        "run_simulation"
+      ],
+      "properties": {
+        "get_game_context": {"type": "integer", "minimum": 1},
+        "get_current_odds": {"type": "integer", "minimum": 1},
+        "get_odds_history": {"type": "integer", "minimum": 1},
+        "get_market_splits": {"type": "integer", "minimum": 1},
+        "calculate_market_math": {"type": "integer", "minimum": 1},
+        "get_bet_tracker_summary": {"type": "integer", "minimum": 1},
+        "run_simulation": {"type": "integer", "minimum": 1}
+      }
+    },
+    "required_curriculum_labels": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "skill_ids",
+          "difficulty",
+          "interaction_mode",
+          "scenario_cluster_id",
+          "evidence_status",
+          "policy_action",
+          "risk_tier",
+          "answer_length"
+        ]
+      },
+      "allOf": [
+        {"contains": {"const": "skill_ids"}},
+        {"contains": {"const": "difficulty"}},
+        {"contains": {"const": "interaction_mode"}},
+        {"contains": {"const": "scenario_cluster_id"}},
+        {"contains": {"const": "evidence_status"}},
+        {"contains": {"const": "policy_action"}},
+        {"contains": {"const": "risk_tier"}},
+        {"contains": {"const": "answer_length"}}
+      ]
+    },
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_valid",
+        "exact_tool_validation",
+        "numeric_traceability",
+        "historical_cutoff_audit",
+        "provenance_and_rights_complete",
+        "privacy_and_consent_complete",
+        "direct_identifier_scan",
+        "exact_and_semantic_dedup",
+        "grouped_partition_audit",
+        "evaluation_contamination_audit",
+        "approved_only",
+        "critical_two_reviewer_minimum",
+        "immutable_manifest_before_training"
+      ],
+      "properties": {
+        "schema_valid": {"const": true},
+        "exact_tool_validation": {"const": true},
+        "numeric_traceability": {"const": true},
+        "historical_cutoff_audit": {"const": true},
+        "provenance_and_rights_complete": {"const": true},
+        "privacy_and_consent_complete": {"const": true},
+        "direct_identifier_scan": {"const": true},
+        "exact_and_semantic_dedup": {"const": true},
+        "grouped_partition_audit": {"const": true},
+        "evaluation_contamination_audit": {"const": true},
+        "approved_only": {"const": true},
+        "critical_two_reviewer_minimum": {"const": true},
+        "immutable_manifest_before_training": {"const": true}
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "target", "gpu_required"],
+        "properties": {
+          "name": {
+            "enum": [
+              "foundation_screen_authored",
+              "overfit_diagnostic",
+              "foundation_tranche",
+              "complete_foundation_sft",
+              "one_epoch_candidate"
+            ]
+          },
+          "target": {"type": "integer", "minimum": 1},
+          "gpu_required": {"type": "boolean"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "canonicalIdentifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+    },
+    "fraction": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1
+    },
+    "nonnegativeSplitCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0}
+      }
+    },
+    "positiveSplitCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 1},
+        "validation": {"type": "integer", "minimum": 1}
+      }
+    },
+    "answerLengthQuota": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation", "word_range"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 1},
+        "validation": {"type": "integer", "minimum": 1},
+        "word_range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {"type": "integer", "minimum": 1},
+            {"type": "integer", "minimum": 1}
+          ],
+          "items": false
+        }
+      }
+    },
+    "nonemptyCanonicalIdentifierArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/canonicalIdentifier"}
+    },
+    "aliasGroups": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/canonicalIdentifier"},
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {"$ref": "#/$defs/canonicalIdentifier"}
+      }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+# Stripe ↔ database drift detector (audit finding OPS-001).
+#
+# Nothing else in this system notices when the database and Stripe disagree.
+# Webhook delivery is at-least-once, not guaranteed-forever: a revoke dropped
+# during a database outage, or a webhook endpoint missing an event subscription,
+# leaves a cancelled customer entitled — or a paying one locked out — with no
+# signal at all. This job is that signal.
+#
+# STRICTLY READ-ONLY. It lists Stripe subscriptions, diffs them against
+# app_users, and reports. It never writes an entitlement: auto-healing drift you
+# have not diagnosed is how one wrong assumption becomes a mass revoke.
+#
+# Drift is reported, not failed — the job exits 0 with the table in the log and
+# raises a billing alert. Only an execution error is a non-2xx.
+#
+# Required repo secrets / vars:
+#   RAILWAY_APP_URL — e.g. https://aisportsbettingmodels.com  (no trailing slash)
+#   CRON_SECRET     — must match CRON_SECRET in Railway → Variables
+#
+name: Cron — Stripe ↔ database reconciliation
+
+on:
+  schedule:
+    - cron: "17 9 * * *" # daily 09:17 UTC (off the hour — GitHub cron is congested on :00)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-stripe-reconcile
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger /api/cron/stripe-reconcile
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present"
+
+      - name: "[STEP] POST /api/cron/stripe-reconcile (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/stripe-reconcile"
+          echo "[INPUT] POST $URL at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/stripe-reconcile")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::stripe-reconcile failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — reconcile completed (HTTP $CODE)"

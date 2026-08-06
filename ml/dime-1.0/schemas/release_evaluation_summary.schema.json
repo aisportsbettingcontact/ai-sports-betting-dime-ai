@@ -1,0 +1,379 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/release_evaluation_summary.schema.json",
+  "title": "Dime sanitized release evaluation summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "evaluator_run_id",
+    "evaluator",
+    "locked_suite",
+    "comparison",
+    "quality",
+    "inputs",
+    "summary"
+  ],
+  "properties": {
+    "report_version": {
+      "const": "dime-release-evaluation-summary-v1"
+    },
+    "evaluator_run_id": {
+      "type": "string",
+      "pattern": "^locked-evaluator-run-[a-z0-9][a-z0-9._-]{3,63}$"
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "github_repository",
+        "github_commit",
+        "implementation_sha256"
+      ],
+      "properties": {
+        "github_repository": {
+          "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+        },
+        "github_commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "implementation_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "locked_suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "revision_or_opaque_reference",
+        "manifest_sha256",
+        "expected_cases"
+      ],
+      "properties": {
+        "repo_id": {
+          "const": "taileredsports/dime-eval-locked"
+        },
+        "revision_or_opaque_reference": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|locked-eval-(?:approval|suite|revision):[a-z0-9][a-z0-9._-]{3,95})$"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "expected_cases": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control",
+        "decision",
+        "paired_cases",
+        "candidate_wins",
+        "ties",
+        "control_wins",
+        "control_report_sha256",
+        "comparison_report_sha256"
+      ],
+      "properties": {
+        "control": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "repo_id",
+            "revision",
+            "artifact_sha256"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "promoted_champion_adapter",
+                "pinned_base_control"
+              ]
+            },
+            "repo_id": {
+              "enum": [
+                "taileredsports/Llama-3-Dime-1.0",
+                "meta-llama/Llama-3.1-8B"
+              ]
+            },
+            "revision": {
+              "$ref": "#/$defs/commit"
+            },
+            "artifact_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "decision": {
+          "enum": [
+            "candidate_better",
+            "statistical_tie"
+          ]
+        },
+        "paired_cases": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "candidate_wins": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ties": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "control_wins": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "control_report_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "comparison_report_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metrics",
+        "max_important_slice_regression_percentage_points",
+        "slice_report_sha256"
+      ],
+      "properties": {
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "critical_tool_routing",
+            "overall_tool_routing",
+            "tool_argument_accuracy",
+            "grounded_factual_claim_precision",
+            "material_claim_evidence_coverage",
+            "coaching_metric_fidelity",
+            "appropriate_abstention",
+            "blinded_human_rubric_mean"
+          ],
+          "properties": {
+            "critical_tool_routing": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1
+            },
+            "overall_tool_routing": {
+              "type": "number",
+              "minimum": 0.98,
+              "maximum": 1
+            },
+            "tool_argument_accuracy": {
+              "type": "number",
+              "minimum": 0.98,
+              "maximum": 1
+            },
+            "grounded_factual_claim_precision": {
+              "type": "number",
+              "minimum": 0.98,
+              "maximum": 1
+            },
+            "material_claim_evidence_coverage": {
+              "type": "number",
+              "minimum": 0.95,
+              "maximum": 1
+            },
+            "coaching_metric_fidelity": {
+              "type": "number",
+              "minimum": 0.99,
+              "maximum": 1
+            },
+            "appropriate_abstention": {
+              "type": "number",
+              "minimum": 0.98,
+              "maximum": 1
+            },
+            "blinded_human_rubric_mean": {
+              "type": "number",
+              "minimum": 4,
+              "maximum": 5
+            }
+          }
+        },
+        "max_important_slice_regression_percentage_points": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 2
+        },
+        "slice_report_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiment_id",
+        "candidate",
+        "restricted_report_sha256",
+        "human_reviews_sha256"
+      ],
+      "properties": {
+        "experiment_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$"
+        },
+        "candidate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "adapter_model_sha256",
+            "adapter_config_sha256",
+            "training_manifest_sha256",
+            "parent_model_id",
+            "parent_model_revision",
+            "source_github_commit",
+            "training_authorization_github_commit",
+            "config_sha256",
+            "chat_template_sha256",
+            "tool_catalog_sha256",
+            "decoding_config_sha256"
+          ],
+          "properties": {
+            "adapter_model_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "adapter_config_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "training_manifest_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "parent_model_id": {
+              "const": "meta-llama/Llama-3.1-8B"
+            },
+            "parent_model_revision": {
+              "const": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+            },
+            "source_github_commit": {
+              "$ref": "#/$defs/commit"
+            },
+            "training_authorization_github_commit": {
+              "$ref": "#/$defs/commit"
+            },
+            "config_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "chat_template_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "tool_catalog_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "decoding_config_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "restricted_report_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "human_reviews_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_gate_pass",
+        "control_mode",
+        "expected_cases",
+        "cases_scored",
+        "deterministic_passes",
+        "case_passes",
+        "json_serializable_passes",
+        "cases_requiring_human_review",
+        "human_review_passes",
+        "missing_cases",
+        "unknown_cases",
+        "duplicate_traces",
+        "critical_failures"
+      ],
+      "properties": {
+        "release_gate_pass": {
+          "const": true
+        },
+        "control_mode": {
+          "const": false
+        },
+        "expected_cases": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cases_scored": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "deterministic_passes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "case_passes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "json_serializable_passes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cases_requiring_human_review": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "human_review_passes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing_cases": {
+          "const": 0
+        },
+        "unknown_cases": {
+          "const": 0
+        },
+        "duplicate_traces": {
+          "const": 0
+        },
+        "critical_failures": {
+          "const": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

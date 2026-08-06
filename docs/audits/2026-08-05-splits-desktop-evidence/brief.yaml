@@ -1,0 +1,77 @@
+# Federated UI brief — Betting Splits + Odds History, desktop refinement pass.
+# Filled before touching code; copied into the evidence bundle and attached to the PR.
+
+id: betting-splits-refine-2026-08-05
+
+surface:
+  name: "betting-splits-odds-history"
+  kind: feed
+  mode: operate
+  change: refine
+
+lead: "impeccable"
+advisors:
+  - "ui-ux-pro-max:ui-ux-pro-max (research, terminal-only — NO --persist; the page contract lands via the PR proposal, never a generated tree)"
+  - "emil-design-eng (hover/press craft within brand motion law)"
+  - "frontend-design via Read (distinctiveness critic, read-only)"
+  - "review-animations via Read (motion gate if the diff touches motion)"
+  # taste v2 NOT invoked — product UI out of scope by its own Section 13.
+
+product:
+  audience: "Bettors reading market consensus (tickets vs handle) and line movement before pricing a bet"
+  single_job: "See where the public money is and how the line moved, per game, in one scan"
+  business_goal: "Premium odds-movement content (history is auth-gated) — trust through numeric precision"
+  evidence:
+    - "/ui-loop invocation 2026-08-05 (surface 2): brand-law compliance + product-UI craft; investigate (not conclude): GameCard legacy vocabulary drift, mint-on-every-row bars, history-table scan hierarchy"
+    - "oddsHistory.listForGame is appUserProcedure (premium gate) — history is a retention surface"
+
+content:
+  source:
+    - "client/src/pages/BettingSplits.tsx"
+    - "client/src/components/GameCard.tsx (mode=splits) + BettingSplitsPanel.tsx + OddsHistoryPanel.tsx"
+    - "client/src/styles/splits-interactions.css (+ index.css / dime-mobile.css tokens)"
+  responsible_gaming: true
+  invented_claims: false
+
+law:                        # NO pages/ override exists for this surface
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md          # wins over MASTER wherever they disagree
+  - design-system/dime-ai/TYPOGRAPHY.md # orthogonal size/rhythm/measure/wrap
+law_notes:
+  - "The ai-model-projections page override does NOT extend here"
+  - "If refinement surfaces rules worth codifying → PROPOSE design-system/dime-ai/pages/betting-splits.md in the PR with a dated decision note (owner territory — proposal only)"
+  - "Team logos are licensed brand assets — colors exempt from the palette law; never 'fix' them"
+  - "Route slugs come from bettingSplitsPath (feedRoutes.ts) — never hand-emit; covered by feedRoutes.test.ts/routePattern.test.ts"
+
+risks_to_investigate:   # from the /ui-loop invocation — investigate, not conclude
+  - "GameCard flagged as legacy surface distinct from the projections card language — assess vocabulary drift between two pages sharing one shell"
+  - "Tickets/handle bars use mint on every row — judge against mint-is-signal (is a 50/50 split signal?); check bar-label contrast at small segment sizes"
+  - "Expanded ODDS & SPLITS HISTORY tables need scan hierarchy (row rhythm, tabular-nums, time-column treatment) judged against TYPOGRAPHY.md"
+
+direction:
+  adjectives: ["consensus-at-a-glance", "precise", "quiet", "chronological", "trustworthy"]
+  anti_references: ["sportsbook promo clutter", "heatmap rainbow dashboards"]
+  signature_element: "The mint/track split bar as the page's one repeated instrument — refinement sharpens its legibility (labels, small-segment behavior); no new signature introduced"
+
+dials: {}
+
+engineering:
+  stack: React + Vite (client/src), Express server, pnpm only
+  component_reuse_first: true
+  branch: feat/splits-desktop-refine
+  css_first: true            # splits-interactions.css is the sanctioned override layer
+  no_new_dependencies: true
+  preserve: ["tRPC wiring", "analytics (useTrackAction, data-cta-id/location)", "AgeModal + auth gating", "favorites (gc-star + favorites.toggle)", "sonner toasts", "mobile nav config", "mobile layouts (out of scope, must not regress)"]
+  viewports_primary: [1280x800, 1440x900, 1680x1050]
+  viewports_regression: [1024x768, 375x812]
+  reduced_motion: required
+  dark_and_light: required
+
+acceptance:
+  required_states: ["loading", "empty", "expanded history tables", "hover", "press", "focus-visible", "reduced-motion", "favorite star", "LIVE row"]
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto
+  detector: "node .claude/skills/impeccable/scripts/detect.mjs --json client/src/components/GameCard.tsx client/src/components/BettingSplitsPanel.tsx client/src/components/OddsHistoryPanel.tsx client/src/pages/BettingSplits.tsx client/src/styles/splits-interactions.css"
+  delivery_gate: "MASTER.md Pre-Delivery Checklist item-by-item (Plex Mono item per 2026-07-24 supersede) + evidence bundle at docs/audits/2026-08-05-splits-desktop-evidence/"
+  stop_rule: "Bounded repair — one batched fix round + at most one confirm round"

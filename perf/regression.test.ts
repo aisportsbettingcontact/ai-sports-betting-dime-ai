@@ -8,7 +8,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { evaluatePerfRun, type PerfBudget, type PerfSample } from "./regression";
+import {
+  evaluatePerfRun,
+  type PerfBudget,
+  type PerfSample,
+} from "./regression";
 
 const budget: PerfBudget = {
   budget: { ttfbMs: 800, lcpMs: 2500, transferBytes: 2_000_000 },
@@ -25,7 +29,13 @@ function sample(route: string, metrics: Record<string, number>): PerfSample {
 describe("evaluatePerfRun", () => {
   it("passes when every metric is within budget and near baseline", () => {
     const r = evaluatePerfRun(
-      [sample("/landingpage-v2", { ttfbMs: 320, lcpMs: 1850, transferBytes: 1_050_000 })],
+      [
+        sample("/landingpage-v2", {
+          ttfbMs: 320,
+          lcpMs: 1850,
+          transferBytes: 1_050_000,
+        }),
+      ],
       budget
     );
     expect(r.pass).toBe(true);
@@ -39,7 +49,9 @@ describe("evaluatePerfRun", () => {
       budget
     );
     expect(r.pass).toBe(false);
-    expect(r.violations.some((v) => v.kind === "budget" && v.metric === "lcpMs")).toBe(true);
+    expect(
+      r.violations.some(v => v.kind === "budget" && v.metric === "lcpMs")
+    ).toBe(true);
   });
 
   it("flags a regression over baseline even when under the hard budget", () => {
@@ -49,13 +61,19 @@ describe("evaluatePerfRun", () => {
       budget
     );
     expect(r.pass).toBe(false);
-    const v = r.violations.find((x) => x.metric === "ttfbMs");
+    const v = r.violations.find(x => x.metric === "ttfbMs");
     expect(v?.kind).toBe("regression");
   });
 
   it("never fails on an improvement", () => {
     const r = evaluatePerfRun(
-      [sample("/landingpage-v2", { ttfbMs: 100, lcpMs: 900, transferBytes: 500_000 })],
+      [
+        sample("/landingpage-v2", {
+          ttfbMs: 100,
+          lcpMs: 900,
+          transferBytes: 500_000,
+        }),
+      ],
       budget
     );
     expect(r.pass).toBe(true);
@@ -67,8 +85,10 @@ describe("evaluatePerfRun", () => {
       budget
     );
     // ttfb 400 < 800 budget → ok; lcp 3000 > 2500 budget → fail. No baseline crash.
-    expect(r.violations.some((v) => v.kind === "regression")).toBe(false);
-    expect(r.violations.some((v) => v.kind === "budget" && v.metric === "lcpMs")).toBe(true);
+    expect(r.violations.some(v => v.kind === "regression")).toBe(false);
+    expect(
+      r.violations.some(v => v.kind === "budget" && v.metric === "lcpMs")
+    ).toBe(true);
   });
 
   it("ignores metrics that have neither a budget nor a baseline", () => {

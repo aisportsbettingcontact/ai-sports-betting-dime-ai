@@ -106,15 +106,26 @@ function fmtTotal(val: string | null | undefined): string {
 
 // ─── Result Chip ──────────────────────────────────────────────────────────────
 
-function ResultChip({ label, variant }: { label: string; variant: "win" | "loss" | "push" | "neutral" }) {
+function ResultChip({
+  label,
+  variant,
+}: {
+  label: string;
+  variant: "win" | "loss" | "push" | "neutral";
+}) {
   const colors = {
-    win:     "bg-black text-[#45E0A8] border border-[#45E0A8]",
-    loss:    "bg-black text-white border border-white",
-    push:    "bg-black text-white border border-white",
+    win: "bg-black text-[#45E0A8] border border-[#45E0A8]",
+    loss: "bg-black text-white border border-white",
+    push: "bg-black text-white border border-white",
     neutral: "bg-black text-white border border-white",
   };
   return (
-    <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono", colors[variant])}>
+    <span
+      className={cn(
+        "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono",
+        colors[variant]
+      )}
+    >
       {label}
     </span>
   );
@@ -122,57 +133,70 @@ function ResultChip({ label, variant }: { label: string; variant: "win" | "loss"
 
 // ─── Game Row ─────────────────────────────────────────────────────────────────
 
-function GameRow({
-  game,
-  teamSlug,
-}: {
-  game: ScheduleGame;
-  teamSlug: string;
-}) {
+function GameRow({ game, teamSlug }: { game: ScheduleGame; teamSlug: string }) {
   const isHome = game.homeSlug === teamSlug;
   const opponentSlug = isHome ? game.awaySlug : game.homeSlug;
   const opponentAbbr = isHome ? game.awayAbbr : game.homeAbbr;
   const opponentTeam = NHL_BY_AN_SLUG.get(opponentSlug);
 
-  const teamScore    = isHome ? game.homeScore : game.awayScore;
-  const oppScore     = isHome ? game.awayScore : game.homeScore;
-  const isCompleted  = game.gameStatus === "complete" || game.gameStatus === "closed";
-  const hasScore     = isCompleted && teamScore !== null && oppScore !== null;
+  const teamScore = isHome ? game.homeScore : game.awayScore;
+  const oppScore = isHome ? game.awayScore : game.homeScore;
+  const isCompleted =
+    game.gameStatus === "complete" || game.gameStatus === "closed";
+  const hasScore = isCompleted && teamScore !== null && oppScore !== null;
 
   // Determine W/L
   const teamWon = isHome ? game.awayWon === false : game.awayWon === true;
   const resultLabel = !hasScore ? "—" : teamWon ? "W" : "L";
-  const resultVariant: "win" | "loss" | "neutral" = !hasScore ? "neutral" : teamWon ? "win" : "loss";
+  const resultVariant: "win" | "loss" | "neutral" = !hasScore
+    ? "neutral"
+    : teamWon
+      ? "win"
+      : "loss";
 
   // Puck line coverage
-  const puckLineCovered = isHome ? game.homePuckLineCovered : game.awayPuckLineCovered;
-  const spreadLabel = puckLineCovered === null ? "—" : puckLineCovered ? "COV" : "NO";
-  const spreadVariant: "win" | "loss" | "neutral" = puckLineCovered === null ? "neutral" : puckLineCovered ? "win" : "loss";
+  const puckLineCovered = isHome
+    ? game.homePuckLineCovered
+    : game.awayPuckLineCovered;
+  const spreadLabel =
+    puckLineCovered === null ? "—" : puckLineCovered ? "COV" : "NO";
+  const spreadVariant: "win" | "loss" | "neutral" =
+    puckLineCovered === null ? "neutral" : puckLineCovered ? "win" : "loss";
 
   // Total result
   const totalResult = game.totalResult ?? "—";
   const totalVariant: "win" | "loss" | "push" | "neutral" =
-    totalResult === "OVER" ? "win" :
-    totalResult === "UNDER" ? "loss" :
-    totalResult === "PUSH" ? "push" : "neutral";
+    totalResult === "OVER"
+      ? "win"
+      : totalResult === "UNDER"
+        ? "loss"
+        : totalResult === "PUSH"
+          ? "push"
+          : "neutral";
 
   // Team's puck line
   const teamPuckLine = isHome ? game.dkHomePuckLine : game.dkAwayPuckLine;
-  const teamPuckLineOdds = isHome ? game.dkHomePuckLineOdds : game.dkAwayPuckLineOdds;
+  const teamPuckLineOdds = isHome
+    ? game.dkHomePuckLineOdds
+    : game.dkAwayPuckLineOdds;
   const teamML = isHome ? game.dkHomeML : game.dkAwayML;
 
   const isUpcoming = !isCompleted;
 
   return (
-    <tr className={cn(
-      "border-b border-white transition-colors",
-      isUpcoming && "opacity-70"
-    )}>
+    <tr
+      className={cn(
+        "border-b border-white transition-colors",
+        isUpcoming && "opacity-70"
+      )}
+    >
       {/* Date */}
       <td className="px-3 py-2.5 text-sm text-white font-mono whitespace-nowrap">
         <div>{formatGameDate(game.gameDate)}</div>
         {isUpcoming && (
-          <div className="text-xs text-white">{formatStartTime(game.startTimeUtc)}</div>
+          <div className="text-xs text-white">
+            {formatStartTime(game.startTimeUtc)}
+          </div>
         )}
       </td>
 
@@ -187,10 +211,14 @@ function GameRow({
               src={opponentTeam.logoUrl}
               alt={opponentAbbr}
               className="w-5 h-5 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           )}
-          <span className="text-sm text-white font-mono font-bold">{opponentAbbr}</span>
+          <span className="text-sm text-white font-mono font-bold">
+            {opponentAbbr}
+          </span>
         </div>
       </td>
 
@@ -212,9 +240,12 @@ function GameRow({
       <td className="px-3 py-2.5 text-center">
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-sm text-white font-mono">
-            {fmtLine(teamPuckLine)} <span className="text-white">{fmtOdds(teamPuckLineOdds)}</span>
+            {fmtLine(teamPuckLine)}{" "}
+            <span className="text-white">{fmtOdds(teamPuckLineOdds)}</span>
           </span>
-          {isCompleted && <ResultChip label={spreadLabel} variant={spreadVariant} />}
+          {isCompleted && (
+            <ResultChip label={spreadLabel} variant={spreadVariant} />
+          )}
         </div>
       </td>
 
@@ -258,37 +289,45 @@ export default function NhlTeamSchedule() {
   // SECURITY: only fire when appUser is confirmed — prevents unauthenticated API calls
   const scheduleQuery = trpc.nhlSchedule.getTeamSchedule.useQuery(
     { teamSlug: slug ?? "" },
-    { enabled: !!slug && !appAuthLoading && Boolean(appUser), staleTime: 5 * 60 * 1000, retry: 2 }
+    {
+      enabled: !!slug && !appAuthLoading && Boolean(appUser),
+      staleTime: 5 * 60 * 1000,
+      retry: 2,
+    }
   );
 
   const games = (scheduleQuery.data?.games ?? []) as ScheduleGame[];
   const completedGames = games.filter(
-    (g) => g.gameStatus === "complete" || g.gameStatus === "closed"
+    g => g.gameStatus === "complete" || g.gameStatus === "closed"
   );
   const upcomingGames = games.filter(
-    (g) => g.gameStatus !== "complete" && g.gameStatus !== "closed"
+    g => g.gameStatus !== "complete" && g.gameStatus !== "closed"
   );
 
   // Season record
-  const wins   = completedGames.filter((g) => {
+  const wins = completedGames.filter(g => {
     const isHome = g.homeSlug === slug;
     return isHome ? g.awayWon === false : g.awayWon === true;
   }).length;
   const losses = completedGames.length - wins;
 
   // ATS record (puck line)
-  const atsWins = completedGames.filter((g) => {
+  const atsWins = completedGames.filter(g => {
     const isHome = g.homeSlug === slug;
-    return isHome ? g.homePuckLineCovered === true : g.awayPuckLineCovered === true;
+    return isHome
+      ? g.homePuckLineCovered === true
+      : g.awayPuckLineCovered === true;
   }).length;
-  const atsLosses = completedGames.filter((g) => {
+  const atsLosses = completedGames.filter(g => {
     const isHome = g.homeSlug === slug;
-    return isHome ? g.homePuckLineCovered === false : g.awayPuckLineCovered === false;
+    return isHome
+      ? g.homePuckLineCovered === false
+      : g.awayPuckLineCovered === false;
   }).length;
 
   // O/U record
-  const overs  = completedGames.filter((g) => g.totalResult === "OVER").length;
-  const unders = completedGames.filter((g) => g.totalResult === "UNDER").length;
+  const overs = completedGames.filter(g => g.totalResult === "OVER").length;
+  const unders = completedGames.filter(g => g.totalResult === "UNDER").length;
 
   if (!slug) {
     return (
@@ -316,7 +355,9 @@ export default function NhlTeamSchedule() {
               src={team.logoUrl}
               alt={team.abbrev}
               className="w-8 h-8 object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           )}
           <div>
@@ -335,31 +376,45 @@ export default function NhlTeamSchedule() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 py-6">
         {/* ── Season Summary ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <TrendingUp className="w-3 h-3 text-white" />
-              <span className="text-xs text-white font-mono uppercase tracking-widest">Record</span>
+              <span className="text-xs text-white font-mono uppercase tracking-widest">
+                Record
+              </span>
             </div>
-            <p className="text-lg font-bold text-white font-mono">{wins}-{losses}</p>
-            <p className="text-xs text-white font-mono">{completedGames.length} games</p>
+            <p className="text-lg font-bold text-white font-mono">
+              {wins}-{losses}
+            </p>
+            <p className="text-xs text-white font-mono">
+              {completedGames.length} games
+            </p>
           </div>
           <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Calendar className="w-3 h-3 text-white" />
-              <span className="text-xs text-white font-mono uppercase tracking-widest">Puck Line</span>
+              <span className="text-xs text-white font-mono uppercase tracking-widest">
+                Puck Line
+              </span>
             </div>
-            <p className="text-lg font-bold text-white font-mono">{atsWins}-{atsLosses}</p>
+            <p className="text-lg font-bold text-white font-mono">
+              {atsWins}-{atsLosses}
+            </p>
             <p className="text-xs text-white font-mono">Puck line coverage</p>
           </div>
           <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Calendar className="w-3 h-3 text-white" />
-              <span className="text-xs text-white font-mono uppercase tracking-widest">O/U</span>
+              <span className="text-xs text-white font-mono uppercase tracking-widest">
+                O/U
+              </span>
             </div>
-            <p className="text-lg font-bold text-white font-mono">{overs}-{unders}</p>
+            <p className="text-lg font-bold text-white font-mono">
+              {overs}-{unders}
+            </p>
             <p className="text-xs text-white font-mono">Over-Under</p>
           </div>
         </div>
@@ -368,17 +423,24 @@ export default function NhlTeamSchedule() {
         {scheduleQuery.isLoading ? (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-5 h-5 text-white animate-spin mr-3" />
-            <span className="text-white font-mono text-sm">Loading schedule...</span>
+            <span className="text-white font-mono text-sm">
+              Loading schedule...
+            </span>
           </div>
         ) : scheduleQuery.error ? (
           <div className="bg-black border border-white rounded-lg p-4">
-            <p className="text-white font-mono text-sm">Error: {scheduleQuery.error.message}</p>
+            <p className="text-white font-mono text-sm">
+              Error: {scheduleQuery.error.message}
+            </p>
           </div>
         ) : games.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-white font-mono text-sm">No schedule data found for this team.</p>
+            <p className="text-white font-mono text-sm">
+              No schedule data found for this team.
+            </p>
             <p className="text-white font-mono text-sm mt-1">
-              Data will populate as games are played and stored from the DK NJ API.
+              Data will populate as games are played and stored from the DK NJ
+              API.
             </p>
           </div>
         ) : (
@@ -387,7 +449,10 @@ export default function NhlTeamSchedule() {
               <span className="text-xs text-white font-mono uppercase tracking-widest">
                 Full Schedule — {games.length} games
               </span>
-              <Badge variant="outline" className="text-[8px] font-mono text-white border-white">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-mono text-white border-white"
+              >
                 DK NJ · AN API
               </Badge>
             </div>
@@ -396,21 +461,33 @@ export default function NhlTeamSchedule() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white">
-                    <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">Date</th>
-                    <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">Opponent</th>
-                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">Result</th>
-                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">Puck Line</th>
-                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">O/U</th>
-                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">ML</th>
+                    <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">
+                      Date
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">
+                      Opponent
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">
+                      Result
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">
+                      Puck Line
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">
+                      O/U
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">
+                      ML
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {/* Upcoming games first */}
-                  {upcomingGames.map((g) => (
+                  {upcomingGames.map(g => (
                     <GameRow key={g.id} game={g} teamSlug={slug ?? ""} />
                   ))}
                   {/* Completed games (most recent first) */}
-                  {completedGames.map((g) => (
+                  {completedGames.map(g => (
                     <GameRow key={g.id} game={g} teamSlug={slug ?? ""} />
                   ))}
                 </tbody>
@@ -418,7 +495,7 @@ export default function NhlTeamSchedule() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

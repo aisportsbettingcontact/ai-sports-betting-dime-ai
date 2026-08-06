@@ -1,264 +1,359 @@
 /**
- * Discord Bot — starts a discord.js Client alongside the Express server.
+ * Discord Bot — a supervised discord.js Client alongside the Express server.
  *
- * The bot shares the same Node.js process as the Express server so it
- * automatically has access to the database and all server-side helpers.
+ * The bot registers NO slash commands. Its only job is to keep a gateway
+ * client connected for the site's Discord integrations:
+ *   - password-reset DM fallback (server/routers/appUsers.ts via getDiscordClient)
+ *   - security alerts and digests (discordSecurityAlert.ts, securityDigest.ts,
+ *     weeklySecurityDigest.ts — channel sends via getDiscordClient)
+ * Membership role grants/revokes go through the Discord REST API directly
+ * (server/discord/discordRoleSync.ts) and do not use this client.
  *
  * Call startDiscordBot() ONCE from server/_core/index.ts after the HTTP
  * server is listening.
  *
- * ── Reconnection safety ───────────────────────────────────────────────────────
- * discord.js v14 reconnects automatically on most close codes. However, on
- * close code 4004 (TOKEN_INVALID) it will loop forever at full speed if not
- * intercepted. This file adds:
+ * ── Availability model (read this before changing the retry logic) ────────────
  *
- *   1. Singleton guard — only one Client instance is ever created per process.
- *   2. Close-code 4004 detection — destroys the client immediately and halts
- *      reconnection so Discord never sees a flood of invalid-token attempts.
- *   3. Exponential backoff with jitter — all other disconnects (network blip,
- *      gateway restart, etc.) wait an increasing delay before reconnecting.
- *   4. Max reconnect cap — after MAX_RECONNECT_ATTEMPTS the bot logs CRITICAL
- *      and stops trying, preventing runaway loops.
- *   5. Structured logging — every connect/disconnect/reconnect event is logged
- *      with a timestamp, attempt counter, and close code.
+ * A gateway connection CANNOT be made to "never disconnect". Discord itself
+ * sends OP 7 RECONNECT for load rebalancing, invalidates sessions, and requires
+ * heartbeats over a socket any network blip can drop; deploys restart the
+ * process outright. Reconnection is not a failure mode — it is the documented
+ * mechanism by which a gateway client stays available.
+ *
+ * So the guarantee here is the achievable one: the bot NEVER STAYS DOWN. Every
+ * failure path leads back to a connected client with no human intervention.
+ *
+ *   1. NO TERMINAL STATE. The previous implementation halted permanently after
+ *      10 consecutive failures ("Restart the server to try again") — exactly
+ *      how it died in production: an unrelated dependency fault made every
+ *      login throw, the counter hit 10, and the bot stayed dead until redeploy.
+ *      Retries are now unbounded.
+ *   2. AUTH FAULTS RETRY SLOWLY INSTEAD OF HALTING, so rotating the token in
+ *      Railway self-heals without a redeploy, on an interval long enough that
+ *      Discord never sees a flood of invalid-credential attempts.
+ *   3. NO CLIENT LEAKS. Each attempt destroys the prior Client first. The old
+ *      code abandoned the previous instance on every retry, leaking its
+ *      sockets, timers and listeners.
+ *   4. WATCHDOG for states that raise no event at all — a destroyed client, a
+ *      socket wedged half-open, a login promise that never settles.
+ *   5. OBSERVABLE via getDiscordBotHealth(), so "bot is down" can be surfaced
+ *      rather than inferred from stored data that looks healthy.
  */
 
-import {
-  Client,
-  GatewayIntentBits,
-  Events,
-  type ChatInputCommandInteraction,
-} from "discord.js";
+import { Client, GatewayIntentBits, Events, Status } from "discord.js";
 import { ENV } from "../_core/env";
-import { handleSplitsCommand, handleSplitsAutocomplete, closeSplitsRenderer } from "./splitsCommand";
-import { handleLineupsCommand, handleLineupsAutocomplete } from "./lineupsCommand";
-import { warmUpRenderer } from "./renderSplitsCard";
-import { enrichTeamRegistryFromDb } from "./teamRegistry";
 
-// ─── Singleton guard ──────────────────────────────────────────────────────────
-// Prevents multiple Client instances from being created if startDiscordBot()
-// is accidentally called more than once (e.g., during hot-reload in dev).
+// ─── Tunables ─────────────────────────────────────────────────────────────────
+
+const BASE_BACKOFF_MS = 2_000; //   2s — first transient retry
+const MAX_BACKOFF_MS = 300_000; //  5m — ceiling for transient failures
+/**
+ * Auth faults retry on their own, much slower clock. Retrying an invalid token
+ * at transient speed would hammer Discord with bad credentials; never retrying
+ * means a token rotation cannot heal without a redeploy. 15 minutes does both.
+ */
+const AUTH_RETRY_MS = 900_000; // 15m
+const JITTER_FACTOR = 0.3; // ±30%, so instances never retry in lockstep
+const WATCHDOG_INTERVAL_MS = 60_000; // 1m — probe cadence, NOT the teardown threshold
+/**
+ * How long a client may sit un-ready before the watchdog tears it down.
+ *
+ * MUST be comfortably longer than a real gateway handshake. The first version
+ * used the 60s probe interval as the threshold and destroyed the client on the
+ * FIRST un-ready probe, which livelocked in production: a handshake that had
+ * not finished within 60s was killed and restarted, each rebuild issuing a
+ * fresh IDENTIFY, so it could never complete and the bot never came up. The
+ * watchdog was supposed to be the backstop for permanent death, and instead it
+ * became the cause.
+ */
+const WATCHDOG_GRACE_MS = 300_000; // 5m
+
+/**
+ * Statuses that mean "a handshake is in flight — leave it alone".
+ * Tearing down mid-handshake is what produced the identify storm.
+ */
+const TRANSITIONAL_STATUSES = new Set<number>([
+  Status.Connecting,
+  Status.Reconnecting,
+  Status.Identifying,
+  Status.Resuming,
+  Status.Nearly,
+  Status.WaitingForGuilds,
+]);
+
+/**
+ * Close codes meaning "this configuration cannot work as-is". NOT terminal —
+ * they back off to AUTH_RETRY_MS so fixing config in Railway recovers on its own.
+ *   4004 auth failed · 4010 invalid shard · 4011 sharding required
+ *   4013 invalid intents · 4014 disallowed intents
+ */
+const CONFIG_FAULT_CLOSE_CODES = new Set([4004, 4010, 4011, 4013, 4014]);
+
+// ─── Supervisor state ─────────────────────────────────────────────────────────
+
 let botClient: Client | null = null;
-let botStarted = false;
+let supervising = false;
+let consecutiveFailures = 0;
+let totalConnects = 0;
+let totalReconnects = 0;
+let lastReadyAt: number | null = null;
+let lastFailureAt: number | null = null;
+let lastFailureReason: string | null = null;
+let retryTimer: NodeJS.Timeout | null = null;
+let watchdogTimer: NodeJS.Timeout | null = null;
+let shuttingDown = false;
+/** When the gateway first went un-ready. NULL while healthy. Drives the grace window. */
+let unreadySince: number | null = null;
 
-// ─── Reconnection constants ───────────────────────────────────────────────────
-const MAX_RECONNECT_ATTEMPTS = 10;       // halt after this many consecutive failures
-const BASE_BACKOFF_MS        = 2_000;    // 2s base delay
-const MAX_BACKOFF_MS         = 300_000;  // 5 min ceiling
-const JITTER_FACTOR          = 0.3;      // ±30% random jitter
+/** Exponential backoff with jitter, capped. */
+export function calcBackoffMs(failures: number): number {
+  const base = Math.min(
+    BASE_BACKOFF_MS * 2 ** Math.max(0, failures - 1),
+    MAX_BACKOFF_MS
+  );
+  const jitter = base * JITTER_FACTOR * (Math.random() * 2 - 1);
+  return Math.max(1_000, Math.round(base + jitter));
+}
 
-// Discord close codes that must NOT trigger a reconnect attempt
-// 4004 = Authentication failed (invalid/revoked token)
-// 4010 = Invalid shard
-// 4011 = Sharding required
-// 4013 = Invalid intents
-// 4014 = Disallowed intents
-const FATAL_CLOSE_CODES = new Set([4004, 4010, 4011, 4013, 4014]);
+/** True when the client exists and its gateway is actually usable. */
+function isConnected(): boolean {
+  const c = botClient;
+  if (!c) return false;
+  // isReady() covers the normal case; the ws status check also catches a client
+  // that fired ready once and has since gone Disconnected without emitting a
+  // login rejection we could hook.
+  return c.isReady() && c.ws.status === Status.Ready;
+}
 
-// ─── Interaction deduplication guard ─────────────────────────────────────────
-// Discord's gateway occasionally delivers the same interaction twice.
-// We track recently-seen interaction IDs for 10 seconds to detect and drop
-// duplicates before they reach the command handler.
-const seenInteractionIds = new Map<string, number>(); // id → timestamp
-const INTERACTION_DEDUP_TTL_MS = 10_000;
+/**
+ * Schedule the next attempt. Idempotent by design: several signals (login
+ * rejection, shard disconnect, watchdog) can all conclude "reconnect" for the
+ * same outage, and they must collapse into ONE pending timer rather than
+ * multiplying into parallel reconnect storms.
+ */
+function scheduleReconnect(delayMs: number, why: string): void {
+  if (shuttingDown || !supervising) return;
+  if (retryTimer) return; // an attempt is already queued
+  console.log(
+    `[DiscordBot] [STEP] Reconnect queued in ${Math.round(delayMs / 1000)}s ` +
+      `(consecutiveFailures=${consecutiveFailures}, why=${why})`
+  );
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void connect();
+  }, delayMs);
+  retryTimer.unref?.();
+}
 
-function isDuplicateInteraction(id: string): boolean {
-  const now = Date.now();
-  Array.from(seenInteractionIds.entries()).forEach(([k, ts]) => {
-    if (now - ts > INTERACTION_DEDUP_TTL_MS) seenInteractionIds.delete(k);
-  });
-  if (seenInteractionIds.has(id)) {
-    console.warn(`[SplitsBot] [WARN] Duplicate interaction detected and dropped: ${id}`);
-    return true;
+/** Tear down the current client completely. Safe when there is none. */
+function teardownClient(reason: string): void {
+  const c = botClient;
+  botClient = null;
+  if (!c) return;
+  try {
+    c.removeAllListeners();
+    void c.destroy();
+    console.log(`[DiscordBot] [STEP] Destroyed previous client (${reason})`);
+  } catch (err) {
+    // Destroying a half-dead client can throw; that must not abort the rebuild.
+    console.warn(
+      `[DiscordBot] [WARN] Error destroying client (${reason}): ${(err as Error)?.message ?? err}`
+    );
   }
-  seenInteractionIds.set(id, now);
-  return false;
 }
 
-// ─── Backoff calculator ───────────────────────────────────────────────────────
-function calcBackoffMs(attempt: number): number {
-  const base = Math.min(BASE_BACKOFF_MS * Math.pow(2, attempt), MAX_BACKOFF_MS);
-  const jitter = base * JITTER_FACTOR * (Math.random() * 2 - 1); // ±30%
-  return Math.round(base + jitter);
-}
+/** Build a client, wire its events, and log in. Never throws. */
+async function connect(): Promise<void> {
+  if (shuttingDown || !supervising) return;
+  if (isConnected()) return;
 
-// ─── Core bot factory ─────────────────────────────────────────────────────────
-function createAndLoginClient(attempt: number): void {
-  const ts = new Date().toISOString();
-  console.log(`[SplitsBot] [STEP] Creating Client (attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS}) at ${ts}`);
+  // Always start from a clean instance — reusing a failed client is what leaked
+  // sockets and listeners on every previous retry.
+  teardownClient("rebuilding");
 
-  const client = new Client({
-    intents: [GatewayIntentBits.Guilds],
-  });
+  const attemptNo = consecutiveFailures + 1;
+  console.log(
+    `[DiscordBot] [STEP] Connecting (attempt ${attemptNo}, unbounded) at ${new Date().toISOString()}`
+  );
 
-  // ── Ready ─────────────────────────────────────────────────────────────────
-  client.once(Events.ClientReady, (readyClient) => {
-    const readyTs = new Date().toISOString();
-    console.log(`[SplitsBot] [OUTPUT] ✅ Logged in as ${readyClient.user.tag} at ${readyTs}`);
-    console.log(`[SplitsBot] [STATE] Guild: ${ENV.discordGuildId}`);
+  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+  botClient = client;
 
-    // Reset reconnect counter on successful login
-    reconnectAttempt = 0;
-
-    // Parallel startup tasks
-    warmUpRenderer().catch((err) =>
-      console.error("[SplitsBot] [WARN] Renderer warm-up failed (non-fatal):", err)
-    );
-    enrichTeamRegistryFromDb().catch((err) =>
-      console.error("[SplitsBot] [WARN] Team registry enrichment failed:", err)
-    );
-  });
-
-  // ── Interaction handler ───────────────────────────────────────────────────
-  client.on(Events.InteractionCreate, async (interaction) => {
-    if (interaction.isAutocomplete()) {
-      if (interaction.commandName === "splits") {
-        await handleSplitsAutocomplete(interaction).catch((err) =>
-          console.error("[SplitsBot] [WARN] Autocomplete error:", err)
-        );
-      } else if (interaction.commandName === "lineups") {
-        await handleLineupsAutocomplete(interaction).catch((err) =>
-          console.error("[LineupsBot] [WARN] Autocomplete error:", err)
-        );
-      }
-      return;
-    }
-
-    if (!interaction.isChatInputCommand()) return;
-
-    const { commandName } = interaction;
-
-    if (isDuplicateInteraction(interaction.id)) {
-      console.warn(`[SplitsBot] [WARN] Dropped duplicate interaction ${interaction.id} for /${commandName}`);
-      return;
-    }
-
+  client.on(Events.ClientReady, ready => {
+    consecutiveFailures = 0;
+    unreadySince = null;
+    totalConnects += 1;
+    if (totalConnects > 1) totalReconnects += 1;
+    lastReadyAt = Date.now();
     console.log(
-      `[SplitsBot] [INPUT] /${commandName} from ${interaction.user.id} (${interaction.user.tag}) [id=${interaction.id}]`
+      `[DiscordBot] [OUTPUT] ✅ Connected as ${ready.user.tag} at ${new Date(lastReadyAt).toISOString()} ` +
+        `(guild=${ENV.discordGuildId}, connects=${totalConnects}, reconnects=${totalReconnects})`
     );
-
-    try {
-      if (commandName === "splits") {
-        await handleSplitsCommand(interaction as ChatInputCommandInteraction, client);
-      } else if (commandName === "lineups") {
-        await handleLineupsCommand(interaction as ChatInputCommandInteraction, client);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[SplitsBot] [FAIL] Unhandled error in /${commandName} [id=${interaction.id}]: ${msg}`);
-      try {
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply(`❌ Unexpected error: ${msg}`);
-        } else {
-          await interaction.reply({ content: `❌ Unexpected error: ${msg}`, ephemeral: true });
-        }
-      } catch (replyErr) {
-        const replyMsg = replyErr instanceof Error ? replyErr.message : String(replyErr);
-        console.error(`[SplitsBot] [FAIL] Could not send error reply for /${commandName} [id=${interaction.id}]: ${replyMsg}`);
-      }
-    }
   });
 
-  // ── Disconnect handler — the critical reconnection safety layer ───────────
   client.on(Events.ShardDisconnect, (closeEvent, shardId) => {
     const code = closeEvent.code;
-    const disconnectTs = new Date().toISOString();
-    console.warn(`[SplitsBot] [STATE] Shard ${shardId} disconnected at ${disconnectTs} — close code: ${code}`);
+    lastFailureAt = Date.now();
+    lastFailureReason = `shard ${shardId} closed with code ${code}`;
+    console.warn(
+      `[DiscordBot] [STATE] Shard ${shardId} disconnected — close code ${code}`
+    );
 
-    // Fatal close codes: destroy immediately, do NOT reconnect
-    if (FATAL_CLOSE_CODES.has(code)) {
+    if (CONFIG_FAULT_CLOSE_CODES.has(code)) {
+      consecutiveFailures += 1;
       console.error(
-        `[SplitsBot] [CRITICAL] Close code ${code} is fatal — destroying client. ` +
-        `This usually means the bot token is invalid or revoked. ` +
-        `Regenerate the token at discord.com/developers/applications and update DISCORD_BOT_TOKEN.`
+        `[DiscordBot] [CRITICAL] Close code ${code} indicates a CONFIGURATION fault ` +
+          `(usually an invalid/revoked DISCORD_BOT_TOKEN or disallowed intents). ` +
+          `Retrying every ${AUTH_RETRY_MS / 60_000}m so fixing it in Railway recovers without a redeploy.`
       );
-      client.destroy();
-      botClient = null;
-      botStarted = false; // allow restart after token is fixed
+      teardownClient(`config fault ${code}`);
+      scheduleReconnect(AUTH_RETRY_MS, `close_${code}`);
       return;
     }
 
-    // Non-fatal: discord.js will handle the reconnect automatically.
-    // Log the event so we have a trace.
-    console.log(`[SplitsBot] [STEP] Non-fatal disconnect (code=${code}) — discord.js will reconnect automatically.`);
+    // Transient close: discord.js drives its own resume. Nothing is scheduled
+    // here — doing so would race discord.js's own reconnect. The watchdog is
+    // the backstop if that resume never completes.
+    console.log(
+      `[DiscordBot] [STEP] Transient close (${code}) — discord.js will resume; watchdog is the backstop.`
+    );
   });
 
-  // ── Error handler ─────────────────────────────────────────────────────────
-  client.on(Events.Error, (err) => {
-    console.error("[SplitsBot] [FAIL] Discord client error:", err.message);
+  client.on(Events.Error, err => {
+    lastFailureAt = Date.now();
+    lastFailureReason = err.message;
+    console.error(`[DiscordBot] [FAIL] Client error: ${err.message}`);
   });
 
-  // ── Login ─────────────────────────────────────────────────────────────────
-  client.login(ENV.discordBotToken).catch((err) => {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[SplitsBot] [FAIL] Login attempt ${attempt + 1} failed: ${errMsg}`);
+  try {
+    await client.login(ENV.discordBotToken);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    consecutiveFailures += 1;
+    lastFailureAt = Date.now();
+    lastFailureReason = msg;
+    console.error(
+      `[DiscordBot] [FAIL] Login attempt ${attemptNo} failed: ${msg}`
+    );
 
-    // If the error message indicates an invalid token, halt immediately
-    if (
-      errMsg.includes("TOKEN_INVALID") ||
-      errMsg.includes("Invalid token") ||
-      errMsg.includes("401")
-    ) {
-      console.error(
-        `[SplitsBot] [CRITICAL] Token is invalid — halting reconnection. ` +
-        `Regenerate the token at discord.com/developers/applications and update DISCORD_BOT_TOKEN.`
-      );
-      botStarted = false;
-      return;
-    }
-
-    // Schedule a backoff retry for other login errors (network, gateway down, etc.)
-    reconnectAttempt++;
-    if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
-      console.error(
-        `[SplitsBot] [CRITICAL] Reached max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}). ` +
-        `Halting bot. Restart the server to try again.`
-      );
-      botStarted = false;
-      return;
-    }
-
-    const delay = calcBackoffMs(reconnectAttempt);
-    console.log(`[SplitsBot] [STEP] Scheduling reconnect attempt ${reconnectAttempt + 1} in ${delay}ms...`);
-    setTimeout(() => createAndLoginClient(reconnectAttempt), delay);
-  });
-
-  botClient = client;
+    const isAuth = /TOKEN_INVALID|invalid token|401|unauthorized/i.test(msg);
+    teardownClient("login failed");
+    scheduleReconnect(
+      isAuth ? AUTH_RETRY_MS : calcBackoffMs(consecutiveFailures),
+      isAuth ? "auth" : "login_error"
+    );
+  }
 }
 
-// ─── Reconnect attempt counter (module-level, shared across retries) ──────────
-let reconnectAttempt = 0;
+/**
+ * The backstop. Events are not guaranteed: a client can end up destroyed, or
+ * wedged mid-handshake, without emitting anything we hook. This probe asks the
+ * only question that matters — "is the gateway usable right now?" — and
+ * rebuilds if not.
+ */
+function startWatchdog(): void {
+  if (watchdogTimer) return;
+  watchdogTimer = setInterval(() => {
+    if (shuttingDown || !supervising) return;
+    if (retryTimer) return; // recovery already queued
+
+    if (isConnected()) {
+      unreadySince = null; // healthy — reset the grace clock
+      return;
+    }
+
+    // discord.js drives its own reconnect and resume. Interrupting a handshake
+    // in progress is strictly harmful: it burns an IDENTIFY and restarts the
+    // clock, which is precisely how this livelocked.
+    const status = botClient?.ws.status;
+    if (status != null && TRANSITIONAL_STATUSES.has(status)) {
+      console.log(
+        `[DiscordBot] [WATCHDOG] handshake in progress (status=${status}) — not interfering`
+      );
+      return;
+    }
+
+    // Un-ready and idle. Start (or continue) the grace clock rather than
+    // tearing down on a single probe.
+    const now = Date.now();
+    unreadySince ??= now;
+    const stalledFor = now - unreadySince;
+    if (stalledFor < WATCHDOG_GRACE_MS) {
+      console.log(
+        `[DiscordBot] [WATCHDOG] not ready (status=${status ?? "no client"}) for ${Math.round(stalledFor / 1000)}s ` +
+          `— waiting up to ${WATCHDOG_GRACE_MS / 1000}s before forcing a rebuild`
+      );
+      return;
+    }
+
+    console.warn(
+      `[DiscordBot] [WATCHDOG] stalled ${Math.round(stalledFor / 1000)}s at status=${status ?? "no client"} — forcing reconnect`
+    );
+    unreadySince = null;
+    consecutiveFailures += 1;
+    scheduleReconnect(calcBackoffMs(consecutiveFailures), "watchdog");
+  }, WATCHDOG_INTERVAL_MS);
+  watchdogTimer.unref?.();
+}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export function startDiscordBot(): void {
   if (!ENV.discordBotToken) {
-    console.warn("[SplitsBot] [WARN] DISCORD_BOT_TOKEN not set — bot will not start");
+    console.warn(
+      "[DiscordBot] [WARN] DISCORD_BOT_TOKEN not set — bot will not start"
+    );
     return;
   }
-
-  // Singleton guard: prevent multiple Client instances in the same process
-  if (botStarted) {
-    console.warn("[SplitsBot] [WARN] startDiscordBot() called more than once — ignoring duplicate call");
+  if (supervising) {
+    console.warn(
+      "[DiscordBot] [WARN] startDiscordBot() called more than once — ignoring duplicate call"
+    );
     return;
   }
-  botStarted = true;
-  reconnectAttempt = 0;
+  supervising = true;
+  shuttingDown = false;
+  consecutiveFailures = 0;
 
-  console.log(`[SplitsBot] [STEP] Starting Discord bot at ${new Date().toISOString()}`);
-  createAndLoginClient(0);
+  console.log(
+    `[DiscordBot] [STEP] Supervisor starting at ${new Date().toISOString()}`
+  );
+  void connect();
+  startWatchdog();
 
-  // Graceful shutdown on process exit
-  const shutdown = async () => {
-    console.log("[SplitsBot] [STEP] Shutting down — closing Playwright browser and Discord client...");
-    await closeSplitsRenderer();
-    botClient?.destroy();
-    botClient = null;
+  const shutdown = () => {
+    shuttingDown = true;
+    supervising = false;
+    if (retryTimer) clearTimeout(retryTimer);
+    if (watchdogTimer) clearInterval(watchdogTimer);
+    retryTimer = null;
+    watchdogTimer = null;
+    console.log(
+      "[DiscordBot] [STEP] Shutting down — destroying Discord client..."
+    );
+    teardownClient("process shutdown");
   };
   process.once("SIGTERM", shutdown);
   process.once("SIGINT", shutdown);
 }
 
 export function getDiscordClient(): Client | null {
-  return botClient;
+  // Callers use this to send messages; handing back a client whose gateway is
+  // down produces confusing downstream errors, so gate on real readiness.
+  return isConnected() ? botClient : null;
+}
+
+/** Real connection state, for health endpoints and admin surfaces. */
+export function getDiscordBotHealth() {
+  return {
+    supervising,
+    connected: isConnected(),
+    consecutiveFailures,
+    totalConnects,
+    totalReconnects,
+    lastReadyAt,
+    lastFailureAt,
+    lastFailureReason,
+    retryQueued: retryTimer != null,
+  };
 }

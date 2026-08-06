@@ -20,18 +20,28 @@
  *    HOME WD top / AWAY WD bottom, YES/NO) with Book | Model per side;
  *    zero truncation down to 360px (labels stack above values <380px).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
+import { useAnalytics, useTrackAction } from "@/lib/analytics";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ProjectionCard } from "@/components/projections/ProjectionCard";
 import { presentationToProjectionGame } from "@/components/projections/fromPresentation";
+import {
+  mlbLineupToProjectionPregame,
+  type MlbLineupLike,
+} from "@/components/projections/fromMlbLineup";
+import type {
+  GameStatus,
+  ProjectionPregameLineups,
+} from "@/components/projections/types";
 import { sportAdapters } from "@/lib/sport/presentation";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
-import { formatGameTime } from "@/lib/gameUtils";
+import { formatGameTime, timeToMinutes } from "@/lib/gameUtils";
 import {
   calculateEdge,
   calculate3WayResult,
@@ -39,7 +49,7 @@ import {
   type ThreeWayOdds,
 } from "@/lib/edgeUtils";
 import { feedModelPath, bettingSplitsPath, toFeedSlugDate } from "@/lib/feedRoutes";
-import { useMlbMarketGates, applyMlbMarketGates } from "@/hooks/useMlbMarketGates";
+import "./dimeModelFeed.css";
 
 // ─── Normalized card model (adapters below map tRPC rows into this) ─────────
 
@@ -70,15 +80,19 @@ interface TeamSpec {
 }
 interface FeedCardSpec {
   id: string;
+  /** Explicit status prevents postponed/suspended games from looking scheduled. */
+  status: GameStatus;
+  /** Numeric DB identity for batched source-specific reads. */
+  sourceGameId?: number;
   liveLabel?: string | null;
   timeLabel: string;
   away: TeamSpec;
   home: TeamSpec;
   meta: string;
-  /** Full starting-pitcher names; the mobile header renders surnames only. */
-  pitchers?: { away: string; home: string } | null;
   /** Quiet secondary line under the mobile matchup header (venue / round). */
   venueLine?: string | null;
+  /** Scheduled MLB only; ignored by the sport-generic market adapter. */
+  pregameLineups?: ProjectionPregameLineups;
   markets: MarketColSpec[];
   verdict: {
     pick: string;
@@ -96,9 +110,6 @@ const fmtAm = (v: number | null | undefined): string =>
 
 const NO_EDGE = { label: "NO EDGE", edge: false } as const;
 
-/** Last token of a name — the mobile matchup header shows pitcher surnames. */
-const lastNameOf = (s: string): string => s.trim().split(/\s+/).pop() ?? s;
-
 /** Simple edge → letter grade tiering (matches the reference verdict strip). */
 function edgeGrade(pp: number): string {
   if (Number.isNaN(pp) || pp < EDGE_THRESHOLD_PP) return "—";
@@ -109,188 +120,27 @@ function edgeGrade(pp: number): string {
   return "C+";
 }
 
-/**
- * Black or white ink for a monogram on a `hex` disc (WCAG relative luminance,
- * threshold 0.5) — light team discs need black ink, not hardcoded white.
- * Duplicated in client/src/components/TeamLogo.tsx (no shared export without
- * a new file) — keep in sync.
- */
-function inkFor(hex: string): string {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return "#FFFFFF";
-  const n = parseInt(m[1], 16);
-  const lin = (v: number) => {
-    const c = v / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
-  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-  return L > 0.5 ? "#000000" : "#FFFFFF";
-}
-
 // ─── Presentational components ───────────────────────────────────────────────
-
-function Crest({ c, size }: { c: CrestSpec | null | undefined; size: number }) {
-  const [failed, setFailed] = useState(false);
-  if (!c) return null;
-  const showImg = !!c.url && !failed;
-  return (
-    <span
-      className="dmf-crest"
-      style={{ width: size, height: size, flex: `0 0 ${size}px` }}
-      aria-hidden="true"
-    >
-      {showImg ? (
-        <img
-          src={c.url!}
-          alt=""
-          loading="lazy"
-          onError={() => setFailed(true)}
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        />
-      ) : (
-        <span
-          className="dmf-crest-mono"
-          style={{
-            background: c.bg || "var(--dmf-card-hi)",
-            // Team-colored disc: compute ink from disc luminance. No bg: the
-            // CSS default var(--dmf-t1) is the theme ink for the card-hi disc.
-            color: c.bg ? inkFor(c.bg) : undefined,
-            fontSize: Math.max(7, size * 0.34),
-          }}
-        >
-          {/* 2-char monogram — 3 letters clip inside small circles (Rule 5) */}
-          {c.code.slice(0, 2)}
-        </span>
-      )}
-    </span>
-  );
-}
-
-function MarketCol({ mc }: { mc: MarketColSpec }) {
-  return (
-    <div className="dmf-mkcol">
-      <div className="dmf-mktitle">
-        <span>{mc.title}</span>
-      </div>
-      <div className="dmf-mkbox">
-        <div className="dmf-mkhead">
-          <span>Side</span>
-          <span>Book</span>
-          <span>Model</span>
-        </div>
-        {mc.rows.map((r, i) => (
-          <div className="dmf-mkrow" key={i}>
-            <div className="dmf-rlab">
-              <Crest c={r.crest} size={14} />
-              <span className="dmf-lab">{r.label}</span>
-            </div>
-            <div className="dmf-side">
-              <span className="dmf-val">{r.book}</span>
-            </div>
-            <div className={`dmf-side dmf-model${r.sig ? " dmf-sig" : ""}`}>
-              <span className="dmf-val">{r.model}</span>
-              {r.wp ? <span className="dmf-wp">{r.wp}</span> : null}
-            </div>
-          </div>
-        ))}
-        <div className={`dmf-mkfoot ${mc.foot.edge ? "dmf-edge" : "dmf-none"}`}>
-          <Crest c={mc.foot.crest} size={12} />
-          <span>{mc.foot.label}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TeamRow({ t }: { t: TeamSpec }) {
-  return (
-    <div className="dmf-teamrow">
-      <Crest c={t.crest} size={24} />
-      <span className="dmf-tname">{t.name}</span>
-      {t.score != null && t.score !== "" ? (
-        <span className="dmf-tscore">{t.score}</span>
-      ) : null}
-    </div>
-  );
-}
-
-function GameRow({ g }: { g: FeedCardSpec }) {
-  const v = g.verdict;
-  const mode = g.markets.length >= 6 ? "dmf-mk7" : "dmf-mk3";
-  // Mobile-only pitcher duel (surnames, Grotesk 600); full names kept in title.
-  const duel = g.pitchers
-    ? {
-        away: lastNameOf(g.pitchers.away),
-        home: lastNameOf(g.pitchers.home),
-        full: `${g.pitchers.away} vs ${g.pitchers.home}`,
-      }
-    : null;
-  return (
-    <div className={`dmf-game ${mode}${v.pass ? " dmf-pass" : ""}${g.liveLabel ? " dmf-live" : ""}`}>
-      <div className="dmf-gbody">
-        <div className="dmf-matchup">
-          {g.liveLabel ? (
-            <div className="dmf-status">
-              <span className="dmf-ld" />
-              <span className="dmf-lt">{g.liveLabel}</span>
-            </div>
-          ) : (
-            <div className="dmf-status">
-              <span className="dmf-time">{g.timeLabel}</span>
-            </div>
-          )}
-          <div className="dmf-teams">
-            <TeamRow t={g.away} />
-            {duel ? (
-              <div className="dmf-duel" title={duel.full}>
-                {duel.away} vs {duel.home}
-              </div>
-            ) : null}
-            <TeamRow t={g.home} />
-          </div>
-          <div className="dmf-meta">{g.meta}</div>
-          {g.venueLine ? <div className="dmf-venue">{g.venueLine}</div> : null}
-        </div>
-        <div className="dmf-markets">
-          {g.markets.map((mc) => (
-            <MarketCol mc={mc} key={mc.title} />
-          ))}
-        </div>
-        <div className="dmf-verdict">
-          <div className="dmf-vitem dmf-vpick">
-            <span className="dmf-vl">Pick</span>
-            <span className={`dmf-vv${v.pass ? "" : " dmf-vsig"}`}>
-              <Crest c={v.crest} size={18} />
-              {v.pick}
-            </span>
-          </div>
-          <div className="dmf-vitem">
-            <span className="dmf-vl">Edge</span>
-            <span className={`dmf-vv${v.pass ? "" : " dmf-vsig"}`}>{v.edge}</span>
-          </div>
-          <div className="dmf-vitem">
-            <span className="dmf-vl">Grade</span>
-            <span className="dmf-vv">
-              <span className="dmf-grade">{v.grade}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// (GameRow/MarketCol/TeamRow/Crest — the pre-ProjectionCard render tree — were
+// removed 2026-08-02: zero call sites since the card migrated to
+// components/projections/ProjectionCard. FeedCardSpec and the data adapters
+// below remain the live pipeline feeding the presentation adapters.)
 
 function SkeletonRow() {
+  // Audit DIME-UI-019: the skeleton mirrors the loaded ProjectionCard anatomy
+  // (matchup header → pregame panel → summary row → markets row) inside the
+  // same card chrome, so resolving data swaps content without reflowing the
+  // card. Bars are percentage-based (container-relative like the loaded type),
+  // and the pulse matches the app's one skeleton treatment (killed globally
+  // under prefers-reduced-motion).
   return (
-    <div className="dmf-game dmf-mk3" aria-hidden="true">
-      <div className="dmf-gbody">
-        <div className="dmf-matchup">
-          <div className="dmf-skel" style={{ width: 90, height: 10 }} />
-          <div className="dmf-skel" style={{ width: 170, height: 18, marginTop: 10 }} />
-          <div className="dmf-skel" style={{ width: 150, height: 18, marginTop: 8 }} />
-          <div className="dmf-skel" style={{ width: 200, height: 9, marginTop: 10 }} />
-        </div>
-      </div>
+    <div className="dmf-skelcard animate-pulse" aria-hidden="true">
+      <div className="dmf-skel" style={{ width: "55%", height: 20, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "38%", height: 12, marginTop: 8, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "30%", height: 10, marginTop: 6, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 132, marginTop: 12, borderRadius: 12 }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 44, marginTop: 12, borderRadius: 10 }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 44, marginTop: 8, borderRadius: 10 }} />
     </div>
   );
 }
@@ -335,6 +185,52 @@ const prettyDate = (iso: string): string =>
     timeZone: "UTC",
   });
 
+/** League logo box, shared by the in-list collapsible header (desktop) and the
+ *  feedhead league bar (mobile). WC emblem is theme-keyed (black FIFA wordmark
+ *  on light, white on dark — CSS swaps by data-dmf-theme; both render in the
+ *  same fixed box). A missing logo file hides itself and the row stays clean
+ *  text. MLB uses the actual current mark (navy/red, owner directive
+ *  2026-07-21) — official mlbstatic league SVG with the bundled recolored mark
+ *  as offline fallback before hiding. */
+function LeagueMark({ league }: { league: "WC" | "MLB" }) {
+  return (
+    <span className={`dmf-lglogo${league === "MLB" ? " dmf-lglogo--mlb" : ""}`} aria-hidden="true">
+      {league === "WC" ? (
+        <>
+          <img
+            className="dmf-lglogo-light"
+            src="/brand/wc26-emblem-on-light.png"
+            alt=""
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <img
+            className="dmf-lglogo-dark"
+            src="/brand/wc26-emblem-on-dark.png"
+            alt=""
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </>
+      ) : (
+        <img
+          src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
+          alt=""
+          loading="lazy"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            if (img.src.endsWith("/brand/mlb-logo.png")) {
+              img.style.display = "none";
+            } else {
+              img.src = "/brand/mlb-logo.png";
+            }
+          }}
+        />
+      )}
+    </span>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export interface DimeModelFeedProps {
@@ -354,7 +250,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   const parsed = parseFeedModelPath(props.sport, props.date);
   // Theme is app-global (ThemeContext) so the choice follows the user across
   // every tab and the bottom tab bar. ?theme= is still honored for embeds.
-  const { theme, setTheme } = useTheme();
+  const { theme, mode, setTheme } = useTheme();
   useEffect(() => {
     try {
       const q = new URLSearchParams(window.location.search).get("theme");
@@ -393,25 +289,63 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   }, []);
 
   // ADAPTER WIRING (exact bindings from GameCard / WcFeedInline) is attached
-  // below in useFeedCards — see mlbRowsToCards / wcMatchesToCards.
-  const { cards, isLoading, isStale, gamesCount } = useFeedCards(sport, isoDate);
+  // below in useFeedCards — see mlbRowToCard / wcMatchToCard. The feed is
+  // combined (owner directive 2026-07-18): both leagues load for the date.
+  const { sections, isLoading, isStale, gamesCount, isError, retry } = useFeedCards(isoDate);
 
-  const go = (nextSport: "MLB" | "WC", nextIso: string) =>
-    navigate(resolveRouteHref(feedModelPath(nextSport, nextIso)));
+  // League open/closed is CONTROLLED state (owner directive 2026-07-29): on
+  // mobile the league header lives inside the sticky feedhead (the feed's
+  // primary menu bar), physically apart from the <details> it collapses, so
+  // native summary toggling alone can't drive it. Desktop summary clicks and
+  // mobile bar taps both funnel through setLeagueOpen; onToggle keeps state in
+  // sync when the browser flips the DOM first. Leagues default open.
+  const [closedLeagues, setClosedLeagues] = useState<ReadonlySet<FeedSection["key"]>>(
+    () => new Set(),
+  );
+  const setLeagueOpen = (key: FeedSection["key"], open: boolean) =>
+    setClosedLeagues((prev) => {
+      if (prev.has(key) === !open) return prev;
+      const next = new Set(prev);
+      if (open) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  // Value event (D1): fires once per (date, gamesCount) the moment a complete,
+  // trustworthy projection set renders — loaded, fresh (not stale), non-empty.
+  // Never fires on a bare/loading/stale feed. No betting signals in the props.
+  const track = useAnalytics();
+  // Action emitter (D3): fire-and-forget curated actions on this lazy surface.
+  const trackAction = useTrackAction();
+  const firedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading || isStale || gamesCount <= 0) return;
+    const sig = `${isoDate}:${gamesCount}`;
+    if (firedRef.current === sig) return;
+    firedRef.current = sig;
+    track("projection_evaluation_viewed", {
+      featureId: "model_feed",
+      outcome: "success",
+      props: { sport: sport.toLowerCase(), data_freshness_state: "fresh" },
+    });
+  }, [isLoading, isStale, gamesCount, isoDate, track, sport]);
+
+  // Date nav canonicalizes on the mlb- slug: the combined feed has one URL per
+  // date. Legacy wc- deep links still parse and render the same combined slate.
+  const go = (nextIso: string) =>
+    navigate(resolveRouteHref(feedModelPath("MLB", nextIso)));
 
   if (needsDateCanonicalize) {
     // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
     return (
-      <div className="dmf-root" data-dmf-theme={theme}>
-        <style>{DMF_CSS}</style>
+      <div className="dmf-root" data-dmf-theme={theme} data-dmf-mode={mode}>
       </div>
     );
   }
 
   if (!parsed) {
     return (
-      <div className="dmf-root" data-dmf-theme="dark">
-        <style>{DMF_CSS}</style>
+      <div className="dmf-root" data-dmf-theme="dark" data-dmf-mode="dark">
         <div className="dmf-invalid">
           <span className="dmf-micro">Invalid feed URL</span>
           <p>
@@ -424,9 +358,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   }
 
   return (
-    <div className="dmf-root" data-dmf-theme={theme}>
-      <style>{DMF_CSS}</style>
-
+    <div className="dmf-root" data-dmf-theme={theme} data-dmf-mode={mode}>
       <div className="dmf-topbar">
         {/* One Dime identity per page (directive §6): when embedded in the app
             shell, the sidebar already carries the Dime brand — repeating the
@@ -451,83 +383,156 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               <Link href="/profile" className="dmf-navlink">Profile</Link>
             </nav>
           )}
-          {/* Theme lives in Profile (shared ThemeSetting) when embedded — the
-              shell owns the single theme control (directive §8). Standalone
-              /feed keeps an inline toggle since it has no Profile chrome. */}
-          {!props.embeddedInShell && (
-            <button
-              className="dmf-themebtn"
-              onClick={() => setTheme?.(theme === "dark" ? "light" : "dark")}
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-            >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
-          )}
+          {/* No theme toggle here — the Profile tab's Appearance setting is the
+              single theme control (owner directive 2026-07-17). ?theme= embeds
+              are still honored via the effect above. */}
         </div>
       </div>
 
-      <div className="dmf-scroll">
+      {/* Landmark/heading ownership (A11Y-NO-MAIN / A11Y-NO-H1): every host
+          mode renders the scroll region as the page's <main> — the shell's
+          external pane is a <section>, so pages own their landmark
+          (BettingSplits/TrendsPage pattern). The h1 is sr-only and
+          standalone-only: the topbar title span is display:none'd by the
+          mobile floating nav, and embedded the shell already exposes an
+          sr-only pane h1. */}
+      <main className="dmf-scroll">
+        {!props.embeddedInShell && <h1 className="sr-only">AI Model Projections</h1>}
         <div className="dmf-feedhead">
           <div className="dmf-datenav">
-            <button className="dmf-sq" aria-label="Previous day" onClick={() => go(sport, shiftIso(isoDate, -1))}>
+            <button
+              className="dmf-sq"
+              aria-label="Previous day"
+              onClick={() => {
+                trackAction("feed_date_navigated", { props: { direction: "prev" } });
+                go(shiftIso(isoDate, -1));
+              }}
+            >
               ‹
             </button>
             <div className="dmf-datelbl">{prettyDate(isoDate)}</div>
-            <button className="dmf-sq" aria-label="Next day" onClick={() => go(sport, shiftIso(isoDate, 1))}>
+            <button
+              className="dmf-sq"
+              aria-label="Next day"
+              onClick={() => {
+                trackAction("feed_date_navigated", { props: { direction: "next" } });
+                go(shiftIso(isoDate, 1));
+              }}
+            >
               ›
             </button>
-            <span className="dmf-micro dmf-slatecount">
-              {sport === "WC" ? "World Cup" : "MLB"} · {gamesCount} {gamesCount === 1 ? "game" : "games"}
-            </span>
           </div>
-          <div className="dmf-sports" role="tablist" aria-label="Sport">
-            <button
-              role="tab"
-              aria-selected={sport === "MLB"}
-              className={`dmf-chip${sport === "MLB" ? " dmf-active" : ""}`}
-              onClick={() => go("MLB", isoDate)}
-            >
-              MLB
-            </button>
-            <button
-              role="tab"
-              aria-selected={sport === "WC"}
-              className={`dmf-chip${sport === "WC" ? " dmf-active" : ""}`}
-              onClick={() => go("WC", isoDate)}
-            >
-              World Cup
-            </button>
-          </div>
+          {/* Combined slate (owner directive 2026-07-18): no sport toggle and
+              no slate count — the league headers below own identification;
+              the feedhead's bottom border stays as the divider. */}
+          {/* MOBILE (<768px, owner directive 2026-07-29): the league headers
+              join the date inside this sticky feedhead — one grouped primary
+              menu bar with no gap to the floating nav. Each bar toggles its
+              league's <details> below (controlled state); the in-list summary
+              headers are display:none'd on mobile so the bar is the single
+              control. Desktop never shows these (CSS hides .dmf-lgbars). */}
+          {sections.length > 0 && (
+            <div className="dmf-lgbars">
+              {sections.map((section) => {
+                const open = !closedLeagues.has(section.key);
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    className="dmf-lgbar"
+                    aria-expanded={open}
+                    aria-controls={`dmf-league-${section.key}`}
+                    onClick={() => setLeagueOpen(section.key, !open)}
+                  >
+                    <LeagueMark league={section.key} />
+                    <span className="dmf-lgname">{section.label}</span>
+                    <ChevronDown className="dmf-lgchev dmf-lgchev--expand" aria-hidden="true" />
+                    <ChevronUp className="dmf-lgchev dmf-lgchev--collapse" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className={`dmf-list${isStale ? " dmf-stale" : ""}`} aria-busy={isStale}>
-          {isLoading && cards.length === 0 ? (
-            <>
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-            </>
-          ) : cards.length === 0 ? (
+          {isLoading && gamesCount === 0 ? (
+            /* 2026-08-05 (audit DIME-UI-019 completion): skeletons render
+               inside the SAME .dmf-league/.dmf-leaguebody containers as the
+               loaded slate, so the container-driven 1/2/3-up column count is
+               identical before and after data resolves — loading no longer
+               reflows from a single-column stack into a multi-column grid. */
+            <div className="dmf-league" aria-hidden="true">
+              <div className="dmf-leaguebody">
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </div>
+            </div>
+          ) : gamesCount === 0 && isError ? (
+            <div className="dmf-empty" role="alert">
+              <span className="dmf-micro">Projections unavailable</span>
+              <p>The slate could not be loaded. Check your connection and try again.</p>
+              <button type="button" className="dmf-retry" onClick={retry}>
+                Retry
+              </button>
+            </div>
+          ) : gamesCount === 0 ? (
             <div className="dmf-empty">
               <span className="dmf-micro">No games for this date</span>
               <p>Try the date arrows above.</p>
             </div>
           ) : (
-            cards.map((g) => {
-              // Route every sport through its typed adapter → one shared model →
-              // the shared card. Soccer resolves country names + flags + fully
-              // labeled markets ("Spain Win or Draw") here, not in the component.
-              const model =
-                sport === "WC"
-                  ? sportAdapters.SOCCER(g, { competition: "World Cup" })
-                  : sportAdapters.MLB(g, { competition: "MLB" });
-              return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
-            })
+            // Combined slate, league-sectioned (owner directive 2026-07-18):
+            // World Cup on top, MLB beneath — buildFeedSections owns the order
+            // and drops empty leagues. Each league is a COLLAPSIBLE container
+            // (native details/summary, open by default): official league logo
+            // + the full spelled-out name across the row, chevron affordance
+            // at the right edge. The WC emblem is theme-keyed (black FIFA
+            // wordmark on light, white on dark — CSS swaps by data-dmf-theme;
+            // both render in the same fixed box). A missing logo file hides
+            // itself and the header stays clean text.
+            sections.map((section) => (
+              <details
+                key={section.key}
+                id={`dmf-league-${section.key}`}
+                className="dmf-league"
+                open={!closedLeagues.has(section.key)}
+                onToggle={(e) => setLeagueOpen(section.key, e.currentTarget.open)}
+              >
+                <summary className="dmf-leaguehead">
+                  <LeagueMark league={section.key} />
+                  <span className="dmf-lgname">{section.label}</span>
+                  <ChevronDown className="dmf-lgchev dmf-lgchev--expand" aria-hidden="true" />
+                  <ChevronUp className="dmf-lgchev dmf-lgchev--collapse" aria-hidden="true" />
+                </summary>
+                <div className="dmf-leaguebody">
+                  {section.cards.map((g) => {
+                    const model =
+                      section.key === "WC"
+                        ? sportAdapters.SOCCER(g, { competition: "World Cup" })
+                        : sportAdapters.MLB(g, { competition: "MLB" });
+                    const projectionGame = presentationToProjectionGame(model);
+                    return (
+                      <ProjectionCard
+                        key={g.id}
+                        game={{
+                          ...projectionGame,
+                          pregameLineups:
+                            projectionGame.status === "scheduled"
+                              ? g.pregameLineups
+                              : undefined,
+                        }}
+                        onOpen={() => trackAction("projection_opened", { props: { sport: section.key } })}
+                      />
+                    );
+                  })}
+                </div>
+              </details>
+            ))
           )}
         </div>
-
-        <div className="dmf-rg dmf-micro">21+ · Gambling problem? Call 1-800-GAMBLER</div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -626,8 +631,13 @@ function verdictOf(best: BestPick | null): FeedCardSpec["verdict"] {
 }
 
 // ── MLB adapter (bindings: GameCard.tsx via @shared/mlbTeams registry) ───────
+// Exported for DimeModelFeed.doubleheader.test.ts — the card id is the render
+// key, so its per-EVENT uniqueness (doubleheader safety) is pinned by tests.
 
-function mlbRowToCard(g: MlbRow): FeedCardSpec {
+export function mlbRowToCard(
+  g: MlbRow,
+  lineup?: MlbLineupLike | null,
+): FeedCardSpec {
   const awayAbbr = (g.awayTeam ?? "").toUpperCase();
   const homeAbbr = (g.homeTeam ?? "").toUpperCase();
   const awayReg = MLB_BY_ABBREV.get(awayAbbr);
@@ -635,8 +645,24 @@ function mlbRowToCard(g: MlbRow): FeedCardSpec {
   const awayCrest: CrestSpec = { url: awayReg?.logoUrl, code: awayAbbr.slice(0, 3), bg: awayReg?.primaryColor };
   const homeCrest: CrestSpec = { url: homeReg?.logoUrl, code: homeAbbr.slice(0, 3), bg: homeReg?.primaryColor };
 
-  const isLive = g.gameStatus === "live";
-  const isFinal = g.gameStatus === "final";
+  // Suspended is its own lifecycle member as of 2026-08-05 (owner directive):
+  // it used to be folded into "postponed" and render POSTPONED, which the page
+  // law contradicts — it names suspended a first-class state.
+  const status: GameStatus =
+    g.gameStatus === "live"
+      ? "live"
+      : g.gameStatus === "final"
+        ? "final"
+        : g.gameStatus === "suspended"
+          ? "suspended"
+          : g.gameStatus === "postponed"
+            ? "postponed"
+            : "scheduled";
+  const isLive = status === "live";
+  const isFinal = status === "final";
+  // Suspended games were halted mid-play, so they have a real score to show —
+  // the fact that distinguishes them from postponed (never played).
+  const showsScore = isLive || isFinal || status === "suspended";
   // Model freshness gate — modelRunAt null ⇒ model invalidated (GameCard rule).
   const hasModel = g.modelRunAt != null;
   const M = <T,>(v: T | null): T | null => (hasModel ? v : null);
@@ -694,24 +720,52 @@ function mlbRowToCard(g: MlbRow): FeedCardSpec {
   let best: BestPick | null = null;
   for (const col of [rl, total, ml]) best = trackBest(best, col);
 
-  const pitchers =
-    g.awayStartingPitcher || g.homeStartingPitcher
-      ? `${g.awayStartingPitcher ?? "TBD"} vs ${g.homeStartingPitcher ?? "TBD"}`
-      : null;
-  const meta = [pitchers, g.venue].filter(Boolean).join(" · ") || "MLB";
+  // Ballpark only in the matchup context. Scheduled probable pitchers now own a
+  // dedicated middle panel, so they still never pollute or duplicate this line.
+  const meta = g.venue || "MLB";
+
+  const pregameLineups =
+    status === "scheduled"
+      ? mlbLineupToProjectionPregame({
+          ...lineup,
+          awayPitcherName: lineup?.awayPitcherName ?? g.awayStartingPitcher,
+          awayPitcherConfirmed:
+            lineup?.awayPitcherConfirmed ?? g.awayPitcherConfirmed,
+          homePitcherName: lineup?.homePitcherName ?? g.homeStartingPitcher,
+          homePitcherConfirmed:
+            lineup?.homePitcherConfirmed ?? g.homePitcherConfirmed,
+        })
+      : undefined;
 
   return {
-    id: String(g.id ?? `${awayAbbr}-${homeAbbr}`),
+    // Stable event identity = DB primary key. The fallback must stay unique per
+    // EVENT, not per matchup: two doubleheader games share awayAbbr/homeAbbr on
+    // the same date, so a bare `${away}-${home}` key would collapse them into
+    // one React key and silently drop a card. Include date + start time +
+    // gameNumber so even the id-less fallback cannot merge distinct games.
+    id: String(
+      g.id ??
+      `${awayAbbr}-${homeAbbr}-${g.gameDate ?? ""}-${g.startTimeEst ?? ""}-${(g as { gameNumber?: number | null }).gameNumber ?? 1}`
+    ),
+    status,
+    sourceGameId: Number.isInteger(g.id) ? g.id : undefined,
     liveLabel: isLive ? `LIVE${g.gameClock ? ` · ${g.gameClock}` : ""}` : null,
-    timeLabel: isFinal ? "FINAL" : formatGameTime(g.startTimeEst),
-    away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: isLive || isFinal ? (g.awayScore != null ? String(g.awayScore) : null) : null },
-    home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: isLive || isFinal ? (g.homeScore != null ? String(g.homeScore) : null) : null },
+    timeLabel:
+      status === "suspended"
+        ? "SUSPENDED"
+        : status === "postponed"
+          ? "POSTPONED"
+          : isFinal
+            ? "FINAL"
+            : formatGameTime(g.startTimeEst),
+    // A suspended game was halted mid-play and carries a real score — that is
+    // exactly what separates it from postponed (2026-08-05 owner directive
+    // making suspended first-class). Postponed was never played: no score.
+    away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: showsScore ? (g.awayScore != null ? String(g.awayScore) : null) : null },
+    home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: showsScore ? (g.homeScore != null ? String(g.homeScore) : null) : null },
     meta,
-    pitchers:
-      g.awayStartingPitcher || g.homeStartingPitcher
-        ? { away: g.awayStartingPitcher ?? "TBD", home: g.homeStartingPitcher ?? "TBD" }
-        : null,
     venueLine: g.venue || null,
+    pregameLineups,
     markets: [rl, total, ml],
     verdict: verdictOf(best),
   };
@@ -724,13 +778,41 @@ const fifaFlagUrl = (code: string): string =>
 
 /** Round label by PT kickoff-day thresholds (WcFeedInline stage ternary). */
 export function wcRoundLabel(isoDate: string): string {
-  return isoDate >= "2026-07-19" ? "Final"
-    : isoDate >= "2026-07-18" ? "Third-Place Play-Off"
+  return isoDate >= "2026-07-19" ? "World Cup Final"
+    : isoDate >= "2026-07-18" ? "3rd Place Match"
     : isoDate >= "2026-07-14" ? "Semifinal"
     : isoDate >= "2026-07-09" ? "Quarterfinal"
     : isoDate >= "2026-07-04" ? "Round of 16"
     : isoDate >= "2026-06-28" ? "Round of 32"
     : "Group Stage";
+}
+
+/** Owner display map (2026-07-18): stadium → "City, ST". Replaces the DB city
+ *  wholesale ("Miami Gardens" → "Miami, FL"); stadiums not listed keep their
+ *  DB city. Substring match so provider naming variants still hit. */
+const WC_VENUE_CITY_DISPLAY: ReadonlyArray<readonly [pattern: string, city: string]> = [
+  ["hard rock", "Miami, FL"],
+  ["metlife", "East Rutherford, NJ"],
+];
+export function wcDisplayCity(
+  stadium: string | null | undefined,
+  city: string | null | undefined,
+): string | null {
+  const s = (stadium ?? "").toLowerCase();
+  for (const [pattern, display] of WC_VENUE_CITY_DISPLAY) {
+    if (s.includes(pattern)) return display;
+  }
+  return city || null;
+}
+
+/** Stadium display name drops a trailing parenthetical (owner directive
+ *  2026-07-18): "MetLife Stadium (NY/NJ)" reads "MetLife Stadium" — the city
+ *  line beside it already carries the location. Display-only: wcDisplayCity
+ *  keeps matching on the RAW stadium string. */
+export function wcDisplayStadium(stadium: string | null | undefined): string | null {
+  if (!stadium) return null;
+  const stripped = stadium.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return stripped || stadium;
 }
 
 function fmtKickoffEt(kickoffUtc: string | Date | null | undefined): string {
@@ -742,6 +824,26 @@ function fmtKickoffEt(kickoffUtc: string | Date | null | undefined): string {
   );
 }
 
+/** Owner winner-scope markets (2026-07-18): the two remaining WC matches
+ *  replace their MONEYLINE column with a match-WINNER market — graded on
+ *  whoever wins the match when it settles, regardless of 90'+injury time,
+ *  extra time, or penalties. Book prices are OWNER-PROVIDED (2026-07-18).
+ *  Model prices are the v27 engine's model_*_to_advance (ET+pens
+ *  sub-simulation: P(win 90') + P(draw)×[ET λ/3 + pens 50.5/49.5]) — for
+ *  these two matches that is literally "wins the match outright" (engine
+ *  header, v27_jul18_engine.mjs), i.e. the exact same grading scope. They
+ *  reach the card as mo.toAdvanceHome/Away via wc2026_model_projections.
+ *  homeCode/awayCode pin the v27-verified orientation (FRA home vs ENG away;
+ *  ESP home vs ARG away) — if the live row ever disagreed, the card falls
+ *  back to the plain 3-way ML rather than misassign the owner book prices. */
+export const WC_WINNER_MARKETS: Record<
+  string,
+  { title: string; homeCode: string; awayCode: string; bookHome: number; bookAway: number }
+> = {
+  "wc26-3rd-103": { title: "World Cup 3rd Place", homeCode: "FRA", awayCode: "ENG", bookHome: -215, bookAway: 170 },
+  "wc26-final-104": { title: "To Win the World Cup", homeCode: "ESP", awayCode: "ARG", bookHome: -150, bookAway: 130 },
+};
+
 function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const awayCode = m.awayTeam?.fifaCode ?? m.awayTeamId.toUpperCase();
   const homeCode = m.homeTeam?.fifaCode ?? m.homeTeamId.toUpperCase();
@@ -749,6 +851,15 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const homeCrest: CrestSpec = { url: m.homeTeam?.flagUrl ?? fifaFlagUrl(homeCode), code: homeCode };
   const dk = m.dkOdds;
   const mo = m.modelOdds;
+
+  // Winner-scope override applies ONLY when the live orientation matches the
+  // v27-verified home/away — the owner book prices bind positionally.
+  const winnerSpec = WC_WINNER_MARKETS[m.matchId];
+  const winnerApplies =
+    winnerSpec != null && winnerSpec.homeCode === homeCode && winnerSpec.awayCode === awayCode;
+  // Clarity rule (owner directive 2026-07-18): with the winner market on the
+  // card, the 90-minute-scoped markets say so in their headers.
+  const t90 = (title: string): string => (winnerApplies ? `${title} (90 Min)` : title);
 
   // 3-way calc for ML + DRAW (WcMktCol rule) — also yields the win% annotation.
   const threeWayBook: ThreeWayOdds | null =
@@ -768,6 +879,26 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
     { label: homeCode, crest: homeCrest, book: dk?.toAdvanceHome ?? null, model: mo?.toAdvanceHome ?? null },
     "ADV",
   );
+
+  // WINNER MARKET (owner directive 2026-07-18) — replaces ML on the 3rd-place
+  // match and the Final. Away top / home bottom (card row order). Book = the
+  // owner-provided winner prices; model = mo.toAdvanceHome/Away — the v27
+  // ET+pens winner odds, the exact same "wins the match however it settles"
+  // scope — so calculateEdge(book, model) inside twoWayCol IS the precise
+  // 2-way edge for this market (the model side is fair: pAdvH + pAdvA = 1).
+  const winner = winnerApplies
+    ? twoWayCol(
+        winnerSpec.title,
+        { label: awayCode, crest: awayCrest, book: winnerSpec.bookAway, model: mo?.toAdvanceAway ?? null },
+        { label: homeCode, crest: homeCrest, book: winnerSpec.bookHome, model: mo?.toAdvanceHome ?? null },
+      )
+    : null;
+  if (process.env.NODE_ENV === "development" && winnerSpec && !winnerApplies) {
+    console.warn(
+      `[wcMatchToCard:WINNER] ${m.matchId}: live orientation ${awayCode}@${homeCode} disagrees with ` +
+        `verified ${winnerSpec.awayCode}@${winnerSpec.homeCode} — falling back to plain ML (owner odds NOT applied)`,
+    );
+  }
 
   // ML — away top; edge/sig from the 3-way calc when available.
   const favIsAway = calc3 ? calc3.away.modelFairProb >= calc3.home.modelFairProb : false;
@@ -806,9 +937,10 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
     }
   }
 
-  // DRAW — DRAW top / NO DRAW bottom (owner spec).
+  // DRAW — DRAW top / NO DRAW bottom (owner spec). 90-min scope tagged when
+  // the winner market is on the card.
   const draw = twoWayCol(
-    "Draw",
+    t90("Draw"),
     { label: "DRAW", book: dk?.draw ?? null, model: mo?.draw ?? null },
     { label: "NO DRAW", book: dk?.noDraw ?? null, model: mo?.noDraw ?? null },
   );
@@ -833,7 +965,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const aLine = dk?.awaySpreadLine;
   const hLine = dk?.homeSpreadLine;
   const spread = twoWayCol(
-    "Spread",
+    t90("Spread"),
     {
       label: aLine != null ? `${awayCode} ${fmtLine(aLine)}` : awayCode,
       crest: awayCrest,
@@ -851,19 +983,25 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   // DBL CHC — HOME WD top (dkOdds.homeDrawOdds) / AWAY WD bottom (owner spec),
   // each carrying the matching team's flag (Rule 4).
   const dblChc = twoWayCol(
-    "Dbl Chc",
+    t90("Dbl Chc"),
     { label: "HOME WD", crest: homeCrest, book: dk?.homeDrawOdds ?? null, model: mo?.homeDrawOdds ?? null },
     { label: "AWAY WD", crest: awayCrest, book: dk?.awayDrawOdds ?? null, model: mo?.awayDrawOdds ?? null },
   );
 
   // BTTS — YES top / NO bottom.
   const btts = twoWayCol(
-    "BTTS",
+    t90("BTTS"),
     { label: "YES", book: dk?.bttsYes ?? null, model: mo?.bttsYes ?? null },
     { label: "NO", book: dk?.bttsNo ?? null, model: mo?.bttsNo ?? null },
   );
 
-  const markets = [toAdv, ml, draw, total, spread, dblChc, btts];
+  // TO ADVANCE only exists as a book market when there IS a next round — the
+  // 3rd-place match and the Final carry no such market (book adv NULL), so the
+  // column is dropped for those cards instead of rendering dashes.
+  const hasAdvMarket = dk?.toAdvanceAway != null || dk?.toAdvanceHome != null;
+  // Winner market takes the ML slot on the 3rd-place match and the Final
+  // (owner directive 2026-07-18); every other card keeps the 3-way ML.
+  const markets = [...(hasAdvMarket ? [toAdv] : []), winner ?? ml, draw, total, spread, dblChc, btts];
   let best: BestPick | null = null;
   for (const col of markets) best = trackBest(best, col);
 
@@ -878,11 +1016,17 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const isFinal = status === "FT" || status === "FT_PEN";
   const showScores = !!liveLabel || isFinal;
 
-  const venueBits = [m.venue?.stadium, m.venue?.city].filter(Boolean).join(", ");
-  const meta = [wcRoundLabel(isoDate), venueBits].filter(Boolean).join(" · ");
+  // Round and venue are separate card lines (owner directive 2026-07-18):
+  // the context line carries the round only, and the full venue renders on
+  // its own line beneath it so the stadium is never truncated.
+  const venueBits = [wcDisplayStadium(m.venue?.stadium), wcDisplayCity(m.venue?.stadium, m.venue?.city)]
+    .filter(Boolean)
+    .join(" · ");
+  const meta = wcRoundLabel(isoDate);
 
   return {
     id: m.matchId,
+    status: liveLabel ? "live" : isFinal ? "final" : "scheduled",
     liveLabel,
     timeLabel: isFinal ? (status === "FT_PEN" ? "FINAL (PENS)" : "FINAL") : fmtKickoffEt(m.kickoffUtc),
     away: {
@@ -896,24 +1040,76 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
       score: showScores && m.homeScore != null ? String(m.homeScore) : null,
     },
     meta,
-    venueLine: meta || null,
+    venueLine: venueBits || null,
     markets,
     verdict: verdictOf(best),
   };
 }
 
+/**
+ * Slate status tier (owner directive 2026-07-18, amended 2026-08-06).
+ *
+ * LIVE sits above upcoming; SETTLED sinks to the bottom — and "settled" now
+ * means final PLUS postponed and suspended. Those two used to fall through into
+ * the upcoming tier and sort by their original first pitch, which put games
+ * nobody can bet above the ones they can.
+ *
+ * Exhaustive by construction: adding a GameStatus member without giving it a
+ * tier fails the typecheck here, instead of silently defaulting into one. That
+ * silent default is exactly how postponed and suspended slipped into the
+ * upcoming tier while the rank sniffed the timeLabel string for a FINAL
+ * prefix — a test that could only ever recognize the states it was written for.
+ *
+ * Within a tier the existing order holds: Array.sort is stable, so MLB keeps
+ * earliest-first-pitch order and WC keeps the server's match order.
+ */
+const SLATE_TIER: Record<GameStatus, number> = {
+  live: 0,
+  scheduled: 1,
+  final: 2,
+  postponed: 2,
+  suspended: 2,
+};
+export function slateStatusRank(card: Pick<FeedCardSpec, "status">): number {
+  return SLATE_TIER[card.status];
+}
+
 // ── Query orchestration (contracts: exact {sport, gameDate}; 60s poll;
 //    placeholderData keeps the previous slate while the next date loads) ─────
 
+/** One league group in the combined slate. */
+export interface FeedSection {
+  key: "WC" | "MLB";
+  /** Full spelled-out league name for the collapsible header (owner directive
+   *  2026-07-18: no game counts in the header — the name owns the width). */
+  label: string;
+  cards: FeedCardSpec[];
+}
+
+/** Combined slate (owner directive 2026-07-18): ONE collective feed for the
+ *  date — World Cup section on top, MLB beneath it (CBS-scores league grouping;
+ *  only the grouping/order is mirrored, nothing else). A league renders only
+ *  when it has games that date, so post-final WC dates are pure MLB with no
+ *  empty header. Within a section the existing slate order holds. */
+export function buildFeedSections(
+  wcCards: FeedCardSpec[],
+  mlbCards: FeedCardSpec[],
+): FeedSection[] {
+  const sections: FeedSection[] = [];
+  if (wcCards.length > 0) sections.push({ key: "WC", label: "2026 FIFA World Cup", cards: wcCards });
+  if (mlbCards.length > 0) sections.push({ key: "MLB", label: "Major League Baseball (MLB)", cards: mlbCards });
+  return sections;
+}
+
 function useFeedCards(
-  sport: "MLB" | "WC",
   isoDate: string,
-): { cards: FeedCardSpec[]; isLoading: boolean; isStale: boolean; gamesCount: number } {
-  const isWc = sport === "WC";
+): { sections: FeedSection[]; isLoading: boolean; isStale: boolean; gamesCount: number; isError: boolean; retry: () => void } {
+  // Both leagues load together — the combined feed has no sport toggle
+  // (owner directive 2026-07-18), so neither query is gated on a tab.
   const mlbQuery = trpc.games.list.useQuery(
     { sport: "MLB", gameDate: isoDate },
     {
-      enabled: !isWc && !!isoDate,
+      enabled: !!isoDate,
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,
       staleTime: 60 * 1000,
@@ -923,291 +1119,70 @@ function useFeedCards(
   const wcQuery = trpc.wc2026.matchesByDate.useQuery(
     { date: isoDate },
     {
-      enabled: isWc && !!isoDate,
+      enabled: !!isoDate,
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,
       staleTime: 60 * 1000,
       placeholderData: keepPreviousData,
     },
   );
+  const scheduledMlbGameIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          ((mlbQuery.data ?? []) as MlbRow[])
+            .filter((game) => game.gameStatus === "upcoming")
+            .map((game) => game.id)
+            .filter((gameId): gameId is number => Number.isInteger(gameId) && gameId > 0),
+        ),
+      )
+        .sort((a, b) => a - b)
+        .slice(0, 50),
+    [mlbQuery.data],
+  );
+  const mlbLineupsQuery = trpc.games.mlbLineups.useQuery(
+    { gameIds: scheduledMlbGameIds },
+    {
+      enabled: !!isoDate && scheduledMlbGameIds.length > 0,
+      refetchOnWindowFocus: false,
+      refetchInterval: 60 * 1000,
+      staleTime: 60 * 1000,
+      retry: false,
+    },
+  );
 
-  // M-201 publication gate: null gated MLB model output before the adapter so
-  // BACKTEST-ONLY markets render the existing "model absent" state ("—", no
-  // edge, no verdict). All gates default true — no change until Phase 7.
-  const mlbMarketGates = useMlbMarketGates();
+  const sections = useMemo<FeedSection[]>(() => {
+    // Slate order per league: earliest → latest first pitch (owner directive
+    // 2026-07-17; timeToMinutes sends TBD times to the bottom), then LIVE
+    // above upcoming above FINAL (2026-07-18) — the stable sort keeps the
+    // time order within each tier. Tiers apply WITHIN a league section; the
+    // WC-above-MLB section order is absolute.
+    const wcCards = ((wcQuery.data ?? []) as WcMatch[])
+      .map((m) => wcMatchToCard(m, isoDate))
+      .sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
+    const lineupByGameId = (mlbLineupsQuery.data ?? {}) as Record<number, MlbLineupLike>;
+    const mlbCards = [...((mlbQuery.data ?? []) as MlbRow[])]
+      .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
+      .map((game) => mlbRowToCard(game, lineupByGameId[game.id]))
+      .sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
+    return buildFeedSections(wcCards, mlbCards);
+  }, [wcQuery.data, mlbQuery.data, mlbLineupsQuery.data, isoDate]);
 
-  const cards = useMemo<FeedCardSpec[]>(() => {
-    if (isWc) return ((wcQuery.data ?? []) as WcMatch[]).map((m) => wcMatchToCard(m, isoDate));
-    return ((mlbQuery.data ?? []) as MlbRow[]).map((g) =>
-      mlbRowToCard(applyMlbMarketGates(g, mlbMarketGates))
-    );
-  }, [isWc, wcQuery.data, mlbQuery.data, isoDate, mlbMarketGates]);
-
-  const isLoading = isWc ? wcQuery.isLoading : mlbQuery.isLoading;
+  const isLoading = wcQuery.isLoading || mlbQuery.isLoading;
   // Stale = paging dates while placeholderData keeps the previous slate
   // mounted — the UI dims so the old cards are never mistaken for the new
   // date's numbers (this is a betting surface; wrong-slate reads cost money).
-  const isStale = isWc
-    ? wcQuery.isPlaceholderData && wcQuery.isFetching
-    : mlbQuery.isPlaceholderData && mlbQuery.isFetching;
-  return { cards, isLoading, isStale, gamesCount: cards.length };
+  const isStale =
+    (wcQuery.isPlaceholderData && wcQuery.isFetching) ||
+    (mlbQuery.isPlaceholderData && mlbQuery.isFetching);
+  const gamesCount = sections.reduce((n, s) => n + s.cards.length, 0);
+  // Outage surface (audit D-FEED-ERROR / page law "query errors must be
+  // surfaced"): with no data to show and every league query failed, the feed
+  // must say so instead of claiming an empty slate.
+  const isError = mlbQuery.isError && wcQuery.isError;
+  const retry = () => {
+    void mlbQuery.refetch();
+    void wcQuery.refetch();
+  };
+  return { sections, isLoading, isStale, gamesCount, isError, retry };
 }
-
-// ─── Scoped stylesheet — MASTER.md tokens verbatim, v4 reference layout ──────
-
-const DMF_CSS = `
-.dmf-root{
-  /* THREE-COLOR LAW — dark: black ground, white ink/borders, mint the one accent */
-  --dmf-page:#000000; --dmf-sidebar:#000000; --dmf-card:#000000; --dmf-card-hi:#000000;
-  --dmf-border:#FFFFFF; --dmf-border-hi:#FFFFFF; --dmf-border-hover:#FFFFFF;
-  --dmf-t1:#FFFFFF; --dmf-t2:#FFFFFF; --dmf-t3:#FFFFFF; --dmf-t4:#FFFFFF;
-  --dmf-mint:#45E0A8; --dmf-mint-dim:transparent; --dmf-ring:#45E0A8;
-  --dmf-ease:cubic-bezier(.16,1,.3,1); --dmf-t:160ms;
-  --dmf-mono:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --dmf-sans:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --dmf-shadow-input:none;
-  background:var(--dmf-page); color:var(--dmf-t1); font-family:var(--dmf-sans);
-  min-height:100vh; min-height:100dvh; display:flex; flex-direction:column;
-  container-type:inline-size; container-name:dmf;
-  -webkit-font-smoothing:antialiased;
-}
-.dmf-root[data-dmf-theme="light"]{
-  /* THREE-COLOR LAW — light: white ground, black ink/borders, mint the one accent */
-  --dmf-page:#FFFFFF; --dmf-sidebar:#FFFFFF; --dmf-card:#FFFFFF; --dmf-card-hi:#FFFFFF;
-  --dmf-border:#000000; --dmf-border-hi:#000000; --dmf-border-hover:#000000;
-  --dmf-t1:#000000; --dmf-t2:#000000; --dmf-t3:#000000; --dmf-t4:#000000;
-  --dmf-mint:#45E0A8; --dmf-mint-dim:transparent; --dmf-ring:#45E0A8;
-  --dmf-shadow-input:none;
-}
-.dmf-root *{box-sizing:border-box}
-.dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
-.dmf-root :where(a){touch-action:manipulation}
-.dmf-root :is(button,[tabindex]):focus-visible{outline:none;box-shadow:0 0 0 3px var(--dmf-ring);border-radius:8px}
-.dmf-micro{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3)}
-
-.dmf-topbar{display:flex;align-items:center;gap:14px;height:46px;padding:0 40px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);position:sticky;top:0;z-index:20}
-.dmf-wordmark{font-size:21px;font-weight:700;letter-spacing:-.05em;line-height:1}
-.dmf-i{position:relative;display:inline-block}
-.dmf-coindot{position:absolute;width:.2em;height:.2em;border-radius:50%;background:#45E0A8;left:calc(50% + .03em);top:.02em;transform:translateX(-50%)}
-.dmf-root[data-dmf-theme="light"] .dmf-coindot{box-shadow:0 0 0 1px #000000}
-.dmf-topsep{width:1px;height:18px;background:var(--dmf-border-hi)}
-.dmf-toptitle{font-size:14px;font-weight:600;color:var(--dmf-t2)}
-.dmf-sync{margin-left:auto;display:flex;align-items:center;gap:10px}
-.dmf-themebtn{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);border:1px solid var(--dmf-border-hi);border-radius:8px;padding:6px 10px;position:relative}
-.dmf-themebtn::after{content:"";position:absolute;inset:-8px}
-.dmf-themebtn:hover{color:var(--dmf-t1);border-color:var(--dmf-border-hover)}
-.dmf-nav{display:flex;align-items:center;gap:4px}
-.dmf-navlink{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);text-decoration:none;padding:6px 8px;border-radius:8px;position:relative;transition:color var(--dmf-t) var(--dmf-ease)}
-.dmf-navlink::after{content:"";position:absolute;inset:-8px -2px}
-.dmf-navlink:hover{color:var(--dmf-t1)}
-
-/* Document scroll (no inner overflow) — otherwise .dmf-scroll becomes a
-   never-scrolling scrollport and the sticky slate header can never stick. */
-.dmf-scroll{flex:1;padding:0 40px 60px;position:relative}
-@media (max-width:767px){.dmf-scroll{padding-bottom:130px}}
-.dmf-feedhead{position:sticky;top:46px;z-index:10;padding:16px 0 10px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);margin-bottom:10px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.dmf-datenav{display:flex;align-items:center;gap:12px}
-.dmf-sq{width:28px;height:28px;border-radius:8px;border:1px solid var(--dmf-border-hi);color:var(--dmf-t2);display:grid;place-items:center;position:relative;transition:border-color var(--dmf-t) var(--dmf-ease),color var(--dmf-t) var(--dmf-ease)}
-.dmf-sq::after{content:"";position:absolute;inset:-8px}
-.dmf-sq:hover{border-color:var(--dmf-border-hover);color:var(--dmf-t1)}
-.dmf-sq:active{background:var(--dmf-card-hi)}
-.dmf-datelbl{font-size:15px;font-weight:700;letter-spacing:-.005em;white-space:nowrap}
-.dmf-sports{margin-left:auto;display:flex;gap:8px}
-.dmf-chip{padding:8px 16px;border-radius:18px;font-size:13px;font-weight:600;color:var(--dmf-t3);white-space:nowrap;position:relative;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
-.dmf-chip::after{content:"";position:absolute;inset:-6px}
-.dmf-chip:hover{color:var(--dmf-t1)}
-.dmf-chip.dmf-active{background:var(--dmf-card-hi);color:var(--dmf-t1);box-shadow:inset 0 0 0 1px var(--dmf-border-hi)}
-
-.dmf-list{display:flex;flex-direction:column;gap:12px;padding-top:6px;transition:opacity var(--dmf-t) var(--dmf-ease)}
-.dmf-list.dmf-stale{opacity:.45;pointer-events:none}
-.dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}/* card-level container: key type below scales by the CARD's width (cqi), not the viewport. Named @container dmf rules still target .dmf-root. */
-.dmf-game.dmf-pass{opacity:.82}
-.dmf-gbody{display:grid;grid-template-columns:250px 1fr 240px;align-items:stretch}
-
-.dmf-matchup{padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0}
-.dmf-status{display:flex;align-items:center;gap:7px;margin-bottom:2px}
-.dmf-ld{width:7px;height:7px;border-radius:50%;background:var(--dmf-mint);animation:dmf-pulse 1.6s var(--dmf-ease) infinite}
-.dmf-root[data-dmf-theme="light"] .dmf-ld{box-shadow:0 0 0 1px #000000}
-@keyframes dmf-pulse{0%,100%{opacity:.55}50%{opacity:1}}
-.dmf-lt{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-mint)}
-.dmf-time{font-family:var(--dmf-mono);font-size:10.5px;font-weight:500;letter-spacing:.08em;color:var(--dmf-t3);text-transform:uppercase}
-.dmf-teams{display:flex;flex-direction:column;gap:8px;min-width:0}
-.dmf-teamrow{display:flex;align-items:center;gap:9px;min-width:0}
-.dmf-crest{border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;box-shadow:inset 0 0 0 1px var(--dmf-border-hi);background:var(--dmf-card-hi)}
-.dmf-crest-mono{width:100%;height:100%;display:grid;place-items:center;font-weight:700;color:var(--dmf-t1);border-radius:50%}
-.dmf-tname{font-size:clamp(13.5px,7px + 1.3cqi,15.5px);font-weight:700;letter-spacing:-.006em;color:var(--dmf-t1)}
-.dmf-tscore{margin-left:auto;font-size:16px;font-weight:700;color:var(--dmf-t2);font-variant-numeric:tabular-nums}
-.dmf-meta{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4);margin-top:2px;line-height:1.6}
-/* Mobile-only matchup elements — hidden on desktop (>=768px keeps dmf-meta). */
-.dmf-duel{display:none}
-.dmf-venue{display:none}
-
-.dmf-markets{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-left:1px solid var(--dmf-border);min-width:0}
-.dmf-mkcol{padding:10px 8px 8px;border-right:1px solid var(--dmf-border);display:flex;flex-direction:column;min-width:0}
-.dmf-mkcol:last-child{border-right:0}
-.dmf-mktitle{display:flex;align-items:center;gap:5px;margin-bottom:7px}
-.dmf-mktitle::before,.dmf-mktitle::after{content:"";flex:1;height:1px;background:var(--dmf-border)}
-.dmf-mktitle span{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);white-space:nowrap}
-.dmf-mkbox{background:var(--dmf-card-hi);border:1px solid var(--dmf-border);border-radius:8px;flex:1;display:flex;flex-direction:column;overflow:hidden}
-.dmf-mkhead{display:grid;grid-template-columns:minmax(72px,1.15fr) 1fr 1fr;column-gap:8px;padding:4px 6px 3px;border-bottom:1px solid var(--dmf-border)}
-.dmf-mkhead span{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;text-align:center;color:var(--dmf-t4)}
-.dmf-mkhead span:first-child{text-align:left}
-.dmf-mkrow{display:grid;grid-template-columns:minmax(72px,1.15fr) 1fr 1fr;column-gap:8px;padding:6px 6px;align-items:center}
-.dmf-mkrow + .dmf-mkrow{border-top:1px solid var(--dmf-border)}
-.dmf-rlab{display:flex;align-items:center;gap:5px;min-width:0}
-.dmf-lab{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.04em;color:var(--dmf-t3);text-transform:uppercase;white-space:nowrap}
-.dmf-side{display:flex;align-items:center;justify-content:center;min-width:0;gap:4px}
-.dmf-val{font-size:15px;font-weight:500;color:var(--dmf-t2);font-variant-numeric:tabular-nums;white-space:nowrap}
-.dmf-model .dmf-val{font-weight:700;color:var(--dmf-t1)}
-.dmf-model.dmf-sig .dmf-val{color:var(--dmf-mint)}
-.dmf-wp{font-size:11px;color:var(--dmf-t3);font-weight:500;white-space:nowrap}
-.dmf-mkfoot{margin-top:auto;border-top:1px solid var(--dmf-border);padding:4px 6px;display:flex;align-items:center;justify-content:center;gap:5px;font-family:var(--dmf-mono);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
-.dmf-mkfoot.dmf-edge{color:var(--dmf-mint);background:var(--dmf-mint-dim);font-size:11px;font-weight:500}
-.dmf-mkfoot.dmf-none{color:var(--dmf-t4);font-size:10px;font-weight:500}
-
-.dmf-verdict{border-left:1px solid var(--dmf-border);display:grid;grid-template-columns:1fr 1fr;align-content:center;gap:12px 4px;padding:12px 14px}
-.dmf-vitem{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 4px;min-width:0}
-.dmf-vitem.dmf-vpick{grid-column:1 / -1}
-.dmf-vl{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4)}
-.dmf-vv{font-size:clamp(14.5px,7px + 1.45cqi,17px);font-weight:700;letter-spacing:-.01em;color:var(--dmf-t1);font-variant-numeric:tabular-nums;white-space:nowrap;display:flex;align-items:center;gap:7px}
-.dmf-vpick .dmf-vv{font-size:clamp(16px,8px + 1.6cqi,19px)}
-.dmf-vv.dmf-vsig{color:var(--dmf-mint)}
-.dmf-pass .dmf-vv{color:var(--dmf-t3)}
-.dmf-grade{display:inline-grid;place-items:center;min-width:32px;height:26px;padding:0 8px;border-radius:8px;font-size:15px;font-weight:700;background:var(--dmf-card-hi);box-shadow:inset 0 0 0 1px var(--dmf-border-hi);color:var(--dmf-t1)}
-
-.dmf-empty,.dmf-invalid{padding:60px 0;text-align:center;color:var(--dmf-t3)}
-.dmf-empty p,.dmf-invalid p{margin-top:8px;font-size:14px}
-.dmf-skel{background:color-mix(in srgb, var(--dmf-t1) 8%, transparent);border-radius:6px}
-.dmf-rg{padding:28px 0 8px;text-align:center}
-
-/* mk7 (WC): matchup header, 4-col market grid, verdict strip */
-.dmf-game.dmf-mk7 .dmf-gbody{grid-template-columns:1fr}
-.dmf-game.dmf-mk7 .dmf-matchup{border-bottom:1px solid var(--dmf-border);display:grid;grid-template-columns:1fr auto;align-items:start;gap:4px 16px}
-.dmf-game.dmf-mk7 .dmf-status{grid-column:1;grid-row:1}
-.dmf-game.dmf-mk7 .dmf-meta{grid-column:2;grid-row:1;text-align:right;margin:0}
-.dmf-game.dmf-mk7 .dmf-teams{grid-column:1 / -1;grid-row:2;max-width:420px}
-.dmf-game.dmf-mk7 .dmf-markets{border-left:0;grid-auto-flow:row;grid-template-columns:repeat(4,1fr);grid-auto-columns:unset}
-.dmf-game.dmf-mk7 .dmf-mkcol{border-bottom:1px solid var(--dmf-border)}
-.dmf-game.dmf-mk7 .dmf-mkcol:nth-child(4n){border-right:0}
-.dmf-game.dmf-mk7 .dmf-mkcol:last-child:nth-child(4n+3){grid-column:span 2;border-right:0}
-.dmf-game.dmf-mk7 .dmf-verdict{display:flex;border-left:0;border-top:1px solid var(--dmf-border);background:var(--dmf-card-hi);padding:10px 16px;justify-content:center;gap:56px}
-.dmf-game.dmf-mk7 .dmf-vitem{flex:0 0 auto}
-.dmf-game.dmf-mk7 .dmf-vpick .dmf-vv{font-size:17px}
-
-/* 1200 (not 1000): at 1001-1200px containers the 250|1fr|240 desktop grid
-   left the three market columns ~17-43px value tracks — Book/Model odds
-   overlapped on every iPad landscape (1024/1080/1180). Stack until true
-   desktop widths. */
-@container dmf (max-width: 1200px){
-  .dmf-game.dmf-mk3 .dmf-gbody{grid-template-columns:1fr}
-  .dmf-game.dmf-mk3 .dmf-matchup{border-bottom:1px solid var(--dmf-border)}
-  .dmf-game.dmf-mk3 .dmf-markets{border-left:0;grid-auto-flow:row;grid-template-columns:repeat(3,1fr);grid-auto-columns:unset}
-  .dmf-game.dmf-mk3 .dmf-mkcol{border-bottom:1px solid var(--dmf-border)}
-  .dmf-game.dmf-mk3 .dmf-mkcol:nth-child(3n){border-right:0}
-  .dmf-game.dmf-mk3 .dmf-verdict{display:flex;border-left:0;border-top:1px solid var(--dmf-border);background:var(--dmf-card-hi);padding:10px 16px;justify-content:center;gap:56px}
-  .dmf-game.dmf-mk3 .dmf-vitem{flex:0 0 auto}
-  .dmf-game.dmf-mk3 .dmf-vpick .dmf-vv{font-size:17px}
-}
-/* WC cards: 4-across squeezes the ML win%% annotation into the Book column
-   on iPad portrait (768-834) — drop to 2x2 well before that point. */
-@container dmf (max-width: 900px){
-  .dmf-game.dmf-mk7 .dmf-markets{grid-template-columns:repeat(2,1fr)}
-  .dmf-game.dmf-mk7 .dmf-mkcol{border-right:1px solid var(--dmf-border)}
-  .dmf-game.dmf-mk7 .dmf-mkcol:nth-child(2n){border-right:0}
-  .dmf-game.dmf-mk7 .dmf-mkcol:last-child:nth-child(odd){grid-column:1 / -1;border-right:0}
-}
-@container dmf (max-width: 700px){
-  .dmf-game .dmf-markets{grid-template-columns:repeat(2,1fr) !important}
-  .dmf-game .dmf-mkcol{border-right:1px solid var(--dmf-border) !important;border-bottom:1px solid var(--dmf-border)}
-  .dmf-game .dmf-mkcol:nth-child(2n){border-right:0 !important}
-  .dmf-game .dmf-mkcol:last-child:nth-child(odd){grid-column:1 / -1 !important;border-right:0 !important}
-  .dmf-game.dmf-mk7 .dmf-matchup{grid-template-columns:1fr}
-  .dmf-game.dmf-mk7 .dmf-meta{grid-column:1;grid-row:3;text-align:left}
-  .dmf-game.dmf-mk7 .dmf-teams{grid-row:2}
-  .dmf-game .dmf-verdict{display:flex !important;gap:0 !important;justify-content:space-between !important;padding:10px 12px !important}
-  .dmf-game .dmf-vitem{flex:1 1 0 !important}
-  .dmf-game .dmf-vpick .dmf-vv{font-size:16px !important}
-  .dmf-wp{display:none}
-  .dmf-topbar{padding-left:16px;padding-right:16px}
-  .dmf-scroll{padding-left:16px;padding-right:16px}
-}
-@container dmf (max-width: 520px){
-  .dmf-toptitle,.dmf-topsep{display:none}
-}
-@container dmf (max-width: 440px){
-  .dmf-mkhead{grid-template-columns:1fr 1fr}
-  .dmf-mkhead span:first-child{display:none}
-  .dmf-mkrow{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;row-gap:2px}
-  .dmf-rlab{grid-column:1 / -1;justify-content:flex-start}
-  /* 320-360px: keep the date row inside the viewport without shrinking the
-     28px arrows (their ::after keeps the effective hit area at 44px) */
-  .dmf-datenav{flex-wrap:wrap;gap:8px}
-  .dmf-datelbl{font-size:13.5px}
-  .dmf-feedhead{gap:10px}
-}
-/* MOBILE (<768px): the bottom tab bar owns navigation (hide dmf-nav; theme
-   toggle stays). Matchup header collapses to one symmetric row —
-   [away logo] Nickname · Surname vs Surname · Nickname [home logo] — with
-   bare transparent logos (no circle chrome) and the venue as a quiet Grotesk
-   line below. Market grids align Book/Model as identical right-aligned
-   tabular columns; row labels drop mono/all-caps for Grotesk 600. Desktop
-   (>=768px) is untouched. */
-@media (max-width:767px){
-  .dmf-root .dmf-nav{display:none}
-  .dmf-root .dmf-topbar{padding-left:16px;padding-right:16px}
-  .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
-  /* Sport chips are a data filter (not nav): never let flex shrink clip their
-     labels; the row scrolls instead. Verdict micro-labels ride the t3 label
-     tier so Pick/Edge/Grade clear 4.5:1 on the elevated card ground. */
-  .dmf-root .dmf-sports{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .dmf-root .dmf-chip{flex:0 0 auto}
-  .dmf-root .dmf-vl{color:var(--dmf-t3)}
-
-  /* Bare logos: no circle background/border/clip. The monogram fallback
-     keeps its own disc (it needs the team-color ground to read). */
-  .dmf-root .dmf-crest{border-radius:0;box-shadow:none;background:transparent;overflow:visible}
-  .dmf-root .dmf-teams .dmf-crest{width:30px !important;height:30px !important;flex-basis:30px !important}
-
-  /* One-row matchup header, centered rhythm. */
-  .dmf-root .dmf-matchup{padding:14px 14px 12px;gap:8px}
-  .dmf-root .dmf-status{justify-content:center;margin-bottom:0}
-  .dmf-root .dmf-time{font-size:11px}
-  .dmf-root .dmf-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px 14px;max-width:none}
-  .dmf-root .dmf-teams .dmf-teamrow:first-child{grid-column:1;grid-row:1}
-  .dmf-root .dmf-teams .dmf-teamrow:last-child{grid-column:3;grid-row:1;flex-direction:row-reverse}
-  .dmf-root .dmf-teamrow{gap:8px}
-  .dmf-root .dmf-tname{font-size:14px;line-height:1.2;min-width:0}
-  .dmf-root .dmf-tscore{margin-left:0;font-size:16px}
-  .dmf-root .dmf-duel{display:block;grid-column:2;grid-row:1;max-width:172px;text-align:center;font-family:var(--dmf-sans);font-size:13px;font-weight:600;line-height:1.3;letter-spacing:-.005em;color:var(--dmf-t2);padding:0 2px}
-  .dmf-root .dmf-game .dmf-meta{display:none}
-  .dmf-root .dmf-venue{display:block;text-align:center;font-size:12px;font-weight:500;letter-spacing:0;color:var(--dmf-t3);line-height:1.4}
-
-  /* Markets: every card (MLB mk3 and WC mk7) stacks full-width so all
-     markets share one aligned grid; Book and Model are identical-width
-     columns with right-aligned Grotesk 700 tabular values (16px floor). */
-  .dmf-root .dmf-game.dmf-mk3 .dmf-markets,
-  .dmf-root .dmf-game.dmf-mk7 .dmf-markets{grid-template-columns:1fr !important}
-  .dmf-root .dmf-game.dmf-mk3 .dmf-mkcol,
-  .dmf-root .dmf-game.dmf-mk7 .dmf-mkcol{border-right:0 !important}
-  .dmf-root .dmf-mkcol{padding:10px 12px}
-  .dmf-root .dmf-mkhead{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);column-gap:10px;padding:5px 10px 4px}
-  /* t3 (not desktop's t4): 4.5:1 floor on the dark card for these headers. */
-  .dmf-root .dmf-mkhead span{text-align:right;color:var(--dmf-t3)}
-  .dmf-root .dmf-mkhead span:first-child{display:block;text-align:left}
-  .dmf-root .dmf-mkrow{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;row-gap:0;column-gap:10px;padding:8px 10px;min-height:40px;align-items:center}
-  .dmf-root .dmf-rlab{grid-column:auto;justify-content:flex-start;gap:7px}
-  .dmf-root .dmf-lab{font-family:var(--dmf-sans);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--dmf-t1)}
-  .dmf-root .dmf-side{justify-content:flex-end}
-  .dmf-root .dmf-val{font-size:16px;font-weight:700}
-  .dmf-root .dmf-mkfoot{font-size:11px;padding:6px}
-  .dmf-root .dmf-mkfoot.dmf-none{color:var(--dmf-t3)}
-}
-@media (prefers-reduced-motion: reduce){
-  .dmf-root *{transition:none !important}
-  .dmf-ld{animation:none;opacity:1}
-}
-@media (prefers-contrast: more){
-  .dmf-root{--dmf-border:#FFFFFF;--dmf-border-hi:#FFFFFF;--dmf-t3:#FFFFFF;--dmf-t4:#FFFFFF}
-  .dmf-root[data-dmf-theme="light"]{--dmf-border:#000000;--dmf-border-hi:#000000;--dmf-t3:#000000;--dmf-t4:#000000}
-}
-`;

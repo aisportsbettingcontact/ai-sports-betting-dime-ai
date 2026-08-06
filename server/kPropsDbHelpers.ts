@@ -23,12 +23,7 @@
  */
 
 import { getDb } from "./db";
-import {
-  mlbStrikeoutProps,
-  games,
-  mlbTeamBattingSplits,
-  mlbCalibrationConstants,
-} from "../drizzle/schema";
+import { mlbStrikeoutProps, games } from "../drizzle/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import type { ANKPropsResult, ANKPropLine } from "./anKPropsService";
 
@@ -65,7 +60,10 @@ export interface UpsertKPropsResult {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function normalizeName(name: string): string {
-  return name.toLowerCase().trim().replace(/[^a-z\s]/g, "");
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z\s]/g, "");
 }
 
 function getLastName(name: string): string {
@@ -130,16 +128,27 @@ export async function upsertKPropsFromAN(
     .from(games)
     .where(and(eq(games.gameDate, gameDate), eq(games.sport, "MLB")));
 
-  console.log(`${TAG}[STATE] Found ${dbGames.length} MLB games in DB for ${gameDate}`);
+  console.log(
+    `${TAG}[STATE] Found ${dbGames.length} MLB games in DB for ${gameDate}`
+  );
 
   // Build lookup: "AWAY@HOME" → game row
-  const gameByMatchup = new Map<string, { id: number; awayTeam: string; homeTeam: string }>();
-  for (const g of dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>) {
+  const gameByMatchup = new Map<
+    string,
+    { id: number; awayTeam: string; homeTeam: string }
+  >();
+  for (const g of dbGames as Array<{
+    id: number;
+    awayTeam: string;
+    homeTeam: string;
+  }>) {
     gameByMatchup.set(`${g.awayTeam}@${g.homeTeam}`, g);
   }
 
   // ── Step 2: Load existing K-Props rows for this date ────────────────────
-  const gameIds = (dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>).map((g) => g.id);
+  const gameIds = (
+    dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>
+  ).map(g => g.id);
   const existingRows =
     gameIds.length > 0
       ? await db
@@ -153,10 +162,12 @@ export async function upsertKPropsFromAN(
           .where(inArray(mlbStrikeoutProps.gameId, gameIds))
       : [];
 
-  console.log(`${TAG}[STATE] Found ${existingRows.length} existing K-Props rows`);
+  console.log(
+    `${TAG}[STATE] Found ${existingRows.length} existing K-Props rows`
+  );
 
   // Build lookup: "gameId:side" → existing row
-  const existingByKey = new Map<string, typeof existingRows[0]>();
+  const existingByKey = new Map<string, (typeof existingRows)[0]>();
   for (const row of existingRows) {
     existingByKey.set(`${row.gameId}:${row.side}`, row);
   }
@@ -181,10 +192,14 @@ export async function upsertKPropsFromAN(
     const dbTeam = mapTeamAbbr(anProp.teamAbbr);
 
     // Find the matching DB game: pitcher's team is either away or home
-    let matchedGame: typeof dbGames[0] | undefined;
+    let matchedGame: (typeof dbGames)[0] | undefined;
     let side: "away" | "home" | undefined;
 
-    for (const g of dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>) {
+    for (const g of dbGames as Array<{
+      id: number;
+      awayTeam: string;
+      homeTeam: string;
+    }>) {
       if (g.awayTeam === dbTeam) {
         matchedGame = g;
         side = "away";
@@ -218,11 +233,14 @@ export async function upsertKPropsFromAN(
     const existingRow = existingByKey.get(key);
 
     const bookLine = anProp.line !== null ? String(anProp.line) : null;
-    const bookOverOdds = anProp.overOdds !== null ? String(Math.round(anProp.overOdds)) : null;
-    const bookUnderOdds = anProp.underOdds !== null ? String(Math.round(anProp.underOdds)) : null;
+    const bookOverOdds =
+      anProp.overOdds !== null ? String(Math.round(anProp.overOdds)) : null;
+    const bookUnderOdds =
+      anProp.underOdds !== null ? String(Math.round(anProp.underOdds)) : null;
     const anNoVigOverPct =
       anProp.noVigOverPct !== null ? anProp.noVigOverPct.toFixed(4) : null;
-    const anPlayerId = anProp.anPlayerId !== null ? Number(anProp.anPlayerId) : null;
+    const anPlayerId =
+      anProp.anPlayerId !== null ? Number(anProp.anPlayerId) : null;
 
     try {
       if (existingRow) {
@@ -280,7 +298,8 @@ export async function upsertKPropsFromAN(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       const cause = (err as { cause?: unknown })?.cause;
-      const causeMsg = cause instanceof Error ? ` | cause: ${cause.message}` : "";
+      const causeMsg =
+        cause instanceof Error ? ` | cause: ${cause.message}` : "";
       console.error(
         `${TAG}[ERROR] Failed to upsert ${anProp.pitcherName} (${side}): ${msg}${causeMsg}`
       );
@@ -345,8 +364,8 @@ export async function updateKPropsFromAN(
   };
 
   // Build a map of existing rows by normalized pitcher name
-  const rowsByName = new Map<string, typeof existingRows[0]>();
-  const rowsByLastName = new Map<string, typeof existingRows[0]>();
+  const rowsByName = new Map<string, (typeof existingRows)[0]>();
+  const rowsByLastName = new Map<string, (typeof existingRows)[0]>();
   for (const row of existingRows) {
     rowsByName.set(normalizeName(row.pitcherName), row);
     rowsByLastName.set(getLastName(row.pitcherName), row);
@@ -380,14 +399,20 @@ export async function updateKPropsFromAN(
         `[KPropsDB][WARN] No DB row found for AN pitcher: ${anName} (normalized: ${anNameNorm})`
       );
       result.notFound++;
-      result.details.push({ pitcherName: anName, anLine: anProp.line, matched: false });
+      result.details.push({
+        pitcherName: anName,
+        anLine: anProp.line,
+        matched: false,
+      });
       continue;
     }
 
     // Find the AN prop for this pitcher (one entry per pitcher with both odds)
     const anPropFull =
-      anResult.props.find((p) => normalizeName(p.pitcherName) === anNameNorm) ??
-      anResult.props.find((p) => getLastName(p.pitcherName) === getLastName(anName));
+      anResult.props.find(p => normalizeName(p.pitcherName) === anNameNorm) ??
+      anResult.props.find(
+        p => getLastName(p.pitcherName) === getLastName(anName)
+      );
 
     if (!anPropFull) {
       result.notFound++;
@@ -402,7 +427,7 @@ export async function updateKPropsFromAN(
 
     // Update all rows for this pitcher (both OVER and UNDER sides)
     const matchingRows = existingRows.filter(
-      (r: typeof existingRows[0]) =>
+      (r: (typeof existingRows)[0]) =>
         normalizeName(r.pitcherName) === anNameNorm ||
         getLastName(r.pitcherName) === getLastName(anName)
     );
@@ -416,7 +441,8 @@ export async function updateKPropsFromAN(
             bookLine: line.toString(),
             bookOverOdds: overOdds !== null ? String(overOdds) : null,
             bookUnderOdds: underOdds !== null ? String(underOdds) : null,
-            anNoVigOverPct: noVigOverPct !== null ? noVigOverPct.toFixed(4) : null,
+            anNoVigOverPct:
+              noVigOverPct !== null ? noVigOverPct.toFixed(4) : null,
             anPlayerId: anPlayerId !== null ? Number(anPlayerId) : null,
           })
           .where(eq(mlbStrikeoutProps.id, row.id));
@@ -428,8 +454,11 @@ export async function updateKPropsFromAN(
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         const cause = (err as { cause?: unknown })?.cause;
-        const causeMsg = cause instanceof Error ? ` | cause: ${cause.message}` : "";
-        console.error(`[KPropsDB][ERROR] Failed to update row ${row.id}: ${msg}${causeMsg}`);
+        const causeMsg =
+          cause instanceof Error ? ` | cause: ${cause.message}` : "";
+        console.error(
+          `[KPropsDB][ERROR] Failed to update row ${row.id}: ${msg}${causeMsg}`
+        );
         result.errors++;
       }
     }
@@ -464,102 +493,4 @@ export async function upsertKPropsForDate(
   const gameDate = `${anDateStr.slice(0, 4)}-${anDateStr.slice(4, 6)}-${anDateStr.slice(6, 8)}`;
   const anResult = await fetchANKProps(anDateStr);
   return upsertKPropsFromAN(anResult, gameDate);
-}
-
-// ── Model-cycle helpers (each called once per modelKPropsForDate cycle; the
-//    caller holds the result in locals for the duration of the run) ──────────
-
-/**
- * Fallback league mean for mlb_team_batting_splits.k9 (K/AB*27 basis) used
- * when the splits query fails. Measured league mean is ~6.69-6.87.
- */
-export const LEAGUE_MEAN_TEAM_K9_FALLBACK = 6.78;
-
-/**
- * League mean of mlb_team_batting_splits.k9 per pitcher hand (AVG over the
- * 30 team rows for that hand).
- *
- * M-204: team k9 in this table is on a K/AB*27 basis (league mean ~6.8), NOT
- * true K/9 (~8.2). The opponent adjustment must divide opp_k9 by this
- * same-basis mean so opp_adj centers on 1.0 — dividing by a true-K/9 constant
- * structurally shrank every projection ~0.83x.
- */
-export async function getLeagueMeanTeamK9ByHand(): Promise<Record<"L" | "R", number>> {
-  const TAG = "[KPropsDB]";
-  try {
-    const db = await getDb();
-    const rows = await db
-      .select({
-        hand: mlbTeamBattingSplits.hand,
-        k9: mlbTeamBattingSplits.k9,
-      })
-      .from(mlbTeamBattingSplits);
-
-    const acc: Record<string, { sum: number; n: number }> = {};
-    for (const row of rows as Array<{ hand: string; k9: number | null }>) {
-      if (row.k9 === null) continue;
-      const hand = row.hand.toUpperCase();
-      acc[hand] = acc[hand] ?? { sum: 0, n: 0 };
-      acc[hand].sum += row.k9;
-      acc[hand].n += 1;
-    }
-    const mean = (hand: "L" | "R"): number =>
-      acc[hand] && acc[hand].n > 0 ? acc[hand].sum / acc[hand].n : LEAGUE_MEAN_TEAM_K9_FALLBACK;
-    const result = { L: mean("L"), R: mean("R") };
-    console.log(
-      `${TAG}[STATE] League mean team k9 (K/AB*27 basis): L=${result.L.toFixed(3)} (n=${acc.L?.n ?? 0}) R=${result.R.toFixed(3)} (n=${acc.R?.n ?? 0})`
-    );
-    return result;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `${TAG}[ERROR] getLeagueMeanTeamK9ByHand failed — fallback ${LEAGUE_MEAN_TEAM_K9_FALLBACK}: ${msg}`
-    );
-    return { L: LEAGUE_MEAN_TEAM_K9_FALLBACK, R: LEAGUE_MEAN_TEAM_K9_FALLBACK };
-  }
-}
-
-/**
- * Direction-split K calibration factors from mlb_calibration_constants
- * (paramNames 'k_calibration_factor_over' / 'k_calibration_factor_under').
- *
- * M-207: falls back to the caller-supplied hardcoded defaults when the rows
- * are absent or the query fails, so behavior is unchanged until Phase 5
- * walk-forward writes the re-fitted values.
- */
-export async function getKCalibrationFactors(
-  fallbackOver: number,
-  fallbackUnder: number
-): Promise<{ over: number; under: number }> {
-  const TAG = "[KPropsDB]";
-  const PARAM_OVER = "k_calibration_factor_over";
-  const PARAM_UNDER = "k_calibration_factor_under";
-  try {
-    const db = await getDb();
-    const rows = await db
-      .select({
-        paramName: mlbCalibrationConstants.paramName,
-        currentValue: mlbCalibrationConstants.currentValue,
-      })
-      .from(mlbCalibrationConstants)
-      .where(inArray(mlbCalibrationConstants.paramName, [PARAM_OVER, PARAM_UNDER]));
-
-    const byName = new Map<string, number>();
-    for (const row of rows as Array<{ paramName: string; currentValue: string }>) {
-      const val = parseFloat(row.currentValue);
-      if (!isNaN(val) && val > 0) byName.set(row.paramName, val);
-    }
-    const over = byName.get(PARAM_OVER) ?? fallbackOver;
-    const under = byName.get(PARAM_UNDER) ?? fallbackUnder;
-    console.log(
-      `${TAG}[STATE] K calibration factors: over=${over} (${byName.has(PARAM_OVER) ? "db" : "fallback"}) under=${under} (${byName.has(PARAM_UNDER) ? "db" : "fallback"})`
-    );
-    return { over, under };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `${TAG}[ERROR] getKCalibrationFactors failed — fallbacks over=${fallbackOver} under=${fallbackUnder}: ${msg}`
-    );
-    return { over: fallbackOver, under: fallbackUnder };
-  }
 }

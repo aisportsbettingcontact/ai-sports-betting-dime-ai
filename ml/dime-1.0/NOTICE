@@ -1,0 +1,9 @@
+Dime AI development starter.
+
+The parent model is Meta Llama 3.1 8B Base and remains governed by the applicable
+Meta Llama 3.1 Community License and Acceptable Use Policy. This starter does not
+redistribute the parent weights or replace those terms.
+
+Built with Llama.
+
+Model-generated Dime outputs must be presented to end users as AI-generated.

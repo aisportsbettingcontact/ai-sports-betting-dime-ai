@@ -1,7 +1,61 @@
 {
+  "cleanupPeriodDays": 365,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}/.claude/scripts/prompt-capsule.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}/.claude/scripts/bootstrap-plugins.sh\"",
+            "timeout": 300,
+            "statusMessage": "Loading skill arsenal\u2026"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}/.claude/scripts/bootstrap-dime-context.sh\"",
+            "timeout": 45,
+            "statusMessage": "Loading Dime control-plane context\u2026"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "mcp__plugin_railway_railway__accept-deploy",
+      "mcp__plugin_railway_railway__create-deployment",
+      "mcp__plugin_railway_railway__create-project",
+      "mcp__plugin_railway_railway__create-service",
+      "mcp__plugin_railway_railway__delete-feature-flag",
+      "mcp__plugin_railway_railway__generate-domain",
+      "mcp__plugin_railway_railway__railway-agent",
+      "mcp__plugin_railway_railway__redeploy",
+      "mcp__plugin_railway_railway__set-feature-flag",
+      "mcp__plugin_railway_railway__set-variables",
+      "mcp__plugin_railway_railway__update-service",
+      "mcp__plugin_railway_railway__list-variables"
+    ]
+  },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "mcp-server-dev@claude-plugins-official": true,
+    "superpowers@dime-vendored": true,
+    "mcp-server-dev@dime-vendored": true,
     "jobs-to-be-done@pm-skills": true,
     "acquisition-channel-advisor@pm-skills": true,
     "agent-orchestration-advisor@pm-skills": true,
@@ -57,46 +111,40 @@
     "user-story-splitting@pm-skills": true,
     "vp-cpo-readiness-advisor@pm-skills": true,
     "workshop-facilitation@pm-skills": true,
-    "figma@knowledge-work-plugins": true,
+    "figma@dime-vendored": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "taste-skill@taste-skill": true,
     "railway@railway-skills": true
   },
   "extraKnownMarketplaces": {
-    "claude-plugins-official": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/claude-plugins-official"
-      }
-    },
     "pm-skills": {
       "source": {
-        "source": "github",
-        "repo": "deanpeters/Product-Manager-Skills"
-      }
-    },
-    "knowledge-work-plugins": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/knowledge-work-plugins"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/pm-skills"
       }
     },
     "ui-ux-pro-max-skill": {
       "source": {
-        "source": "github",
-        "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/ui-ux-pro-max-skill"
       }
     },
     "taste-skill": {
       "source": {
-        "source": "github",
-        "repo": "leonxlnx/taste-skill"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/taste-skill"
       }
     },
     "railway-skills": {
       "source": {
-        "source": "github",
-        "repo": "railwayapp/railway-skills"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/railway-skills"
+      }
+    },
+    "dime-vendored": {
+      "source": {
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/dime-vendored"
       }
     }
   }

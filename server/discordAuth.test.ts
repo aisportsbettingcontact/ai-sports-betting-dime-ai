@@ -4,7 +4,7 @@
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  CRITICAL INVARIANT: All Discord routes MUST be under /api/ prefix.    │
  * │                                                                         │
- * │  The Manus production proxy only forwards /api/* to Express.           │
+ * │  The legacy production proxy only forwarded /api/* to Express.         │
  * │  Routes outside /api/* hit the static CDN and return SPA index.html   │
  * │  (HTTP 200) instead of the Express handler — a silent 404.            │
  * │                                                                         │
@@ -29,9 +29,9 @@ import { ENV } from "./_core/env";
 // ─── CRITICAL: Route prefix invariant ─────────────────────────────────────────
 // This test exists to prevent the regression where Discord routes were placed
 // at /auth/discord/* instead of /api/auth/discord/* — causing a silent 404 on
-// the Manus production site because the proxy only forwards /api/* to Express.
+// the legacy production site because the proxy only forwarded /api/* to Express.
 describe("Discord route prefix invariant", () => {
-  it("ROUTE_PREFIX must start with /api/ (Manus proxy only routes /api/* to Express)", async () => {
+  it("ROUTE_PREFIX must start with /api/ (legacy proxy only routed /api/* to Express)", async () => {
     // We read the ROUTE_PREFIX constant directly from the source file to ensure
     // it hasn't been changed to a non-/api/ path.
     const fs = await import("fs");
@@ -53,7 +53,7 @@ describe("Discord route prefix invariant", () => {
     const path = await import("path");
     const srcPath = path.resolve(__dirname, "discordAuth.ts");
     const src = fs.readFileSync(srcPath, "utf-8");
-    expect(src).toContain('`${ROUTE_PREFIX}/connect`');
+    expect(src).toContain("`${ROUTE_PREFIX}/connect`");
   });
 
   it("callback route is registered at /api/auth/discord/callback", async () => {
@@ -61,7 +61,7 @@ describe("Discord route prefix invariant", () => {
     const path = await import("path");
     const srcPath = path.resolve(__dirname, "discordAuth.ts");
     const src = fs.readFileSync(srcPath, "utf-8");
-    expect(src).toContain('`${ROUTE_PREFIX}/callback`');
+    expect(src).toContain("`${ROUTE_PREFIX}/callback`");
   });
 
   it("disconnect route is registered at /api/auth/discord/disconnect", async () => {
@@ -69,13 +69,18 @@ describe("Discord route prefix invariant", () => {
     const path = await import("path");
     const srcPath = path.resolve(__dirname, "discordAuth.ts");
     const src = fs.readFileSync(srcPath, "utf-8");
-    expect(src).toContain('`${ROUTE_PREFIX}/disconnect`');
+    expect(src).toContain("`${ROUTE_PREFIX}/disconnect`");
   });
 
   it("frontend connect href uses /api/auth/discord/connect", async () => {
+    // The legacy ModelProjections surface was deleted 2026-07-24 (unrouted
+    // dead code); the live account-linking surface is the chat SettingsModal.
     const fs = await import("fs");
     const path = await import("path");
-    const frontendPath = path.resolve(__dirname, "../client/src/pages/ModelProjections.tsx");
+    const frontendPath = path.resolve(
+      __dirname,
+      "../client/src/pages/dime-chat/SettingsModal.tsx"
+    );
     const src = fs.readFileSync(frontendPath, "utf-8");
     expect(src).toContain('href="/api/auth/discord/connect"');
     expect(src).not.toContain('href="/auth/discord/connect"');
@@ -85,16 +90,35 @@ describe("Discord route prefix invariant", () => {
     // POLICY: Users cannot disconnect their own Discord account.
     // Once linked, it is permanent from the user's perspective.
     // Only the owner (@prez) can unlink via the User Management admin panel.
-    // This test enforces that no user-facing disconnect call exists in ModelProjections.tsx.
+    // Strengthened 2026-07-24 (legacy surface deleted): NO file under
+    // client/src may carry a user-facing disconnect call.
     const fs = await import("fs");
     const path = await import("path");
-    const frontendPath = path.resolve(__dirname, "../client/src/pages/ModelProjections.tsx");
-    const src = fs.readFileSync(frontendPath, "utf-8");
-    // Must NOT have a user-facing disconnect fetch call
-    expect(src).not.toContain('"/api/auth/discord/disconnect"');
-    expect(src).not.toContain('"/auth/discord/disconnect"');
-    // Must still have the connect link
-    expect(src).toContain('"/api/auth/discord/connect"');
+    const root = path.resolve(__dirname, "../client/src");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(tsx|ts)$/.test(entry.name)) {
+          const src = fs.readFileSync(full, "utf-8");
+          if (
+            src.includes('"/api/auth/discord/disconnect"') ||
+            src.includes('"/auth/discord/disconnect"')
+          ) {
+            offenders.push(full);
+          }
+        }
+      }
+    };
+    walk(root);
+    expect(offenders).toEqual([]);
+    // The one sanctioned connect link still exists on the live surface
+    const modal = fs.readFileSync(
+      path.resolve(root, "pages/dime-chat/SettingsModal.tsx"),
+      "utf-8"
+    );
+    expect(modal).toContain('"/api/auth/discord/connect"');
   });
 });
 
@@ -158,11 +182,13 @@ describe("Discord route guards", () => {
     const mockReq = {
       headers: { cookie: "" },
       protocol: "https",
-      get: (h: string) => h === "host" ? "example.com" : "",
+      get: (h: string) => (h === "host" ? "example.com" : ""),
     };
     const redirects: string[] = [];
     const mockRes = {
-      redirect: (code: number, url: string) => { redirects.push(url); },
+      redirect: (code: number, url: string) => {
+        redirects.push(url);
+      },
     };
 
     // Import the guard logic inline (mirrors discordAuth.ts logic)
@@ -181,7 +207,9 @@ describe("Discord route guards", () => {
     // Simulate callback with no code → redirect to /dashboard?discord_error=invalid_request
     const redirects: string[] = [];
     const mockRes = {
-      redirect: (code: number, url: string) => { redirects.push(url); },
+      redirect: (code: number, url: string) => {
+        redirects.push(url);
+      },
     };
 
     const code = null;
@@ -197,11 +225,16 @@ describe("Discord route guards", () => {
   it("/api/auth/discord/callback rejects expired state", async () => {
     const redirects: string[] = [];
     const mockRes = {
-      redirect: (code: number, url: string) => { redirects.push(url); },
+      redirect: (code: number, url: string) => {
+        redirects.push(url);
+      },
     };
 
     // Simulate an expired state entry
-    const pendingStates = new Map<string, { userId: number; expiresAt: number }>();
+    const pendingStates = new Map<
+      string,
+      { userId: number; expiresAt: number }
+    >();
     const state = "test-state-expired";
     pendingStates.set(state, { userId: 1, expiresAt: Date.now() - 1000 }); // already expired
 
@@ -221,7 +254,9 @@ describe("Discord route guards", () => {
     const responses: Array<{ status: number; body: unknown }> = [];
     const mockRes = {
       status: (code: number) => ({
-        json: (body: unknown) => { responses.push({ status: code, body }); },
+        json: (body: unknown) => {
+          responses.push({ status: code, body });
+        },
       }),
     };
 
@@ -230,7 +265,9 @@ describe("Discord route guards", () => {
     }
 
     expect(responses[0]?.status).toBe(401);
-    expect((responses[0]?.body as { error: string })?.error).toBe("Not authenticated");
+    expect((responses[0]?.body as { error: string })?.error).toBe(
+      "Not authenticated"
+    );
   });
 });
 
@@ -256,6 +293,8 @@ describe.skipIf(IS_CI)("PUBLIC_ORIGIN env var", () => {
   it("redirect_uri built from PUBLIC_ORIGIN matches Discord Portal registration", () => {
     const expectedCallbackUrl = `${ENV.publicOrigin}/api/auth/discord/callback`;
     // This must exactly match what is registered in Discord Developer Portal
-    expect(expectedCallbackUrl).toBe("https://aisportsbettingmodels.com/api/auth/discord/callback");
+    expect(expectedCallbackUrl).toBe(
+      "https://aisportsbettingmodels.com/api/auth/discord/callback"
+    );
   });
 });

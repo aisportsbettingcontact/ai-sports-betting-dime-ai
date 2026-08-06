@@ -1,0 +1,470 @@
+[
+ {
+  "probe": "feed-390-geometry",
+  "cardW": 358,
+  "cardH": 430,
+  "pregameGrid": {
+   "cls": "pregame-pitchers",
+   "display": "grid",
+   "cols": "145px 145px",
+   "areas": "none"
+  },
+  "pitchers": [
+   {
+    "sel": ".pregame-pitcher",
+    "cls": "pregame-pitcher pregame-pitcher--away",
+    "x": 34,
+    "y": 216,
+    "w": 145,
+    "h": 100,
+    "pos": "static",
+    "display": "flex"
+   },
+   {
+    "sel": ".pregame-pitcher",
+    "cls": "pregame-pitcher pregame-pitcher--home",
+    "x": 179,
+    "y": 216,
+    "w": 145,
+    "h": 100,
+    "pos": "static",
+    "display": "flex"
+   }
+  ],
+  "lineups": [
+   {
+    "sel": ".pregame-pitchers__lineups",
+    "cls": "pregame-pitchers__lineups",
+    "x": 147,
+    "y": 320,
+    "w": 64,
+    "h": 32,
+    "pos": "relative",
+    "display": "flex"
+   }
+  ],
+  "cls": 0.00016531807915193004,
+  "firstViewportOrder": [
+   {
+    "y": 124,
+    "t": "‹"
+   },
+   {
+    "y": 128,
+    "t": "Friday, July 31"
+   },
+   {
+    "y": 124,
+    "t": "›"
+   },
+   {
+    "y": 171,
+    "t": "Major League Baseball (MLB)"
+   },
+   {
+    "y": 259,
+    "t": "@"
+   },
+   {
+    "y": 290,
+    "t": "Wrigley Field"
+   },
+   {
+    "y": 312,
+    "t": "2:20 PM ET"
+   },
+   {
+    "y": 445,
+    "t": "Expected"
+   },
+   {
+    "y": 518,
+    "t": "Will Warren"
+   },
+   {
+    "y": 532,
+    "t": "7-5 · 4.41 ERA"
+   },
+   {
+    "y": 549,
+    "t": "Lineups"
+   },
+   {
+    "y": 445,
+    "t": "Expected"
+   },
+   {
+    "y": 518,
+    "t": "Shota Imanaga"
+   },
+   {
+    "y": 532,
+    "t": "7-8 · 3.72 ERA"
+   },
+   {
+    "y": 369,
+    "t": "Model edge"
+   },
+   {
+    "y": 381,
+    "t": "Under 9"
+   },
+   {
+    "y": 366,
+    "t": "Book"
+   },
+   {
+    "y": 378,
+    "t": "-103"
+   },
+   {
+    "y": 366,
+    "t": "Model"
+   },
+   {
+    "y": 378,
+    "t": "-129"
+   },
+   {
+    "y": 373,
+    "t": "Bet"
+   },
+   {
+    "y": 372,
+    "t": "+5.6%"
+   },
+   {
+    "y": 369,
+    "t": "Model edge"
+   },
+   {
+    "y": 381,
+    "t": "Cubs -1.5"
+   }
+  ],
+  "edgeRowY": 365
+ },
+ {
+  "probe": "tabular-digits",
+  "normal_111": 170,
+  "normal_999": 170,
+  "tnum_111": 170,
+  "tnum_999": 170,
+  "normalJitter": 0,
+  "tnumJitter": 0
+ },
+ {
+  "probe": "keyboard-walk-feed-1280",
+  "seq": [
+   {
+    "tag": "BUTTON",
+    "cls": "dmf-sq",
+    "text": "‹",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "dmf-sq",
+    "text": "›",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "SUMMARY",
+    "cls": "dmf-leaguehead",
+    "text": "Major League Baseball (M",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgeUnder 9Book-10",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": "View next model edge: Cu",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "projection-card__markets-toggle ds-label",
+    "text": "View full AI model proje",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgePirates -1.5Bo",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": "View next projection: Ov",
+    "outline": "0px none",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "projection-card__markets-toggle ds-label",
+    "text": "View full AI model proje",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgeOrioles -1.5Bo",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": "View next model edge: Un",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "projection-card__markets-toggle ds-label",
+    "text": "View full AI model proje",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgeUnder 7.5Book-",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "projection-card__markets-toggle ds-label",
+    "text": "View full AI model proje",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgeRays -1.5Book+",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": "View next model edge: Ra",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "projection-card__markets-toggle ds-label",
+    "text": "View full AI model proje",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgeOver 8.5Book-1",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "projection-card__markets-toggle ds-label",
+    "text": "View full AI model proje",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "pregame-pitchers__lineups",
+    "text": "Lineups",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "DIV",
+    "cls": "summary__viewport",
+    "text": "Model edgeGuardians -1.5",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "summary__next",
+    "text": "View next model edge: Gu",
+    "outline": "0px none",
+    "boxShadow": "rgb(69, 224, 168) 0px 0px 0px 3px"
+   }
+  ]
+ },
+ {
+  "probe": "landing-contrast-detail",
+  "fails": [
+   {
+    "text": "Get access",
+    "ratio": 1,
+    "need": 4.5,
+    "size": "15px",
+    "color": "rgb(0, 0, 0)",
+    "bg": "rgb(0,0,0)",
+    "cls": "btn btn--mint"
+   },
+   {
+    "text": "Most popular",
+    "ratio": 1.14,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(0, 0, 0)",
+    "bg": "rgb(20,20,20)",
+    "cls": "tier-badge tier-badge--mint"
+   },
+   {
+    "text": "Start Pro",
+    "ratio": 1.14,
+    "need": 4.5,
+    "size": "15px",
+    "color": "rgb(0, 0, 0)",
+    "bg": "rgb(20,20,20)",
+    "cls": "btn btn--mint btn--wide"
+   },
+   {
+    "text": "Submit application",
+    "ratio": 1.06,
+    "need": 4.5,
+    "size": "15px",
+    "color": "rgb(0, 0, 0)",
+    "bg": "rgb(10,10,10)",
+    "cls": "btn btn--mint btn--wide"
+   },
+   {
+    "text": "+",
+    "ratio": 2.37,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(74, 74, 74)",
+    "bg": "rgb(0,0,0)",
+    "cls": "marker"
+   },
+   {
+    "text": "+",
+    "ratio": 2.37,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(74, 74, 74)",
+    "bg": "rgb(0,0,0)",
+    "cls": "marker"
+   },
+   {
+    "text": "+",
+    "ratio": 2.37,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(74, 74, 74)",
+    "bg": "rgb(0,0,0)",
+    "cls": "marker"
+   },
+   {
+    "text": "+",
+    "ratio": 2.37,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(74, 74, 74)",
+    "bg": "rgb(0,0,0)",
+    "cls": "marker"
+   },
+   {
+    "text": "+",
+    "ratio": 2.37,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(74, 74, 74)",
+    "bg": "rgb(0,0,0)",
+    "cls": "marker"
+   },
+   {
+    "text": "+",
+    "ratio": 2.37,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(74, 74, 74)",
+    "bg": "rgb(0,0,0)",
+    "cls": "marker"
+   },
+   {
+    "text": "Get access · dıme",
+    "ratio": 1.06,
+    "need": 4.5,
+    "size": "15px",
+    "color": "rgb(0, 0, 0)",
+    "bg": "rgb(10,10,10)",
+    "cls": "btn btn--mint"
+   },
+   {
+    "text": "Start Pro →",
+    "ratio": 1.14,
+    "need": 4.5,
+    "size": "14px",
+    "color": "rgb(0, 0, 0)",
+    "bg": "rgb(20,20,20)",
+    "cls": "btn btn--mint"
+   }
+  ]
+ }
+]

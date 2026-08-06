@@ -35,8 +35,8 @@ export const MAX_HTML_PASTE_LENGTH = 500_000;
 export function sanitizeString(input: string | null | undefined): string {
   if (input == null) return "";
   return xss(input, {
-    whiteList: {},          // no tags allowed
-    stripIgnoreTag: true,   // strip tags not in whitelist
+    whiteList: {}, // no tags allowed
+    stripIgnoreTag: true, // strip tags not in whitelist
     stripIgnoreTagBody: ["script", "style"], // strip script/style bodies entirely
   });
 }
@@ -49,7 +49,7 @@ export function sanitizeString(input: string | null | undefined): string {
 export const zodGameDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "gameDate must be YYYY-MM-DD")
-  .refine((d) => {
+  .refine(d => {
     const ts = Date.parse(d);
     return !isNaN(ts);
   }, "gameDate must be a valid calendar date");
@@ -78,7 +78,10 @@ export const zodDbSlug = z
   .string()
   .min(2, "DB slug too short")
   .max(100, "DB slug too long")
-  .regex(/^[a-z0-9_]+$/, "DB slug must be lowercase letters, digits, and underscores only");
+  .regex(
+    /^[a-z0-9_]+$/,
+    "DB slug must be lowercase letters, digits, and underscores only"
+  );
 
 /**
  * Zod schema for a file path string used in model runner inputs.
@@ -88,8 +91,14 @@ export const zodFilePath = z
   .string()
   .min(1, "File path cannot be empty")
   .max(500, "File path too long")
-  .refine((p) => !p.includes("../") && !p.includes("..\\"), "Path traversal not allowed")
-  .refine((p) => !p.startsWith("/") && !p.match(/^[A-Za-z]:\\/), "Absolute paths not allowed");
+  .refine(
+    p => !p.includes("../") && !p.includes("..\\"),
+    "Path traversal not allowed"
+  )
+  .refine(
+    p => !p.startsWith("/") && !p.match(/^[A-Za-z]:\\/),
+    "Absolute paths not allowed"
+  );
 
 /**
  * Zod schema for a pitcher RS ID (Retrosheet).
@@ -107,8 +116,11 @@ export const zodPitcherRsId = z
  */
 export const zodBase64File = z
   .string()
-  .max(MAX_BASE64_LENGTH, `File too large (max ${MAX_BASE64_LENGTH / 1_000_000}MB encoded)`)
-  .refine((s) => /^[A-Za-z0-9+/=]+$/.test(s), "Invalid base64 encoding");
+  .max(
+    MAX_BASE64_LENGTH,
+    `File too large (max ${MAX_BASE64_LENGTH / 1_000_000}MB encoded)`
+  )
+  .refine(s => /^[A-Za-z0-9+/=]+$/.test(s), "Invalid base64 encoding");
 
 /**
  * Zod schema for an HTML paste (ingestAnOdds).
@@ -117,7 +129,10 @@ export const zodBase64File = z
 export const zodHtmlPaste = z
   .string()
   .min(100, "HTML too short — paste the full AN best-odds table HTML")
-  .max(MAX_HTML_PASTE_LENGTH, `HTML paste too large (max ${MAX_HTML_PASTE_LENGTH / 1000}KB)`);
+  .max(
+    MAX_HTML_PASTE_LENGTH,
+    `HTML paste too large (max ${MAX_HTML_PASTE_LENGTH / 1000}KB)`
+  );
 
 /**
  * Zod schema for a batch of game IDs.
@@ -126,4 +141,7 @@ export const zodHtmlPaste = z
 export const zodGameIdArray = z
   .array(z.number().int().positive())
   .min(1, "At least one game ID required")
-  .max(MAX_GAME_IDS_PER_REQUEST, `Too many game IDs (max ${MAX_GAME_IDS_PER_REQUEST})`);
+  .max(
+    MAX_GAME_IDS_PER_REQUEST,
+    `Too many game IDs (max ${MAX_GAME_IDS_PER_REQUEST})`
+  );

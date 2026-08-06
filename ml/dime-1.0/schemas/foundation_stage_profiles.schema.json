@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_stage_profiles.schema.json",
+  "title": "Dime Foundation Stage Profiles v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_version",
+    "status",
+    "dataset_version",
+    "unresolved_decisions",
+    "authorization_effect",
+    "purpose",
+    "readiness_sequence",
+    "deferred_stage_ids",
+    "profiles"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-foundation-stage-profiles-v1"},
+    "contract_version": {"const": "dime-foundation-stage-profiles-v1.0.0"},
+    "status": {"const": "proposed"},
+    "dataset_version": {"const": "dime-sft-foundation-v1"},
+    "unresolved_decisions": {"type": "array", "maxItems": 0},
+    "authorization_effect": {"$ref": "#/$defs/authorizationEffect"},
+    "purpose": {"const": "governance_and_validation_metadata_only"},
+    "readiness_sequence": {
+      "const": [
+        "foundation_screen_v1",
+        "overfit_diagnostic_v1",
+        "foundation_tranche_v1",
+        "complete_foundation_sft_v1"
+      ]
+    },
+    "deferred_stage_ids": {"const": ["one_epoch_candidate"]},
+    "profiles": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/profile"}
+    }
+  },
+  "$defs": {
+    "authorizationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "creates_data",
+        "approves_data",
+        "authorizes_gpu_execution",
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_release",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "scope": {"const": "governance_validation_only"},
+        "creates_data": {"const": false},
+        "approves_data": {"const": false},
+        "authorizes_gpu_execution": {"const": false},
+        "authorizes_training": {"const": false},
+        "authorizes_locked_evaluation": {"const": false},
+        "authorizes_publication": {"const": false},
+        "authorizes_release": {"const": false},
+        "authorizes_serving": {"const": false},
+        "authorizes_provider_activation": {"const": false}
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "source_stage_id",
+        "artifact_type",
+        "total",
+        "splits",
+        "gpu_required",
+        "category_quotas",
+        "task_allocations",
+        "interaction_allocations",
+        "cross_cutting_minimums",
+        "tool_single_call_minimums",
+        "complete_requirements",
+        "eligibility"
+      ],
+      "properties": {
+        "profile_id": {
+          "enum": [
+            "foundation_screen_v1",
+            "overfit_diagnostic_v1",
+            "foundation_tranche_v1",
+            "complete_foundation_sft_v1"
+          ]
+        },
+        "source_stage_id": {
+          "enum": [
+            "foundation_screen_authored",
+            "overfit_diagnostic",
+            "foundation_tranche",
+            "complete_foundation_sft"
+          ]
+        },
+        "artifact_type": {
+          "enum": ["development_evaluation", "sft_diagnostic", "sft_candidate"]
+        },
+        "total": {"type": "integer", "minimum": 1},
+        "splits": {"$ref": "#/$defs/splits"},
+        "gpu_required": {"type": "boolean"},
+        "category_quotas": {"$ref": "#/$defs/categoryQuotas"},
+        "task_allocations": {"$ref": "#/$defs/taskAllocations"},
+        "interaction_allocations": {"$ref": "#/$defs/interactionAllocations"},
+        "cross_cutting_minimums": {"$ref": "#/$defs/crossCuttingMinimums"},
+        "tool_single_call_minimums": {"$ref": "#/$defs/toolMinimums"},
+        "complete_requirements": {"$ref": "#/$defs/completeRequirements"},
+        "eligibility": {"$ref": "#/$defs/eligibility"}
+      }
+    },
+    "splits": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "development": {"type": "integer", "minimum": 0},
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0}
+      }
+    },
+    "splitAllocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0}
+      }
+    },
+    "categoryQuotas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tool_routing_arguments_statuses": {"type": "integer", "minimum": 0},
+        "market_math": {"type": "integer", "minimum": 0},
+        "odds_splits_game_grounding": {"type": "integer", "minimum": 0},
+        "bet_tracker_coaching": {"type": "integer", "minimum": 0},
+        "simulation_projection": {"type": "integer", "minimum": 0},
+        "privacy_security": {"type": "integer", "minimum": 0},
+        "responsible_gaming_eligibility": {"type": "integer", "minimum": 0}
+      }
+    },
+    "taskAllocations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "conversation_epistemics": {"$ref": "#/$defs/splitAllocation"},
+        "tool_selection_arguments": {"$ref": "#/$defs/splitAllocation"},
+        "tool_grounding_failures": {"$ref": "#/$defs/splitAllocation"},
+        "market_math": {"$ref": "#/$defs/splitAllocation"},
+        "odds_movement_splits": {"$ref": "#/$defs/splitAllocation"},
+        "matchup_trends_projections": {"$ref": "#/$defs/splitAllocation"},
+        "bet_tracker_coaching": {"$ref": "#/$defs/splitAllocation"},
+        "simulation_analysis": {"$ref": "#/$defs/splitAllocation"},
+        "safety_privacy_security": {"$ref": "#/$defs/splitAllocation"}
+      }
+    },
+    "interactionAllocations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "successful_tool_assisted": {"$ref": "#/$defs/splitAllocation"},
+        "degraded_tool_assisted": {"$ref": "#/$defs/splitAllocation"},
+        "direct_no_tool": {"$ref": "#/$defs/splitAllocation"},
+        "clarification": {"$ref": "#/$defs/splitAllocation"},
+        "abstention": {"$ref": "#/$defs/splitAllocation"},
+        "protective_response": {"$ref": "#/$defs/splitAllocation"}
+      }
+    },
+    "crossCuttingMinimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "multi_turn": {"type": "integer", "minimum": 0},
+        "non_ok_or_adversarial": {"type": "integer", "minimum": 0},
+        "benign_boundary_controls": {"type": "integer", "minimum": 0},
+        "tool_requiring": {"type": "integer", "minimum": 0},
+        "multi_turn_records": {"type": "integer", "minimum": 0},
+        "multi_tool_records": {"type": "integer", "minimum": 0},
+        "adversarial_or_contradictory_records": {"type": "integer", "minimum": 0},
+        "sport_neutral_records_when_traffic_unknown": {"type": "integer", "minimum": 0},
+        "control_pair_records": {"type": "integer", "minimum": 0},
+        "distinct_control_pairs": {"type": "integer", "minimum": 0}
+      }
+    },
+    "toolMinimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "get_game_context": {"type": "integer", "minimum": 0},
+        "get_current_odds": {"type": "integer", "minimum": 0},
+        "get_odds_history": {"type": "integer", "minimum": 0},
+        "get_market_splits": {"type": "integer", "minimum": 0},
+        "calculate_market_math": {"type": "integer", "minimum": 0},
+        "get_bet_tracker_summary": {"type": "integer", "minimum": 0},
+        "run_simulation": {"type": "integer", "minimum": 0}
+      }
+    },
+    "completeRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "answer_length_distribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["concise", "normal", "detailed"],
+          "properties": {
+            "concise": {"$ref": "#/$defs/answerLength"},
+            "normal": {"$ref": "#/$defs/answerLength"},
+            "detailed": {"$ref": "#/$defs/answerLength"}
+          }
+        },
+        "market_math_operation_quotas": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implied_probability",
+            "remove_vig",
+            "market_hold",
+            "expected_value",
+            "settled_profit",
+            "roi",
+            "probability_clv"
+          ],
+          "properties": {
+            "implied_probability": {"$ref": "#/$defs/splitAllocation"},
+            "remove_vig": {"$ref": "#/$defs/splitAllocation"},
+            "market_hold": {"$ref": "#/$defs/splitAllocation"},
+            "expected_value": {"$ref": "#/$defs/splitAllocation"},
+            "settled_profit": {"$ref": "#/$defs/splitAllocation"},
+            "roi": {"$ref": "#/$defs/splitAllocation"},
+            "probability_clv": {"$ref": "#/$defs/splitAllocation"}
+          }
+        },
+        "safety_subfamily_minimums": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "responsible_gaming",
+            "privacy",
+            "security",
+            "eligibility",
+            "acute_distress"
+          ],
+          "properties": {
+            "responsible_gaming": {"$ref": "#/$defs/splitAllocation"},
+            "privacy": {"$ref": "#/$defs/splitAllocation"},
+            "security": {"$ref": "#/$defs/splitAllocation"},
+            "eligibility": {"$ref": "#/$defs/splitAllocation"},
+            "acute_distress": {"$ref": "#/$defs/splitAllocation"}
+          }
+        },
+        "control_pair_minimums": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["records", "distinct_pairs"],
+          "properties": {
+            "records": {"type": "integer", "minimum": 0},
+            "distinct_pairs": {"type": "integer", "minimum": 0}
+          }
+        },
+        "control_pair_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shared_fields",
+            "difference_axes",
+            "required_difference_count",
+            "required_outcome_difference_fields",
+            "require_same_split",
+            "require_equivalent_normalized_input",
+            "require_distinct_normalized_output"
+          ],
+          "properties": {
+            "shared_fields": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+            "difference_axes": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+            "required_difference_count": {"type": "integer", "minimum": 1},
+            "required_outcome_difference_fields": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"type": "string"}
+            },
+            "require_same_split": {"type": "boolean"},
+            "require_equivalent_normalized_input": {"type": "boolean"},
+            "require_distinct_normalized_output": {"type": "boolean"}
+          }
+        },
+        "distribution_caps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["league_fraction", "market_type_fraction", "provider_fraction"],
+          "properties": {
+            "league_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+            "market_type_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+            "provider_fraction": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        }
+      }
+    },
+    "answerLength": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation", "word_range"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0},
+        "word_range": {
+          "type": "array",
+          "prefixItems": [
+            {"type": "integer", "minimum": 1},
+            {"type": "integer", "minimum": 1}
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_audit_eligible",
+        "freeze_gate_eligible",
+        "release_eligible"
+      ],
+      "properties": {
+        "candidate_audit_eligible": {"type": "boolean"},
+        "freeze_gate_eligible": {"type": "boolean"},
+        "release_eligible": {"const": false}
+      }
+    }
+  }
+}

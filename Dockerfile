@@ -5,7 +5,63 @@
 # (nhlModelEngine). Debian bookworm ships Python 3.11 at exactly those paths;
 # Nixpacks (nix store paths) does not, which is the source of the historical
 # `spawn /usr/bin/python3 ENOENT` failure on Railway (see server/cron/cronRoutes.ts).
+#
+# Multi-stage (2026-08-05, KNOWN-FINDING-2 remediation): the build toolchain
+# never reaches the runtime image. esbuild/vite/drizzle-kit are devDependencies,
+# and their native esbuild binaries carried fixable Go-stdlib CRITICALs
+# (CVE-2024-24790, CVE-2025-68121); the base image's global npm bundles node-tar
+# (CVE-2026-59873). The runtime stage gets a production-only node_modules
+# (esbuild bundles the server with --packages=external, so prod deps must be
+# present) and strips npm/corepack/npx outright — nothing at runtime spawns
+# them (verified: server spawns only node, python3, python3.11, and chromium
+# via the playwright library). Gate: 09-artifact-build-and-smoke (Trivy
+# CRITICAL fixable-only + dead-DB boot + smoke).
+
+# ---------- build: full toolchain, produces dist ----------
+FROM node:22-bookworm-slim AS build
+
+WORKDIR /app
+
+# package.json pins packageManager: pnpm@x — corepack activates that version.
+RUN corepack enable
+
+# patches/ and .npmrc must be present before install — package.json declares
+# pnpm patchedDependencies (patches/wouter@*.patch) and install fails without them.
+COPY package.json pnpm-lock.yaml .npmrc ./
+COPY patches ./patches
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+# Builds the client into dist/public AND bundles the server into dist/index.js.
+# The server also serves the client build, so the Railway domain works
+# standalone — Railway is the only host for both API and frontend.
+RUN pnpm run build
+
+# ---------- proddeps: production-only node_modules ----------
+# A fresh --prod install (not `pnpm prune`) so the dependency set is decided by
+# the resolver against the lockfile, never by prune semantics. Dev-only trees
+# (esbuild, vite, drizzle-kit, puppeteer, typescript) simply never exist here.
+FROM node:22-bookworm-slim AS proddeps
+
+WORKDIR /app
+RUN corepack enable
+COPY package.json pnpm-lock.yaml .npmrc ./
+COPY patches ./patches
+# onlyBuiltDependencies covers puppeteer only, and puppeteer is a devDependency,
+# so no postinstall scripts run in this stage (same posture as the full install).
+RUN pnpm install --prod --frozen-lockfile
+
+# ---------- runtime ----------
 FROM node:22-bookworm-slim
+
+# Pin the container clock to UTC. Nothing should DEPEND on this — the code that
+# used to (the bet-tracker idempotency guard) now does its time arithmetic
+# database-side with UTC_TIMESTAMP(). This is defence in depth: it removes the
+# whole class of "works because the Node TZ and the DB TZ happen to agree",
+# which on a PDT workstation turned a 30-second duplicate window into a
+# seven-hour one. Debian resolves TZ from /etc/localtime; tzdata ships in the
+# base image.
+ENV TZ=UTC
 
 # apt python packages land in /usr/lib/python3/dist-packages, which Debian's system
 # python3 already searches by default (no PYTHONPATH override needed — see
@@ -18,24 +74,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-scipy \
       python3-requests \
       ca-certificates \
-      # Debian Chromium for the Playwright-based scrapers/renderers (server/wc2026/
-      # espnPageScraper.ts, server/discord/renderSplitsCard.ts, server/discord/
-      # renderLineupCard.ts import "playwright" directly). pnpm's script allowlist only
+      # Debian Chromium for the Playwright-based scraper (server/wc2026/
+      # espnPageScraper.ts imports "playwright" directly). pnpm's script allowlist only
       # covers puppeteer (package.json pnpm.onlyBuiltDependencies), so Playwright's own
       # postinstall browser download never runs here — apt chromium is the smallest
       # reliable substitute: it reuses the shared libs installed below (no second copy
       # of the same dependency closure) and lands at a fixed, version-independent path
-      # (/usr/bin/chromium) that all three files' PLAYWRIGHT_CHROMIUM_PATH resolution
+      # (/usr/bin/chromium) that its PLAYWRIGHT_CHROMIUM_PATH resolution
       # can target directly via an explicit `executablePath`, unlike Playwright's own
       # download which nests under a version-numbered ms-playwright/chromium-<rev>/
-      # directory that shifts on every Playwright bump. All three fall back to
+      # directory that shifts on every Playwright bump. It falls back to
       # Playwright's own self-managed browser resolution when this env var is unset
       # and no apt/ms-playwright binary is found on disk, which is what keeps local
       # dev working without it.
       chromium \
-      # Shared libs below cover both the apt chromium binary above and puppeteer's
-      # own downloaded browser (.npmrc allow-build=puppeteer runs its postinstall
-      # download at install time), even though no server/*.ts currently imports puppeteer.
+      # Shared libs below cover the apt chromium binary above.
       fonts-liberation \
       libasound2 \
       libatk-bridge2.0-0 \
@@ -61,26 +114,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
+# Strip the Node package toolchain from the runtime image. The server spawns
+# node/python/chromium only — never npm, npx, corepack, or pnpm — and npm's
+# bundled node-tar is a recurring CVE surface (CVE-2026-59873 at image-scan
+# time). Removing the toolchain removes the class, not just the finding.
+RUN rm -rf /usr/local/lib/node_modules \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 WORKDIR /app
 
-# package.json pins packageManager: pnpm@x — corepack activates that version.
-RUN corepack enable
-
-# patches/ and .npmrc must be present before install — package.json declares
-# pnpm patchedDependencies (patches/wouter@*.patch) and install fails without them.
-COPY package.json pnpm-lock.yaml .npmrc ./
-COPY patches ./patches
-RUN pnpm install --frozen-lockfile
-
-COPY . .
-# Builds the client into dist/public AND bundles the server into dist/index.js.
-# The server also serves the client build as a fallback origin, so the Railway
-# domain works standalone even though Vercel is the primary frontend host.
-RUN pnpm run build
+# Same /app geometry as the historical single-stage image: dist/ and
+# node_modules/ under /app, so import.meta.dirname-relative resolution in the
+# bundled server (static client serving, cp'd python/mjs engines) is unchanged.
+COPY --from=proddeps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json ./
+# The one runtime configuration artifact allow-listed out of the governed ml/
+# tree (.dockerignore): DIME_PRICING_REGISTRY_PATH points here in production
+# (docs/runbooks/2026-07-29-dime-phase1-disabled-deployment-parity.md). The
+# application validates its checksum and fails closed to cost_unavailable.
+COPY --from=build /app/ml/dime-1.0/configs/dime_observability_pricing_v1.json \
+      ./ml/dime-1.0/configs/dime_observability_pricing_v1.json
 
 ENV NODE_ENV=production
 # Matches the apt-installed chromium binary above. espnPageScraper.ts's fallback candidate
-# chain otherwise only checks Manus-sandbox ms-playwright cache paths (/home/ubuntu/...)
+# chain otherwise only checks legacy-sandbox ms-playwright cache paths (/home/ubuntu/...)
 # and a bare /usr/bin/chromium guess — setting this explicitly makes the resolution
 # deterministic instead of depending on that fallback ordering.
 ENV PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium

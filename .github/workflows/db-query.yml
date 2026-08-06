@@ -1,49 +1,51 @@
-# Read-only DB verification against the migration TARGET cluster.
+# Read-only DB verification against the application database.
 #
-# Manual trigger only (workflow_dispatch). Connects with the
-# TARGET_DATABASE_URL repo secret from a CI runner (which has real egress to
-# TiDB, unlike sandboxed agent environments) and runs one of a fixed set of
-# read-only queries — no free-text SQL, so this never becomes an injection
-# surface in the Actions logs. Reports table counts / row counts only; it
-# never selects data rows and never writes.
+# Manual trigger only (workflow_dispatch). Connects with the DATABASE_URL repo
+# secret from a CI runner (which has real egress to TiDB, unlike sandboxed
+# agent environments) and runs one of a fixed set of read-only queries — no
+# free-text SQL, so this never becomes an injection surface in the Actions
+# logs. Reports table counts / row counts only; it never selects data rows
+# and never writes. The schema to inspect is derived from the URL's path.
 name: DB Query (read-only)
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "What to report from the target cluster"
+        description: "What to report from the application database"
         required: true
         default: summary
         type: choice
         options:
-          - summary        # per-schema table count + estimated rows + grand total
-          - tables         # full table list per schema
-          - exact-counts   # exact SELECT COUNT(*) per table (slower, precise)
+          - summary # table count + estimated rows + grand total
+          - tables # full table list
+          - exact-counts # exact SELECT COUNT(*) per table (slower, precise)
+          - dime-trace-v1 # duplicate-sequence preflight + additive schema state
 
 permissions:
   contents: read
 
 jobs:
   query:
-    name: "Query target (${{ github.event.inputs.mode }})"
+    name: "Query database (${{ github.event.inputs.mode }})"
     runs-on: ubuntu-latest
-    env:
-      # The four application databases cloned in the migration.
-      DBS: "9w3eZzSJhkkc5sJ763dXxA MW3FicTy7ae3qrm8dx8Lua ZTNf5uThCjBDEX2kNSs593 mLJ3UFRGiMBjj6Ve3qzhT4"
+    environment: Production
     steps:
       - name: "[STEP] Install MySQL client"
         run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
 
-      - name: "[STEP] Build client config from TARGET_DATABASE_URL (secret never printed)"
+      - name: "[STEP] Build client config from DATABASE_URL (secret never printed)"
         env:
-          TARGET_DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           python3 - <<'PY'
           import os, urllib.parse, stat
-          u = urllib.parse.urlparse(os.environ["TARGET_DATABASE_URL"])
+          u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
           if not u.hostname:
-              raise SystemExit("TARGET_DATABASE_URL is not a valid mysql:// URL")
+              raise SystemExit("DATABASE_URL is not a valid mysql:// URL")
+          schema = u.path.lstrip("/").split("?")[0]
+          if not schema:
+              raise SystemExit("DATABASE_URL has no database path component")
           cnf = (
               "[client]\n"
               f"host={u.hostname}\n"
@@ -56,47 +58,72 @@ jobs:
           with open("client.cnf", "w") as f:
               f.write(cnf)
           os.chmod("client.cnf", stat.S_IRUSR | stat.S_IWUSR)  # 600
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"DB_SCHEMA={schema}\n")
           print("client.cnf written (host/port/user only shown, password omitted):")
-          print(f"  host={u.hostname} port={u.port or 4000} user={urllib.parse.unquote(u.username or '')}")
+          print(f"  host={u.hostname} port={u.port or 4000} user={urllib.parse.unquote(u.username or '')} schema={schema}")
           PY
 
       - name: "[STEP] Run query"
+        env:
+          QUERY_MODE: ${{ github.event.inputs.mode }}
         run: |
           set -euo pipefail
-          MODE="${{ github.event.inputs.mode }}"
-          IN_LIST=$(printf "'%s'," $DBS | sed "s/,$//")
+          MODE="$QUERY_MODE"
 
           if [ "$MODE" = "summary" ]; then
-            echo "===== TARGET: per-schema summary ====="
-            mysql --defaults-extra-file=client.cnf -t -e "
-              SELECT table_schema, COUNT(*) AS tables, SUM(table_rows) AS est_rows
-              FROM information_schema.tables
-              WHERE table_schema IN ($IN_LIST)
-              GROUP BY table_schema ORDER BY table_schema;"
-            echo "===== TARGET: grand total ====="
+            echo "===== $DB_SCHEMA: summary ====="
             mysql --defaults-extra-file=client.cnf -t -e "
               SELECT COUNT(*) AS total_tables, SUM(table_rows) AS total_est_rows
-              FROM information_schema.tables WHERE table_schema IN ($IN_LIST);"
+              FROM information_schema.tables WHERE table_schema='$DB_SCHEMA';"
 
           elif [ "$MODE" = "tables" ]; then
-            for db in $DBS; do
-              echo "===== $db ====="
-              mysql --defaults-extra-file=client.cnf -N -e "
-                SELECT table_name FROM information_schema.tables
-                WHERE table_schema='$db' ORDER BY table_name;"
-            done
+            echo "===== $DB_SCHEMA: tables ====="
+            mysql --defaults-extra-file=client.cnf -N -e "
+              SELECT table_name FROM information_schema.tables
+              WHERE table_schema='$DB_SCHEMA' ORDER BY table_name;"
 
           elif [ "$MODE" = "exact-counts" ]; then
-            for db in $DBS; do
-              echo "===== $db (exact row counts) ====="
-              TBLS=$(mysql --defaults-extra-file=client.cnf -N -e "
-                SELECT table_name FROM information_schema.tables
-                WHERE table_schema='$db' AND table_type='BASE TABLE' ORDER BY table_name;")
-              for t in $TBLS; do
-                n=$(mysql --defaults-extra-file=client.cnf -N -e "SELECT COUNT(*) FROM \`$db\`.\`$t\`;")
-                printf "  %-48s %s\n" "$t" "$n"
-              done
+            echo "===== $DB_SCHEMA: exact row counts ====="
+            TBLS=$(mysql --defaults-extra-file=client.cnf -N -e "
+              SELECT table_name FROM information_schema.tables
+              WHERE table_schema='$DB_SCHEMA' AND table_type='BASE TABLE' ORDER BY table_name;")
+            for t in $TBLS; do
+              n=$(mysql --defaults-extra-file=client.cnf -N -e "SELECT COUNT(*) FROM \`$DB_SCHEMA\`.\`$t\`;")
+              printf "  %-48s %s\n" "$t" "$n"
             done
+
+          elif [ "$MODE" = "dime-trace-v1" ]; then
+            echo "===== $DB_SCHEMA: Dime Conversation Trace v1 ====="
+            mysql --defaults-extra-file=client.cnf -t -e "
+              SELECT COUNT(*) AS duplicate_thread_seq_pairs
+              FROM (
+                SELECT threadId, seq
+                FROM \`$DB_SCHEMA\`.\`dime_chat_messages\`
+                GROUP BY threadId, seq
+                HAVING COUNT(*) > 1
+              ) duplicate_pairs;
+
+              SELECT COUNT(*) AS trace_v1_tables_present
+              FROM information_schema.tables
+              WHERE table_schema='$DB_SCHEMA'
+                AND table_name IN (
+                  'dime_chat_sessions',
+                  'dime_chat_turns',
+                  'dime_chat_generations',
+                  'dime_chat_trace_events'
+                );
+
+              SELECT index_name, non_unique
+              FROM information_schema.statistics
+              WHERE table_schema='$DB_SCHEMA'
+                AND table_name='dime_chat_messages'
+                AND index_name IN (
+                  'idx_dime_chat_messages_thread_seq',
+                  'uq_dime_chat_messages_thread_seq'
+                )
+              GROUP BY index_name, non_unique
+              ORDER BY index_name;"
           fi
 
       - name: "[STEP] Cleanup"

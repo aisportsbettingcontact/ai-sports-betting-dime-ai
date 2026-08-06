@@ -1,10 +1,15 @@
-import type { MarketSideInput } from "@/lib/gameInsight";
 import type {
   SportPresentationModel,
   Participant,
   MarketPresentationModel,
 } from "@/lib/sport/presentation";
-import type { ProjectionGame, ProjectionMarket, ProjectionTeam, GameStatus } from "./types";
+import type {
+  ProjectionGame,
+  ProjectionMarket,
+  ProjectionMarketSide,
+  ProjectionTeam,
+  GameStatus,
+} from "./types";
 
 /**
  * View binding: SportPresentationModel → ProjectionGame.
@@ -29,18 +34,27 @@ function participantToTeam(p: Participant): ProjectionTeam {
 
 function marketToProjection(m: MarketPresentationModel): ProjectionMarket {
   const n = m.selections.length;
-  const sides: MarketSideInput[] = m.selections.map((sel, i) => ({
+  const sides: ProjectionMarketSide[] = m.selections.map((sel, i) => ({
     marketKey: m.key,
     marketLabel: m.label,
     sideLabel: sel.label,
     bookPrice: sel.bookPrice,
     bookOppPrice: n === 2 ? m.selections[n - 1 - i].bookPrice : undefined,
     modelPrice: sel.modelPrice,
+    flag: sel.flag ?? null,
   }));
-  return { key: m.key, label: m.label, sides, resultLabel: m.resultLabel };
+  return {
+    key: m.key,
+    label: m.label,
+    sides,
+    resultLabel: m.resultLabel,
+    resultIsEdge: m.resultIsEdge,
+  };
 }
 
-export function presentationToProjectionGame(model: SportPresentationModel): ProjectionGame {
+export function presentationToProjectionGame(
+  model: SportPresentationModel
+): ProjectionGame {
   const status: GameStatus = model.status; // scheduled | live | final all valid
   return {
     id: model.eventId,
@@ -51,6 +65,7 @@ export function presentationToProjectionGame(model: SportPresentationModel): Pro
     home: participantToTeam(model.homeParticipant),
     matchupContext: model.contextLine,
     venue: model.venue,
+    startTime: model.startTime,
     markets: model.markets.map(marketToProjection),
   };
 }

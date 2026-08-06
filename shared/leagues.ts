@@ -29,5 +29,5 @@ export const LEAGUES: League[] = [
 
 /** Lookup by sport key */
 export const LEAGUE_BY_SPORT: Record<SportKey, League> = Object.fromEntries(
-  LEAGUES.map((l) => [l.sport, l])
+  LEAGUES.map(l => [l.sport, l])
 ) as Record<SportKey, League>;

@@ -104,7 +104,13 @@ export interface LineupWatcherResult {
 export interface LineupWatcherGameDetail {
   gameId: number;
   matchup: string;
-  action: "first_lineup" | "changed" | "unchanged" | "confirmed_stop" | "insufficient_data" | "error";
+  action:
+    | "first_lineup"
+    | "changed"
+    | "unchanged"
+    | "confirmed_stop"
+    | "insufficient_data"
+    | "error";
   lineupVersion: number;
   lineupHash: string | null;
   previousHash: string | null;
@@ -130,7 +136,7 @@ export function computeLineupHash(
   homePitcherName: string | null | undefined,
   homePitcherHand: string | null | undefined,
   awayLineupJson: string | null | undefined,
-  homeLineupJson: string | null | undefined,
+  homeLineupJson: string | null | undefined
 ): string {
   // Normalize pitcher fields — null/undefined → empty string
   const ap = (awayPitcherName ?? "").trim().toLowerCase();
@@ -151,7 +157,9 @@ export function computeLineupHash(
         mlbamId?: number | null;
       }>;
       // Sort by battingOrder (should already be sorted, but enforce it)
-      const sorted = [...players].sort((a, b) => a.battingOrder - b.battingOrder);
+      const sorted = [...players].sort(
+        (a, b) => a.battingOrder - b.battingOrder
+      );
       // Only include stable lineup fields — exclude lookup artifacts
       const stable = sorted.map(p => ({
         b: p.battingOrder,
@@ -188,7 +196,9 @@ export function isNullLineupHash(hash: string): boolean {
  * Fetch existing mlb_lineups rows for a list of gameIds.
  * Returns a Map<gameId, MlbLineupRow> for O(1) lookup.
  */
-async function fetchExistingLineups(gameIds: number[]): Promise<Map<number, MlbLineupRow>> {
+async function fetchExistingLineups(
+  gameIds: number[]
+): Promise<Map<number, MlbLineupRow>> {
   const db = await getDb();
   if (!db || gameIds.length === 0) return new Map();
 
@@ -207,14 +217,19 @@ async function fetchExistingLineups(gameIds: number[]): Promise<Map<number, MlbL
 /**
  * Fetch games rows for a list of gameIds to check modelability (book lines present).
  */
-async function fetchGamesForModelability(gameIds: number[]): Promise<Map<number, {
-  bookTotal: string | null;
-  awayML: string | null;
-  homeML: string | null;
-  awayTeam: string | null;
-  homeTeam: string | null;
-  gameDate: string;
-}>> {
+async function fetchGamesForModelability(gameIds: number[]): Promise<
+  Map<
+    number,
+    {
+      bookTotal: string | null;
+      awayML: string | null;
+      homeML: string | null;
+      awayTeam: string | null;
+      homeTeam: string | null;
+      gameDate: string;
+    }
+  >
+> {
   const db = await getDb();
   if (!db || gameIds.length === 0) return new Map();
 
@@ -231,7 +246,7 @@ async function fetchGamesForModelability(gameIds: number[]): Promise<Map<number,
     .from(games)
     .where(inArray(games.id, gameIds));
 
-  const map = new Map<number, typeof rows[0]>();
+  const map = new Map<number, (typeof rows)[0]>();
   for (const row of rows) {
     map.set(row.id, row);
   }
@@ -245,7 +260,7 @@ async function fetchGamesForModelability(gameIds: number[]): Promise<Map<number,
 async function markLineupModeled(
   gameId: number,
   newHash: string,
-  newVersion: number,
+  newVersion: number
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
@@ -269,7 +284,7 @@ async function markLineupModeled(
 async function updateLineupHashOnly(
   gameId: number,
   newHash: string,
-  newVersion: number,
+  newVersion: number
 ): Promise<void> {
   const db = await getDb();
   if (!db) return;
@@ -290,13 +305,14 @@ async function updateLineupHashOnly(
  * Run the lineup watcher for a set of scraped games.
  *
  * @param scrapedGames - Array of RotoLineupGame from the scraper (already upserted to DB)
- * @param gameIdMap    - Map from awayAbbrev+homeAbbrev → DB gameId (built by upsertLineupsToDB)
+ * @param gameIdMap    - Exact scraped-game object → DB gameId (built by upsertLineupsToDB)
+ *   Object identity preserves cardinality for same-matchup doubleheaders.
  * @param dateStr      - Date string "YYYY-MM-DD" for model runner scoping
  */
 export async function runLineupWatcher(
   scrapedGames: RotoLineupGame[],
-  gameIdMap: Map<string, number>,
-  dateStr: string,
+  gameIdMap: Map<RotoLineupGame, number>,
+  dateStr: string
 ): Promise<LineupWatcherResult> {
   const TAG = `[LineupWatcher][${dateStr}]`;
   console.log(`${TAG} Starting — ${scrapedGames.length} scraped games`);
@@ -319,18 +335,19 @@ export async function runLineupWatcher(
 
   // ── Step 1: Collect all gameIds for this batch ───────────────────────────────
   const gameIds: number[] = [];
-  const gameKeyToId = new Map<string, number>();
+  const gameToId = new Map<RotoLineupGame, number>();
 
   for (const g of scrapedGames) {
-    const key = `${g.awayAbbrev}@${g.homeAbbrev}`;
-    const gameId = gameIdMap.get(key);
+    const gameId = gameIdMap.get(g);
     if (gameId !== undefined) {
       gameIds.push(gameId);
-      gameKeyToId.set(key, gameId);
+      gameToId.set(g, gameId);
     }
   }
 
-  console.log(`${TAG} [STEP] Resolved ${gameIds.length}/${scrapedGames.length} gameIds`);
+  console.log(
+    `${TAG} [STEP] Resolved ${gameIds.length}/${scrapedGames.length} gameIds`
+  );
 
   if (gameIds.length === 0) {
     console.log(`${TAG} No gameIds resolved — all games unmatched in DB`);
@@ -345,7 +362,7 @@ export async function runLineupWatcher(
 
   console.log(
     `${TAG} [STATE] Existing lineup rows: ${existingLineups.size} | ` +
-    `Games with data: ${gamesData.size}`
+      `Games with data: ${gamesData.size}`
   );
 
   // ── Step 3: Collect games that need model re-run ─────────────────────────────
@@ -358,11 +375,13 @@ export async function runLineupWatcher(
   }> = [];
   // Pitcher writes: map gameId → { awayPitcherName, homeStartingPitcher }
   // Written to games table BEFORE model run so mlbModelRunner can read them.
-  const pendingPitcherWrites = new Map<number, { away: string; home: string }>();
+  const pendingPitcherWrites = new Map<
+    number,
+    { away: string; home: string }
+  >();
 
   for (const g of scrapedGames) {
-    const key = `${g.awayAbbrev}@${g.homeAbbrev}`;
-    const gameId = gameKeyToId.get(key);
+    const gameId = gameToId.get(g);
     if (gameId === undefined) continue;
 
     const matchup = `${g.awayAbbrev}@${g.homeAbbrev}`;
@@ -377,7 +396,7 @@ export async function runLineupWatcher(
       g.homePitcher?.name,
       g.homePitcher?.hand,
       g.awayLineup.length > 0 ? JSON.stringify(g.awayLineup) : null,
-      g.homeLineup.length > 0 ? JSON.stringify(g.homeLineup) : null,
+      g.homeLineup.length > 0 ? JSON.stringify(g.homeLineup) : null
     );
 
     const isNullHash = isNullLineupHash(currentHash);
@@ -386,10 +405,14 @@ export async function runLineupWatcher(
     // P0 FIX: Only skip if lineupModeledAt is set (model has already run for this game).
     // If lineupModeledAt is null, the model never fired — fall through to trigger it
     // even though both lineups are confirmed (e.g. server restart after lineups posted).
-    if (existing?.awayLineupConfirmed && existing?.homeLineupConfirmed && existing?.lineupModeledAt) {
+    if (
+      existing?.awayLineupConfirmed &&
+      existing?.homeLineupConfirmed &&
+      existing?.lineupModeledAt
+    ) {
       console.log(
         `${gameTag} [STATE] CONFIRMED_STOP — both lineups confirmed + model already ran ` +
-        `(lineupModeledAt=${existing.lineupModeledAt}), no re-model needed`
+          `(lineupModeledAt=${existing.lineupModeledAt}), no re-model needed`
       );
       result.confirmed++;
       result.details.push({
@@ -400,19 +423,24 @@ export async function runLineupWatcher(
         lineupHash: existing.lineupHash ?? null,
         previousHash: existing.lineupHash ?? null,
         modelTriggered: false,
-        reason: "Both batting orders confirmed + model already ran — stop guard active",
+        reason:
+          "Both batting orders confirmed + model already ran — stop guard active",
       });
       continue;
     }
 
-     // ── CASE C: Lineup unchanged ─────────────────────────────────────────
+    // ── CASE C: Lineup unchanged ─────────────────────────────────────────
     // P0 FIX: Only skip if lineupModeledAt is set (model has already run for this game).
     // If lineupModeledAt is null, the model never fired — fall through to trigger it
     // even though the hash hasn’t changed (e.g. server restart after first scrape).
-    if (existing?.lineupHash && existing.lineupHash === currentHash && existing?.lineupModeledAt) {
+    if (
+      existing?.lineupHash &&
+      existing.lineupHash === currentHash &&
+      existing?.lineupModeledAt
+    ) {
       console.log(
         `${gameTag} [STATE] UNCHANGED — hash=${currentHash.slice(0, 12)}... ` +
-        `model already ran (lineupModeledAt=${existing.lineupModeledAt}), no action`
+          `model already ran (lineupModeledAt=${existing.lineupModeledAt}), no action`
       );
       result.unchanged++;
       result.details.push({
@@ -430,7 +458,9 @@ export async function runLineupWatcher(
 
     // ── Null lineup check: no pitchers AND no batting orders ─────────────────
     if (isNullHash) {
-      console.log(`${gameTag} [STATE] NULL_LINEUP — no pitchers/batting orders yet, skipping`);
+      console.log(
+        `${gameTag} [STATE] NULL_LINEUP — no pitchers/batting orders yet, skipping`
+      );
       result.insufficientData++;
       result.details.push({
         gameId,
@@ -453,7 +483,11 @@ export async function runLineupWatcher(
     // ── Modelability check ───────────────────────────────────────────────────
     // Model requires: both pitchers + book lines (bookTotal + awayML + homeML)
     const hasBothPitchers = !!(g.awayPitcher?.name && g.homePitcher?.name);
-    const hasBookLines = !!(gameRow?.bookTotal && gameRow?.awayML && gameRow?.homeML);
+    const hasBookLines = !!(
+      gameRow?.bookTotal &&
+      gameRow?.awayML &&
+      gameRow?.homeML
+    );
     const isModelable = hasBothPitchers && hasBookLines;
 
     if (!isModelable) {
@@ -466,12 +500,17 @@ export async function runLineupWatcher(
 
       console.log(
         `${gameTag} [STATE] ${isFirstLineup ? "FIRST_LINEUP" : "CHANGED"} ` +
-        `v${previousVersion}→v${newVersion} hash=${currentHash.slice(0, 12)}... ` +
-        `NOT_MODELABLE (missing: ${missingParts.join(", ")}) — updating hash only`
+          `v${previousVersion}→v${newVersion} hash=${currentHash.slice(0, 12)}... ` +
+          `NOT_MODELABLE (missing: ${missingParts.join(", ")}) — updating hash only`
       );
 
       // Still update hash/version so we detect future changes
-      pendingHashUpdates.push({ gameId, hash: currentHash, version: newVersion, triggerModel: false });
+      pendingHashUpdates.push({
+        gameId,
+        hash: currentHash,
+        version: newVersion,
+        triggerModel: false,
+      });
 
       result.insufficientData++;
       result.details.push({
@@ -491,16 +530,21 @@ export async function runLineupWatcher(
     const actionLabel = isFirstLineup ? "FIRST_LINEUP" : "CHANGED";
     console.log(
       `${gameTag} [STATE] ${actionLabel} ` +
-      `v${previousVersion}→v${newVersion} ` +
-      `hash=${currentHash.slice(0, 12)}... ` +
-      `awayP="${g.awayPitcher!.name}" (${g.awayPitcher!.hand}) ` +
-      `homeP="${g.homePitcher!.name}" (${g.homePitcher!.hand}) ` +
-      `awayLineup=${g.awayLineup.length}/9 (${g.awayLineupConfirmed ? "CONFIRMED" : "expected"}) ` +
-      `homeLineup=${g.homeLineup.length}/9 (${g.homeLineupConfirmed ? "CONFIRMED" : "expected"}) ` +
-      `→ TRIGGERING MODEL`
+        `v${previousVersion}→v${newVersion} ` +
+        `hash=${currentHash.slice(0, 12)}... ` +
+        `awayP="${g.awayPitcher!.name}" (${g.awayPitcher!.hand}) ` +
+        `homeP="${g.homePitcher!.name}" (${g.homePitcher!.hand}) ` +
+        `awayLineup=${g.awayLineup.length}/9 (${g.awayLineupConfirmed ? "CONFIRMED" : "expected"}) ` +
+        `homeLineup=${g.homeLineup.length}/9 (${g.homeLineupConfirmed ? "CONFIRMED" : "expected"}) ` +
+        `→ TRIGGERING MODEL`
     );
 
-    pendingHashUpdates.push({ gameId, hash: currentHash, version: newVersion, triggerModel: true });
+    pendingHashUpdates.push({
+      gameId,
+      hash: currentHash,
+      version: newVersion,
+      triggerModel: true,
+    });
     gamesToModel.push(gameId);
     // Register pitcher names for games-table write (bridge: Rotowire → games.awayStartingPitcher)
     pendingPitcherWrites.set(gameId, {
@@ -528,7 +572,9 @@ export async function runLineupWatcher(
 
   // ── Step 4: Apply all hash updates ──────────────────────────────────────────
   if (pendingHashUpdates.length > 0) {
-    console.log(`${TAG} [STEP] Applying ${pendingHashUpdates.length} hash updates to DB`);
+    console.log(
+      `${TAG} [STEP] Applying ${pendingHashUpdates.length} hash updates to DB`
+    );
     await Promise.all(
       pendingHashUpdates.map(u =>
         u.triggerModel
@@ -544,7 +590,9 @@ export async function runLineupWatcher(
   // Without this write, games with Rotowire pitchers but no MLB Stats API probable pitcher
   // (common for tomorrow's games) will be skipped by the model with hasPitchers=false.
   if (pendingPitcherWrites.size > 0) {
-    console.log(`${TAG} [STEP] Writing ${pendingPitcherWrites.size} pitcher pair(s) to games table`);
+    console.log(
+      `${TAG} [STEP] Writing ${pendingPitcherWrites.size} pitcher pair(s) to games table`
+    );
     const db = await getDb();
     if (db) {
       const pitcherWriteResults: string[] = [];
@@ -562,13 +610,15 @@ export async function runLineupWatcher(
           );
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.error(`${TAG} [ERROR] Pitcher write failed for gameId=${gameId}: ${msg}`);
+          console.error(
+            `${TAG} [ERROR] Pitcher write failed for gameId=${gameId}: ${msg}`
+          );
           pitcherWriteResults.push(`gameId=${gameId} [ERROR: ${msg}]`);
         }
       }
       console.log(
         `${TAG} [OUTPUT] Pitcher writes complete:\n` +
-        pitcherWriteResults.map(r => `  ${r}`).join('\n')
+          pitcherWriteResults.map(r => `  ${r}`).join("\n")
       );
     } else {
       console.warn(`${TAG} [WARN] DB not available — pitcher writes skipped`);
@@ -577,19 +627,26 @@ export async function runLineupWatcher(
 
   // ── Step 5: Trigger model for affected games ─────────────────────────────────
   if (gamesToModel.length > 0) {
-    console.log(`${TAG} [STEP] Triggering model for ${gamesToModel.length} game(s): ${gamesToModel.join(", ")}`);
+    console.log(
+      `${TAG} [STEP] Triggering model for ${gamesToModel.length} game(s): ${gamesToModel.join(", ")}`
+    );
     try {
       const { runMlbModelForDate } = await import("./mlbModelRunner.js");
       const modelResult = await runMlbModelForDate(dateStr);
       console.log(
         `${TAG} [OUTPUT] Model run complete: ` +
-        `written=${modelResult.written} skipped=${modelResult.skipped} errors=${modelResult.errors} ` +
-        `validation=${modelResult.validation.passed ? "✅ PASSED" : "❌ FAILED (" + modelResult.validation.issues.length + " issues)"}`
+          `written=${modelResult.written} skipped=${modelResult.skipped} errors=${modelResult.errors} ` +
+          `validation=${modelResult.validation.passed ? "✅ PASSED" : "❌ FAILED (" + modelResult.validation.issues.length + " issues)"}`
       );
       if (!modelResult.validation.passed) {
-        console.error(`${TAG} [VERIFY] FAIL — Model validation issues:`, modelResult.validation.issues);
+        console.error(
+          `${TAG} [VERIFY] FAIL — Model validation issues:`,
+          modelResult.validation.issues
+        );
       } else {
-        console.log(`${TAG} [VERIFY] PASS — Model ran successfully for lineup-triggered games`);
+        console.log(
+          `${TAG} [VERIFY] PASS — Model ran successfully for lineup-triggered games`
+        );
       }
       if (modelResult.errors > 0) {
         result.modelErrors += modelResult.errors;
@@ -606,13 +663,13 @@ export async function runLineupWatcher(
   // ── Step 6: Summary ──────────────────────────────────────────────────────────
   console.log(
     `${TAG} [OUTPUT] Done — ` +
-    `total=${result.total} ` +
-    `firstLineup=${result.firstLineup} ` +
-    `changed=${result.changed} ` +
-    `unchanged=${result.unchanged} ` +
-    `confirmed=${result.confirmed} ` +
-    `insufficientData=${result.insufficientData} ` +
-    `modelErrors=${result.modelErrors}`
+      `total=${result.total} ` +
+      `firstLineup=${result.firstLineup} ` +
+      `changed=${result.changed} ` +
+      `unchanged=${result.unchanged} ` +
+      `confirmed=${result.confirmed} ` +
+      `insufficientData=${result.insufficientData} ` +
+      `modelErrors=${result.modelErrors}`
   );
 
   return result;

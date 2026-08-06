@@ -1,0 +1,251 @@
+{
+  "schema_version": "dime-training-contract-v1",
+  "contract_id": "dime-qlora-foundation-v1",
+  "status": "INCOMPLETE_NOT_AUTHORIZED",
+  "capability_hypothesis": {
+    "statement": "A rank-16 Dime QLoRA adapter trained on the approved Foundation v1 mixture will improve factual correctness over the same base model with Runtime Answer Routing v1.",
+    "falsifiable": true,
+    "success_condition": "Candidate C improves overall factual correctness by at least 0.02 over Candidate B while clearing every frozen quality, calibration, latency, and reliability gate.",
+    "failure_condition": "Candidate C fails any hard gate or improves overall factual correctness by less than 0.02 over Candidate B."
+  },
+  "training_orchestrator": {
+    "platform": "Codex",
+    "agent": "5.6 Sol",
+    "role": "engineering_and_training_control"
+  },
+  "model_compute": {
+    "platform": "RunPod",
+    "role": "training_and_inference_compute"
+  },
+  "base_model": {
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "tokenizer": {
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "base_model_selection": {
+    "status": "BLOCKED_PENDING_SUITABILITY_EVALUATION",
+    "selected_candidate": null,
+    "current_training_code_binding": "candidate-base",
+    "current_binding_is_selection": false,
+    "evaluation_contract": {
+      "path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
+      "sha256": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+      "status": "FROZEN_NOT_AUTHORIZED"
+    },
+    "candidates": [
+      {
+        "candidate_id": "candidate-base",
+        "repo_id": "meta-llama/Llama-3.1-8B",
+        "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+        "tokenizer_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+      },
+      {
+        "candidate_id": "candidate-instruct",
+        "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+        "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+        "tokenizer_revision": "0e9e39f249a16976918f6564b8830bc894c89659"
+      }
+    ],
+    "required_before_dataset_approval": true,
+    "required_before_training_authorization": true
+  },
+  "foundation_dataset": {
+    "repo_id": "taileredsports/dime-foundation-sft",
+    "dataset_version": "dime-sft-foundation-v1",
+    "target_record_count": 2400,
+    "train_record_count": 2160,
+    "validation_record_count": 240,
+    "revision": null,
+    "dataset_manifest_sha256": null,
+    "checksums_sha256": null,
+    "approved_release": false,
+    "observed_public_sample_record_count": 12,
+    "validation_requirements": [
+      "record_level_provenance",
+      "exact_train_development_evaluation_separation",
+      "exact_duplicate_detection",
+      "near_duplicate_detection",
+      "temporal_leakage_detection",
+      "locked_evaluation_exclusion",
+      "label_consistency",
+      "route_balance",
+      "tool_use_coverage",
+      "missing_data_and_abstention_coverage",
+      "sports_platform_market_and_statistical_reasoning_coverage"
+    ]
+  },
+  "separation": {
+    "foundation_train_and_validation": {
+      "repo_or_path": "taileredsports/dime-foundation-sft",
+      "revision_or_sha256": null,
+      "training_access": "allowed"
+    },
+    "development_evaluation": {
+      "repo_or_path": "taileredsports/dime-eval-development",
+      "revision_or_sha256": null,
+      "training_access": "prohibited"
+    },
+    "model_artifact_evaluation": {
+      "repo_or_path": "ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json",
+      "revision_or_sha256": "model-artifact-evaluation-v1",
+      "training_access": "prohibited"
+    },
+    "general_capability_regression_evaluation": {
+      "repo_or_path": "pending-general-capability-regression-evaluation",
+      "revision_or_sha256": null,
+      "training_access": "prohibited"
+    },
+    "locked_evaluation": {
+      "repo_or_path": "taileredsports/dime-eval-locked",
+      "revision_or_sha256": null,
+      "training_access": "prohibited"
+    }
+  },
+  "source": {
+    "github_repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "training_code_commit": "ec32c8ae99a0b311dc77028d3ab306de51eed421",
+    "training_script_path": "ml/dime-1.0/scripts/train_qlora.py",
+    "training_script_sha256": "7a783ec0986384cb0ebf8cdaf495270bab7723d2cbd9b3a98f1f51824e40d677",
+    "training_config_path": "ml/dime-1.0/configs/sft_full_TEMPLATE.yaml",
+    "training_config_sha256": "c5467b101c6584cf24fd0a65e40942e3ebbb904867e775825d324a29d992cefd",
+    "requirements_lock_path": "ml/dime-1.0/requirements.lock.txt",
+    "requirements_lock_sha256": "dc322aa71bff1b7aa5065af329e5b3136da8a9808c867429c3d6aa1f65bad013"
+  },
+  "prompt": {
+    "revision": "dime-prompt-v1",
+    "files": [
+      {
+        "path": "ml/dime-1.0/prompts/dime_system_v1.md",
+        "sha256": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9"
+      },
+      {
+        "path": "ml/dime-1.0/prompts/llama3_dime_chat_template_v1.jinja",
+        "sha256": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087"
+      },
+      {
+        "path": "ml/dime-1.0/tools/tools.v1.json",
+        "sha256": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5"
+      }
+    ]
+  },
+  "routing": {
+    "revision": "runtime-answer-routing-v1",
+    "files": [
+      {
+        "path": "server/_core/dimeAnswerRouting.ts",
+        "sha256": "f0ccc880992f6dfcfd91f93733dad4ab0c3b1c55485fb5d41e143051535f17b7"
+      },
+      {
+        "path": "server/_core/dimeChatContext.ts",
+        "sha256": "1436a564daa2b101607256fe17a57da6c5599960fa71b96c420b11f2ecc6261d"
+      }
+    ]
+  },
+  "evaluation": {
+    "revision": "model-artifact-evaluation-v1",
+    "files": [
+      {
+        "path": "ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json",
+        "sha256": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19"
+      },
+      {
+        "path": "ml/dime-1.0/configs/decoding_v1.json",
+        "sha256": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1"
+      },
+      {
+        "path": "ml/dime-1.0/configs/foundation_release_plan_v1.json",
+        "sha256": "adf05bc0820b47ba343da66e4c17e8b246476a272122cb97aceb61d6f4313ec0"
+      },
+      {
+        "path": "ml/dime-1.0/configs/evaluation_identity_plan_v1.json",
+        "sha256": "9ceb670946697ccb5f32ed07bf72edbdf45571b4ddf6193466158861cfa879ec"
+      },
+      {
+        "path": "ml/dime-1.0/configs/model_execution_gates_v1.json",
+        "sha256": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee"
+      }
+    ]
+  },
+  "random_seeds": {
+    "training": 1729,
+    "data": 1729,
+    "evaluation": 1729
+  },
+  "hardware_profile": {
+    "profile_id": "dime-llama31-8b-training-v1",
+    "container_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",
+    "gpu": "NVIDIA GeForce RTX 4090 24GB",
+    "python": "3.12.3",
+    "pytorch": "2.8.0+cu128",
+    "cuda_runtime": "12.8"
+  },
+  "training_method": {
+    "kind": "QLoRA",
+    "quantization": "NF4",
+    "compute_dtype": "bfloat16",
+    "adapter_rank": 16,
+    "adapter_alpha": 32,
+    "adapter_dropout": 0.05,
+    "epochs": 1,
+    "learning_rate": 0.0002,
+    "gradient_checkpointing": true,
+    "checkpoint_interval_steps": 20
+  },
+  "required_training_controls": {
+    "immutable_dataset_revision": false,
+    "checkpoint_intervals": true,
+    "loss_monitoring": true,
+    "gradient_monitoring": true,
+    "validation_during_training": true,
+    "early_stopping_implemented": true,
+    "minimum_validation_events": 6,
+    "evaluation_and_checkpoint_cadence_aligned": true,
+    "practical_early_stopping_preflight_implemented": true,
+    "best_checkpoint_restoration_verifier_implemented": true,
+    "best_checkpoint_restoration_verified": false,
+    "authorized_resume_verification_implemented": true,
+    "resume_verification_passed": false,
+    "artifact_hashes": true,
+    "hardware_and_library_capture": true,
+    "general_capability_regression_tests": true
+  },
+  "artifact_constraints": {
+    "adapter_only": true,
+    "maximum_trainable_parameters": 44000000,
+    "maximum_adapter_bytes": 104857600,
+    "maximum_candidate_c_p95_latency_increase_over_b": 0.15,
+    "base_weights_publication_prohibited": true
+  },
+  "readiness": {
+    "verdict": "REVISE",
+    "training_contract_complete": false,
+    "blocking_reasons": [
+      "The base-versus-Instruct suitability evaluation has no independent selection verdict.",
+      "The Foundation dataset approved revision, dataset-manifest hash, and checksum-manifest hash are null.",
+      "The development-evaluation and locked-evaluation immutable identities are null.",
+      "The general-capability regression evaluation identity is null.",
+      "The public 81-case suite is exposed and not eligible as a sealed model-selection suite.",
+      "Evaluation semantic-case, answer-key, runner, scorer, and training credential separation is not implemented.",
+      "The repository contains only 12 public SFT sample records, not the approved 2,400-record Foundation release.",
+      "Practical early stopping, best-checkpoint restoration, and checkpoint resume are enforced in code but have not passed an authorized RunPod smoke run.",
+      "No independent authorization exists for RunPod GPU execution or model training."
+    ]
+  },
+  "authorization_boundary": {
+    "foundation_dataset_approval": false,
+    "runpod_gpu_execution": false,
+    "model_training": false,
+    "checkpoint_resume": false,
+    "benchmark_execution": false,
+    "adapter_publication": false,
+    "model_selection": false,
+    "provider_activation": false,
+    "railway_mutation": false,
+    "trace_activation": false,
+    "shadow_traffic": false,
+    "generative_route_activation": false
+  }
+}

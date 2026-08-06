@@ -4,7 +4,7 @@
  * Branded transactional email service — Dime AI (mint #45E0A8, ink surfaces).
  * Delivers via Google Workspace SMTP (team@aisportsbettingmodels.com).
  *
- * All emails are fully branded — no Manus logos, no external branding.
+ * All emails are fully branded — no third-party logos, no external branding.
  *
  * ENVIRONMENT VARIABLES REQUIRED:
  *   GMAIL_APP_PASSWORD — App Password for team@aisportsbettingmodels.com
@@ -32,11 +32,17 @@ function getTransporter() {
   const appPassword = process.env.GMAIL_APP_PASSWORD;
 
   if (!appPassword) {
-    console.error(`${TAG} [VERIFY] FAIL — GMAIL_APP_PASSWORD env var is not set`);
-    throw new Error("GMAIL_APP_PASSWORD is not configured. Email delivery is unavailable.");
+    console.error(
+      `${TAG} [VERIFY] FAIL — GMAIL_APP_PASSWORD env var is not set`
+    );
+    throw new Error(
+      "GMAIL_APP_PASSWORD is not configured. Email delivery is unavailable."
+    );
   }
 
-  console.log(`${TAG} [STATE] Creating Gmail SMTP transporter for ${FROM_EMAIL}`);
+  console.log(
+    `${TAG} [STATE] Creating Gmail SMTP transporter for ${FROM_EMAIL}`
+  );
 
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -97,7 +103,7 @@ function buildEmailHtml(opts: {
           <tr>
             <td align="center" style="padding-top:20px;">
               <p style="font-size:11px;color:#FFFFFF;margin:0;">
-                &copy; ${new Date().getFullYear()} Dime AI &mdash; AI Sports Betting Models &nbsp;&bull;&nbsp;
+                &copy; ${new Date().getFullYear()} Dime AI &mdash; Tailered Sports, Inc. &nbsp;&bull;&nbsp;
                 <a href="https://aisportsbettingmodels.com" style="color:#FFFFFF;text-decoration:none;">aisportsbettingmodels.com</a>
               </p>
               <p style="font-size:10px;color:#FFFFFF;margin:6px 0 0;">
@@ -123,7 +129,9 @@ export async function sendPasswordResetEmail(opts: {
   expiresAt: Date;
 }): Promise<void> {
   const TAG = "[Email][sendPasswordResetEmail]";
-  console.log(`${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} expiresAt=${opts.expiresAt.toISOString()}`);
+  console.log(
+    `${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} expiresAt=${opts.expiresAt.toISOString()}`
+  );
 
   const expiryStr = opts.expiresAt.toLocaleString("en-US", {
     month: "short",
@@ -181,7 +189,9 @@ export async function sendPasswordResetEmail(opts: {
       html,
       text: `Reset your Dime AI password\n\nHi @${opts.username},\n\nClick the link below to reset your password (expires ${expiryStr} ET):\n${opts.resetUrl}\n\nIf you did not request this, ignore this email.\n\n— Dime AI`,
     });
-    console.log(`${TAG} [OUTPUT] Email sent messageId=${info.messageId} to=${opts.toEmail}`);
+    console.log(
+      `${TAG} [OUTPUT] Email sent messageId=${info.messageId} to=${opts.toEmail}`
+    );
     console.log(`${TAG} [VERIFY] PASS`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -199,7 +209,9 @@ export async function sendWelcomeEmail(opts: {
   expiryDate: Date | null;
 }): Promise<void> {
   const TAG = "[Email][sendWelcomeEmail]";
-  console.log(`${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} plan=${opts.planLabel}`);
+  console.log(
+    `${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} plan=${opts.planLabel}`
+  );
 
   const expiryLine = opts.expiryDate
     ? `<p style="font-size:12px;color:#FFFFFF;margin:0 0 0;">
@@ -255,12 +267,16 @@ export async function sendWelcomeEmail(opts: {
       html,
       text: `Welcome to Dime AI!\n\nHi @${opts.username},\n\nYour ${opts.planLabel} is now active.\n\nEnter the platform: https://aisportsbettingmodels.com/feed/model/mlb\n\n— Dime AI`,
     });
-    console.log(`${TAG} [OUTPUT] Welcome email sent messageId=${info.messageId} to=${opts.toEmail}`);
+    console.log(
+      `${TAG} [OUTPUT] Welcome email sent messageId=${info.messageId} to=${opts.toEmail}`
+    );
     console.log(`${TAG} [VERIFY] PASS`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${TAG} [VERIFY] FAIL — SMTP error: ${msg}`);
     // Welcome email failure is non-fatal — log but don't throw
-    console.warn(`${TAG} [STATE] Welcome email failed but account creation proceeds`);
+    console.warn(
+      `${TAG} [STATE] Welcome email failed but account creation proceeds`
+    );
   }
 }

@@ -26,7 +26,15 @@ export function CountryFlag({
       className="country-flag"
       role="img"
       aria-label={label}
-      style={size ? { inlineSize: size, minInlineSize: size, fontSize: Math.round(size * 0.8) } : undefined}
+      style={
+        size
+          ? {
+              inlineSize: size,
+              minInlineSize: size,
+              fontSize: Math.round(size * 0.8),
+            }
+          : undefined
+      }
     >
       {flag}
     </span>

@@ -1,0 +1,56 @@
+# CodeRabbit — the single primary AI reviewer (Layer 9). ADVISORY: human
+# code-owner approval remains required regardless of anything said here.
+# This file is CODEOWNERS-protected: reviewers read instructions from the PR
+# head branch, so the instructions themselves are owner-gated.
+#
+# STATUS: config ready; the CodeRabbit GitHub App is NOT installed yet —
+# installation is an owner action (marketplace), and its LLM usage must be
+# reconciled with the repo's API-credit law before enabling
+# (docs/verification/ROLLOUT.md, docs/verification/AI-REVIEW-CALIBRATION.md).
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: false # advisory: comment, never block
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "server/stripe/**"
+      instructions: >-
+        Money is integer cents end-to-end. Flag any float arithmetic, toFixed
+        in ledger math, missing idempotency on webhook handlers, or a new
+        charge/refund path without a ledger event. Stripe API version changes
+        require the upgrade checklist.
+    - path: "server/{appUsers,ownerAuth,discordAuth,discordLogin}*.ts"
+      instructions: >-
+        Auth surface. Flag: session issuance without tokenVersion checks, new
+        endpoints missing owner/protected procedure wrappers, any credential
+        or session secret appearing in logs, and cookie flag regressions.
+    - path: "drizzle/**"
+      instructions: >-
+        Migrations are append-only (0000-0132+). Flag ANY edit to an existing
+        .sql file, destructive statements without a plan file in
+        docs/verification/migration-plans/, and changes to meta/ snapshots
+        0108/0122 (consumer-pinned).
+    - path: "server/_core/{dimeAgent,piAgent,dimeChatModel}.ts"
+      instructions: >-
+        AI runtime. Flag: any process.env spread into subprocess env, new env
+        vars added to the agent allowlist, provider changes away from
+        "anthropic" (owner-gated), prompt edits without matching test updates,
+        and model output flowing to execution without schema validation.
+    - path: ".github/workflows/**"
+      instructions: >-
+        Fail-closed CI law: no continue-on-error on required jobs, no
+        unpinned actions (full SHA + version comment), minimal permissions,
+        pull_request+merge_group+workflow_dispatch on required workflows.
+        Flag any check rename (required-check identity breaks silently).
+    - path: ".semgrep/** | .coderabbit.yaml | docs/verification/**"
+      instructions: >-
+        Review-policy surface. Any weakening of rules, thresholds, or gates
+        must cite an owner decision. Treat silent gate removal as a blocking
+        concern for the human reviewer.
+chat:
+  auto_reply: false

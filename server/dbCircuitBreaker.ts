@@ -40,20 +40,20 @@ import type { AppUser } from "../drizzle/schema";
 const TAG = "[CircuitBreaker]";
 
 // ── Circuit Breaker Config ────────────────────────────────────────────────────
-const FAILURE_THRESHOLD  = 5;         // consecutive TRUE DB errors before opening
-const OPEN_DURATION_MS   = 60_000;    // 60 seconds in open state before retrying
-const HALF_OPEN_TIMEOUT  = 10_000;    // probe timeout when in half-open state
-const CLOSED_TIMEOUT_MS  = 8_000;     // per-query latency guard in CLOSED state
+const FAILURE_THRESHOLD = 5; // consecutive TRUE DB errors before opening
+const OPEN_DURATION_MS = 60_000; // 60 seconds in open state before retrying
+const HALF_OPEN_TIMEOUT = 10_000; // probe timeout when in half-open state
+const CLOSED_TIMEOUT_MS = 8_000; // per-query latency guard in CLOSED state
 
 // ── User Cache Config ─────────────────────────────────────────────────────────
-const USER_CACHE_TTL_MS  = 5 * 60 * 1000;  // 5 minutes
+const USER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // ── Circuit Breaker State ─────────────────────────────────────────────────────
 type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
 let circuitState: CircuitState = "CLOSED";
-let consecutiveFailures = 0;   // TRUE DB errors only — timeouts excluded
-let consecutiveTimeouts = 0;   // latency events — does NOT open circuit
+let consecutiveFailures = 0; // TRUE DB errors only — timeouts excluded
+let consecutiveTimeouts = 0; // latency events — does NOT open circuit
 let openedAt: number | null = null;
 let totalFailures = 0;
 let totalSuccesses = 0;
@@ -64,7 +64,9 @@ function getCircuitState(): CircuitState {
     const elapsed = Date.now() - openedAt;
     if (elapsed >= OPEN_DURATION_MS) {
       circuitState = "HALF_OPEN";
-      console.log(`${TAG} Circuit → HALF_OPEN (probe after ${Math.round(elapsed / 1000)}s)`);
+      console.log(
+        `${TAG} Circuit → HALF_OPEN (probe after ${Math.round(elapsed / 1000)}s)`
+      );
     }
   }
   return circuitState;
@@ -73,7 +75,9 @@ function getCircuitState(): CircuitState {
 function onSuccess(): void {
   totalSuccesses++;
   if (circuitState !== "CLOSED") {
-    console.log(`${TAG} Circuit → CLOSED (DB recovered after ${totalFailures} total failures)`);
+    console.log(
+      `${TAG} Circuit → CLOSED (DB recovered after ${totalFailures} total failures)`
+    );
   }
   circuitState = "CLOSED";
   consecutiveFailures = 0;
@@ -94,12 +98,12 @@ function onTrueFailure(err: unknown): void {
     openedAt = Date.now();
     console.error(
       `${TAG} Circuit → OPEN after ${consecutiveFailures} consecutive TRUE DB errors. ` +
-      `Will retry in ${OPEN_DURATION_MS / 1000}s. Error: ${(err as Error)?.message ?? String(err)}`
+        `Will retry in ${OPEN_DURATION_MS / 1000}s. Error: ${(err as Error)?.message ?? String(err)}`
     );
   } else {
     console.warn(
       `${TAG} TRUE DB error (${consecutiveFailures}/${FAILURE_THRESHOLD}): ` +
-      `${(err as Error)?.message ?? String(err)}`
+        `${(err as Error)?.message ?? String(err)}`
     );
   }
 }
@@ -114,9 +118,9 @@ function onTimeout(timeoutMs: number): void {
   consecutiveTimeouts++;
   console.warn(
     `${TAG} LATENCY WARNING: query exceeded ${timeoutMs}ms ` +
-    `(timeout #${consecutiveTimeouts} in a row, total=${totalTimeouts}). ` +
-    `Circuit remains ${circuitState}. ` +
-    `Timeout ≠ failure — DB may still be healthy.`
+      `(timeout #${consecutiveTimeouts} in a row, total=${totalTimeouts}). ` +
+      `Circuit remains ${circuitState}. ` +
+      `Timeout ≠ failure — DB may still be healthy.`
   );
 }
 
@@ -169,10 +173,13 @@ export async function withCircuitBreaker<T>(fn: () => Promise<T>): Promise<T> {
   const state = getCircuitState();
 
   if (state === "OPEN") {
-    throw new Error(`${TAG} Circuit is OPEN — DB unavailable. Fast-failing to prevent hang.`);
+    throw new Error(
+      `${TAG} Circuit is OPEN — DB unavailable. Fast-failing to prevent hang.`
+    );
   }
 
-  const timeoutMs = state === "HALF_OPEN" ? HALF_OPEN_TIMEOUT : CLOSED_TIMEOUT_MS;
+  const timeoutMs =
+    state === "HALF_OPEN" ? HALF_OPEN_TIMEOUT : CLOSED_TIMEOUT_MS;
   let timeoutFired = false;
 
   const timeoutPromise = new Promise<never>((_, reject) =>
@@ -206,7 +213,7 @@ export async function withCircuitBreaker<T>(fn: () => Promise<T>): Promise<T> {
       // These are NOT DB availability issues — do not affect circuit state
       console.log(
         `${TAG} Application-level error (circuit unchanged): ` +
-        `${(err as Error)?.message ?? String(err)}`
+          `${(err as Error)?.message ?? String(err)}`
       );
     }
     throw err;
@@ -232,7 +239,9 @@ export function getCircuitStatus(): {
     totalSuccesses,
     totalTimeouts,
     openedAt,
-    openedSecondsAgo: openedAt ? Math.round((Date.now() - openedAt) / 1000) : null,
+    openedSecondsAgo: openedAt
+      ? Math.round((Date.now() - openedAt) / 1000)
+      : null,
   };
 }
 
@@ -245,6 +254,11 @@ interface CachedUser {
 
 const userCache = new Map<number, CachedUser>();
 
+export interface CachedAppUserEntry {
+  user: AppUser;
+  cachedAt: number;
+}
+
 /** Cache an app user record (called after successful DB read) */
 export function setCachedAppUser(user: AppUser): void {
   userCache.set(user.id, { user, cachedAt: Date.now() });
@@ -252,13 +266,20 @@ export function setCachedAppUser(user: AppUser): void {
 
 /** Get a cached app user by ID. Returns null if not found or expired. */
 export function getCachedAppUser(userId: number): AppUser | null {
+  return getCachedAppUserEntry(userId)?.user ?? null;
+}
+
+/** Return a non-expired cache entry together with its age metadata. */
+export function getCachedAppUserEntry(
+  userId: number
+): CachedAppUserEntry | null {
   const entry = userCache.get(userId);
   if (!entry) return null;
   if (Date.now() - entry.cachedAt > USER_CACHE_TTL_MS) {
     userCache.delete(userId);
     return null;
   }
-  return entry.user;
+  return { user: entry.user, cachedAt: entry.cachedAt };
 }
 
 /** Invalidate a specific user from cache (call on logout or role change) */

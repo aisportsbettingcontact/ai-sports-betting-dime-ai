@@ -3,10 +3,31 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import compression from "compression";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import rateLimit from "express-rate-limit";
+import {
+  clientIpKey,
+  createTrpcRateLimitDispatch,
+  isReservedOrInternalIp,
+  resolveClientIp,
+  sendRateLimitResponse,
+} from "./trpcRateLimitPolicy";
+import {
+  cfConnectingIp,
+  edgeMode,
+  immediateUpstreamIp,
+  isCloudflareEdgeIp,
+} from "./edgeProxy";
+import { originLock } from "./originLock";
+import {
+  currentSchemaVerdict,
+  runBootSchemaProbe,
+  shouldFailHealthForSchema,
+  startSchemaProbeInterval,
+} from "./schemaHealthGate";
+import { isAnalyticsStore } from "../analytics/config";
 import helmet from "helmet";
+import { permissionsPolicy } from "./securityHeaders";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { registerDiscordAuthRoutes } from "../discordAuth";
 import { registerDiscordLoginRoutes } from "../discordLogin";
@@ -16,7 +37,6 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startDailyPurgeSchedule } from "../dailyPurge";
 import { startVsinAutoRefresh } from "../vsinAutoRefresh";
-import { startNbaModelSyncScheduler } from "../nbaModelSync";
 import { startNhlModelSyncScheduler } from "../nhlModelSync";
 import { startNhlGoalieWatcher } from "../nhlGoalieWatcher";
 import { startDiscordBot } from "../discord/bot";
@@ -33,28 +53,47 @@ import { prewarmSlateCache } from "../actionNetwork";
 import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
-// startJackMacScheduler removed — Jack Mac tab purged
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
-import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
+import {
+  getDb,
+  listGames,
+  getCacheHealthStats,
+  getAvailableDates,
+  forceInvalidateGamesCache,
+} from "../db";
 import { ensureDebugLogsTable } from "./debugLogger";
-import { registerRgProxyRoute } from "../rotogrinderProxy";
-import { registerStripeWebhookRoute } from "../stripeWebhook";
-import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
-import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
+import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
+import { registerAnalyticsReadRoute } from "../analytics/readRoute";
+import { registerStripeWebhookRoute, getWebhookLatencyStats } from "../stripeWebhook";
+import { assertSchemaCurrent } from "./schemaGuard";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
 import { registerDimeChatRoute } from "../dime-chat.route";
+import { startDimeChatTraceRetentionScheduler } from "../dimeChatTrace";
 import { registerDimeWC2026Route } from "../dime-wc2026.route";
 import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getAppUserById, invalidateAppUserByIdCache } from "../db";
-import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { reportBillingAlertTransport } from "./billingAlerts";
+import { getDiscordBotHealth } from "../discord/bot";
+import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
+import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
+import { resolveOwnerIdentity } from "../ownerAuth";
+import { installFatalErrorHandler } from "./fatalErrorHandler";
+import { logSafe } from "./logSafe";
+import {
+  formatDimeRuntimeReadinessLog,
+  getDimeRuntimeReadiness,
+} from "./dimeRuntimeReadiness";
+import {
+  formatDimePricingAttestationLog,
+  getDimePricingAttestation,
+} from "./dimePricingAttestation";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
-// The legacy owner debug endpoints authenticated via the Manus SDK request-auth
-// helper + an OWNER_OPEN_ID comparison against the Manus OAuth server — permanently
-// dead off Manus. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
+// The legacy owner debug endpoints authenticated via the retired platform's SDK
+// request-auth helper + an OWNER_OPEN_ID comparison against its OAuth server —
+// permanently dead now. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
 // app_session JWT with ENV.cookieSecret, require type === "app_user", load the user
 // row (DB-authoritative — NEVER trust payload.role, a JWT is signed at login and a
 // later demotion must take effect immediately), enforce the tokenVersion check, then
@@ -71,7 +110,9 @@ type OwnerAuthResult =
   | { ok: true; userId: number }
   | { ok: false; status: 401 | 403 };
 
-async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuthResult> {
+async function authenticateOwnerRequest(
+  req: express.Request
+): Promise<OwnerAuthResult> {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");
   const token = cookies["app_session"];
   if (!token) return { ok: false, status: 401 };
@@ -83,42 +124,21 @@ async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuth
     const userId = Number(payload.sub);
     const tv = payload.tv as number | null | undefined;
 
-    // Force a fresh DB read — a stale cache entry could still carry a demoted-from-owner
-    // role. Mirrors ownerProcedure's cache-invalidation-before-read.
+    const fallback = getCachedAppUserEntry(userId);
     invalidateAppUserByIdCache(userId);
-    invalidateCachedAppUser(userId);
-
-    let user = await getAppUserById(userId);
-    const fromCache = !user;
-    if (!user) {
-      // getAppUserById returns null both for "no such user" and "DB unreachable" —
-      // fall back to the in-memory cache (same one ownerProcedure uses) to distinguish
-      // a real DB outage from a genuinely deleted user. If nothing is cached either,
-      // fail closed below.
-      user = getCachedAppUser(userId);
-      if (user) console.log(`[OwnerAuth] DB unavailable — serving userId=${userId} from cache (role=${user?.role})`);
-    } else {
-      setCachedAppUser(user);
-    }
-
-    if (!user) {
-      // Fail closed: user doesn't exist (deleted) OR DB is down with no cache — either
-      // way we cannot verify the caller is a live owner.
-      console.log(`[OwnerAuth] REJECTED — user not found / DB unavailable with no cache userId=${userId}`);
-      return { ok: false, status: 401 };
-    }
-
-    // tokenVersion check — only enforced when we have a fresh DB read (cache entries
-    // may predate a force-logout) and the JWT actually carries a tv claim.
-    if (!fromCache && tv !== null && tv !== undefined && user.tokenVersion !== tv) {
-      console.log(`[OwnerAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
-      return { ok: false, status: 401 };
-    }
-
-    // Role check: DB (or DB-derived cache) row only — the JWT claim is never trusted.
-    if (user.role !== "owner") {
-      console.log(`[OwnerAuth] FORBIDDEN — dbRole=${user.role} jwtRole=${payload.role ?? "?"} userId=${userId} (owner required)`);
-      return { ok: false, status: 403 };
+    const lookup = await lookupAppUserByIdFresh(userId);
+    if (lookup.status === "found") setCachedAppUser(lookup.user);
+    const resolved = resolveOwnerIdentity({
+      lookup,
+      fallback,
+      tokenVersion: tv,
+    });
+    if (!resolved.ok) {
+      console.log(
+        `[OwnerAuth] REJECTED — reason=${resolved.reason} userId=${userId}`
+      );
+      const status = resolved.reason.startsWith("token_version") ? 401 : 403;
+      return { ok: false, status };
     }
     return { ok: true, userId };
   } catch {
@@ -146,8 +166,16 @@ function fireRateLimitEvent(
   ip: string,
   path: string,
   method: string,
-  limitType: "global" | "auth" | "trpc_auth" | "stripe_checkout" | "waitlist_submit",
-  ua: string | null,
+  limitType:
+    | "global"
+    | "auth"
+    | "trpc_auth"
+    | "stripe_checkout"
+    | "waitlist_submit"
+    | "public_feed"
+    | "xff_canary"
+    | "edge_origin_ingress_anomaly",
+  ua: string | null
 ) {
   const now = Date.now();
   const dedupKey = `${ip}:${path}:${limitType}`;
@@ -163,9 +191,9 @@ function fireRateLimitEvent(
 
   const tag = `[RateLimit][${limitType.toUpperCase()}]`;
   console.warn(
-    `${tag} BLOCKED | IP=${ip} path=${path} method=${method}` +
-    ` ua="${ua?.substring(0, 60) ?? "none"}"` +
-    (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
+    `${tag} BLOCKED | IP=${logSafe(ip)} path=${logSafe(path)} method=${logSafe(method)}` +
+      ` ua="${logSafe(ua?.substring(0, 60) ?? "none")}"` +
+      (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
   );
 
   if (now - lastSent < RATE_LIMIT_DEDUP_MS) return; // deduplicated
@@ -180,7 +208,7 @@ function fireRateLimitEvent(
     userAgent: ua,
     context: limitType,
     occurredAt: now,
-  }).catch((err) =>
+  }).catch(err =>
     console.error(`${tag} DB insert failed: ${(err as Error).message}`)
   );
   // [STEP] Post structured embed to 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 Discord channel (async, non-blocking)
@@ -192,7 +220,7 @@ function fireRateLimitEvent(
     userAgent: ua,
     context: limitType,
     occurredAt: now,
-  }).catch((err) =>
+  }).catch(err =>
     console.error(`${tag} Discord alert failed: ${(err as Error).message}`)
   );
 }
@@ -201,46 +229,68 @@ function fireRateLimitEvent(
 // Prevent unhandled promise rejections and uncaught exceptions from killing the
 // process. Log them instead so the server stays alive and serves requests.
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("[CRASH GUARD] Unhandled promise rejection:", reason, "at:", promise);
-});
-
-process.on("uncaughtException", (err) => {
-  console.error("[CRASH GUARD] Uncaught exception — server will continue:", err);
+  console.error(
+    "[CRASH GUARD] Unhandled promise rejection:",
+    reason,
+    "at:",
+    promise
+  );
 });
 
 // ─── Rate limiters ────────────────────────────────────────────────────────────
 // Global limiter: 200 requests per minute per IP across all API routes.
 // Generous enough for legitimate use; blocks automated scraping/flooding.
 const globalApiLimiter = rateLimit({
-  windowMs: 60 * 1000,          // 1 minute window
-  max: 200,                      // max 200 requests per window per IP
-  standardHeaders: "draft-7",    // Return rate limit info in RateLimit-* headers
+  windowMs: 60 * 1000, // 1 minute window
+  max: 200, // max 200 requests per window per IP
+  standardHeaders: "draft-7", // Return rate limit info in RateLimit-* headers
   legacyHeaders: false,
   message: { error: "Too many requests. Please slow down." },
-  skip: (req) => req.path === "/health", // never throttle health probes
-  handler: (req, res, _next, options) => {
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)
-      ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+  skip: req => req.path === "/health", // never throttle health probes
+  // Key on the true client IP (leftmost sanitized XFF), NOT req.ip: under
+  // Railway's edge + trust proxy=1, req.ip is the rotating edge node, so the
+  // default keyGenerator both multiplied per-client budgets and shared budgets
+  // across unrelated clients. See clientIpKey.
+  keyGenerator: req => `global:${clientIpKey(req)}`,
+  handler: (req, res, _next) => {
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
+      req.ip ??
+      "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "global", ua);
-    res.status(options.statusCode).json(options.message);
+    sendRateLimitResponse(req, res, "Too many requests. Please slow down.");
   },
 });
 
 // Auth limiter: max 5 login/auth attempts per 15 minutes per IP.
 // Prevents brute-force credential stuffing on login and OAuth routes.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,     // 15-minute window
-  max: 5,                        // max 5 attempts per window per IP
+  windowMs: 15 * 60 * 1000, // 15-minute window
+  max: 5, // max 5 attempts per window per IP
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  message: { error: "Too many authentication attempts. Please wait 15 minutes before trying again." },
-  handler: (req, res, _next, options) => {
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)
-      ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+  message: {
+    error:
+      "Too many authentication attempts. Please wait 15 minutes before trying again.",
+  },
+  keyGenerator: req => `auth:${clientIpKey(req)}`,
+  handler: (req, res, _next) => {
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
+      req.ip ??
+      "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "auth", ua);
-    res.status(options.statusCode).json(options.message);
+    sendRateLimitResponse(
+      req,
+      res,
+      "Too many authentication attempts. Please wait 15 minutes before trying again."
+    );
   },
 });
 
@@ -252,19 +302,29 @@ const trpcAuthLimiter = rateLimit({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { error: "Too many login attempts. Please wait 15 minutes." },
-  keyGenerator: (req) => {
-    // Key by IP + procedure path for precise per-procedure limiting.
-    // MUST use ipKeyGenerator helper to normalize IPv6 addresses — express-rate-limit v8
-    // throws ERR_ERL_KEY_GEN_IPV6 (fatal ValidationError) if req.ip is used directly.
-    const path = req.path.replace(/^\//, "");
-    return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
+  keyGenerator: req => {
+    // Class-stable key, NOT path-derived: this limiter is fed by the /api/trpc
+    // procedure-aware dispatch, where req.path is the full comma-separated
+    // batch — keying on it would let an attacker mint a fresh budget per batch
+    // composition (login,me vs login,foo). clientIpKey resolves the true client
+    // (leftmost sanitized XFF), not the rotating Railway edge node. All login
+    // attempts from one client share one budget.
+    return `${clientIpKey(req)}:trpc_auth`;
   },
-  handler: (req, res, _next, options) => {
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)
-      ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+  handler: (req, res, _next) => {
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
+      req.ip ??
+      "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "trpc_auth", ua);
-    res.status(options.statusCode).json(options.message);
+    sendRateLimitResponse(
+      req,
+      res,
+      "Too many login attempts. Please wait 15 minutes."
+    );
   },
 });
 
@@ -279,7 +339,9 @@ function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  console.log(`[PORT_CHECK] Scanning for available port starting at ${startPort}`);
+  console.log(
+    `[PORT_CHECK] Scanning for available port starting at ${startPort}`
+  );
   for (let port = startPort; port < startPort + 20; port++) {
     console.log(`[PORT_CHECK] Testing port ${port}...`);
     const available = await isPortAvailable(port);
@@ -293,26 +355,36 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  console.log(`[SERVER_STARTUP] startServer() invoked — NODE_ENV=${process.env.NODE_ENV} PORT_ENV=${process.env.PORT ?? "(unset)"} pid=${process.pid}`);
+  console.log(
+    `[SERVER_STARTUP] startServer() invoked — NODE_ENV=${process.env.NODE_ENV} PORT_ENV=${process.env.PORT ?? "(unset)"} pid=${process.pid}`
+  );
 
   const app = express();
   console.log(`[SERVER_STARTUP] Express app created`);
 
   const server = createServer(app);
+  installFatalErrorHandler({ server });
   console.log(`[SERVER_STARTUP] HTTP server created`);
 
   // ─── Server-level error handlers ─────────────────────────────────────────
   // Catch binding errors (EADDRINUSE, EACCES) and connection-level errors
   // that would otherwise surface silently or crash the process.
   server.on("error", (err: NodeJS.ErrnoException) => {
-    console.error(`[ERROR] HTTP server error event: code=${err.code} message=${err.message}`, err);
+    console.error(
+      `[ERROR] HTTP server error event: code=${err.code} message=${err.message}`,
+      err
+    );
   });
   server.on("clientError", (err: NodeJS.ErrnoException, socket) => {
-    console.error(`[ERROR] HTTP client error: code=${err.code} message=${err.message}`);
+    console.error(
+      `[ERROR] HTTP client error: code=${err.code} message=${err.message}`
+    );
     socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
   });
-  server.on("connection", (socket) => {
-    console.log(`[SERVER_STARTUP] New TCP connection from ${socket.remoteAddress}:${socket.remotePort}`);
+  server.on("connection", socket => {
+    console.log(
+      `[SERVER_STARTUP] New TCP connection from ${socket.remoteAddress}:${socket.remotePort}`
+    );
   });
 
   // ─── Top-level request logger ────────────────────────────────────────────
@@ -323,12 +395,16 @@ async function startServer() {
   // Railway's 500 logs/sec rate limit. Errors (5xx) and slow requests
   // (>1000ms) are ALWAYS logged regardless of the sample decision so that
   // production visibility into problems is fully preserved.
-  console.log(`[SERVER_STARTUP] Registering top-level request logging middleware`);
+  console.log(
+    `[SERVER_STARTUP] Registering top-level request logging middleware`
+  );
   app.use((req, res, next) => {
     const start = Date.now();
     const ts = new Date().toISOString();
     const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
       req.socket?.remoteAddress ??
       "unknown";
     // Decide at request-time whether this request falls in the 10% sample.
@@ -337,11 +413,11 @@ async function startServer() {
     const sampled = Math.random() < 0.1;
     if (sampled) {
       console.log(
-        `[HTTP_REQUEST] → ${req.method} ${req.originalUrl} | ts=${ts} ip=${ip}` +
-        ` host=${req.headers["host"] ?? "-"}` +
-        ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
-        ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
-        ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
+        `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)}` +
+          ` host=${logSafe(req.headers["host"] ?? "-")}` +
+          ` x-forwarded-for=${logSafe(req.headers["x-forwarded-for"] ?? "-")}` +
+          ` x-forwarded-proto=${logSafe(req.headers["x-forwarded-proto"] ?? "-")}` +
+          ` user-agent=${logSafe((req.headers["user-agent"] ?? "-").toString().substring(0, 80))}`
       );
     }
     res.on("finish", () => {
@@ -350,9 +426,9 @@ async function startServer() {
       const isSlow = ms > 1000;
       if (sampled || isError || isSlow) {
         console.log(
-          `[HTTP_REQUEST] ← ${req.method} ${req.originalUrl} | status=${res.statusCode} duration=${ms}ms ip=${ip}` +
-          (isError ? " [ERROR]" : "") +
-          (isSlow ? " [SLOW]" : "")
+          `[HTTP_REQUEST] ← ${req.method} ${logSafe(req.originalUrl)} | status=${res.statusCode} duration=${ms}ms ip=${logSafe(ip)}` +
+            (isError ? " [ERROR]" : "") +
+            (isSlow ? " [SLOW]" : "")
         );
       }
     });
@@ -370,7 +446,9 @@ async function startServer() {
     if (host.startsWith("www.")) {
       const canonical = host.slice(4); // strip "www."
       const redirectUrl = `${req.protocol}://${canonical}${req.originalUrl}`;
-      console.log(`[www→canonical] 308 redirect: ${host}${req.originalUrl} → ${redirectUrl}`);
+      console.log(
+        `[www→canonical] 308 redirect: ${logSafe(host)}${logSafe(req.originalUrl)} → ${logSafe(redirectUrl)}`
+      );
       return res.redirect(308, redirectUrl);
     }
     next();
@@ -383,50 +461,110 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering compression middleware`);
   app.use(compression({ threshold: 512 }));
 
-  // Trust the first proxy (Manus edge) so req.protocol reflects
+  // Trust the first proxy (Railway edge) so req.protocol reflects
   // the original HTTPS scheme and cookies are set correctly (sameSite+secure).
   // Also required for express-rate-limit to read the real client IP from
   // X-Forwarded-For rather than the proxy IP.
-  app.set('trust proxy', 1);
+  app.set("trust proxy", 1);
+
+  // ─── Origin lock (Phase 4 edge defense) ───────────────────────────────────
+  // When EDGE_MODE is "on", a direct hit on the public *.up.railway.app origin
+  // that lacks the Cloudflare-injected x-dime-edge-secret (and a CF-range
+  // upstream) is 403'd — rendering the origin useless to a scraper who
+  // discovers its URL. "/health" stays reachable for Railway's probe. With
+  // EDGE_MODE unset/"off" this is a pure pass-through (byte-identical to today,
+  // inert on merge). Mounted BEFORE helmet/body-parsers/limiters so a denied
+  // request touches nothing. onEvent routes denials to the same loud, deduped
+  // alerting the rate limiters use. See server/_core/originLock.ts.
+  app.use(
+    originLock((kind, req) => {
+      fireRateLimitEvent(
+        immediateUpstreamIp(req) || resolveClientIp(req),
+        req.path,
+        req.method,
+        "edge_origin_ingress_anomaly",
+        (req.headers["user-agent"] as string | undefined) ?? null
+      );
+      if (kind === "edge_no_secret") {
+        console.error(
+          "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
+        );
+      } else if (kind === "edge_breaker_tripped") {
+        console.error(
+          "[edge][origin-lock] CRITICAL circuit breaker TRIPPED — EDGE_MODE=on but ~no verified Cloudflare ingress over the sample window; enforcement auto-downgraded to observe-only to prevent a 403 outage. Cloudflare is likely NOT fronting the origin (DNS/secret). Site falls back to Phase 3 gating + rate limits. Investigate the edge path."
+        );
+      } else if (kind === "edge_breaker_recovered") {
+        console.warn(
+          "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
+        );
+      }
+    })
+  );
 
   // ─── Security headers (helmet) ────────────────────────────────────────────
   // Sets X-Content-Type-Options, X-Frame-Options, X-XSS-Protection,
   // Strict-Transport-Security, Referrer-Policy, and a Content-Security-Policy
   // that allows our own origin + CDN assets. Vite HMR websocket is allowed in dev.
-  console.log(`[SERVER_STARTUP] Registering helmet security headers middleware`);
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        // Stripe Embedded Checkout (/checkout, MUST stay on-domain — owner
-        // directive): Stripe.js loads from js.stripe.com and mounts an iframe.
-        // Without these CSP allowances the browser blocks the script and the
-        // page shows "Failed to load Stripe.js" (observed live 2026-07-10).
-        // Per https://docs.stripe.com/security/guide#content-security-policy
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://js.stripe.com",
-          "https://*.js.stripe.com",
-          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []), // unsafe-eval only in dev (Vite HMR)
-        ],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-        imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
-        connectSrc: ["'self'", "wss:", "ws:", "https:"],
-        frameSrc: [
-          "'self'", // same-origin iframes (Rotogrinders proxy)
-          "https://js.stripe.com",
-          "https://*.js.stripe.com",
-          "https://checkout.stripe.com", // Embedded Checkout session iframe
-          "https://hooks.stripe.com",    // 3DS / bank-redirect auth frames
-        ],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
+  console.log(
+    `[SERVER_STARTUP] Registering helmet security headers middleware`
+  );
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          // Stripe Embedded Checkout (/checkout, MUST stay on-domain — owner
+          // directive): Stripe.js loads from js.stripe.com and mounts an iframe.
+          // Without these CSP allowances the browser blocks the script and the
+          // page shows "Failed to load Stripe.js" (observed live 2026-07-10).
+          // Per https://docs.stripe.com/security/guide#content-security-policy
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://js.stripe.com",
+            "https://*.js.stripe.com",
+            ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []), // unsafe-eval only in dev (Vite HMR)
+          ],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+          ],
+          // d2xsxph8kpxj0f.cloudfront.net serves Discord's "GG Sans" woff2 files.
+          // Owner-approved exception (2026-07-24) so Discord-affiliated controls
+          // can carry Discord's own typeface — see dime-ai/THREE-COLOR-LAW.md
+          // §"Discord platform exception". Scoped to fonts only.
+          fontSrc: [
+            "'self'",
+            "https://fonts.gstatic.com",
+            "https://d2xsxph8kpxj0f.cloudfront.net",
+            "data:",
+          ],
+          imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
+          connectSrc: ["'self'", "wss:", "ws:", "https:"],
+          frameSrc: [
+            "'self'", // same-origin iframes
+            "https://js.stripe.com",
+            "https://*.js.stripe.com",
+            "https://checkout.stripe.com", // Embedded Checkout session iframe
+            "https://hooks.stripe.com", // 3DS / bank-redirect auth frames
+          ],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests:
+            process.env.NODE_ENV === "production" ? [] : null,
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false, // Allow embedding external resources (logos, CDN)
-  }));
+      crossOriginEmbedderPolicy: false, // Allow embedding external resources (logos, CDN)
+    })
+  );
+
+  // Permissions-Policy: helmet no longer emits this (dropped in v5+), so we set
+  // it explicitly — denies every unused device/sensor capability (camera, mic,
+  // geolocation, USB/serial/BT/HID, MIDI, motion sensors) so a successful XSS
+  // still can't reach them, delegates `payment` to Stripe's Embedded Checkout
+  // origins (mirrors the CSP frame-src), and opts out of FLoC/Topics tracking.
+  console.log(`[SERVER_STARTUP] Registering Permissions-Policy header`);
+  app.use(permissionsPolicy());
 
   // ─── Stripe webhook — MUST be registered BEFORE express.json() ────────────
   // Uses express.raw() to preserve the raw buffer for HMAC-SHA256 signature
@@ -449,16 +587,68 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering /health endpoint`);
   app.get("/health", (req, res) => {
     const circuit = getCircuitStatus();
-    const dbOk = circuit.state === 'CLOSED';
+    const dbOk = circuit.state === "CLOSED";
+    // Schema/code-agreement gate (Phase 1½): a live app_users schema behind the
+    // code fails health, so Railway keeps the previous healthy deploy instead of
+    // cutting over to a code-ahead-of-migration deploy that would silently break
+    // auth (#370). Only a CONFIRMED mismatch fails; "unknown" never does.
+    const schemaMismatch = shouldFailHealthForSchema();
+    const healthy = dbOk && !schemaMismatch;
     const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
       req.socket?.remoteAddress ??
       "unknown";
-    console.log(`[HEALTH_CHECK] GET /health | ip=${ip} db.state=${circuit.state} dbOk=${dbOk}`);
-    res.status(dbOk ? 200 : 503).json({
-      status: dbOk ? 'ok' : 'degraded',
+    console.log(
+      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} db.state=${circuit.state} dbOk=${dbOk} schema=${currentSchemaVerdict()}`
+    );
+    // Integration state is REPORTED but deliberately does NOT drive the status
+    // code. Railway probes this endpoint: returning 503 because Discord's
+    // gateway is reconnecting would restart the container, killing the very
+    // supervisor that recovers it — an outage manufactured by its own monitor.
+    // Only the database, which the app genuinely cannot serve without, decides
+    // 200 vs 503.
+    const bot = getDiscordBotHealth();
+    res.status(healthy ? 200 : 503).json({
+      status: healthy ? "ok" : schemaMismatch ? "schema_mismatch" : "degraded",
       ts: Date.now(),
-      db: { state: circuit.state, consecutiveFailures: circuit.consecutiveFailures },
+      db: {
+        state: circuit.state,
+        consecutiveFailures: circuit.consecutiveFailures,
+      },
+      // Phase 1½ schema/code-agreement verdict (ok | schema_mismatch | unknown).
+      schema: currentSchemaVerdict(),
+      integrations: {
+        // Answers "is the bot up?" in one request instead of inferring it from
+        // the absence of a log line — the exact question that was unanswerable
+        // when a schedule backfill flooded the boot window.
+        discord: {
+          supervising: bot.supervising,
+          connected: bot.connected,
+          consecutiveFailures: bot.consecutiveFailures,
+          totalConnects: bot.totalConnects,
+          totalReconnects: bot.totalReconnects,
+          lastReadyAt: bot.lastReadyAt,
+          lastFailureAt: bot.lastFailureAt,
+          // Bounded: a Stripe/Discord error string is not a secret, but it is
+          // attacker-visible on a public probe, so cap it rather than echo it.
+          lastFailureReason: bot.lastFailureReason ? String(bot.lastFailureReason).slice(0, 120) : null,
+          retryQueued: bot.retryQueued,
+          uptimeMs: bot.connected && bot.lastReadyAt ? Date.now() - bot.lastReadyAt : null,
+        },
+        billingAlerts: {
+          // "Can a failed renewal actually reach a human?" Boolean only — the
+          // webhook URL itself is a secret and must never appear here.
+          configured: Boolean(
+            process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL ?? process.env.DISCORD_BILLING_WEBHOOK_URL
+          ),
+        },
+        // Webhook-path latency (avenue #11). Reported, never a status-code
+        // input — a slow webhook is an alert condition, not a reason for
+        // Railway to restart the container. In-memory since last boot.
+        stripeWebhook: getWebhookLatencyStats(),
+      },
     });
   });
 
@@ -467,7 +657,9 @@ async function startServer() {
   app.get("/api/db-status", globalApiLimiter, async (req, res) => {
     const auth = await authenticateOwnerRequest(req);
     if (!auth.ok) {
-      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+      return res
+        .status(auth.status)
+        .json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
     }
     const circuit = getCircuitStatus();
     const cache = getCacheStats();
@@ -482,7 +674,9 @@ async function startServer() {
   app.get("/api/perf", globalApiLimiter, async (req, res) => {
     const auth = await authenticateOwnerRequest(req);
     if (!auth.ok) {
-      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+      return res
+        .status(auth.status)
+        .json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
     }
     const cacheHealth = getCacheHealthStats();
     const circuit = getCircuitStatus();
@@ -497,7 +691,10 @@ async function startServer() {
         rssMB: (mem.rss / 1024 / 1024).toFixed(1),
       },
       cache: cacheHealth,
-      db: { state: circuit.state, consecutiveFailures: circuit.consecutiveFailures },
+      db: {
+        state: circuit.state,
+        consecutiveFailures: circuit.consecutiveFailures,
+      },
     });
   });
 
@@ -508,22 +705,35 @@ async function startServer() {
   app.get("/api/debug-logs", globalApiLimiter, async (req, res) => {
     const auth = await authenticateOwnerRequest(req);
     if (!auth.ok) {
-      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+      return res
+        .status(auth.status)
+        .json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
     }
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "db-unavailable" });
 
     try {
-      const source = typeof req.query.source === "string" ? req.query.source : null;
-      const level  = typeof req.query.level  === "string" ? req.query.level  : null;
-      const limit  = Math.min(parseInt(String(req.query.limit ?? "200"), 10) || 200, 1000);
+      const source =
+        typeof req.query.source === "string" ? req.query.source : null;
+      const level =
+        typeof req.query.level === "string" ? req.query.level : null;
+      const limit = Math.min(
+        parseInt(String(req.query.limit ?? "200"), 10) || 200,
+        1000
+      );
 
       // Build WHERE clause dynamically
       let whereClause = "WHERE 1=1";
       const params: (string | number)[] = [];
-      if (source) { whereClause += " AND source = ?"; params.push(source); }
-      if (level)  { whereClause += " AND level = ?";  params.push(level); }
+      if (source) {
+        whereClause += " AND source = ?";
+        params.push(source);
+      }
+      if (level) {
+        whereClause += " AND level = ?";
+        params.push(level);
+      }
       params.push(limit);
 
       const [rows] = await db.execute(
@@ -540,12 +750,62 @@ async function startServer() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // Table may not exist yet — return helpful error
-      if (msg.includes("doesn't exist") || msg.includes("Table") || msg.includes("ER_NO_SUCH_TABLE")) {
-        return res.status(404).json({ error: "debug_logs table not found — restart server to auto-create it" });
+      if (
+        msg.includes("doesn't exist") ||
+        msg.includes("Table") ||
+        msg.includes("ER_NO_SUCH_TABLE")
+      ) {
+        return res.status(404).json({
+          error:
+            "debug_logs table not found — restart server to auto-create it",
+        });
       }
       console.error("[DebugLogs] Query failed:", err);
       res.status(500).json({ error: "query-failed", message: msg });
     }
+  });
+
+  // ─── XFF-sanitization canary ──────────────────────────────────────────────
+  // All limiter keying trusts that Railway's edge sanitizes inbound
+  // X-Forwarded-For and appends its (public) hop, so the resolved client is
+  // always a PUBLIC IP. If a /api/trpc request ever resolves to a private/
+  // reserved/carrier-internal address, that assumption has broken (hop
+  // structure changed) — fire a loud, deduped security alert so it can never
+  // fail silently. This is the runtime half of the guarantee; the deploy half
+  // is the spoof self-check in scripts/smoke-deploy.mjs. Observe-only; never
+  // blocks. See trpcRateLimitPolicy.isReservedOrInternalIp.
+  app.use("/api/trpc", (req, _res, next) => {
+    const ip = resolveClientIp(req);
+    if (ip && isReservedOrInternalIp(ip)) {
+      fireRateLimitEvent(
+        ip,
+        req.path,
+        req.method,
+        "xff_canary",
+        (req.headers["user-agent"] as string | undefined) ?? null
+      );
+    }
+    // Edge-aware anomaly (Phase 4): the private-range canary above is
+    // structurally blind to a WRONG-BUT-PUBLIC client (e.g. a CF PoP egress IP
+    // when resolution silently breaks, or a direct-origin bypass). When edge
+    // mode is armed, a /api/trpc request that is NOT a verified Cloudflare
+    // ingress (missing cf-connecting-ip or a non-CF upstream) is the signal the
+    // regex can't catch — fire it observe-only. In "on" mode a genuine bypass
+    // is already 403'd by originLock upstream, so this mostly surfaces during
+    // the "log" soak (proof that Cloudflare is actually fronting every request).
+    if (edgeMode() !== "off") {
+      const upstream = immediateUpstreamIp(req);
+      if (!cfConnectingIp(req) || !isCloudflareEdgeIp(upstream)) {
+        fireRateLimitEvent(
+          upstream || ip,
+          req.path,
+          req.method,
+          "edge_origin_ingress_anomaly",
+          (req.headers["user-agent"] as string | undefined) ?? null
+        );
+      }
+    }
+    next();
   });
 
   // ─── Global API rate limiter ──────────────────────────────────────────────
@@ -554,19 +814,16 @@ async function startServer() {
   app.use("/api", globalApiLimiter);
 
   // ─── Auth-specific rate limiters ─────────────────────────────────────────
-  // Manus OAuth callback — 5 attempts per 15 min per IP
-  app.use("/api/oauth", authLimiter);
-
   // Discord OAuth routes — 5 attempts per 15 min per IP
   app.use("/api/discord-auth", authLimiter);
   app.use("/api/auth/discord-invite", authLimiter);
   app.use("/api/auth/discord-login", authLimiter);
   app.use("/api/auth/discord", authLimiter);
 
-  // tRPC login mutation — 5 attempts per 15 min per IP
-  // Matches both batch (?batch=1) and direct calls to appUsers.login
-  app.use("/api/trpc/appUsers.login", trpcAuthLimiter);
-  app.use("/api/trpc/auth.login", trpcAuthLimiter);
+  // tRPC login mutation limiting moved to the procedure-aware dispatch below
+  // (SEC: the old path-prefix mounts here were batch-evadable — a comma-batched
+  // /api/trpc/appUsers.login,appUsers.me never matched the prefix, so appending
+  // any second procedure skipped the 5/15min brute-force limiter entirely).
 
   // ─── Stripe checkout rate limiter ────────────────────────────────────────
   // Dedicated limiter for the unauthenticated publicCreateCheckoutSession endpoint.
@@ -581,27 +838,40 @@ async function startServer() {
     max: 10,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    message: { error: "Too many checkout requests. Please wait 15 minutes before trying again." },
-    keyGenerator: (req) => {
-      const path = req.path.replace(/^\//, "");
-      return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
+    message: {
+      error:
+        "Too many checkout requests. Please wait 15 minutes before trying again.",
     },
-    handler: (req, res, _next, options) => {
-      const ip = (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+    keyGenerator: req => {
+      // Class-stable key (see trpcAuthLimiter note): req.path under the
+      // /api/trpc dispatch is the full batch list — path-derived keys would
+      // reopen per-composition budget minting for the rotating-origin probers
+      // this limiter exists to stop. clientIpKey resolves the true client, not
+      // the rotating Railway edge node.
+      return `${clientIpKey(req)}:stripe_checkout`;
+    },
+    handler: (req, res, _next) => {
+      const ip =
+        (req.headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          .trim() ??
+        req.ip ??
+        "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
-      console.warn(`[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`);
+      console.warn(
+        `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+      );
       fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);
-      res.status(options.statusCode).json(options.message);
+      sendRateLimitResponse(
+        req,
+        res,
+        "Too many checkout requests. Please wait 15 minutes before trying again."
+      );
     },
   });
-  // Apply to both direct and batch tRPC calls
-  app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
-  // Embedded (in-domain) checkout variant — same abuse surface, same limiter
-  app.use("/api/trpc/stripe.publicCreateEmbeddedCheckoutSession", stripeCheckoutLimiter);
-  // Identity attach (elements-mode username metadata) — public + hits Stripe API,
-  // same limiter class (per-path buckets via keyGenerator).
-  app.use("/api/trpc/stripe.publicAttachCheckoutIdentity", stripeCheckoutLimiter);
+  // Stripe procedure limiting now flows through the consolidated
+  // procedure-aware dispatch mounted after the waitlist limiter below
+  // (AUTH-004 generalized — see server/_core/trpcRateLimitPolicy.ts).
 
   // ─── Waitlist submit rate limiter (DB-006 remediation) ────────────────────
   // Public form endpoint — 5 submissions per 15 minutes per IP.
@@ -611,20 +881,92 @@ async function startServer() {
     max: 5,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    message: { error: "Too many waitlist submissions. Please wait 15 minutes before trying again." },
-    keyGenerator: (req) => {
-      return `waitlist:${ipKeyGenerator(req.ip ?? "")}`;
+    message: {
+      error:
+        "Too many waitlist submissions. Please wait 15 minutes before trying again.",
     },
-    handler: (req, res, _next, options) => {
-      const ip = (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+    keyGenerator: req => {
+      return `waitlist:${clientIpKey(req)}`;
+    },
+    handler: (req, res, _next) => {
+      const ip =
+        (req.headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          .trim() ??
+        req.ip ??
+        "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
-      console.warn(`[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`);
+      console.warn(
+        `[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+      );
       fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);
-      res.status(options.statusCode).json(options.message);
+      sendRateLimitResponse(
+        req,
+        res,
+        "Too many waitlist submissions. Please wait 15 minutes before trying again."
+      );
     },
   });
-  app.use("/api/trpc/waitlist.submit", waitlistSubmitLimiter);
+
+  // ─── Public feed read limiter ─────────────────────────────────────────────
+  // The scraper hot path: every model-bearing feed read in the "public_feed"
+  // class of TRPC_PROCEDURE_CLASSES (games.list + feed meta, wc2026 match/odds
+  // feeds, MLB strikeout/HR prop feeds) — see trpcRateLimitPolicy.ts for the
+  // authoritative list. httpBatchLink coalesces a whole feed page into ONE
+  // request (one token), so a real logged-in user sends ~1-3 req/min incl.
+  // navigation; 60/min/IP is ~20x headroom while capping a scraper at 1 req/s.
+  // FAIL OPEN (feed is the
+  // product — a limiter fault must not become an outage; enforced in the
+  // dispatch's public_feed branch). Env knobs: FEED_RATE_LIMIT_MAX (default 60),
+  // FEED_RATE_LIMIT_DISABLED=1 kill-switch (feed class only; never auth/checkout).
+  const feedRateLimitMax = Number(process.env.FEED_RATE_LIMIT_MAX ?? "60") || 60;
+  const feedRateLimitDisabled =
+    (process.env.FEED_RATE_LIMIT_DISABLED ?? "").trim() === "1";
+  const feedProcedureLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: feedRateLimitMax,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    skip: () => feedRateLimitDisabled,
+    // Fail OPEN natively: on a store error, allow the request rather than 500.
+    // Inert with the in-process MemoryStore (cannot error), but load-bearing if
+    // this class ever moves to a shared/Redis store — the feed must never go
+    // down because its limiter's backing store did.
+    passOnStoreError: true,
+    keyGenerator: req => `${clientIpKey(req)}:public_feed`,
+    handler: (req, res, _next) => {
+      const ip =
+        (req.headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          .trim() ??
+        req.ip ??
+        "unknown";
+      const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+      fireRateLimitEvent(ip, req.path, req.method, "public_feed", ua);
+      sendRateLimitResponse(
+        req,
+        res,
+        "Too many feed requests. Please slow down and try again shortly."
+      );
+    },
+  });
+
+  // ─── Procedure-aware tRPC rate-limit dispatch (AUTH-004 generalized) ─────
+  // ONE classifier for every procedure-scoped limiter. Path-prefix mounts on
+  // /api/trpc/<procedure> are batch-evadable (httpBatchLink sends comma lists:
+  // /api/trpc/a.b,c.d — the comma breaks Express prefix matching), which
+  // previously left appUsers.login/auth.login and waitlist.submit unprotected
+  // against batched calls. The dispatch parses every batch segment and hands
+  // the request to the strictest matching class limiter.
+  app.use(
+    "/api/trpc",
+    createTrpcRateLimitDispatch({
+      auth: trpcAuthLimiter,
+      stripe_checkout: stripeCheckoutLimiter,
+      waitlist: waitlistSubmitLimiter,
+      public_feed: feedProcedureLimiter,
+    })
+  );
 
   // ─── Request timeout middleware ───────────────────────────────────────────
   // Kill requests that take > 25s to prevent hanging connections from exhausting
@@ -638,29 +980,33 @@ async function startServer() {
   app.use((req, res, next) => {
     const timeout = setTimeout(() => {
       if (!res.headersSent) {
-        const isTrpc = req.path.startsWith('/api/trpc');
-        console.error(`[TIMEOUT] Request timed out: ${req.method} ${req.path} isTrpc=${isTrpc}`);
+        const isTrpc = req.path.startsWith("/api/trpc");
+        console.error(
+          `[TIMEOUT] Request timed out: ${req.method} ${logSafe(req.path)} isTrpc=${isTrpc}`
+        );
         if (isTrpc) {
           // tRPC batch envelope: HTTP 200 with error in the result array
           // The client will receive a TRPCClientError with code INTERNAL_SERVER_ERROR
-          res.status(200).json([{
-            error: {
-              json: {
-                message: 'Request timed out. Please try again in a moment.',
-                code: -32603,
-                data: {
-                  code: 'INTERNAL_SERVER_ERROR',
-                  httpStatus: 503,
-                  path: req.path.replace('/api/trpc/', ''),
+          res.status(200).json([
+            {
+              error: {
+                json: {
+                  message: "Request timed out. Please try again in a moment.",
+                  code: -32603,
+                  data: {
+                    code: "INTERNAL_SERVER_ERROR",
+                    httpStatus: 503,
+                    path: req.path.replace("/api/trpc/", ""),
+                  },
                 },
               },
             },
-          }]);
+          ]);
         } else {
-          res.status(503).json({ error: 'Request timeout' });
+          res.status(503).json({ error: "Request timeout" });
         }
       }
-    }, 60_000);  // 60s: accommodates TiDB cold-start + retryOnce
+    }, 60_000); // 60s: accommodates TiDB cold-start + retryOnce
     // Worst case with cold-start retry:
     //   Attempt 1: read(8s) + parallel_check(8s) + bcrypt(0.11s) + write(8s) = 24.11s [transient fail]
     //   retryOnce delay: 3s
@@ -669,37 +1015,25 @@ async function startServer() {
     // Normal case (TiDB warm): 24.11s << 60s timeout
     // The keep-alive ping (every 4 min) prevents cold starts in practice;
     // this 60s timeout is the last-resort safety net for edge cases.
-    res.on('finish', () => clearTimeout(timeout));
-    res.on('close', () => clearTimeout(timeout));
+    res.on("finish", () => clearTimeout(timeout));
+    res.on("close", () => clearTimeout(timeout));
     next();
   });
 
-  // Storage proxy — serves /manus-storage/* paths via signed Forge URLs
+  // Storage proxy — serves /dime-storage/* asset paths (local-first)
   console.log(`[SERVER_STARTUP] Registering storage proxy routes`);
   registerStorageProxy(app);
-  // OAuth callback under /api/oauth/callback
-  console.log(`[SERVER_STARTUP] Registering OAuth routes`);
-  registerOAuthRoutes(app);
   // Discord account linking routes
   console.log(`[SERVER_STARTUP] Registering Discord auth/login/invite routes`);
   registerDiscordAuthRoutes(app);
   registerDiscordLoginRoutes(app);
   registerDiscordInviteRoutes(app);
-  // Rotogrinders server-side proxy — PAUSED (set ROTOGRINDERS_PAUSED=false in jackMac.ts to re-enable scheduler too)
-  // registerRgProxyRoute(app);  // PAUSED
 
-  // ─── Fangraphs lineup Heartbeat ─────────────────────────────────────────
-  // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
-  // Writes today + tomorrow MLB lineup tabs. Zero RotoGrinders code.
-  console.log(`[SERVER_STARTUP] Registering Fangraphs lineup heartbeat route`);
-  registerFgLineupsHeartbeat(app);
-
-  // ─── Rotowire lineup Heartbeat ──────────────────────────────────────────
-  // POST /api/scheduled/roto-lineups — called every 10 min by Manus Heartbeat
-  // Scrapes Rotowire today + tomorrow lineups → writes MM-DD-YYYY LINEUPS tabs.
-  // Schema: BATTING_ORDER (J) | BATTER_NAME (K) | BAT_HAND (L) | POSITION (M)
-  console.log(`[SERVER_STARTUP] Registering Rotowire lineup heartbeat route`);
-  registerRotoLineupsHeartbeat(app);
+  // User Activity analytics ingestion — private, secret-gated, served ONLY on
+  // the back office (store role); returns 404 on the web instance. Inert until
+  // ANALYTICS_ROLE=store + ANALYTICS_INGEST_SECRET are set. See server/analytics.
+  registerAnalyticsIngestRoute(app);
+  registerAnalyticsReadRoute(app);
 
   // ─── WC2026 Heartbeats ───────────────────────────────────────────────────
   // POST /api/scheduled/wc2026-odds    — every 30 min (5 min near kickoff)
@@ -708,7 +1042,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering WC2026 heartbeat routes`);
   registerWc2026Heartbeats(app);
 
-  // ─── GitHub Actions cron endpoints (off-Manus data freshness) ────────────
+  // ─── GitHub Actions cron endpoints (data freshness) ──────────────────────
   // POST /api/cron/vsin-odds · /api/cron/scores — fired by GitHub Actions on a
   // timer, shared-secret authed (CRON_SECRET). These replace the always-on
   // in-process schedulers gated off via DISABLE_BACKGROUND_JOBS on Railway.
@@ -720,6 +1054,8 @@ async function startServer() {
   // Plain Express SSE route (not tRPC) for optimal streaming performance.
   console.log(`[SERVER_STARTUP] Registering Dime AI chat SSE route`);
   registerDimeChatRoute(app);
+  console.log(formatDimeRuntimeReadinessLog(getDimeRuntimeReadiness()));
+  console.log(formatDimePricingAttestationLog(getDimePricingAttestation()));
 
   // ─── Dime WC2026 Intelligence — Tier 4 authenticated, credit-gated, source-grounded
   // POST /api/dime/wc2026 — 14-step enforcement, 22-path validated
@@ -759,24 +1095,32 @@ async function startServer() {
     // redirect lands on the same slate DimeModelFeed defaults to.
     const FEED_CUTOFF_UTC_HOUR = 7;
     const now = new Date();
-    const ms = now.getUTCHours() < FEED_CUTOFF_UTC_HOUR
-      ? now.getTime() - 24 * 60 * 60 * 1000
-      : now.getTime();
+    const ms =
+      now.getUTCHours() < FEED_CUTOFF_UTC_HOUR
+        ? now.getTime() - 24 * 60 * 60 * 1000
+        : now.getTime();
     const d = new Date(ms);
     const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
     const da = String(d.getUTCDate()).padStart(2, "0");
     return `${mo}-${da}-${d.getUTCFullYear()}`;
   };
-  console.log(`[SERVER_STARTUP] Registering legacy slug 308 redirects (/feed, /splits, /projections, /dashboard)`);
+  console.log(
+    `[SERVER_STARTUP] Registering legacy slug 308 redirects (/feed, /splits, /projections, /dashboard)`
+  );
   const firstQueryValue = (v: unknown): string =>
-    typeof v === "string" ? v : Array.isArray(v) && typeof v[0] === "string" ? v[0] : "";
+    typeof v === "string"
+      ? v
+      : Array.isArray(v) && typeof v[0] === "string"
+        ? v[0]
+        : "";
   app.get(["/feed", "/splits", "/projections", "/dashboard"], (req, res) => {
     const tab = firstQueryValue(req.query.tab);
     let target: string;
     if (req.path === "/splits" || tab === "splits") {
       target = "/betting-splits/MLB";
     } else {
-      const sport = firstQueryValue(req.query.sport).toUpperCase() === "WC" ? "wc" : "mlb";
+      const sport =
+        firstQueryValue(req.query.sport).toUpperCase() === "WC" ? "wc" : "mlb";
       const legacyDate = firstQueryValue(req.query.date);
       const slugDate = /^\d{4}-\d{2}-\d{2}$/.test(legacyDate)
         ? `${legacyDate.slice(5, 7)}-${legacyDate.slice(8, 10)}-${legacyDate.slice(0, 4)}`
@@ -797,7 +1141,9 @@ async function startServer() {
     // The /feed target varies with the 07:00 UTC rollover — a cached 308
     // would pin repeat visitors to a stale date, so forbid caching.
     res.set("Cache-Control", "no-store");
-    console.log(`[legacy→canonical] 308 redirect: ${req.originalUrl} → ${target}`);
+    console.log(
+      `[legacy→canonical] 308 redirect: ${logSafe(req.originalUrl)} → ${logSafe(target)}`
+    );
     res.redirect(308, target);
   });
 
@@ -807,16 +1153,22 @@ async function startServer() {
     await setupVite(app, server);
     console.log(`[SERVER_STARTUP] Vite dev middleware ready`);
   } else {
-    console.log(`[SERVER_STARTUP] Registering static file serving (production)`);
+    console.log(
+      `[SERVER_STARTUP] Registering static file serving (production)`
+    );
     serveStatic(app);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
-  console.log(`[SERVER_STARTUP] Preferred port from env: ${preferredPort} (PORT="${process.env.PORT ?? "(unset)"}")`);
+  console.log(
+    `[SERVER_STARTUP] Preferred port from env: ${preferredPort} (PORT="${process.env.PORT ?? "(unset)"}")`
+  );
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log(
+      `[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`
+    );
   }
 
   // Registered via server.once("listening") — NOT as a listen() callback — so it
@@ -824,10 +1176,29 @@ async function startServer() {
   // would double-start every scheduler below).
   const onListening = () => {
     const addr = server.address();
-    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`);
+    console.log(
+      `[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`
+    );
     console.log(`Server running on http://localhost:${port}/`);
+    // Does the live schema actually satisfy what this build's queries assume?
+    // Drizzle enumerates every declared column, so code deployed ahead of its
+    // migration breaks every query against the affected table — which on
+    // 2026-07-31 took platform-wide login down while the deploy looked green.
+    // Warn-only by default (SCHEMA_GUARD_FATAL=1 to fail closed) so a check
+    // failure can never crash-loop the service it is meant to protect.
+    assertSchemaCurrent().catch((err: unknown) =>
+      console.warn(`[SchemaGuard] check failed to run: ${err instanceof Error ? err.message : String(err)}`)
+    );
+    // Say at boot whether billing alerts can actually reach a human, rather
+    // than discovering it the first time something goes wrong.
+    reportBillingAlertTransport();
     // Ensure debug_logs table exists — idempotent, non-fatal
-    ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
+    ensureDebugLogsTable().catch((err: unknown) =>
+      console.warn(
+        "[Startup] [DebugLogger] Table creation failed (non-fatal):",
+        err
+      )
+    );
     // ── Recurring background jobs (metered-host credit control) ──────────────
     // Every job below is an in-process 24/7 loop (VSiN scrapers, model runs,
     // schedule-history refreshes, bet auto-grading, security digests). On a
@@ -838,91 +1209,105 @@ async function startServer() {
     // flag is removed or the jobs are moved to a dedicated worker service.
     // Unset (the default) preserves current behavior — every job runs.
     if (isBackgroundJobsDisabled()) {
-      console.log('[SCHEDULERS] DISABLE_BACKGROUND_JOBS set — web-only mode: recurring background jobs skipped');
+      console.log(
+        "[SCHEDULERS] DISABLE_BACKGROUND_JOBS set — web-only mode: recurring background jobs skipped"
+      );
     } else {
-    // Start daily 6am EST game purge (removes previous day's games)
-    startDailyPurgeSchedule();
-    // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
-    startVsinAutoRefresh();
-    // Auto-sync NBA model projections from Google Sheet every 3 hours (9AM–midnight PST)
-    startNbaModelSyncScheduler();
-    // NHL model sync — runs every 30 min (9AM–9PM PST), models unmodeled NHL games
-    startNhlModelSyncScheduler();
-    // NHL goalie watcher — checks RotoWire every 10 min for goalie changes, re-runs model on scratch
-    startNhlGoalieWatcher();
-    // Discord bot — listens for /splits slash command
-    startDiscordBot();
-    // MLB player sync — nightly at 08:00 UTC, updates active rosters from MLB Stats API
-    startMlbPlayerSyncScheduler();
-    // MLB schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
-    startMlbScheduleHistoryScheduler();
-    // MLB TRENDS nightly refresh — fires at 2:59 AM EST (11:59 PM PST) every night
-    // Re-ingests yesterday + today, runs 30-team cross-validation, notifies owner
-    startMlbNightlyTrendsScheduler();
-    // NBA schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
-    startNbaScheduleHistoryScheduler();
-    // NHL schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
-    startNhlScheduleHistoryScheduler();
-    // Pre-warm Action Network slate cache for today — eliminates cold-start latency on first BetTracker load
-    prewarmSlateCache().catch(err => console.error("[AN][PREWARM] Failed:", err));
-    // Automated bet grading — 15-min polling during game hours + nightly 11:30 PM EST sweep
-    startBetAutoGradeScheduler();
-    // MLB outcome ingestion + f5_share drift detection + auto-recalibration
-    // Nightly at 12:30 AM PST: ingest final game outcomes → compute Brier scores → check f5_share drift
-    // Monthly on 1st at 3:00 AM PST: full recalibration regardless of drift
-    startMlbOutcomeAndDriftScheduler();
-    // MLB model sync — standalone 5-min heartbeat for today+tomorrow, 24/7, no time gates
-    // Catch-all safety net: models any game with pitchers+lines but modelRunAt=null
-    // Idempotent: modelRunAt IS NULL guard prevents re-running already-modeled games
-    startMlbModelSyncScheduler();
-    // Jack Mac scheduler removed — tab purged
-    // Security digest — daily at 08:00 EST (13:00 UTC), sends 24h threat summary via notifyOwner()
-    startSecurityDigestScheduler();
-    // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
-    startWeeklySecurityDigestScheduler();
+      // Start daily 6am EST game purge (removes previous day's games)
+      startDailyPurgeSchedule();
+      // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
+      startVsinAutoRefresh();
+      // NHL model sync — runs every 30 min (9AM–9PM PST), models unmodeled NHL games
+      startNhlModelSyncScheduler();
+      // NHL goalie watcher — checks RotoWire every 10 min for goalie changes, re-runs model on scratch
+      startNhlGoalieWatcher();
+      // Discord bot — gateway client for role sync, password-reset DMs, security alerts
+      startDiscordBot();
+      // MLB player sync — nightly at 08:00 UTC, updates active rosters from MLB Stats API
+      startMlbPlayerSyncScheduler();
+      // MLB schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
+      startMlbScheduleHistoryScheduler();
+      // MLB TRENDS nightly refresh — fires at 2:59 AM EST (11:59 PM PST) every night
+      // Re-ingests yesterday + today, runs 30-team cross-validation, notifies owner
+      startMlbNightlyTrendsScheduler();
+      // NBA schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
+      startNbaScheduleHistoryScheduler();
+      // NHL schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
+      startNhlScheduleHistoryScheduler();
+      // Pre-warm Action Network slate cache for today — eliminates cold-start latency on first BetTracker load
+      prewarmSlateCache().catch(err =>
+        console.error("[AN][PREWARM] Failed:", err)
+      );
+      // Automated bet grading — 15-min polling during game hours + nightly 11:30 PM EST sweep
+      startBetAutoGradeScheduler();
+      // MLB outcome ingestion + f5_share drift detection + auto-recalibration
+      // Nightly at 12:30 AM PST: ingest final game outcomes → compute Brier scores → check f5_share drift
+      // Monthly on 1st at 3:00 AM PST: full recalibration regardless of drift
+      startMlbOutcomeAndDriftScheduler();
+      // MLB model sync — standalone 5-min heartbeat for today+tomorrow, 24/7, no time gates
+      // Catch-all safety net: models any game with pitchers+lines but modelRunAt=null
+      // Idempotent: modelRunAt IS NULL guard prevents re-running already-modeled games
+      startMlbModelSyncScheduler();
+      // Security digest — daily at 08:00 EST (13:00 UTC), sends 24h threat summary via notifyOwner()
+      startSecurityDigestScheduler();
+      // Dime Trace v1 — daily purge of restricted raw/context payloads after
+      // their 90-day deadline. User-visible chat history is not removed here.
+      startDimeChatTraceRetentionScheduler();
+      // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
+      startWeeklySecurityDigestScheduler();
 
-    // ── Startup DB backfills + Fangraphs scrape loop (MOVED inside the guard) ──
-    // These write to the DB / scrape an upstream feed on a timer. Previously they
-    // ran outside the DISABLE_BACKGROUND_JOBS guard, so every web replica executed
-    // them — double-writing the backfills and duplicating the 30-min scrape. They
-    // are background jobs and belong behind the kill switch.
-    // OddsHistory lineSource backfill — sets lineSource on historical rows where it is NULL
-    // Uses game.oddsSource as ground truth. Runs once at startup, no-ops if all rows already set.
-    import('../db').then(({ backfillOddsHistoryLineSource }) => {
-      backfillOddsHistoryLineSource()
-        .catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] lineSource backfill failed (non-fatal):', err));
-    }).catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] Import failed (non-fatal):', err));
+      // ── Startup DB backfills (MOVED inside the guard) ──
+      // These write to the DB / scrape an upstream feed on a timer. Previously they
+      // ran outside the DISABLE_BACKGROUND_JOBS guard, so every web replica executed
+      // them — double-writing the backfills and duplicating the 30-min scrape. They
+      // are background jobs and belong behind the kill switch.
+      // OddsHistory lineSource backfill — sets lineSource on historical rows where it is NULL
+      // Uses game.oddsSource as ground truth. Runs once at startup, no-ops if all rows already set.
+      import("../db")
+        .then(({ backfillOddsHistoryLineSource }) => {
+          backfillOddsHistoryLineSource().catch((err: unknown) =>
+            console.warn(
+              "[Startup] [OddsHistory][BACKFILL] lineSource backfill failed (non-fatal):",
+              err
+            )
+          );
+        })
+        .catch((err: unknown) =>
+          console.warn(
+            "[Startup] [OddsHistory][BACKFILL] Import failed (non-fatal):",
+            err
+          )
+        );
 
-    // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
-    // Runs once on server start, non-fatal, no-ops if all rows already resolved
-    import('../mlbKPropsModelService').then(({ backfillAllKPropsMlbamIds }) => {
-      backfillAllKPropsMlbamIds()
-        .then((r: { resolved: number; alreadyHad: number; unresolved: number; errors: number }) =>
-          console.log(`[Startup] [MLBAM_BACKFILL] K-Props: resolved=${r.resolved} alreadyHad=${r.alreadyHad} unresolved=${r.unresolved} errors=${r.errors}`)
-        )
-        .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
-    }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
-
-    // ── Lineup cache pre-warm + recurring 30-min Fangraphs scrape loop ─────────
-    // Pre-fetch MLB lineups at startup so the first LINEUPS tab load is instant,
-    // then refresh every 30 minutes. This scrapes an upstream feed on a timer, so
-    // a web-only replica must skip it (the next user request triggers a live fetch).
-    import('../fangraphsScraper').then(({ scrapeFangraphsLineups }) => {
-      // Initial pre-fetch: 3 seconds after startup (avoids blocking the listen callback)
-      setTimeout(() => {
-        scrapeFangraphsLineups()
-          .then(r => console.log(`[Startup] [LINEUP_CACHE] Pre-warmed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
-          .catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Pre-fetch failed (non-fatal):', err));
-      }, 3000);
-      // Recurring refresh: every 30 minutes (force-refresh to bypass cache)
-      const lineupRefreshInterval = setInterval(() => {
-        scrapeFangraphsLineups(true)
-          .then(r => console.log(`[Scheduler] [LINEUP_CACHE] Refreshed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
-          .catch((err: unknown) => console.warn('[Scheduler] [LINEUP_CACHE] Refresh failed (non-fatal):', err));
-      }, 30 * 60 * 1000);
-      lineupRefreshInterval.unref();
-      console.log('[Startup] [LINEUP_CACHE] Lineup cache pre-warm scheduled (startup + every 30 min)');
-    }).catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Import failed (non-fatal):', err));
+      // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
+      // Runs once on server start, non-fatal, no-ops if all rows already resolved
+      import("../mlbKPropsModelService")
+        .then(({ backfillAllKPropsMlbamIds }) => {
+          backfillAllKPropsMlbamIds()
+            .then(
+              (r: {
+                resolved: number;
+                alreadyHad: number;
+                unresolved: number;
+                errors: number;
+              }) =>
+                console.log(
+                  `[Startup] [MLBAM_BACKFILL] K-Props: resolved=${r.resolved} alreadyHad=${r.alreadyHad} unresolved=${r.unresolved} errors=${r.errors}`
+                )
+            )
+            .catch((err: unknown) =>
+              console.warn(
+                "[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):",
+                err
+              )
+            );
+        })
+        .catch((err: unknown) =>
+          console.warn(
+            "[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):",
+            err
+          )
+        );
     } // ── end recurring background jobs (DISABLE_BACKGROUND_JOBS guard) ──
     // ── DB keep-alive ping ──────────────────────────────────────────────────
     // TiDB Serverless drops idle connections after ~5 minutes. Without a
@@ -936,9 +1321,13 @@ async function startServer() {
     // latency for all UserManagement mutations.
     const runDbKeepAlive = () => {
       getDb()
-        .then((db) => db!.execute('SELECT 1 AS keepalive'))
-        .then(() => console.log('[DB_KEEPALIVE] TiDB connection pool kept warm ✓'))
-        .catch((err: unknown) => console.warn('[DB_KEEPALIVE] Ping failed (non-fatal):', err));
+        .then(db => db!.execute("SELECT 1 AS keepalive"))
+        .then(() =>
+          console.log("[DB_KEEPALIVE] TiDB connection pool kept warm ✓")
+        )
+        .catch((err: unknown) =>
+          console.warn("[DB_KEEPALIVE] Ping failed (non-fatal):", err)
+        );
     };
     // Initial warm-up: 500ms after startup
     setTimeout(runDbKeepAlive, 500);
@@ -946,7 +1335,40 @@ async function startServer() {
     // unref() prevents this interval from keeping the process alive during tests
     const keepAliveInterval = setInterval(runDbKeepAlive, 4 * 60 * 1000);
     keepAliveInterval.unref();
-    console.log('[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)');
+    console.log(
+      "[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)"
+    );
+
+    // ── Checkout reconciliation ────────────────────────────────────────────
+    // The webhook is a PUSH channel and cannot report its own silence: an
+    // unsubscribed event, an undelivered retry, or a deploy window all leave
+    // the ledger stale with nothing to signal it. This pull sweep is the
+    // backstop, and it is what makes abandonment measurable WITHOUT depending
+    // on `checkout.session.expired` being ticked in the Dashboard.
+    //
+    // Read-only against Stripe; the only writes are to our own ledger. Runs
+    // unref'd so it never holds the process open, and every failure is
+    // swallowed — a reconcile outage must not take the server with it.
+    const runCheckoutReconcile = async () => {
+      // Skip on the analytics-store instance — its DB has no checkout_sessions
+      // table (it owns analytics_events, not the app schema), so a sweep there
+      // only logs ER_NO_SUCH_TABLE noise. See server/analytics/config.ts.
+      if (isAnalyticsStore()) return;
+      try {
+        const { reconcileCheckoutSessions } = await import("../stripe/checkoutReconcile");
+        await reconcileCheckoutSessions();
+      } catch (err) {
+        console.error(
+          `[CheckoutReconcile] [FAIL] sweep failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    };
+    // First sweep 60s after boot — late enough that the DB pool is warm, early
+    // enough that a deploy which missed webhooks self-corrects within a minute.
+    setTimeout(runCheckoutReconcile, 60_000).unref();
+    const checkoutReconcileInterval = setInterval(runCheckoutReconcile, 30 * 60 * 1000);
+    checkoutReconcileInterval.unref();
+    console.log("[CheckoutReconcile] Recurring checkout reconcile scheduled (every 30 min)");
 
     // ── Games list cache pre-warm ─────────────────────────────────────────────
     // Pre-warm the games.list cache for all active sports at startup.
@@ -954,6 +1376,10 @@ async function startServer() {
     // With this, the cache is hot before any user hits the server.
     // Non-fatal: if DB is unavailable, the first user request will populate the cache.
     setTimeout(() => {
+      // Skip on the analytics-store instance — its DB has no `games` table, so
+      // pre-warming the feed cache there only logs ER_NO_SUCH_TABLE noise and
+      // warms nothing a client will read (the store serves no feed traffic).
+      if (isAnalyticsStore()) return;
       // Compute the effective feed date using the same isBeforeCutoff logic as the client (todayUTC()).
       // The client sends { sport, gameDate: todayUTC() } — we MUST pre-warm THAT exact cache key.
       // Without this, the startup pre-warm populates MLB:ROLLING but the client requests MLB:2026-05-16,
@@ -967,25 +1393,62 @@ async function startServer() {
       const effectiveDate = new Date(effectiveMs);
       const todayStr = [
         effectiveDate.getUTCFullYear(),
-        String(effectiveDate.getUTCMonth() + 1).padStart(2, '0'),
-        String(effectiveDate.getUTCDate()).padStart(2, '0'),
-      ].join('-');
+        String(effectiveDate.getUTCMonth() + 1).padStart(2, "0"),
+        String(effectiveDate.getUTCDate()).padStart(2, "0"),
+      ].join("-");
       // Also pre-warm yesterday and tomorrow to cover the 11:00 UTC boundary window.
-      const yesterdayStr = new Date(effectiveMs - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const tomorrowStr = new Date(effectiveMs + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      console.log(`[Startup] [GAMES_CACHE] Effective date=${todayStr} (utcHour=${nowUtc.getUTCHours()}, beforeCutoff=${isBeforeCutoff}) — pre-warming MLB:${yesterdayStr}, MLB:${todayStr}, MLB:${tomorrowStr}`);
+      const yesterdayStr = new Date(effectiveMs - 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const tomorrowStr = new Date(effectiveMs + 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      console.log(
+        `[Startup] [GAMES_CACHE] Effective date=${todayStr} (utcHour=${nowUtc.getUTCHours()}, beforeCutoff=${isBeforeCutoff}) — pre-warming MLB:${yesterdayStr}, MLB:${todayStr}, MLB:${tomorrowStr}`
+      );
       Promise.all([
         // MLB: pre-warm today + yesterday + tomorrow (covers the 11:00 UTC boundary window)
-        listGames({ sport: 'MLB', gameDate: todayStr }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB:${todayStr} pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'MLB', gameDate: yesterdayStr }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB:${yesterdayStr} pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'MLB', gameDate: tomorrowStr }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB:${tomorrowStr} pre-warmed: ${r.length} games`)),
+        listGames({ sport: "MLB", gameDate: todayStr }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] MLB:${todayStr} pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "MLB", gameDate: yesterdayStr }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] MLB:${yesterdayStr} pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "MLB", gameDate: tomorrowStr }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] MLB:${tomorrowStr} pre-warmed: ${r.length} games`
+          )
+        ),
         // Non-MLB: no gameDate filter (VSiN-driven, small dataset, rolling window is correct)
-        listGames({ sport: 'NHL' }).then(r => console.log(`[Startup] [GAMES_CACHE] NHL pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'NBA' }).then(r => console.log(`[Startup] [GAMES_CACHE] NBA pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'NCAAM' }).then(r => console.log(`[Startup] [GAMES_CACHE] NCAAM pre-warmed: ${r.length} games`)),
-      ]).catch((err: unknown) => console.warn('[Startup] [GAMES_CACHE] Pre-warm failed (non-fatal):', err));
+        listGames({ sport: "NHL" }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] NHL pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "NBA" }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] NBA pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "NCAAM" }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] NCAAM pre-warmed: ${r.length} games`
+          )
+        ),
+      ]).catch((err: unknown) =>
+        console.warn(
+          "[Startup] [GAMES_CACHE] Pre-warm failed (non-fatal):",
+          err
+        )
+      );
     }, 1000); // 1s after startup — before lineup pre-warm, after DB keep-alive
-    console.log('[Startup] [GAMES_CACHE] Games list cache pre-warm scheduled (1s after startup)');
+    console.log(
+      "[Startup] [GAMES_CACHE] Games list cache pre-warm scheduled (1s after startup)"
+    );
 
     // ── 11:00 UTC boundary cache invalidation ─────────────────────────────────
     // The feed rolls over to the new day's slate at 11:00 UTC. The games cache
@@ -993,6 +1456,9 @@ async function startServer() {
     // clients immediately see the new day's games without waiting for the 60s TTL.
     // We schedule a one-shot invalidation to fire at the next 11:00 UTC boundary.
     const scheduleNextCutoffInvalidation = () => {
+      // Skip on the analytics-store instance — it has no `games` table and
+      // serves no feed, so the boundary re-warm would only log ER_NO_SUCH_TABLE.
+      if (isAnalyticsStore()) return;
       const nowMs = Date.now();
       const nowUtc = new Date(nowMs);
       const CUTOFF_HOUR = 11;
@@ -1000,38 +1466,81 @@ async function startServer() {
       let nextCutoffMs: number;
       if (nowUtc.getUTCHours() < CUTOFF_HOUR) {
         // Before cutoff today — fire at 11:00 UTC today (+5s buffer)
-        nextCutoffMs = Date.UTC(
-          nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(),
-          CUTOFF_HOUR, 0, 5
-        ) - nowMs;
+        nextCutoffMs =
+          Date.UTC(
+            nowUtc.getUTCFullYear(),
+            nowUtc.getUTCMonth(),
+            nowUtc.getUTCDate(),
+            CUTOFF_HOUR,
+            0,
+            5
+          ) - nowMs;
       } else {
         // After cutoff today — fire at 11:00 UTC tomorrow (+5s buffer)
         const tomorrow = new Date(nowMs + 24 * 60 * 60 * 1000);
-        nextCutoffMs = Date.UTC(
-          tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate(),
-          CUTOFF_HOUR, 0, 5
-        ) - nowMs;
+        nextCutoffMs =
+          Date.UTC(
+            tomorrow.getUTCFullYear(),
+            tomorrow.getUTCMonth(),
+            tomorrow.getUTCDate(),
+            CUTOFF_HOUR,
+            0,
+            5
+          ) - nowMs;
       }
       const nextCutoffDate = new Date(nowMs + nextCutoffMs).toISOString();
-      console.log(`[Startup] [CUTOFF_INVALIDATION] Next 11:00 UTC boundary invalidation scheduled in ${Math.round(nextCutoffMs / 60000)}min (at ${nextCutoffDate})`);
+      console.log(
+        `[Startup] [CUTOFF_INVALIDATION] Next 11:00 UTC boundary invalidation scheduled in ${Math.round(nextCutoffMs / 60000)}min (at ${nextCutoffDate})`
+      );
       const cutoffTimer = setTimeout(() => {
-        console.log('[Scheduler] [CUTOFF_INVALIDATION] 11:00 UTC boundary reached — force-invalidating all caches');
+        console.log(
+          "[Scheduler] [CUTOFF_INVALIDATION] 11:00 UTC boundary reached — force-invalidating all caches"
+        );
         forceInvalidateGamesCache();
         // Re-warm the cache immediately after invalidation with the new effective date
         const newNowMs = Date.now();
         const newNowUtc = new Date(newNowMs);
         const newIsBeforeCutoff = newNowUtc.getUTCHours() < CUTOFF_HOUR;
-        const newEffectiveMs = newIsBeforeCutoff ? newNowMs - 24 * 60 * 60 * 1000 : newNowMs;
+        const newEffectiveMs = newIsBeforeCutoff
+          ? newNowMs - 24 * 60 * 60 * 1000
+          : newNowMs;
         const newTodayStr = new Date(newEffectiveMs).toISOString().slice(0, 10);
-        const newYesterdayStr = new Date(newEffectiveMs - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        const newTomorrowStr = new Date(newEffectiveMs + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        console.log(`[Scheduler] [CUTOFF_INVALIDATION] Re-warming cache for effectiveDate=${newTodayStr}`);
+        const newYesterdayStr = new Date(newEffectiveMs - 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        const newTomorrowStr = new Date(newEffectiveMs + 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        console.log(
+          `[Scheduler] [CUTOFF_INVALIDATION] Re-warming cache for effectiveDate=${newTodayStr}`
+        );
         Promise.all([
-          listGames({ sport: 'MLB', gameDate: newTodayStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTodayStr} re-warmed: ${r.length} games`)),
-          listGames({ sport: 'MLB', gameDate: newYesterdayStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newYesterdayStr} re-warmed: ${r.length} games`)),
-          listGames({ sport: 'MLB', gameDate: newTomorrowStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTomorrowStr} re-warmed: ${r.length} games`)),
-          getAvailableDates('MLB').then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB availableDates re-warmed: ${r.length} dates`)),
-        ]).catch((err: unknown) => console.warn('[Scheduler] [CUTOFF_INVALIDATION] Re-warm failed (non-fatal):', err));
+          listGames({ sport: "MLB", gameDate: newTodayStr }).then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTodayStr} re-warmed: ${r.length} games`
+            )
+          ),
+          listGames({ sport: "MLB", gameDate: newYesterdayStr }).then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB:${newYesterdayStr} re-warmed: ${r.length} games`
+            )
+          ),
+          listGames({ sport: "MLB", gameDate: newTomorrowStr }).then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTomorrowStr} re-warmed: ${r.length} games`
+            )
+          ),
+          getAvailableDates("MLB").then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB availableDates re-warmed: ${r.length} dates`
+            )
+          ),
+        ]).catch((err: unknown) =>
+          console.warn(
+            "[Scheduler] [CUTOFF_INVALIDATION] Re-warm failed (non-fatal):",
+            err
+          )
+        );
         // Schedule the next day's boundary invalidation
         scheduleNextCutoffInvalidation();
       }, nextCutoffMs);
@@ -1047,7 +1556,9 @@ async function startServer() {
   // timeout") before it ever reached Express. Fail fast on a bind error so the
   // platform restarts the container instead of leaving a zombie that serves nothing.
   const onBindError = (err: NodeJS.ErrnoException) => {
-    console.error(`[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code ?? "?"}) — exiting so the platform restarts`);
+    console.error(
+      `[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code ?? "?"}) — exiting so the platform restarts`
+    );
     process.exit(1);
   };
   server.once("error", onBindError);
@@ -1055,7 +1566,26 @@ async function startServer() {
     server.removeListener("error", onBindError);
     onListening();
   });
-  console.log(`[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`);
+  // Schema/code-agreement gate (Phase 1½): probe the live app_users schema
+  // against the code's column set BEFORE we accept Railway health probes, so a
+  // code-ahead-of-migration deploy fails its healthcheck (→ Railway keeps the
+  // previous healthy deploy) instead of silently breaking auth (#370). Bounded
+  // so a slow/unreachable DB never blocks startup; a periodic re-probe catches a
+  // mismatch that appears later or a boot probe that timed out.
+  //
+  // Skip on the analytics-store instance: it does not own app_users (its DB has
+  // analytics_events), so the probe there is meaningless and would re-log
+  // ER_NO_SUCH_TABLE every interval. With the probe skipped the verdict stays
+  // "unknown", so /health stays 200 — the gate only guards the app-owning
+  // instances (forwarder/disabled), which is exactly its intended scope.
+  if (!isAnalyticsStore()) {
+    await runBootSchemaProbe();
+    startSchemaProbeInterval();
+  }
+
+  console.log(
+    `[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`
+  );
   server.listen(port);
 }
 

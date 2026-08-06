@@ -8,9 +8,9 @@
  * burning CPU 24/7 on timers, GitHub Actions fires each endpoint on a schedule
  * and the work runs once, on demand.
  *
- * Auth:   shared secret (CRON_SECRET) — see cronAuth.ts for why the Manus
- *         Heartbeat auth can't be reused off-Manus.
- * Path:   /api/cron/*  (deliberately distinct from the Manus /api/scheduled/*
+ * Auth:   shared secret (CRON_SECRET) — see cronAuth.ts for why the legacy
+ *         heartbeat auth can't be reused off the legacy platform.
+ * Path:   /api/cron/*  (deliberately distinct from the legacy /api/scheduled/*
  *         namespace so the two mechanisms never collide during the migration).
  * Shape:  respond 200 immediately, run work in the background under a run-lock.
  *
@@ -20,14 +20,6 @@
  *   - POST /api/cron/mlb-cycle → runMlbCycleOnce()      (MLB lineups/K-props/backtest writes)
  *   - GET  /api/cron/status    → run-lock state for all jobs (observability)
  *
- * SCOPE (second pass — MLB learning-loop ingestion, M-208): the outcome
- * ingestor, closing-line capture, and backtest enrollment previously existed
- * only as in-process schedulers that never fire under DISABLE_BACKGROUND_JOBS=1.
- *   - POST /api/cron/mlb-outcomes        → ingestMlbOutcomes()      (?date= or last 2 days PT)
- *   - POST /api/cron/mlb-closing-capture → captureClosingLines()    (lock DK NJ closing odds)
- *   - POST /api/cron/mlb-backtest        → runMultiMarketBacktest() (final games with no
- *                                          mlb_game_backtest rows; ?date= or last 3 days ET)
- *
  * DELIBERATELY NOT wired here: MLB model sync. runMlbModelForDate() spawns
  * /usr/bin/python3 (400k Monte-Carlo sims) which fails on Railway with
  * `spawn /usr/bin/python3 ENOENT`. Curling a Railway endpoint for it would just
@@ -36,25 +28,13 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { and, eq, inArray, sql } from "drizzle-orm";
-import { games } from "../../drizzle/schema";
 import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
-import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
-import { captureClosingLines } from "../mlbScheduleHistoryService";
-import { runMultiMarketBacktest } from "../mlbMultiMarketBacktest";
-import { getDb } from "../db";
-
-/** Most recent N calendar dates (YYYY-MM-DD, oldest first) in the given IANA zone. */
-function lastNDates(n: number, timeZone: string): string[] {
-  const dates: string[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    dates.push(new Date(Date.now() - i * 86_400_000).toLocaleDateString("en-CA", { timeZone }));
-  }
-  return dates;
-}
+import { runBetGradeCycle, runBetGradeSweep } from "../betAutoGradeScheduler";
+import { reconcileStripeSubscriptions, formatReconcileReport } from "../stripe/reconcile";
+import { billingAlert } from "../_core/billingAlerts";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -73,85 +53,23 @@ const mlbCycleRunner = new CronJobRunner("mlb-cycle", async () => {
   await runMlbCycleOnce();
 });
 
-// ── MLB learning-loop jobs (M-208) ──────────────────────────────────────────
-// Date params are stashed module-level by the handler right before trigger().
-// CronJobRunner.trigger() invokes the work function synchronously, and each
-// work function copies the stash into a local before its first await, so a
-// concurrent request can never mutate the date under an in-flight run.
-
-let mlbOutcomesDateParam: string | null = null;
-// Outcome ingestion (actualFgTotal/actualF5Total/actualNrfiBinary + Briers).
-// ingestMlbOutcomes dates are PT (see mlbOutcomeIngestor.ts): default covers
-// yesterday + today so late-night finals are picked up on the morning run.
-const mlbOutcomesRunner = new CronJobRunner("mlb-outcomes", async () => {
-  const dates = mlbOutcomesDateParam
-    ? [mlbOutcomesDateParam]
-    : lastNDates(2, "America/Los_Angeles");
-  for (const dateStr of dates) {
-    const s = await ingestMlbOutcomes(dateStr);
-    console.log(
-      `[Cron:mlb-outcomes] [OUTPUT] date=${dateStr} total=${s.totalGames} written=${s.written}` +
-      ` skipped_ingested=${s.skippedAlreadyIngested} skipped_not_final=${s.skippedNotFinal}` +
-      ` skipped_no_match=${s.skippedNoApiMatch} errors=${s.errors}`
-    );
-  }
+// Bet grading — settles PENDING tracked bets for today + yesterday.
+//
+// Why this exists: grading lived ONLY inside the in-process scheduler, which
+// sits behind the DISABLE_BACKGROUND_JOBS kill switch. Flipping that flag to cut
+// Railway credits would have stopped bet settlement entirely, silently — no
+// error, bets simply never leave PENDING. This endpoint gives grading the same
+// cron-triggered path the other data-freshness jobs already have, under the same
+// single-flight run-lock.
+const betGradeRunner = new CronJobRunner("bet-grade", async () => {
+  await runBetGradeCycle("cron_bet_grade");
 });
 
-// Closing-line capture — locks DK NJ closing odds at first pitch. Idempotent
-// (skips rows with closingLineLockedAt set), so a 5-minute Actions cadence
-// mirrors the retired in-process interval.
-const mlbClosingCaptureRunner = new CronJobRunner("mlb-closing-capture", async () => {
-  const r = await captureClosingLines();
-  console.log(
-    `[Cron:mlb-closing-capture] [OUTPUT] scanned=${r.scanned} locked=${r.locked}` +
-    ` alreadyLocked=${r.alreadyLocked} noOdds=${r.noOdds} errors=${r.errors.length}`
-  );
-});
-
-let mlbBacktestDateParam: string | null = null;
-// Backtest enrollment — final MLB games with no mlb_game_backtest rows yet.
-// The in-process trigger only fires on the FINAL transition it observes live,
-// so any game that goes final while no job-runner is up is never enrolled.
-const mlbBacktestRunner = new CronJobRunner("mlb-backtest", async () => {
-  const dates = mlbBacktestDateParam
-    ? [mlbBacktestDateParam]
-    : lastNDates(3, "America/New_York"); // games.gameDate is the official ET date
-  const db = await getDb();
-  if (!db) throw new Error("database unavailable");
-  const unenrolled = await db
-    .select({ id: games.id, gameDate: games.gameDate, awayTeam: games.awayTeam, homeTeam: games.homeTeam })
-    .from(games)
-    .where(
-      and(
-        inArray(games.gameDate, dates),
-        eq(games.sport, "MLB"),
-        sql`LOWER(${games.gameStatus}) IN ('final', 'f', 'completed')`,
-        sql`NOT EXISTS (SELECT 1 FROM mlb_game_backtest b WHERE b.gameId = ${games.id})`,
-      )
-    );
-  console.log(
-    `[Cron:mlb-backtest] [STATE] dates=[${dates.join(",")}] unenrolled=${unenrolled.length}`
-  );
-  let processed = 0;
-  let errors = 0;
-  for (const g of unenrolled) {
-    try {
-      await runMultiMarketBacktest(g.id, true);
-      processed++;
-    } catch (err) {
-      errors++;
-      console.error(
-        `[Cron:mlb-backtest] [ERROR] game=${g.id} ${g.awayTeam}@${g.homeTeam} (${g.gameDate}): ` +
-        (err instanceof Error ? err.message : String(err))
-      );
-    }
-  }
-  console.log(
-    `[Cron:mlb-backtest] [OUTPUT] processed=${processed} errors=${errors} of ${unenrolled.length} unenrolled`
-  );
-  if (unenrolled.length > 0 && processed === 0) {
-    throw new Error(`all ${errors} backtest enrollments failed`);
-  }
+// Nightly catch-all — every PENDING bet across every date, not just today and
+// yesterday. Picks up anything the incremental cycle missed (late finals,
+// upstream feed outages, bets logged for older dates).
+const betGradeSweepRunner = new CronJobRunner("bet-grade-sweep", async () => {
+  await runBetGradeSweep("cron_bet_grade_sweep");
 });
 
 /** Wire a POST endpoint that auth-guards, triggers the runner, responds 200. */
@@ -181,65 +99,12 @@ function mountJob(app: Express, path: string, label: string, runner: CronJobRunn
   console.log(`[Cron] [OUTPUT] Registered POST ${path} (job=${label})`);
 }
 
-/**
- * Like mountJob, but accepts an optional ?date=YYYY-MM-DD (query or body) and
- * stashes it via setDate before triggering — see the stash-safety note on the
- * MLB learning-loop runners above.
- */
-function mountDateJob(
-  app: Express,
-  path: string,
-  label: string,
-  runner: CronJobRunner,
-  setDate: (date: string | null) => void
-): void {
-  app.post(path, (req: Request, res: Response) => {
-    if (!requireCronSecret(req, res, label)) return;
-
-    const rawDate = req.query?.date ?? req.body?.date;
-    const date = typeof rawDate === "string" && rawDate.length > 0 ? rawDate : null;
-    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      res.status(400).json({ ok: false, error: "invalid-date", expected: "YYYY-MM-DD" });
-      return;
-    }
-
-    const reqAt = new Date().toISOString();
-    console.log(
-      `[Cron:${label}] [INPUT] POST ${path} at ${reqAt} ip=${req.ip ?? "?"} date=${date ?? "auto"}`
-    );
-
-    setDate(date);
-    const outcome = runner.trigger();
-
-    console.log(
-      `[Cron:${label}] [OUTPUT] started=${outcome.started} skipped=${outcome.skipped} ` +
-      `lastRunAt=${outcome.lastRunAt ?? "never"}`
-    );
-
-    res.status(200).json({
-      ok: true,
-      job: label,
-      startedAt: reqAt,
-      date,
-      started: outcome.started,
-      skipped: outcome.skipped,
-      lastResult: outcome.lastResult,
-    });
-  });
-  console.log(`[Cron] [OUTPUT] Registered POST ${path} (job=${label})`);
-}
-
 export function registerCronRoutes(app: Express): void {
   mountJob(app, "/api/cron/vsin-odds", "vsin-odds", vsinRunner);
   mountJob(app, "/api/cron/scores", "scores", scoresRunner);
   mountJob(app, "/api/cron/mlb-cycle", "mlb-cycle", mlbCycleRunner);
-  mountDateJob(app, "/api/cron/mlb-outcomes", "mlb-outcomes", mlbOutcomesRunner, (d) => {
-    mlbOutcomesDateParam = d;
-  });
-  mountJob(app, "/api/cron/mlb-closing-capture", "mlb-closing-capture", mlbClosingCaptureRunner);
-  mountDateJob(app, "/api/cron/mlb-backtest", "mlb-backtest", mlbBacktestRunner, (d) => {
-    mlbBacktestDateParam = d;
-  });
+  mountJob(app, "/api/cron/bet-grade", "bet-grade", betGradeRunner);
+  mountJob(app, "/api/cron/bet-grade-sweep", "bet-grade-sweep", betGradeSweepRunner);
 
   // MLB All-Star Game (AL vs NL) seed/refresh. Unlike the fire-and-forget jobs
   // above, this runs synchronously and returns the book-vs-model tail + audit so
@@ -261,6 +126,53 @@ export function registerCronRoutes(app: Express): void {
   });
   console.log(`[Cron] [OUTPUT] Registered POST /api/cron/mlb-asg (job=mlb-asg)`);
 
+  // Stripe ↔ database drift detector (audit OPS-001).
+  //
+  // Webhook delivery is at-least-once but not guaranteed-once-forever: a revoke
+  // lost during an outage, or an endpoint misconfiguration, leaves the database
+  // silently disagreeing with Stripe — and nothing else in this system would
+  // ever notice. This job is the safety net. It is strictly READ-ONLY: it lists
+  // Stripe subscriptions, diffs them against app_users, and reports. It never
+  // writes an entitlement, because auto-healing a drift you do not understand is
+  // how one bad assumption becomes a mass revoke.
+  //
+  // Runs synchronously (like mlb-asg) so the workflow can print the drift table,
+  // and returns 200 even when drift is found — drift is a finding to action, not
+  // a failed job. Only an execution error is a non-2xx.
+  app.post("/api/cron/stripe-reconcile", async (req: Request, res: Response) => {
+    if (!requireCronSecret(req, res, "stripe-reconcile")) return;
+    const maxPagesRaw = req.body?.maxPages ?? req.query?.maxPages;
+    const maxPages = Number.isFinite(Number(maxPagesRaw)) && Number(maxPagesRaw) > 0
+      ? Math.min(Number(maxPagesRaw), 50)
+      : undefined;
+    console.log(`[Cron:stripe-reconcile] [INPUT] POST /api/cron/stripe-reconcile maxPages=${maxPages ?? "default"} at ${new Date().toISOString()}`);
+    try {
+      const report = await reconcileStripeSubscriptions(maxPages ? { maxPages } : undefined);
+      const summary = formatReconcileReport(report);
+      console.log(`[Cron:stripe-reconcile] [OUTPUT]\n${summary}`);
+
+      if (report.drift.length > 0) {
+        void billingAlert("RECONCILE_DRIFT", {
+          driftCount: report.drift.length,
+          checkedStripeSubscriptions: report.checkedStripeSubscriptions,
+          checkedDbUsers: report.checkedDbUsers,
+          truncated: report.truncated,
+          // Bounded sample only — the full report is in the job log.
+          sample: report.drift.slice(0, 10).map((d) => ({ kind: d.kind, userId: d.userId, detail: d.detail })),
+        });
+      }
+
+      console.log(`[Cron:stripe-reconcile] [VERIFY] ${report.drift.length === 0 ? "PASS — no drift" : `DRIFT — ${report.drift.length} row(s)`}`);
+      res.status(200).json({ ok: true, ...report, summary });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Cron:stripe-reconcile] [ERROR] ${msg}`);
+      void billingAlert("RECONCILE_DRIFT", { failed: true, detail: msg });
+      res.status(500).json({ ok: false, error: msg });
+    }
+  });
+  console.log(`[Cron] [OUTPUT] Registered POST /api/cron/stripe-reconcile (job=stripe-reconcile)`);
+
   // Observability: read-only run-lock state for all jobs (still secret-guarded so
   // it can't be scraped anonymously). Handy for the CI perf harness and debugging.
   app.get("/api/cron/status", (req: Request, res: Response) => {
@@ -271,9 +183,8 @@ export function registerCronRoutes(app: Express): void {
         "vsin-odds": vsinRunner.state,
         scores: scoresRunner.state,
         "mlb-cycle": mlbCycleRunner.state,
-        "mlb-outcomes": mlbOutcomesRunner.state,
-        "mlb-closing-capture": mlbClosingCaptureRunner.state,
-        "mlb-backtest": mlbBacktestRunner.state,
+        "bet-grade": betGradeRunner.state,
+        "bet-grade-sweep": betGradeSweepRunner.state,
       },
     });
   });

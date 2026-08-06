@@ -5,6 +5,7 @@ import {
   double,
   index,
   int,
+  mediumtext,
   mysqlEnum,
   mysqlTable,
   smallint,
@@ -26,7 +27,7 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  /** Legacy OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -48,9 +49,33 @@ export const appUsers = mysqlTable("app_users", {
   username: varchar("username", { length: 64 }).notNull().unique(),
   passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
   role: mysqlEnum("role", ["owner", "admin", "handicapper", "user"]).default("user").notNull(),
-  hasAccess: boolean("hasAccess").default(true).notNull(),
+  /**
+   * Master access switch. DEFAULT FALSE (flipped 2026-08-01): both live insert
+   * paths (owner createUser, post-payment webhook) set this explicitly, so the
+   * default only ever applies to a FUTURE insert path someone forgets to wire —
+   * and a forgotten path must fail closed (no access until granted), not open.
+   * The old default('1') was vestigial from the invite-only era and made any
+   * bare INSERT a silent lifetime grant (expiryDate NULL = lifetime).
+   */
+  hasAccess: boolean("hasAccess").default(false).notNull(),
   /** NULL means lifetime access; otherwise a UTC timestamp in ms */
   expiryDate: bigint("expiryDate", { mode: "number" }),
+  /**
+   * Soft delete. NULL = live account; a timestamp = retired.
+   *
+   * `app_users` has no foreign keys pointing at it (all 56 FKs in this schema
+   * are in the World Cup tables) and `deleteAppUser` was a bare DELETE, so
+   * removing an account stranded everything it owned. That is not theoretical:
+   * account 60002 left 278 verified bets, a login session and an owner-reviewed
+   * edit request behind, invisible in the picker for months while still
+   * counting toward global totals.
+   *
+   * Retiring an account is now a flag, so history stays attributed and the
+   * operation is reversible. EVERY account-resolution path must exclude
+   * soft-deleted rows or this column is decorative — see getAppUserById,
+   * lookupAppUserByIdFresh, getAppUserByEmail, getAppUserByUsername.
+   */
+  deletedAt: bigint("deletedAt", { mode: "number" }),
   /** Whether the user has accepted the Age & Responsibility notice */
   termsAccepted: boolean("termsAccepted").default(false).notNull(),
   /** UTC timestamp (ms) when the user accepted the terms; NULL if not yet accepted */
@@ -86,6 +111,24 @@ export const appUsers = mysqlTable("app_users", {
    * Tokens are valid for 30 minutes from issuance.
    */
   passwordResetExpiresAt: bigint("passwordResetExpiresAt", { mode: "number" }),
+  // ─── Per-account login lockout (credential-stuffing defense) ────────────────
+  // DB-backed so failures against THIS account are counted no matter which IP
+  // they come from (a botnet defeats the per-IP loginRateMap). See
+  // server/accountLockout.ts for the pure decision logic. Expand-only, safe
+  // defaults — old code that never touches these columns is unaffected.
+  //
+  // ⚠️ DEPLOY-ORDER LAW: Drizzle emits an explicit column list, so the moment
+  // code carrying THIS schema deploys, every app_users SELECT names these
+  // columns. If the DB hasn't had migration 0133 applied yet, MySQL 1054 →
+  // auth resolvers swallow it → SITE-WIDE silent auth failure. Always run
+  // db-push.yml (migration 0133) BEFORE deploying code that includes these
+  // columns. The ACCOUNT_LOCKOUT_DISABLED kill-switch does NOT cover this.
+  /** Failed login attempts in the current rolling window. */
+  failedLoginCount: int("failedLoginCount").default(0).notNull(),
+  /** ms timestamp of the first failure in the current window (window anchor). */
+  firstFailedLoginAt: bigint("firstFailedLoginAt", { mode: "number" }),
+  /** ms timestamp until which the account is locked; NULL = not locked. */
+  lockedUntil: bigint("lockedUntil", { mode: "number" }),
   // ─── Stripe subscription ────────────────────────────────────────────────────
   /**
    * Stripe Customer ID (cus_xxx). Set on first successful checkout.
@@ -98,9 +141,25 @@ export const appUsers = mysqlTable("app_users", {
    */
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
   /**
-   * Subscription plan: 'monthly' | 'annual'. NULL = no active subscription.
+   * Subscription plan slug (FK-by-value to subscription_plans.slug). NULL = no
+   * active subscription. Widened 16→64 to hold owner-created plan slugs; the
+   * legacy values ('monthly'|'annual'|'pro'|'sharp'|'operator') still fit.
    */
-  stripePlanId: varchar("stripePlanId", { length: 16 }),
+  stripePlanId: varchar("stripePlanId", { length: 64 }),
+  /**
+   * Which plan_prices row (i.e. which billing interval) this user is subscribed
+   * on. NULL = unknown/legacy — every row predating this column, plus users with
+   * no subscription. FK-by-value to plan_prices.id, joined in the application:
+   * this repo declares NO DB-level foreign keys, so nothing cascades and nothing
+   * is enforced by the database.
+   *
+   * WHY THE ID AND NOT THE INTERVAL STRING: "month" is ambiguous across plans and
+   * across repricings. plan_prices rows are immutable-by-convention (a repriced
+   * interval mints a NEW row and archives the old one), so the id records the
+   * exact price the user actually bought — the amount, currency, cadence, trial
+   * and promo they are still being billed at after the plan was repriced.
+   */
+  planPriceId: int("planPriceId"),
   /**
    * TRUE when the Stripe subscription is set to cancel at period end (user clicked Cancel).
    * FALSE/NULL = subscription is active and will auto-renew.
@@ -133,10 +192,437 @@ export const appUsers = mysqlTable("app_users", {
    * Cleared (set to NULL) after the user completes account setup.
    */
   pendingStripeSessionId: varchar("pendingStripeSessionId", { length: 128 }),
-});
+  /**
+   * UTC ms when the pending-setup claim expires. After this instant the
+   * pendingStripeSessionId can no longer be redeemed to claim the account.
+   * NULL = legacy row created before the claim window existed.
+   */
+  pendingSetupExpiresAt: bigint("pendingSetupExpiresAt", { mode: "number" }),
+  /**
+   * Last known RAW Stripe subscription status, stored verbatim so the app can
+   * reason about states `hasAccess` alone cannot express:
+   * active | trialing | past_due | unpaid | paused | incomplete |
+   * incomplete_expired | canceled. NULL = never observed.
+   */
+  stripeSubscriptionStatus: varchar("stripeSubscriptionStatus", { length: 32 }),
+  /**
+   * `event.created` (converted to UTC ms) of the most recent APPLIED Stripe
+   * subscription event. Out-of-order guard: a webhook whose event.created is
+   * older than this value must NOT overwrite entitlement state.
+   */
+  lastStripeEventAt: bigint("lastStripeEventAt", { mode: "number" }),
+}, (table) => ({
+  discordIdUnique: uniqueIndex("app_users_discord_id_unique").on(table.discordId),
+  manualDiscordIdUnique: uniqueIndex("app_users_manual_discord_id_unique").on(table.manualDiscordId),
+  /**
+   * Stripe identity uniqueness. All three columns are nullable and MySQL/TiDB
+   * allow unlimited NULLs in a unique index, so unsubscribed rows are unaffected.
+   * These prevent two app_users rows ever sharing one Stripe customer /
+   * subscription / checkout session — the root shape of double-entitlement bugs.
+   */
+  stripeCustomerIdUnique: uniqueIndex("app_users_stripe_customer_id_unique").on(table.stripeCustomerId),
+  stripeSubscriptionIdUnique: uniqueIndex("app_users_stripe_subscription_id_unique").on(table.stripeSubscriptionId),
+  pendingStripeSessionIdUnique: uniqueIndex("app_users_pending_stripe_session_id_unique").on(table.pendingStripeSessionId),
+  /**
+   * "Who is on this billing interval?" — the query behind per-interval revenue
+   * and behind migrating subscribers off a retired plan_prices row. Without this
+   * it is a full table scan of app_users.
+   */
+  planPriceIdIdx: index("app_users_plan_price_idx").on(table.planPriceId),
+  /**
+   * stripePlanId is an FK-BY-VALUE into subscription_plans.slug and was, until
+   * now, entirely unindexed — despite being read on every entitlement check and
+   * rewritten in bulk whenever a plan rename changes a slug (syncPlanSlug in
+   * server/stripe/planProvisioning.ts updates every referrer by this column).
+   * Non-unique on purpose: many users share one plan.
+   */
+  stripePlanIdIdx: index("app_users_stripe_plan_id_idx").on(table.stripePlanId),
+}));
+
+// ─── Subscription plan catalog (owner-managed, Stripe-backed) ────────────────
+/**
+ * subscription_plans — the DB-backed replacement for the static PLANS record in
+ * server/stripe/products.ts. Each row maps to a Stripe Product; its prices live
+ * in plan_prices. `slug` is the stable entitlement key written to
+ * app_users.stripePlanId and to Stripe session metadata (plan_id).
+ */
+export const subscriptionPlans = mysqlTable("subscription_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stable, unique entitlement key (kebab/short). Matches app_users.stripePlanId. */
+  slug: varchar("slug", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: text("description"),
+  planType: mysqlEnum("planType", ["recurring", "one_time", "fixed_date"]).default("recurring").notNull(),
+  /** Stripe Product ID (prod_xxx). NULL until provisioned / for legacy backfill. */
+  stripeProductId: varchar("stripeProductId", { length: 64 }),
+  active: boolean("active").default(true).notNull(),
+  /** UTC ms when archived; NULL = live. */
+  archivedAt: bigint("archivedAt", { mode: "number" }),
+  /** fixed_date plans: access is granted until this UTC ms (phase 4). */
+  accessUntil: bigint("accessUntil", { mode: "number" }),
+  /** Limited-quantity cap on active subscribers; NULL = unlimited (phase 4). */
+  maxSubscribers: int("maxSubscribers"),
+  /** Auto-restock FOMO loop (phase 3). `availableQuantity` is the live
+   *  "spots left" counter shown publicly; it decrements on each subscribe and,
+   *  when `autoRestock` is on and it drops below `restockThreshold`, resets to
+   *  `restockAmount` — an endless scarcity loop. NULL availableQuantity = the
+   *  limited-quantity feature is off for this plan (unlimited). */
+  autoRestock: boolean("autoRestock").default(false).notNull(),
+  availableQuantity: int("availableQuantity"),
+  restockThreshold: int("restockThreshold"),
+  restockAmount: int("restockAmount"),
+  /** Per-plan Discord role to grant (phase 5). */
+  discordRoleId: varchar("discordRoleId", { length: 32 }),
+  /** Per-plan Telegram chat/channel to grant (phase 5). */
+  telegramChatId: varchar("telegramChatId", { length: 64 }),
+  /** Stripe mode this plan was provisioned in — TRUE=live, FALSE=test/sandbox.
+   *  Live checkout only offers livemode plans (a test price fails in live mode). */
+  livemode: boolean("livemode").default(true).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  slugIdx: index("subscription_plans_slug_idx").on(table.slug),
+}));
+
+/**
+ * plan_prices — one row per Stripe Price. Multiple rows per plan support billing
+ * variants (e.g. monthly + annual). Editing an amount/interval archives the old
+ * row (active=false) and inserts a new one, mirroring Stripe price immutability.
+ */
+export const planPrices = mysqlTable("plan_prices", {
+  id: int("id").autoincrement().primaryKey(),
+  /** subscription_plans.id (joined in app; no DB-level FK, matching this repo). */
+  planId: int("planId").notNull(),
+  /** Stripe Price ID (price_xxx). */
+  stripePriceId: varchar("stripePriceId", { length: 64 }).notNull(),
+  label: varchar("label", { length: 80 }),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 8 }).default("usd").notNull(),
+  /** Recurring cadence; NULL for one-time prices. DB column `billingInterval`. */
+  interval: mysqlEnum("billingInterval", ["day", "week", "month", "year"]),
+  intervalCount: int("intervalCount"),
+  trialPeriodDays: int("trialPeriodDays"),
+  /** Per-interval promo (phase 3). `promoType` NULL = no promo. `percent` →
+   *  `promoValue` is 1–100; `amount` → `promoValue` is a discount in cents. A
+   *  Stripe coupon (duration=forever) is provisioned per promo and applied at
+   *  checkout for THIS price; `promoCode`, if set, is also registered as a
+   *  shareable Stripe promotion code. */
+  promoType: mysqlEnum("promoType", ["percent", "amount"]),
+  promoValue: int("promoValue"),
+  promoCode: varchar("promoCode", { length: 64 }),
+  stripeCouponId: varchar("stripeCouponId", { length: 64 }),
+  stripePromoCodeId: varchar("stripePromoCodeId", { length: 64 }),
+  active: boolean("active").default(true).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  /** Owner-hidden interval: retained, but not offered at checkout or shown
+   *  publicly (eyeball toggle). Distinct from active=false (archived). */
+  hidden: boolean("hidden").default(false).notNull(),
+  /** Display order among a plan's intervals — drag-to-reorder (⠿ handle). */
+  sortOrder: int("sortOrder").default(0).notNull(),
+  /** Stripe mode of this Price — TRUE=live, FALSE=test/sandbox. Mirrors the plan. */
+  livemode: boolean("livemode").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  planIdIdx: index("plan_prices_plan_id_idx").on(table.planId),
+  /**
+   * One row per Stripe Price — a duplicate price row silently doubles a plan's
+   * checkout options and breaks price→plan resolution. Declared under a NEW
+   * name because the legacy non-unique KEY `plan_prices_stripe_price_id_idx`
+   * still exists in production; the hardening migration is additive-only and
+   * does NOT drop it (a redundant secondary index is harmless).
+   */
+  stripePriceIdUnique: uniqueIndex("plan_prices_stripe_price_id_unique").on(table.stripePriceId),
+}));
+
+/**
+ * plan_features — which marketing/entitlement features a plan advertises, one
+ * row per (plan, feature).
+ *
+ * WHY A JOIN TABLE AND NOT A JSON/TEXT COLUMN ON subscription_plans: feature
+ * membership is a query, not prose. "Which plans include player prop
+ * projections?" is an indexed equality lookup here; against a JSON blob or a
+ * comma-joined string it degrades to a LIKE over free text that cannot use an
+ * index and matches substrings by accident (`daily_lineups` inside
+ * `daily_lineups_beta`). A row per feature also makes reordering, per-feature
+ * analytics, and future per-feature metadata additive column work instead of a
+ * blob rewrite, and it lets the DB — not application code — enforce that a plan
+ * cannot list the same feature twice.
+ */
+export const planFeatures = mysqlTable("plan_features", {
+  id: int("id").autoincrement().primaryKey(),
+  /** subscription_plans.id (joined in app; no DB-level FK, matching this repo). */
+  planId: int("planId").notNull(),
+  /**
+   * A key from shared/planFeatures.ts — the KEY is stored, never the label, so
+   * marketing can reword a feature without a data migration.
+   */
+  featureKey: varchar("featureKey", { length: 64 }).notNull(),
+  /** Display order within the plan — drag-to-reorder in the plan editor. */
+  sortOrder: int("sortOrder").default(0).notNull(),
+  /** UTC ms, matching the bigint time columns elsewhere in this file. */
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+}, (table) => ({
+  /**
+   * One row per feature per plan. This is what makes a re-save idempotent: the
+   * editor can upsert the selected set without first proving what is already
+   * there, and a double-submit cannot duplicate a chip.
+   */
+  planFeatureUnique: uniqueIndex("plan_features_plan_feature_unique").on(table.planId, table.featureKey),
+  /** Powers the reverse lookup: "which plans include feature X?". */
+  featureIdx: index("plan_features_feature_idx").on(table.featureKey),
+  /** Powers the ordered render of one plan's feature list without a filesort. */
+  planSortIdx: index("plan_features_plan_sort_idx").on(table.planId, table.sortOrder),
+}));
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type PlanPrice = typeof planPrices.$inferSelect;
+export type InsertPlanPrice = typeof planPrices.$inferInsert;
+export type PlanFeature = typeof planFeatures.$inferSelect;
+export type InsertPlanFeature = typeof planFeatures.$inferInsert;
 
 export type AppUser = typeof appUsers.$inferSelect;
 export type InsertAppUser = typeof appUsers.$inferInsert;
+
+// ─── Stripe webhook idempotency ledger ───────────────────────────────────────
+/**
+ * stripe_webhook_events — one row per Stripe event the webhook has APPLIED.
+ * Stripe guarantees at-least-once delivery, so the same event.id can arrive
+ * twice (retries, replays, concurrent deliveries). The handler inserts here
+ * FIRST: a duplicate-key violation on `stripeEventId` is the proof the event
+ * was already processed, and the handler acks 200 without re-applying money
+ * effects. `livemode` is recorded so test-mode traffic can never be mistaken
+ * for live traffic during an audit.
+ */
+export const stripeWebhookEvents = mysqlTable("stripe_webhook_events", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe `event.id` (evt_xxx). The idempotency key — UNIQUE. */
+  stripeEventId: varchar("stripeEventId", { length: 255 }).notNull(),
+  /** Stripe `event.type`, e.g. 'customer.subscription.updated'. */
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  /** Stripe `event.livemode` — TRUE=live keys, FALSE=test/sandbox. */
+  livemode: boolean("livemode").default(false).notNull(),
+  /** Stripe `event.created` converted to UTC ms. NULL = not supplied. */
+  eventCreatedAt: bigint("eventCreatedAt", { mode: "number" }),
+  /** UTC ms when this row was written (i.e. when the event was applied). */
+  processedAt: bigint("processedAt", { mode: "number" }).notNull(),
+  /** 'processed' | 'skipped' | 'failed' — outcome of the applied attempt. */
+  status: varchar("status", { length: 16 }).default("processed").notNull(),
+}, (table) => ({
+  stripeEventIdUnique: uniqueIndex("stripe_webhook_events_event_id_unique").on(table.stripeEventId),
+  eventTypeIdx: index("stripe_webhook_events_event_type_idx").on(table.eventType),
+}));
+
+export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
+export type InsertStripeWebhookEvent = typeof stripeWebhookEvents.$inferInsert;
+
+// ─── Entitlement audit trail (durable money-event log) ───────────────────────
+/**
+ * entitlement_events — append-only record of every change to a user's paid
+ * access, with the BEFORE and AFTER of each entitlement field. This is the
+ * forensic trail for "why does this user have (or not have) access?": logs
+ * rotate, this table does not. `actor` distinguishes automated Stripe webhook
+ * changes from manual owner/admin grants. Rows are never updated or deleted.
+ */
+/**
+ * Checkout attempt ledger — one row per Stripe Checkout Session.
+ *
+ * Written BEFORE the buyer is redirected to Stripe, then resolved by the
+ * webhook. Prior to this, a checkout existed only inside Stripe; the sole local
+ * trace was `app_users.pendingStripeSessionId`, set only for logged-in buyers,
+ * so an anonymous purchase left nothing behind and an abandoned one left
+ * nothing at all.
+ *
+ * `status` and `fulfillment` are deliberately independent. A session can be
+ * status='completed' (Stripe captured the money) while fulfillment='dropped'
+ * (we granted no access). Those two being indistinguishable is precisely what
+ * hid two live dropped payments.
+ */
+export const checkoutSessions = mysqlTable("checkout_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe `cs_...` id. UNIQUE — makes the webhook write-back an idempotent upsert. */
+  stripeSessionId: varchar("stripeSessionId", { length: 255 }).notNull().unique(),
+  livemode: boolean("livemode").default(true).notNull(),
+  /** "subscription" | "payment" */
+  mode: varchar("mode", { length: 16 }).notNull(),
+  /** Stripe-side lifecycle: created | completed | expired */
+  status: varchar("status", { length: 16 }).default("created").notNull(),
+  /** Our side: pending | fulfilled | dropped | skipped */
+  fulfillment: varchar("fulfillment", { length: 16 }).default("pending").notNull(),
+  /** Why not fulfilled. NULL once fulfilled. */
+  fulfillmentReason: varchar("fulfillmentReason", { length: 120 }),
+  /** NULL for anonymous checkout — the case that used to be unrecoverable. */
+  userId: int("userId"),
+  planId: varchar("planId", { length: 64 }),
+  planPriceId: int("planPriceId"),
+  stripePriceId: varchar("stripePriceId", { length: 64 }),
+  amountCents: int("amountCents"),
+  currency: varchar("currency", { length: 8 }),
+  desiredUsername: varchar("desiredUsername", { length: 64 }),
+  customerEmail: varchar("customerEmail", { length: 255 }),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 64 }),
+  paymentStatus: varchar("paymentStatus", { length: 32 }),
+  origin: varchar("origin", { length: 255 }),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+  completedAt: bigint("completedAt", { mode: "number" }),
+  resolvedAt: bigint("resolvedAt", { mode: "number" }),
+}, (t) => ({
+  fulfillmentIdx: index("checkout_sessions_fulfillment_idx").on(t.fulfillment, t.status),
+  statusCreatedIdx: index("checkout_sessions_status_created_idx").on(t.status, t.createdAt),
+  userIdx: index("checkout_sessions_user_idx").on(t.userId),
+  customerIdx: index("checkout_sessions_customer_idx").on(t.stripeCustomerId),
+  planIdx: index("checkout_sessions_plan_idx").on(t.planId),
+  emailIdx: index("checkout_sessions_email_idx").on(t.customerEmail),
+}));
+
+/**
+ * Payment ledger — every money movement, recorded locally.
+ *
+ * Before this, the money existed only inside Stripe. `entitlement_events` said
+ * access changed and `checkout_sessions` said a checkout resolved, but no row
+ * anywhere carried an AMOUNT — so "what did we collect", "which renewals
+ * failed" and "how much is in dispute" all required opening Stripe.
+ *
+ * `outcome` is separate from `kind` for the same reason it is on
+ * checkout_sessions: what Stripe did and what WE did about it are different
+ * facts, and collapsing them is how a silent drop hides.
+ */
+export const paymentEvents = mysqlTable("payment_events", {
+  id: int("id").autoincrement().primaryKey(),
+  stripeEventId: varchar("stripeEventId", { length: 255 }).notNull(),
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  livemode: boolean("livemode").default(true).notNull(),
+  /** The Stripe money object (pi_/in_/ch_/dp_). */
+  objectId: varchar("objectId", { length: 64 }).notNull(),
+  objectType: varchar("objectType", { length: 32 }).notNull(),
+  /** succeeded | failed | refunded | disputed | uncollectible */
+  kind: varchar("kind", { length: 24 }).notNull(),
+  /** What we did: recorded | granted | revoked | noop */
+  outcome: varchar("outcome", { length: 16 }).default("recorded").notNull(),
+  outcomeReason: varchar("outcomeReason", { length: 160 }),
+  amountCents: int("amountCents"),
+  currency: varchar("currency", { length: 8 }),
+  amountRefundedCents: int("amountRefundedCents"),
+  userId: int("userId"),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 64 }),
+  customerEmail: varchar("customerEmail", { length: 255 }),
+  failureCode: varchar("failureCode", { length: 64 }),
+  failureMessage: varchar("failureMessage", { length: 255 }),
+  attemptCount: int("attemptCount"),
+  occurredAt: bigint("occurredAt", { mode: "number" }).notNull(),
+  recordedAt: bigint("recordedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  kindOccurredIdx: index("payment_events_kind_occurred_idx").on(t.kind, t.occurredAt),
+  userIdx: index("payment_events_user_idx").on(t.userId, t.occurredAt),
+  customerIdx: index("payment_events_customer_idx").on(t.stripeCustomerId),
+  subscriptionIdx: index("payment_events_subscription_idx").on(t.stripeSubscriptionId),
+  invoiceIdx: index("payment_events_invoice_idx").on(t.stripeInvoiceId),
+  outcomeIdx: index("payment_events_outcome_idx").on(t.outcome, t.kind),
+  eventObjectUnique: uniqueIndex("payment_events_event_object_unique").on(t.stripeEventId, t.objectId),
+}));
+
+/**
+ * subscription_events — append-only record of every subscription lifecycle
+ * transition: creation, plan change, cancel scheduled/reverted, status move,
+ * deletion, renewal, and trial/renewal previews.
+ *
+ * Why it exists (avenues #3/#4/#8, 2026-08-01): plan changes route through the
+ * Stripe Customer Portal — the recommended pattern — which means no in-app code
+ * runs when a member switches plans. The ONLY local trace of any transition was
+ * whatever grantUserAccess happened to overwrite on app_users, which is current
+ * state, not history. "Who downgraded last month", "how many scheduled
+ * cancellations were reverted", and "which subscription did this renewal
+ * extend" were unanswerable without opening Stripe.
+ *
+ * `kind` (what happened to the subscription) is stored separately from
+ * `outcome` (what WE did about it) with a reason — the same rule as
+ * checkout_sessions and payment_events, because collapsing those two facts is
+ * exactly how the original checkout incident stayed hidden.
+ *
+ * from/to price ids are Stripe price ids, not plan_prices row ids: prices are
+ * immutable in Stripe, so the pair pins the exact SKUs either side of a
+ * transition even after a repricing retires the row.
+ */
+export const subscriptionEvents = mysqlTable("subscription_events", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe event id; NULL for app-initiated actions (cancel/reactivate). */
+  stripeEventId: varchar("stripeEventId", { length: 255 }),
+  /** Stripe event type, or a synthetic `app.*` type for in-app actions. */
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  livemode: boolean("livemode").default(true).notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }).notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  userId: int("userId"),
+  /** created | plan_changed | cancel_scheduled | cancel_reverted |
+   *  status_changed | updated | deleted | renewed | trial_ending |
+   *  renewal_upcoming | payment_failed */
+  kind: varchar("kind", { length: 24 }).notNull(),
+  /** What we did: recorded | granted | revoked | noop */
+  outcome: varchar("outcome", { length: 16 }).default("recorded").notNull(),
+  outcomeReason: varchar("outcomeReason", { length: 160 }),
+  /** Plan slugs (app_users.stripePlanId vocabulary). */
+  fromPlanId: varchar("fromPlanId", { length: 64 }),
+  toPlanId: varchar("toPlanId", { length: 64 }),
+  /** Stripe price ids — immutable SKU identity either side of the transition. */
+  fromPriceId: varchar("fromPriceId", { length: 64 }),
+  toPriceId: varchar("toPriceId", { length: 64 }),
+  fromInterval: varchar("fromInterval", { length: 16 }),
+  toInterval: varchar("toInterval", { length: 16 }),
+  /** Stripe subscription status after the event. */
+  status: varchar("status", { length: 24 }),
+  cancelAtPeriodEnd: boolean("cancelAtPeriodEnd"),
+  /** End of the billing period this event governs, UTC ms. */
+  periodEnd: bigint("periodEnd", { mode: "number" }),
+  /** webhook | user | owner | system */
+  actor: varchar("actor", { length: 16 }).default("webhook").notNull(),
+  occurredAt: bigint("occurredAt", { mode: "number" }).notNull(),
+  recordedAt: bigint("recordedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  subOccurredIdx: index("subscription_events_sub_occurred_idx").on(t.stripeSubscriptionId, t.occurredAt),
+  userOccurredIdx: index("subscription_events_user_occurred_idx").on(t.userId, t.occurredAt),
+  kindOccurredIdx: index("subscription_events_kind_occurred_idx").on(t.kind, t.occurredAt),
+  customerIdx: index("subscription_events_customer_idx").on(t.stripeCustomerId),
+  outcomeKindIdx: index("subscription_events_outcome_kind_idx").on(t.outcome, t.kind),
+  /** Redelivery guard. NULL stripeEventId rows (app-initiated) are exempt. */
+  eventKindUnique: uniqueIndex("subscription_events_event_kind_unique").on(t.stripeEventId, t.kind),
+}));
+
+export type SubscriptionEvent = typeof subscriptionEvents.$inferSelect;
+export type InsertSubscriptionEvent = typeof subscriptionEvents.$inferInsert;
+
+export const entitlementEvents = mysqlTable("entitlement_events", {
+  id: int("id").autoincrement().primaryKey(),
+  /** app_users.id whose entitlement changed (joined in app; no DB-level FK). */
+  userId: int("userId").notNull(),
+  /** Stripe `event.id` that caused the change; NULL for manual/admin actions. */
+  stripeEventId: varchar("stripeEventId", { length: 255 }),
+  /** Stripe event type, or a synthetic type for non-Stripe changes. */
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  /** Short machine reason, e.g. 'subscription_deleted', 'manual_grant'. */
+  reason: varchar("reason", { length: 64 }).notNull(),
+  /** Who applied it: 'webhook' (default), 'owner', 'admin', 'cron', 'backfill'. */
+  actor: varchar("actor", { length: 64 }).default("webhook").notNull(),
+  beforeHasAccess: boolean("beforeHasAccess"),
+  afterHasAccess: boolean("afterHasAccess"),
+  beforePlanId: varchar("beforePlanId", { length: 64 }),
+  afterPlanId: varchar("afterPlanId", { length: 64 }),
+  /** UTC ms; NULL carries the "lifetime access" meaning of app_users.expiryDate. */
+  beforeExpiryDate: bigint("beforeExpiryDate", { mode: "number" }),
+  afterExpiryDate: bigint("afterExpiryDate", { mode: "number" }),
+  /** UTC ms when this audit row was written. */
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+}, (table) => ({
+  userCreatedIdx: index("entitlement_events_user_created_idx").on(table.userId, table.createdAt),
+  stripeEventIdIdx: index("entitlement_events_stripe_event_id_idx").on(table.stripeEventId),
+}));
+
+export type EntitlementEvent = typeof entitlementEvents.$inferSelect;
+export type InsertEntitlementEvent = typeof entitlementEvents.$inferInsert;
 
 // ─── Discord OAuth CSRF state store (DB-backed, survives server restarts) ────
 //
@@ -333,10 +819,20 @@ export const games = mysqlTable("games", {
   homePitcherConfirmed: boolean("homePitcherConfirmed").default(false),
   /** Ballpark / venue name, e.g. "Oracle Park" */
   venue: varchar("venue", { length: 128 }),
-  /** Whether this is a doubleheader: 'N'=no, 'Y'=yes game 1, 'S'=yes game 2 */
+  /**
+   * MLB Stats API doubleheader flag: 'N'=no, 'Y'=traditional doubleheader,
+   * 'S'=split (separate-admission) doubleheader. Grouping metadata only —
+   * event identity is mlbGamePk, never this flag.
+   */
   doubleHeader: varchar("doubleHeader", { length: 2 }).default("N"),
   /** Game number within a doubleheader (1 or 2; 1 for non-DH games) */
   gameNumber: tinyint("gameNumber").default(1),
+  /**
+   * Original scheduled date "YYYY-MM-DD" when this game is a rescheduled
+   * makeup (statsapi `rescheduledFrom`), e.g. the 2026-07-17 TB@BOS G1 makeup
+   * carries "2026-05-09". Null for games played on their original date.
+   */
+  rescheduledFrom: varchar("rescheduledFrom", { length: 10 }),
   /** Away team run line (spread), e.g. "-1.5" or "+1.5" */
   awayRunLine: varchar("awayRunLine", { length: 8 }),
   /** Home team run line (spread), e.g. "+1.5" or "-1.5" */
@@ -572,6 +1068,31 @@ export const games = mysqlTable("games", {
    */
   oddsSource: mysqlEnum("oddsSource", ["open", "dk"]),
 
+  // ─── Evidence Provenance Lifecycle (Phase 1 observability) ────────────────
+  /**
+   * Provider-authored observation time for the current dynamic market record.
+   * Null means no authoritative provider timestamp was persisted. Never
+   * substitute retrieval time, request time, or modelRunAt.
+   */
+  providerObservedAt: timestamp("provider_observed_at", { fsp: 3 }),
+  /**
+   * Provider/source last-update time when it is distinct from the observation
+   * time. Null means the source did not supply an authoritative update time.
+   */
+  sourceUpdatedAt: timestamp("source_updated_at", { fsp: 3 }),
+  /** Time the ingestion boundary received the provider record. */
+  ingestionReceivedAt: timestamp("ingestion_received_at", { fsp: 3 }),
+  /** Time the record completed deterministic normalization. */
+  ingestionNormalizedAt: timestamp("ingestion_normalized_at", { fsp: 3 }),
+  /** Time the normalized record was durably persisted. */
+  ingestionPersistedAt: timestamp("ingestion_persisted_at", { fsp: 3 }),
+  /** Immutable revision of the ingestion pipeline that produced the row. */
+  ingestionPipelineRevision: varchar("ingestion_pipeline_revision", {
+    length: 160,
+  }),
+  /** Stable identifier for the ingestion run that produced the row. */
+  ingestionRunId: varchar("ingestion_run_id", { length: 160 }),
+
   // ─── Outcome Ingestion + Brier Scores (populated by mlbOutcomeIngestor after game final) ──
   /**
    * Actual full-game total runs (awayFinalScore + homeFinalScore).
@@ -637,8 +1158,27 @@ export const games = mysqlTable("games", {
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
-  /** Prevent duplicate rows for the same matchup on the same date */
+  /**
+   * Prevent duplicate rows for the same matchup on the same date.
+   * NOTE (doubleheader contract): gameNumber is part of this key, so two
+   * same-day games coexist ONLY when their gameNumbers differ. Ingestion must
+   * therefore always resolve gameNumber from provider identity (see
+   * mlbEventIdentity.planMlbScheduleSync) — an insert that leaves the default
+   * gameNumber=1 for a second same-matchup game collides here and is swallowed
+   * by upsert paths (the 2026-07-17 TB@BOS incident class).
+   */
   uniqMatchup: uniqueIndex("games_matchup_unique").on(t.gameDate, t.awayTeam, t.homeTeam, t.gameNumber),
+  /**
+   * Canonical provider identity: at most ONE row per MLB gamePk. Multiple
+   * NULLs are permitted by MySQL/TiDB unique-index semantics (non-MLB sports
+   * and pre-identity legacy rows). This is the database-level guarantee that
+   * two distinct provider events can never merge and one event can never
+   * occupy two rows.
+   * PRE-DEPLOY CHECK (run before db-push; must return 0 rows):
+   *   SELECT mlbGamePk, COUNT(*) c FROM games
+   *    WHERE mlbGamePk IS NOT NULL GROUP BY mlbGamePk HAVING c > 1;
+   */
+  uniqMlbGamePk: uniqueIndex("games_mlb_gamepk_unique").on(t.mlbGamePk),
   /**
    * Composite index for the primary feed query pattern:
    *   WHERE sport = ? AND gameDate >= ? AND gameDate <= ? AND gameStatus != 'postponed'
@@ -1812,6 +2352,8 @@ export const mlbScheduleHistory = mysqlTable("mlb_schedule_history", {
   startTimeUtc: varchar("startTimeUtc", { length: 32 }).notNull(),
   /** Game status: 'scheduled' | 'inprogress' | 'complete' */
   gameStatus: varchar("gameStatus", { length: 16 }).notNull().default("scheduled"),
+  /** MLB Stats API gamePk — canonical join key to the mlb_games table; null until backfilled */
+  gamePk: int("gamePk"),
   // ─── Away Team ──────────────────────────────────────────────────────────────
   /** Away team Action Network URL slug, e.g. "arizona-diamondbacks" */
   awaySlug: varchar("awaySlug", { length: 128 }).notNull(),
@@ -1892,6 +2434,7 @@ export const mlbScheduleHistory = mysqlTable("mlb_schedule_history", {
   idxAwaySlug:   index("idx_msh_away_slug").on(t.awaySlug),
   idxHomeSlug:   index("idx_msh_home_slug").on(t.homeSlug),
   idxGameStatus: index("idx_msh_game_status").on(t.gameStatus),
+  idxGamePk:     index("idx_msh_game_pk").on(t.gamePk),
 }));
 export type MlbScheduleHistoryRow = typeof mlbScheduleHistory.$inferSelect;
 export type InsertMlbScheduleHistory = typeof mlbScheduleHistory.$inferInsert;
@@ -2141,6 +2684,29 @@ export const trackedBets = mysqlTable("tracked_bets", {
   line: decimal("line", { precision: 6, scale: 1 }),
   /** American odds, e.g. -125, +145, -110 */
   odds: int("odds").notNull(),
+  /**
+   * For a parlay: the ticket price EXACTLY as the user entered it, before any
+   * leg was dropped. NULL for straight bets.
+   *
+   * This exists to make settlement idempotent. Grading re-runs every 30
+   * minutes; if repricing worked by mutating `odds` in place, each sweep would
+   * divide the price again and a pushed leg would decay the ticket toward
+   * nothing. Every reprice is instead computed fresh from this value and the
+   * CURRENT set of dropped legs, so running it twice changes nothing and a leg
+   * corrected from PUSH back to WIN restores the original price.
+   *
+   * It is also what preserves a correlated (SGP) or boosted price, which is
+   * not the product of its legs and therefore cannot be rebuilt from them.
+   */
+  originalOdds: int("originalOdds"),
+  /**
+   * Number of legs on a parlay; 0 for a straight bet.
+   *
+   * Denormalized on purpose: every list and stats read would otherwise need a
+   * join or a subquery against tracked_bet_legs just to tell the two kinds of
+   * row apart, on a path that is already latency-bound.
+   */
+  legCount: int("legCount").notNull().default(0),
   /** Risk amount in dollars (decimal, 2 decimal places) */
   risk: decimal("risk", { precision: 10, scale: 2 }).notNull(),
   /** To-win amount in dollars (auto-calculated: risk * (100/|odds|) for fav, risk * (odds/100) for dog) */
@@ -2149,12 +2715,22 @@ export const trackedBets = mysqlTable("tracked_bets", {
    * Risk amount expressed in units (e.g. 3.0 for a 3U play).
    * Stored at creation time so analytics can bucket correctly regardless of the user's unit size setting.
    */
-  riskUnits: decimal("riskUnits", { precision: 8, scale: 2 }),
+  /**
+   * Risk in units. scale 4, not 2.
+   *
+   * At scale 2 a stake small relative to the unit size loses real money to
+   * rounding: the first production parlay risked $25 at a $100 unit and paid
+   * $68.50, whose unit value 0.685 stored as 0.69 — implying $69.00. Five live
+   * bets sit under 0.10 units where that error is proportionally largest.
+   * Dollars are already scale 2; units divide dollars, so they need more.
+   */
+  riskUnits: decimal("riskUnits", { precision: 12, scale: 4 }),
   /**
    * To-win amount expressed in units (e.g. 5.0 for a 5U to-win play).
    * Stored at creation time for accurate bySize analytics.
    */
-  toWinUnits: decimal("toWinUnits", { precision: 8, scale: 2 }),
+  /** To-win in units. scale 4 for the same reason as riskUnits. */
+  toWinUnits: decimal("toWinUnits", { precision: 12, scale: 4 }),
   /** Sportsbook name, e.g. "DK NJ", "FanDuel NJ", "Caesars NJ" */
   book: varchar("book", { length: 64 }),
   /** Optional free-text notes */
@@ -2207,10 +2783,110 @@ export const trackedBets = mysqlTable("tracked_bets", {
   idxUserResult:    index("idx_tb_user_result").on(t.userId, t.result),
   /** Composite for userId + result + gameDate — optimal for pending-bet auto-grade queries */
   idxUserResultDate: index("idx_tb_user_result_date").on(t.userId, t.result, t.gameDate),
+  /**
+   * The grading engine's hottest query — `WHERE result='PENDING' AND gameDate=?`
+   * across ALL users, run by every polling cycle and every cron firing. Every
+   * other composite leads with userId, which this query does not filter on, so
+   * TiDB fell back to idx_tb_result(result) and filtered the date in a
+   * Selection: it read every PENDING row in the table, every cycle.
+   */
+  idxResultDate: index("idx_tb_result_date").on(t.result, t.gameDate),
+  /**
+   * The create-path idempotency guard, which matches on
+   * (userId, anGameId, gameNumber, market, pickSide, odds) inside a 30s window.
+   * It resolved through idx_tb_user_id(userId) alone and filtered the rest —
+   * a full scan of that user's history on every insert.
+   */
+  idxUserGame: index("idx_tb_user_game").on(t.userId, t.anGameId, t.gameNumber),
+  /**
+   * Covering index for the stats-cache fingerprint
+   * (COUNT(*), MAX(updatedAt), SUM(id) WHERE userId = ?).
+   *
+   * Validating #330 against production showed the fingerprint resolving through
+   * idx_tb_user_id(userId) and then doing a TableRowIDScan — it read the same
+   * rows as the scan it exists to avoid. Leading with userId and carrying
+   * updatedAt and id makes it an index-only scan, which is what the cache
+   * design assumed.
+   */
+  idxUserFingerprint: index("idx_tb_user_fingerprint").on(t.userId, t.updatedAt, t.id),
 }));
 
 export type TrackedBet = typeof trackedBets.$inferSelect;
 export type InsertTrackedBet = typeof trackedBets.$inferInsert;
+
+// ─── Parlay legs ──────────────────────────────────────────────────────────────
+/**
+ * The legs of a parlay ticket. One row per selection; the parent row in
+ * `tracked_bets` carries the single stake and the ticket price.
+ *
+ * A leg is deliberately shaped like a bet minus the money: it has everything
+ * `gradeTrackedBet` needs (sport, date, teams, market, pickSide, line,
+ * timeframe, anGameId, gameNumber) and nothing about stake, because the
+ * contract puts one stake on the ticket and none on the legs.
+ *
+ * Straight bets have no rows here at all — `tracked_bets.legCount` is 0 and
+ * every existing row keeps behaving exactly as before.
+ */
+export const trackedBetLegs = mysqlTable("tracked_bet_legs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** FK to tracked_bets.id — the parlay ticket this leg belongs to. */
+  betId: int("betId").notNull(),
+  /** Display order within the ticket, 0-based. Pricing itself is order-free. */
+  legIndex: int("legIndex").notNull(),
+  /** Sport: MLB | NBA | NHL | NCAAM | NFL */
+  sport: varchar("sport", { length: 16 }).notNull().default("MLB"),
+  /** Game date in YYYY-MM-DD format */
+  gameDate: varchar("gameDate", { length: 20 }).notNull(),
+  awayTeam: varchar("awayTeam", { length: 128 }),
+  homeTeam: varchar("homeTeam", { length: 128 }),
+  /** Action Network game id, for the same game resolution straight bets use. */
+  anGameId: int("anGameId"),
+  /** Doubleheader discriminator, 1 or 2. */
+  gameNumber: int("gameNumber").default(1),
+  /** Market: ML | RL | TOTAL — the same vocabulary straight bets use. */
+  market: mysqlEnum("market", ["ML", "RL", "TOTAL"]).notNull().default("ML"),
+  pickSide: mysqlEnum("pickSide", ["AWAY", "HOME", "OVER", "UNDER"]),
+  /** Timeframe, which is also where NRFI/YRFI live. */
+  timeframe: mysqlEnum("timeframe", [
+    "FULL_GAME", "FIRST_5", "FIRST_INNING", "NRFI", "YRFI",
+    "REGULATION", "FIRST_PERIOD", "FIRST_HALF", "FIRST_QUARTER",
+  ]).notNull().default("FULL_GAME"),
+  /** Line for RL/TOTAL legs. NULL for ML, required for the other two. */
+  line: decimal("line", { precision: 6, scale: 1 }),
+  /**
+   * The leg's own American price.
+   *
+   * Not decoration: repricing a ticket after a push divides this leg's decimal
+   * price out of the ticket price, so a wrong value here mis-pays the ticket.
+   */
+  odds: int("odds").notNull(),
+  /** Human-readable label, e.g. "NYY ML" or "OVER 8.5". */
+  pick: varchar("pick", { length: 255 }).notNull(),
+  /**
+   * The leg's own outcome. PUSH/VOID mean the leg is dropped and the ticket
+   * reprices; they do not settle the ticket by themselves.
+   */
+  result: mysqlEnum("result", ["PENDING", "WIN", "LOSS", "PUSH", "VOID"])
+    .notNull()
+    .default("PENDING"),
+  /** Final scores for the graded timeframe, for audit. */
+  awayScore: varchar("awayScore", { length: 16 }),
+  homeScore: varchar("homeScore", { length: 16 }),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
+}, (t) => ({
+  /** Load every leg of a ticket — the join behind reads and settlement. */
+  idxLegBet: index("idx_tbl_bet").on(t.betId, t.legIndex),
+  /**
+   * The grading sweep's query: open legs for a given sport/date across all
+   * tickets. Mirrors idx_tb_result_date on the parent for the same reason —
+   * without it the sweep reads every open leg in the table each cycle.
+   */
+  idxLegResultDate: index("idx_tbl_result_date").on(t.result, t.gameDate),
+}));
+
+export type TrackedBetLeg = typeof trackedBetLegs.$inferSelect;
+export type InsertTrackedBetLeg = typeof trackedBetLegs.$inferInsert;
 
 // ─── Bet Edit Requests (porter/hank immutable bets — request changes via this table) ──
 /**
@@ -2318,61 +2994,6 @@ export const discordInviteTokens = mysqlTable("discord_invite_tokens", {
 }));
 export type DiscordInviteToken = typeof discordInviteTokens.$inferSelect;
 export type InsertDiscordInviteToken = typeof discordInviteTokens.$inferInsert;
-
-// ─── Jack Mac Sync Jobs ────────────────────────────────────────────────────────
-// Persists background sync job state to the database so that getSyncStatus
-// can find the job regardless of which Node.js process handles the poll request.
-// This eliminates the "Sync job not found" error caused by in-memory-only state.
-//
-// Lifecycle:
-//   1. syncToSheets creates a row with status='running'
-//   2. Background job updates the row to status='completed' or 'failed'
-//   3. getSyncStatus reads from DB (with in-memory Map as fast-path cache)
-//   4. Rows older than 24 hours are eligible for cleanup
-export const jackMacSyncJobs = mysqlTable("jack_mac_sync_jobs", {
-  /** UUID job identifier returned to the client */
-  jobId:       varchar("jobId",       { length: 64  }).primaryKey(),
-  /** Structured run ID from jackMacCore.generateRunId() */
-  runId:       varchar("runId",       { length: 64  }).notNull(),
-  /** Job lifecycle status */
-  status:      mysqlEnum("status", ["running", "completed", "failed"]).notNull().default("running"),
-  /** UTC timestamp (ms) when the job was created */
-  startedAt:   bigint("startedAt",    { mode: "number" }).notNull(),
-  /** UTC timestamp (ms) when the job finished (NULL while running) */
-  completedAt: bigint("completedAt",  { mode: "number" }),
-  /** JSON-serialised result payload (tab summaries, row counts, etc.) */
-  result:      text("result"),
-  /** Error message if status='failed' */
-  error:       text("error"),
-  /** Username of the user who triggered the sync */
-  triggeredBy: varchar("triggeredBy", { length: 64  }),
-}, (t) => ({
-  idxStatus:    index("idx_jmsj_status").on(t.status),
-  idxStartedAt: index("idx_jmsj_started_at").on(t.startedAt),
-}));
-export type JackMacSyncJob    = typeof jackMacSyncJobs.$inferSelect;
-export type InsertJackMacSyncJob = typeof jackMacSyncJobs.$inferInsert;
-
-// ─── RG Session Cache ──────────────────────────────────────────────────────────────────────
-// Persists the RotoGrinders session cookie across server restarts and processes.
-// Eliminates the 6-8s login step on repeat syncs (25-min TTL matches RG session).
-//
-// Lifecycle:
-//   1. getRgSessionCookie() checks this table before attempting login
-//   2. If a valid (non-expired) cookie exists, it is returned immediately
-//   3. After a successful login, the new cookie is upserted here
-//   4. Rows older than 30 minutes are eligible for cleanup
-export const rgSessionCache = mysqlTable("rg_session_cache", {
-  /** Fixed primary key — only one active session at a time */
-  id:          int("id").primaryKey().default(1),
-  /** The full cookie string (e.g. "rguid=...; session=...") */
-  cookieStr:   text("cookie_str").notNull(),
-  /** UTC timestamp (ms) when the cookie was fetched */
-  fetchedAt:   bigint("fetched_at", { mode: "number" }).notNull(),
-  /** UTC timestamp (ms) when the cookie expires (fetchedAt + TTL) */
-  expiresAt:   bigint("expires_at", { mode: "number" }).notNull(),
-});
-export type RgSessionCache = typeof rgSessionCache.$inferSelect;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // WAITLIST
@@ -3017,9 +3638,12 @@ export const dimeChatThreads = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   },
-  (t) => ({
-    idxUserUpdated: index("idx_dime_chat_threads_user_updated").on(t.userId, t.updatedAt),
-  }),
+  t => ({
+    idxUserUpdated: index("idx_dime_chat_threads_user_updated").on(
+      t.userId,
+      t.updatedAt
+    ),
+  })
 );
 
 export const dimeChatMessages = mysqlTable(
@@ -3028,16 +3652,247 @@ export const dimeChatMessages = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     /** FK to dime_chat_threads.id */
     threadId: int("threadId").notNull(),
+    /** Trace v1 session UUID. NULL only for messages created before Trace v1. */
+    sessionId: varchar("sessionId", { length: 36 }),
+    /** Trace v1 logical turn UUID. NULL only for pre-Trace-v1 messages. */
+    turnId: varchar("turnId", { length: 36 }),
+    /** Browser-generated UUID used only for idempotent message correlation. */
+    clientMessageId: varchar("clientMessageId", { length: 36 }),
+    /** Generation UUID for assistant output; user rows link to the first attempt. */
+    generationId: varchar("generationId", { length: 36 }),
     /** 1-based position within the thread */
     seq: int("seq").notNull(),
     role: mysqlEnum("role", ["user", "assistant"]).notNull(),
     content: text("content").notNull(),
+    /** SHA-256 of the exact persisted user-visible content. */
+    contentSha256: varchar("contentSha256", { length: 64 }),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
-  (t) => ({
-    idxThreadSeq: index("idx_dime_chat_messages_thread_seq").on(t.threadId, t.seq),
-  }),
+  t => ({
+    idxThreadSeq: uniqueIndex("uq_dime_chat_messages_thread_seq").on(
+      t.threadId,
+      t.seq
+    ),
+    idxThreadClientMessage: uniqueIndex(
+      "idx_dime_chat_messages_thread_client_message"
+    ).on(t.threadId, t.clientMessageId),
+    idxTurn: index("idx_dime_chat_messages_turn").on(t.turnId),
+    idxGeneration: index("idx_dime_chat_messages_generation").on(
+      t.generationId
+    ),
+  })
+);
+
+/**
+ * Trace v1 — one authenticated browser chat session.
+ *
+ * `clientSessionId` is an opaque UUID generated by the browser. It never
+ * carries identity; the server binds it to the authenticated app user.
+ */
+export const dimeChatSessions = mysqlTable(
+  "dime_chat_sessions",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    userId: int("userId").notNull(),
+    clientSessionId: varchar("clientSessionId", { length: 36 }).notNull(),
+    surface: varchar("surface", { length: 32 })
+      .default("dime-chat-web")
+      .notNull(),
+    policyVersion: varchar("policyVersion", { length: 32 }).notNull(),
+    retentionClass: mysqlEnum("retentionClass", [
+      "product_history",
+      "restricted_quality",
+    ])
+      .default("product_history")
+      .notNull(),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    lastSeenAt: timestamp("lastSeenAt").defaultNow().notNull(),
+  },
+  t => ({
+    idxUserClientSession: uniqueIndex(
+      "idx_dime_chat_sessions_user_client_session"
+    ).on(t.userId, t.clientSessionId),
+    idxUserLastSeen: index("idx_dime_chat_sessions_user_last_seen").on(
+      t.userId,
+      t.lastSeenAt
+    ),
+  })
+);
+
+/**
+ * Trace v1 — one logical user turn.
+ *
+ * A retry is another generation attempt under the same turn. The user prompt
+ * is therefore stored exactly once while every model attempt remains
+ * independently auditable.
+ */
+export const dimeChatTurns = mysqlTable(
+  "dime_chat_turns",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    userId: int("userId").notNull(),
+    sessionId: varchar("sessionId", { length: 36 }).notNull(),
+    threadId: int("threadId").notNull(),
+    clientTurnId: varchar("clientTurnId", { length: 36 }).notNull(),
+    userMessageId: int("userMessageId").notNull(),
+    assistantMessageId: int("assistantMessageId"),
+    lastGenerationId: varchar("lastGenerationId", { length: 36 }).notNull(),
+    inputSha256: varchar("inputSha256", { length: 64 }).notNull(),
+    requestClass: varchar("requestClass", { length: 32 }).notNull(),
+    responseBudget: int("responseBudget").notNull(),
+    status: mysqlEnum("status", [
+      "generating",
+      "completed",
+      "blocked",
+      "failed",
+      "aborted",
+    ])
+      .default("generating")
+      .notNull(),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  t => ({
+    idxSessionClientTurn: uniqueIndex(
+      "idx_dime_chat_turns_session_client_turn"
+    ).on(t.sessionId, t.clientTurnId),
+    idxThreadStarted: index("idx_dime_chat_turns_thread_started").on(
+      t.threadId,
+      t.startedAt
+    ),
+    idxUserStarted: index("idx_dime_chat_turns_user_started").on(
+      t.userId,
+      t.startedAt
+    ),
+    idxLastGeneration: index("idx_dime_chat_turns_last_generation").on(
+      t.lastGenerationId
+    ),
+  })
+);
+
+/**
+ * Trace v1 — one provider attempt, including exact inputs/outputs needed for
+ * quality review. Raw output and context are restricted QA data and receive a
+ * 90-day purge timestamp; user-visible history remains in dime_chat_messages.
+ */
+export const dimeChatGenerations = mysqlTable(
+  "dime_chat_generations",
+  {
+    id: varchar("id", { length: 36 }).primaryKey(),
+    turnId: varchar("turnId", { length: 36 }).notNull(),
+    userId: int("userId").notNull(),
+    requestId: varchar("requestId", { length: 36 }).notNull(),
+    idempotencyKey: varchar("idempotencyKey", { length: 36 }).notNull(),
+    /** Preserves null-vs-existing-thread semantics for idempotent replay. */
+    requestedThreadId: int("requestedThreadId"),
+    clientAssistantMessageId: varchar("clientAssistantMessageId", {
+      length: 36,
+    }).notNull(),
+    attempt: int("attempt").notNull(),
+    inputSha256: varchar("inputSha256", { length: 64 }).notNull(),
+    requestFingerprintSha256: varchar("requestFingerprintSha256", {
+      length: 64,
+    }).notNull(),
+    /** Exact sanitized browser transcript accepted for this attempt. */
+    historySha256: varchar("historySha256", { length: 64 }).notNull(),
+    historySnapshot: mediumtext("historySnapshot"),
+    provider: varchar("provider", { length: 64 }).notNull(),
+    deploymentTier: varchar("deploymentTier", { length: 32 }).notNull(),
+    endpointSource: varchar("endpointSource", { length: 32 }),
+    requestedModel: varchar("requestedModel", { length: 160 }).notNull(),
+    actualModel: varchar("actualModel", { length: 160 }),
+    baseRevision: varchar("baseRevision", { length: 64 }),
+    adapterRevision: varchar("adapterRevision", { length: 64 }),
+    sourceCommit: varchar("sourceCommit", { length: 64 }),
+    productProfile: varchar("productProfile", { length: 64 }).notNull(),
+    profileVersion: varchar("profileVersion", { length: 32 }).notNull(),
+    promptSource: varchar("promptSource", { length: 64 }).notNull(),
+    systemPromptSha256: varchar("systemPromptSha256", { length: 64 }),
+    blueprintHash: varchar("blueprintHash", { length: 64 }),
+    maxTokens: int("maxTokens").notNull(),
+    temperature: varchar("temperature", { length: 16 }),
+    contextFreshness: mysqlEnum("contextFreshness", ["live", "delayed", "none"])
+      .default("none")
+      .notNull(),
+    contextSha256: varchar("contextSha256", { length: 64 }),
+    contextRowCount: int("contextRowCount").default(0).notNull(),
+    contextSnapshot: text("contextSnapshot"),
+    status: mysqlEnum("status", [
+      "generating",
+      "completed",
+      "blocked",
+      "failed",
+      "aborted",
+    ])
+      .default("generating")
+      .notNull(),
+    rawOutput: text("rawOutput"),
+    servedOutput: text("servedOutput"),
+    validationErrors: text("validationErrors"),
+    certaintyViolation: boolean("certaintyViolation").default(false).notNull(),
+    finishReason: varchar("finishReason", { length: 64 }),
+    promptTokens: int("promptTokens"),
+    completionTokens: int("completionTokens"),
+    totalTokens: int("totalTokens"),
+    latencyMs: int("latencyMs"),
+    errorClass: varchar("errorClass", { length: 96 }),
+    errorCode: varchar("errorCode", { length: 64 }),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    /** A crashed worker may be recovered after this deadline. */
+    leaseExpiresAt: timestamp("leaseExpiresAt").notNull(),
+    completedAt: timestamp("completedAt"),
+    /** Restricted context/raw-output deletion deadline. */
+    purgeAfter: timestamp("purgeAfter").notNull(),
+  },
+  t => ({
+    idxRequestId: uniqueIndex("idx_dime_chat_generations_request_id").on(
+      t.requestId
+    ),
+    idxUserIdempotency: uniqueIndex(
+      "idx_dime_chat_generations_user_idempotency"
+    ).on(t.userId, t.idempotencyKey),
+    idxTurnAttempt: uniqueIndex("idx_dime_chat_generations_turn_attempt").on(
+      t.turnId,
+      t.attempt
+    ),
+    idxStatusStarted: index("idx_dime_chat_generations_status_started").on(
+      t.status,
+      t.startedAt
+    ),
+    idxPurgeAfter: index("idx_dime_chat_generations_purge_after").on(
+      t.purgeAfter
+    ),
+  })
+);
+
+/** Append-only lifecycle events for context, gates, retries, and failures. */
+export const dimeChatTraceEvents = mysqlTable(
+  "dime_chat_trace_events",
+  {
+    id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+    turnId: varchar("turnId", { length: 36 }).notNull(),
+    generationId: varchar("generationId", { length: 36 }),
+    eventType: varchar("eventType", { length: 64 }).notNull(),
+    /** Sanitized JSON only; never credentials, cookies, or raw prompt text. */
+    metadata: text("metadata"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  t => ({
+    idxTurnEvent: index("idx_dime_chat_trace_events_turn_event").on(
+      t.turnId,
+      t.id
+    ),
+    idxGenerationEvent: index("idx_dime_chat_trace_events_generation_event").on(
+      t.generationId,
+      t.id
+    ),
+  })
 );
 
 export type SelectDimeChatThread = typeof dimeChatThreads.$inferSelect;
 export type SelectDimeChatMessage = typeof dimeChatMessages.$inferSelect;
+export type SelectDimeChatSession = typeof dimeChatSessions.$inferSelect;
+export type SelectDimeChatTurn = typeof dimeChatTurns.$inferSelect;
+export type SelectDimeChatGeneration = typeof dimeChatGenerations.$inferSelect;
+export type SelectDimeChatTraceEvent = typeof dimeChatTraceEvents.$inferSelect;

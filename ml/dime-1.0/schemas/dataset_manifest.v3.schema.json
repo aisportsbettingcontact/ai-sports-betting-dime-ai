@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Dime Governed Dataset Publication Manifest v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_version",
+    "visibility",
+    "publication_classification",
+    "provenance_source_class",
+    "source_owner",
+    "rights_basis",
+    "license_or_usage_restrictions",
+    "synthetic_status",
+    "contains_user_data",
+    "contains_provider_derived_data",
+    "approval_status",
+    "approved",
+    "approved_at_utc",
+    "reviewer_ids",
+    "train_record_count",
+    "validation_record_count",
+    "train_sha256",
+    "validation_sha256",
+    "curriculum_config_sha256",
+    "tool_catalog_sha256",
+    "chat_template_sha256",
+    "rights_reviewed",
+    "consent_reviewed",
+    "privacy_reviewed",
+    "partition_audit_passed",
+    "future_data_audit_passed",
+    "semantic_dedup_audit_passed",
+    "evaluation_contamination_audit_passed",
+    "direct_identifier_scan_version",
+    "deletion_policy_id",
+    "limitations_notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-dataset-manifest-v3"
+    },
+    "dataset_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "visibility": {
+      "enum": ["public", "private", "internal"]
+    },
+    "publication_classification": {
+      "enum": ["sample-public", "approved-public", "private-only"]
+    },
+    "provenance_source_class": {
+      "enum": ["synthetic", "human-authored", "provider-derived", "user-derived", "mixed"]
+    },
+    "source_owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rights_basis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "license_or_usage_restrictions": {
+      "type": "string",
+      "minLength": 1
+    },
+    "synthetic_status": {
+      "enum": ["fully-synthetic", "deidentified", "mixed", "not-synthetic"]
+    },
+    "contains_user_data": {
+      "type": "boolean"
+    },
+    "contains_provider_derived_data": {
+      "type": "boolean"
+    },
+    "approval_status": {
+      "enum": ["draft", "approved", "rejected"]
+    },
+    "approved": {
+      "type": "boolean"
+    },
+    "approved_at_utc": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "reviewer_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "train_record_count": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "validation_record_count": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "train_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "validation_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "curriculum_config_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "tool_catalog_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "chat_template_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "rights_reviewed": {
+      "type": "boolean"
+    },
+    "consent_reviewed": {
+      "type": "boolean"
+    },
+    "privacy_reviewed": {
+      "type": "boolean"
+    },
+    "partition_audit_passed": {
+      "type": "boolean"
+    },
+    "future_data_audit_passed": {
+      "type": "boolean"
+    },
+    "semantic_dedup_audit_passed": {
+      "type": "boolean"
+    },
+    "evaluation_contamination_audit_passed": {
+      "type": "boolean"
+    },
+    "direct_identifier_scan_version": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "deletion_policy_id": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "limitations_notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "approved": {
+            "const": true
+          }
+        },
+        "required": ["approved"]
+      },
+      "then": {
+        "properties": {
+          "approval_status": {
+            "const": "approved"
+          },
+          "approved_at_utc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reviewer_ids": {
+            "minItems": 1
+          },
+          "train_record_count": {
+            "type": "integer"
+          },
+          "validation_record_count": {
+            "type": "integer"
+          },
+          "train_sha256": {
+            "type": "string"
+          },
+          "validation_sha256": {
+            "type": "string"
+          },
+          "curriculum_config_sha256": {
+            "type": "string"
+          },
+          "tool_catalog_sha256": {
+            "type": "string"
+          },
+          "chat_template_sha256": {
+            "type": "string"
+          },
+          "direct_identifier_scan_version": {
+            "type": "string"
+          },
+          "deletion_policy_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

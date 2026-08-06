@@ -26,7 +26,8 @@ const PYTHON_BIN = "/usr/bin/python3.11";
 const PYTHON_ENV = {
   ...process.env,
   PYTHONHOME: undefined as unknown as string,
-  PYTHONPATH: "/usr/local/lib/python3.11/dist-packages:/usr/lib/python3/dist-packages",
+  PYTHONPATH:
+    "/usr/local/lib/python3.11/dist-packages:/usr/lib/python3/dist-packages",
 };
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT_PATH = path.join(_dirname, "ActionNetworkF5NrfiAPI.py");
@@ -47,7 +48,7 @@ interface F5Odds {
 
 interface NrfiOdds {
   totalValue: number | null;
-  overOdds: number | null;  // YRFI
+  overOdds: number | null; // YRFI
   underOdds: number | null; // NRFI
 }
 
@@ -79,21 +80,30 @@ function runPythonScraper(dateStr: string): Promise<AnF5NrfiRecord[]> {
     let stdout = "";
     let stderr = "";
 
-    proc.stdout.on("data", (d) => { stdout += d.toString(); });
-    proc.stderr.on("data", (d) => {
+    proc.stdout.on("data", d => {
+      stdout += d.toString();
+    });
+    proc.stderr.on("data", d => {
       stderr += d.toString();
       // Print stderr logs in real time for visibility
       process.stdout.write(d.toString());
     });
 
-    proc.on("close", (code) => {
+    proc.on("close", code => {
       if (code !== 0) {
-        reject(new Error(`[FATAL] ActionNetworkF5NrfiAPI.py exited with code ${code}\n${stderr}`));
+        reject(
+          new Error(
+            `[FATAL] ActionNetworkF5NrfiAPI.py exited with code ${code}\n${stderr}`
+          )
+        );
         return;
       }
 
       // Parse the last non-empty line as JSON
-      const lines = stdout.trim().split("\n").filter(l => l.trim());
+      const lines = stdout
+        .trim()
+        .split("\n")
+        .filter(l => l.trim());
       const lastLine = lines[lines.length - 1];
       try {
         const parsed = JSON.parse(lastLine);
@@ -103,12 +113,18 @@ function runPythonScraper(dateStr: string): Promise<AnF5NrfiRecord[]> {
         }
         resolve(parsed as AnF5NrfiRecord[]);
       } catch (e) {
-        reject(new Error(`[FATAL] Failed to parse Python output as JSON: ${lastLine.slice(0, 200)}`));
+        reject(
+          new Error(
+            `[FATAL] Failed to parse Python output as JSON: ${lastLine.slice(0, 200)}`
+          )
+        );
       }
     });
 
-    proc.on("error", (err) => {
-      reject(new Error(`[FATAL] Failed to spawn Python process: ${err.message}`));
+    proc.on("error", err => {
+      reject(
+        new Error(`[FATAL] Failed to spawn Python process: ${err.message}`)
+      );
     });
   });
 }
@@ -141,12 +157,7 @@ export async function scrapeAndStoreF5Nrfi(dateStr: string): Promise<{
       mlbGamePk: games.mlbGamePk,
     })
     .from(games)
-    .where(
-      and(
-        eq(games.gameDate, dateStr),
-        eq(games.sport, "MLB")
-      )
-    );
+    .where(and(eq(games.gameDate, dateStr), eq(games.sport, "MLB")));
 
   console.log(`[STATE] Found ${dbGames.length} MLB games in DB for ${dateStr}`);
   if (dbGames.length === 0) {
@@ -185,8 +196,12 @@ export async function scrapeAndStoreF5Nrfi(dateStr: string): Promise<{
     const dbMatches = dbGameMap.get(matchKey);
 
     if (!dbMatches || dbMatches.length === 0) {
-      unmatched.push(`${rec.awayTeam}@${rec.homeTeam} (anEventId=${rec.anEventId})`);
-      console.log(`  [WARN] No DB match for ${matchKey} (anEventId=${rec.anEventId})`);
+      unmatched.push(
+        `${rec.awayTeam}@${rec.homeTeam} (anEventId=${rec.anEventId})`
+      );
+      console.log(
+        `  [WARN] No DB match for ${matchKey} (anEventId=${rec.anEventId})`
+      );
       continue;
     }
 
@@ -196,12 +211,12 @@ export async function scrapeAndStoreF5Nrfi(dateStr: string): Promise<{
 
     console.log(
       `  [STEP] Updating game id=${dbGame.id} (${matchKey} G${dbGame.gameNumber ?? 1}) ` +
-      `anEventId=${rec.anEventId}`
+        `anEventId=${rec.anEventId}`
     );
     console.log(
       `    F5: ML=${rec.f5.awayMlOdds}/${rec.f5.homeMlOdds} ` +
-      `RL=${rec.f5.awayRlValue}(${rec.f5.awayRlOdds}) ` +
-      `Tot=${rec.f5.totalValue}(o${rec.f5.overOdds}/u${rec.f5.underOdds})`
+        `RL=${rec.f5.awayRlValue}(${rec.f5.awayRlOdds}) ` +
+        `Tot=${rec.f5.totalValue}(o${rec.f5.overOdds}/u${rec.f5.underOdds})`
     );
     console.log(
       `    NRFI: Tot=${rec.nrfi.totalValue} YRFI=${rec.nrfi.overOdds} NRFI=${rec.nrfi.underOdds}`
@@ -214,18 +229,21 @@ export async function scrapeAndStoreF5Nrfi(dateStr: string): Promise<{
           // F5 book odds (FanDuel NJ)
           f5AwayML: oddsToString(rec.f5.awayMlOdds),
           f5HomeML: oddsToString(rec.f5.homeMlOdds),
-          f5AwayRunLine: rec.f5.awayRlValue !== null ? String(rec.f5.awayRlValue) : null,
+          f5AwayRunLine:
+            rec.f5.awayRlValue !== null ? String(rec.f5.awayRlValue) : null,
           f5AwayRunLineOdds: oddsToString(rec.f5.awayRlOdds),
-          f5HomeRunLine: rec.f5.homeRlValue !== null ? String(rec.f5.homeRlValue) : null,
+          f5HomeRunLine:
+            rec.f5.homeRlValue !== null ? String(rec.f5.homeRlValue) : null,
           f5HomeRunLineOdds: oddsToString(rec.f5.homeRlOdds),
-          f5Total: rec.f5.totalValue !== null ? String(rec.f5.totalValue) : null,
+          f5Total:
+            rec.f5.totalValue !== null ? String(rec.f5.totalValue) : null,
           f5OverOdds: oddsToString(rec.f5.overOdds),
           f5UnderOdds: oddsToString(rec.f5.underOdds),
           // NRFI/YRFI book odds (FanDuel NJ)
           // nrfiOverOdds = NRFI (under 0.5 runs = "over" the no-run line)
           // yrfiUnderOdds = YRFI (over 0.5 runs = "under" the no-run line)
-          nrfiOverOdds: oddsToString(rec.nrfi.underOdds),  // NRFI = under 0.5 runs
-          yrfiUnderOdds: oddsToString(rec.nrfi.overOdds),  // YRFI = over 0.5 runs
+          nrfiOverOdds: oddsToString(rec.nrfi.underOdds), // NRFI = under 0.5 runs
+          yrfiUnderOdds: oddsToString(rec.nrfi.overOdds), // YRFI = over 0.5 runs
         })
         .where(eq(games.id, dbGame.id));
 
@@ -253,7 +271,7 @@ export async function scrapeAndStoreF5Nrfi(dateStr: string): Promise<{
   }
   console.log(
     `[VERIFY] ${errors.length === 0 && unmatched.length === 0 ? "PASS" : "PARTIAL"} — ` +
-    `${matched}/${anRecords.length} games written`
+      `${matched}/${anRecords.length} games written`
   );
   console.log(`${"=".repeat(70)}\n`);
 

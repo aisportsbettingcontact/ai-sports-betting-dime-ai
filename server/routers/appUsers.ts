@@ -1,8 +1,9 @@
 import { TRPCError } from "@trpc/server";
+import { AppUserHasDataError } from "../appUserDeletion";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
-import { protectedProcedure, publicProcedure, router, stripeProcedure } from "../_core/trpc";
+import { publicProcedure, router, stripeProcedure, csrfOriginCheck } from "../_core/trpc";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
@@ -14,22 +15,47 @@ import {
   createAppUser,
   listAppUsers,
   getAppUserById,
+  lookupAppUserByIdFresh,
   getAppUserByEmail,
   getAppUserByUsername,
   updateAppUser,
   deleteAppUser,
+  softDeleteAppUser,
   updateAppUserLastSignedIn,
   incrementTokenVersion,
   incrementAllTokenVersions,
   insertSecurityEvent,
   invalidateAppUserByIdCache,
+  updateAccountLockoutState,
+  recordAccountLoginFailure,
 } from "../db";
+import {
+  accountLockoutConfig,
+  clearedLockout,
+  isLockedOut,
+  type AccountLockoutState,
+} from "../accountLockout";
 import { getDiscordClient } from "../discord/bot";
 import { notifyOwner } from "../_core/notification";
-import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { getCachedAppUser, getCachedAppUserEntry, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { resolveOwnerIdentity } from "../ownerAuth";
 import { getDb } from "../db";
-import { discordInviteTokens, appUsers as appUsersTable } from "../../drizzle/schema";
-import { eq, and, isNull, gt, or } from "drizzle-orm";
+import {
+  discordInviteTokens,
+  appUsers as appUsersTable,
+  planPrices,
+  subscriptionPlans,
+} from "../../drizzle/schema";
+import { eq, ne, and, isNull, gt, or } from "drizzle-orm";
+import { emitServerEvent } from "../analytics/emitServer";
+import { recordEntitlementEvent } from "../stripe/entitlementLedger";
+import { listAllPlans } from "../stripe/planStore";
+import {
+  buildClaimUrl,
+  deriveEntitlementFromPrice,
+  mintClaimToken,
+  resolveCreationPassword,
+} from "../adminAccountProvisioning";
 
 export const APP_USER_COOKIE = "app_session";
 
@@ -116,48 +142,22 @@ export const ownerProcedure = publicProcedure.use(async ({ ctx, next }) => {
   // Reason: JWT role is baked at login time. If an admin promotes a user to owner
   // after their last login, the JWT still carries the old role. DB is always current.
   //
-  // CACHE INVALIDATION: Both caches (_appUserByIdCache in db.ts and the dbCircuitBreaker
-  // in-memory cache) have TTLs of 30s-5min. A stale cache entry could carry an old role
-  // (e.g. 'handicapper') even after the DB was updated to 'owner'. We invalidate both
-  // caches here to guarantee a fresh DB read for every ownerProcedure call.
-  // This adds one DB round-trip per owner action (~1-5ms) — acceptable for admin operations.
+  // Snapshot the last-known-good row before the authoritative read. It is eligible
+  // only for a short outage window and only when its tokenVersion still matches.
+  const fallback = getCachedAppUserEntry(payload.userId);
   invalidateAppUserByIdCache(payload.userId);
-  invalidateCachedAppUser(payload.userId);
-  console.log(`[AppAuth] ownerProcedure: cache invalidated for userId=${payload.userId} — forcing fresh DB read`);
-
-  let user = await getAppUserById(payload.userId);
-  const fromCache = !user;
-  if (!user) {
-    user = getCachedAppUser(payload.userId);
-    if (user) console.log(`[AppAuth] ownerProcedure: DB unavailable — serving userId=${payload.userId} from cache (role=${user?.role})`);
-  } else {
-    setCachedAppUser(user);
-  }
-  if (!user || !user.hasAccess) {
-    console.log(`[AppAuth] ownerProcedure: REJECTED — user not found or no access userId=${payload.userId}`);
-    throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
-  }
-
-  // ── Role check: DB-authoritative (not JWT claim) ────────────────────────────
-  // Accepts both 'owner' role values. JWT claim is logged for audit but NOT used for the decision.
-  if (user.role !== "owner") {
-    console.log(
-      `[AppAuth] ownerProcedure: REJECTED — DB role=${user.role} jwtRole=${payload.role}` +
-      ` userId=${user.id} username=${user.username} (DB role must be 'owner')`
-    );
+  const lookup = await lookupAppUserByIdFresh(payload.userId);
+  if (lookup.status === "found") setCachedAppUser(lookup.user);
+  const resolved = resolveOwnerIdentity({ lookup, fallback, tokenVersion: payload.tv });
+  if (!resolved.ok) {
+    console.log(`[AppAuth] ownerProcedure: REJECTED — reason=${resolved.reason} userId=${payload.userId}`);
+    if (resolved.reason === "token_version_mismatch" || resolved.reason === "token_version_missing") {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
+    }
     throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required" });
   }
-  console.log(
-    `[AppAuth] ownerProcedure: GRANTED — userId=${user.id} username=${user.username}` +
-    ` dbRole=${user.role} jwtRole=${payload.role} fromCache=${fromCache}`
-  );
-
-  // ── tokenVersion check: only enforce when DB is available ──────────────────
-  if (!fromCache && payload.tv !== null && payload.tv !== user.tokenVersion) {
-    console.log(`[AppAuth] ownerProcedure: REJECTED — tokenVersion mismatch: jwt.tv=${payload.tv} db.tv=${user.tokenVersion} userId=${user.id}`);
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
-  }
-  return next({ ctx: { ...ctx, appUser: user } });
+  console.log(`[AppAuth] ownerProcedure: GRANTED — userId=${resolved.user.id} source=${resolved.source}`);
+  return next({ ctx: { ...ctx, appUser: resolved.user } });
 });
 
 // Handicapper procedure — grants access to owner, admin, and handicapper roles
@@ -250,7 +250,16 @@ export const appUserProcedure = publicProcedure.use(async ({ ctx, next }) => {
  *   - app_session JWT cookie validation (tokenVersion + expiry checks)
  *   - Stripe HMAC-SHA256 webhook signature verification
  */
-export const stripeAppUserProcedure = stripeProcedure.use(async ({ ctx, next }) => {
+/**
+ * AUTH-003: cookie-authenticated Stripe mutations (createCheckoutSession,
+ * cancelSubscription, reactivateSubscription) are always invoked from our own
+ * pages, so the CSRF origin check belongs here. The base `stripeProcedure` is
+ * origin-exempt for genuinely cross-origin callers; that exemption was never
+ * meant to cover browser-driven mutations carrying the session cookie, which is
+ * `SameSite=None` in production. A missing Origin header is still allowed, so
+ * server-to-server callers are unaffected.
+ */
+export const stripeAppUserProcedure = stripeProcedure.use(csrfOriginCheck).use(async ({ ctx, next }) => {
   const token = getAppCookie(ctx.req);
   if (!token) {
     console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — no app_session cookie`);
@@ -286,6 +295,73 @@ export const stripeAppUserProcedure = stripeProcedure.use(async ({ ctx, next }) 
   }
   return next({ ctx: { ...ctx, appUser: user } });
 });
+
+/**
+ * The billing catalogue, indexed for lookup.
+ *
+ * `plan_prices` is the authority on what a member is actually paying: the plan
+ * slug alone cannot tell you the amount, the currency, or whether the SKU is
+ * recurring or a one-off. A NULL `billingInterval` is the schema's encoding of
+ * "not recurring" — i.e. lifetime — and is what distinguishes a $999.99 lifetime
+ * seat from a $99.99/month one under the same plan.
+ */
+type CataloguePrice = {
+  id: number;
+  stripePriceId: string;
+  amountCents: number;
+  currency: string;
+  billingInterval: string | null;
+  intervalCount: number | null;
+  plan: { slug: string; name: string; planType: string; active: boolean };
+};
+
+async function loadBillingCatalogue(): Promise<{
+  byPriceId: Map<number, CataloguePrice>;
+  byPlanSlug: Map<string, CataloguePrice["plan"]>;
+}> {
+  const byPriceId = new Map<number, CataloguePrice>();
+  const byPlanSlug = new Map<string, CataloguePrice["plan"]>();
+  const db = await getDb();
+  if (!db) return { byPriceId, byPlanSlug };
+
+  try {
+    const rows = await db
+      .select({
+        priceId: planPrices.id,
+        stripePriceId: planPrices.stripePriceId,
+        amountCents: planPrices.amountCents,
+        currency: planPrices.currency,
+        // Drizzle property is `interval`; the DB column is `billingInterval`.
+        billingInterval: planPrices.interval,
+        intervalCount: planPrices.intervalCount,
+        slug: subscriptionPlans.slug,
+        name: subscriptionPlans.name,
+        planType: subscriptionPlans.planType,
+        planActive: subscriptionPlans.active,
+      })
+      .from(planPrices)
+      .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, planPrices.planId));
+
+    for (const r of rows) {
+      const plan = { slug: r.slug, name: r.name, planType: r.planType, active: Boolean(r.planActive) };
+      byPriceId.set(r.priceId, {
+        id: r.priceId,
+        stripePriceId: r.stripePriceId,
+        amountCents: r.amountCents,
+        currency: r.currency,
+        billingInterval: r.billingInterval ?? null,
+        intervalCount: r.intervalCount ?? null,
+        plan,
+      });
+      if (!byPlanSlug.has(r.slug)) byPlanSlug.set(r.slug, plan);
+    }
+  } catch (err) {
+    // Degrade to "no plan detail" rather than failing the whole admin table —
+    // roles, access and Discord state are still worth rendering.
+    console.error(`[AppAdmin][loadBillingCatalogue][FAIL] ${(err as Error)?.message ?? String(err)}`);
+  }
+  return { byPriceId, byPlanSlug };
+}
 
 export const appUsersRouter = router({
   // ─── Auth ──────────────────────────────────────────────────────────────────
@@ -415,14 +491,58 @@ export const appUsersRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Account has expired" });
       }
 
-      const valid = await bcrypt.compare(input.password, user.passwordHash);
-      if (!valid) {
-        fireAuthFailEvent("invalid_password");
-        recordLoginFailure(clientIp); // [RATE_LIMIT] count failure
+      // ── Per-account lockout (credential-stuffing defense) ──────────────────
+      // Counts failures against THIS account across ALL IPs, so a botnet can't
+      // outrun the per-IP limiter. State lives on the app_users row; the pure
+      // decision logic is server/accountLockout.ts.
+      const lockoutCfg = accountLockoutConfig();
+      const lockState: AccountLockoutState = {
+        failedLoginCount: user.failedLoginCount,
+        firstFailedLoginAt: user.firstFailedLoginAt,
+        lockedUntil: user.lockedUntil,
+      };
+      // While locked, block EVERY attempt (even a correct password) — the
+      // cooldown is the penalty. Time-boxed + cleared by password reset, so a
+      // real user always recovers. The response is deliberately the SAME generic
+      // "Invalid credentials" / UNAUTHORIZED as a wrong password, so the lock
+      // state is not a username-existence oracle. (We skip bcrypt entirely, but
+      // that timing difference already exists for user_not_found above.)
+      if (isLockedOut(lockState, Date.now(), lockoutCfg)) {
+        fireAuthFailEvent("account_locked");
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
       }
 
+      const valid = await bcrypt.compare(input.password, user.passwordHash);
+      if (!valid) {
+        fireAuthFailEvent("invalid_password");
+        recordLoginFailure(clientIp); // [RATE_LIMIT] per-IP count
+        // Per-account count — ATOMIC (SELECT … FOR UPDATE) so concurrent
+        // guesses can't out-race the cap; fail-open (never blocks the response).
+        void recordAccountLoginFailure(user.id, Date.now(), lockoutCfg).then(
+          ({ justLocked }) => {
+            if (justLocked) fireAuthFailEvent("account_locked_triggered");
+          }
+        );
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      }
+
+      // Successful login clears any accumulated lockout state (only writes when
+      // there is something to clear — no needless write on every login).
+      if (user.failedLoginCount > 0 || user.lockedUntil != null) {
+        void updateAccountLockoutState(user.id, clearedLockout());
+      }
+
       await updateAppUserLastSignedIn(user.id);
+
+      // Device-tagged authoritative "last sign in" (server-derived; inert until
+      // the analytics pipeline is enabled). Never blocks or breaks login.
+      const loginUa = ctx.req?.headers?.["user-agent"];
+      void emitServerEvent({
+        eventName: "login",
+        userId: user.id,
+        userAgent: Array.isArray(loginUa) ? loginUa[0] : loginUa,
+        props: { method: "password", is_returning: true },
+      });
 
       console.log(`[AppAuth] login: userId=${user.id} username=${user.username} role=${user.role} tv=${user.tokenVersion} stayLoggedIn=${input.stayLoggedIn}`);
 
@@ -435,25 +555,29 @@ export const appUsersRouter = router({
       // the browser sends BOTH cookies and the old identity can shadow the
       // new login — clearing the domain variant makes account switching stick.
       try {
-        ctx.res.clearCookie(APP_USER_COOKIE, {
-          ...cookieOptions,
-          domain: `.${ctx.req.hostname}`,
-          maxAge: -1,
-        });
+        if (!ctx.res.headersSent) {
+          ctx.res.clearCookie(APP_USER_COOKIE, {
+            ...cookieOptions,
+            domain: `.${ctx.req.hostname}`,
+            maxAge: -1,
+          });
+        }
       } catch {
         /* best-effort — never block login on the legacy clear */
       }
-      if (input.stayLoggedIn) {
-        ctx.res.cookie(APP_USER_COOKIE, token, {
-          ...cookieOptions,
-          maxAge: sessionDays * 24 * 60 * 60 * 1000,
-        });
-      } else {
-        // Session cookie — no maxAge, expires when browser closes
-        ctx.res.cookie(APP_USER_COOKIE, token, {
-          ...cookieOptions,
-          maxAge: undefined,
-        });
+      if (!ctx.res.headersSent) {
+        if (input.stayLoggedIn) {
+          ctx.res.cookie(APP_USER_COOKIE, token, {
+            ...cookieOptions,
+            maxAge: sessionDays * 24 * 60 * 60 * 1000,
+          });
+        } else {
+          // Session cookie — no maxAge, expires when browser closes
+          ctx.res.cookie(APP_USER_COOKIE, token, {
+            ...cookieOptions,
+            maxAge: undefined,
+          });
+        }
       }
 
       return {
@@ -503,7 +627,9 @@ export const appUsersRouter = router({
       const payload = await verifyAppUserToken(token);
       if (payload) invalidateCachedAppUser(payload.userId);
     }
-    ctx.res.clearCookie(APP_USER_COOKIE, { ...cookieOptions, maxAge: -1 });
+    if (!ctx.res.headersSent) {
+      ctx.res.clearCookie(APP_USER_COOKIE, { ...cookieOptions, maxAge: -1 });
+    }
     return { success: true };
   }),
 
@@ -589,27 +715,86 @@ export const appUsersRouter = router({
       console.error(`[AppAdmin][listUsers][FAIL] error=${msg}`);
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to load users. Please refresh the page.' });
     }
-    return users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      username: u.username,
-      role: u.role,
-      hasAccess: u.hasAccess,
-      expiryDate: u.expiryDate,
-      createdAt: u.createdAt,
-      lastSignedIn: u.lastSignedIn,
-      termsAccepted: u.termsAccepted,
-      termsAcceptedAt: u.termsAcceptedAt,
-      discordId: u.discordId ?? null,
-      discordUsername: u.discordUsername ?? null,
-      discordConnectedAt: u.discordConnectedAt ?? null,
-      manualDiscordId: u.manualDiscordId ?? null,
-      // Stripe fields
-      stripeCustomerId: u.stripeCustomerId ?? null,
-      stripePlanId: u.stripePlanId ?? null,
-      stripeSubscriptionId: u.stripeSubscriptionId ?? null,
-      pendingSetup: u.pendingSetup ?? false,
-    }));
+
+    // Resolve the billing catalogue ONCE and index it, rather than per user.
+    // Both tables are small (plans × prices), so this is a single extra round
+    // trip regardless of headcount — no N+1.
+    const catalogue = await loadBillingCatalogue();
+
+    const now = Date.now();
+    return users.map((u) => {
+      // Resolve by priceId first: it identifies the exact SKU the member is on,
+      // including which of several prices under the same plan. Fall back to the
+      // plan slug so members provisioned before planPriceId existed still show
+      // their plan instead of rendering as "no plan".
+      const price = u.planPriceId != null ? catalogue.byPriceId.get(u.planPriceId) ?? null : null;
+      const plan = price?.plan ?? (u.stripePlanId ? catalogue.byPlanSlug.get(u.stripePlanId) ?? null : null);
+
+      // The documented entitlement predicate (USERS.md): hasAccess is the master
+      // switch, NULL expiry means lifetime. Computed here so the table cannot
+      // drift from the contract the server enforces.
+      const entitled = Boolean(u.hasAccess) && (u.expiryDate == null || now <= u.expiryDate);
+
+      return {
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        role: u.role,
+        hasAccess: u.hasAccess,
+        expiryDate: u.expiryDate,
+        createdAt: u.createdAt,
+        lastSignedIn: u.lastSignedIn,
+        termsAccepted: u.termsAccepted,
+        termsAcceptedAt: u.termsAcceptedAt,
+        discordId: u.discordId ?? null,
+        discordUsername: u.discordUsername ?? null,
+        discordConnectedAt: u.discordConnectedAt ?? null,
+        manualDiscordId: u.manualDiscordId ?? null,
+
+        // ── Entitlement, resolved ────────────────────────────────────────────
+        entitled,
+        planPriceId: u.planPriceId ?? null,
+        /**
+         * The real SKU. Previously the UI had none of this and inferred the
+         * plan from `stripePlanId === 'annual' ? ANNUAL : MONTHLY`, which
+         * labelled every lifetime member "MONTHLY" once plan slugs stopped
+         * being the literal strings "monthly"/"annual".
+         */
+        plan: plan
+          ? {
+              slug: plan.slug,
+              name: plan.name,
+              planType: plan.planType,
+              active: plan.active,
+              priceId: price?.id ?? null,
+              stripePriceId: price?.stripePriceId ?? null,
+              amountCents: price?.amountCents ?? null,
+              currency: price?.currency ?? null,
+              billingInterval: price?.billingInterval ?? null,
+              intervalCount: price?.intervalCount ?? null,
+              /** No recurring interval on the price === a one-off / lifetime SKU. */
+              isLifetime: price ? price.billingInterval == null : null,
+              priceResolved: price != null,
+            }
+          : null,
+
+        // ── Stripe linkage ───────────────────────────────────────────────────
+        stripeCustomerId: u.stripeCustomerId ?? null,
+        stripePlanId: u.stripePlanId ?? null,
+        stripeSubscriptionId: u.stripeSubscriptionId ?? null,
+        stripeSubscriptionStatus: u.stripeSubscriptionStatus ?? null,
+        pendingStripeSessionId: u.pendingStripeSessionId ?? null,
+        lastStripeEventAt: u.lastStripeEventAt ?? null,
+        pendingSetup: u.pendingSetup ?? false,
+        /**
+         * How this member got access. "stripe" = a Stripe customer exists;
+         * "manual" = granted directly in the database (comped, migrated, or a
+         * repaired drop). Made explicit because the two are indistinguishable
+         * from entitlement alone, and the distinction matters for revenue.
+         */
+        accessSource: u.stripeCustomerId ? ("stripe" as const) : ("manual" as const),
+      };
+    });
   }),
 
   // ─── Sync Discord role for a specific user (owner-only) ───────────────────────
@@ -636,13 +821,62 @@ export const appUsersRouter = router({
     .input(z.object({
       email: z.string().email(),
       username: z.string().min(2).max(64).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
-      password: z.string().min(8),
+      /**
+       * Optional ONLY when generateClaimLink is true (resolveCreationPassword
+       * enforces the rule): the member then sets their own password through the
+       * claim link and the row holds a CSPRNG throwaway until they do.
+       */
+      password: z.string().min(8).optional(),
       role: z.enum(["owner", "admin", "handicapper", "user"]).default("user"),
       hasAccess: z.boolean().default(true),
-      expiryDate: z.number().nullable().default(null), // null = lifetime
+      expiryDate: z.number().nullable().default(null), // null = lifetime; IGNORED when planPriceId is set (derived instead)
+      /**
+       * Mint a single-use, 7-day claim link (reset-token columns, sha256 at
+       * rest) returned as `claimUrl` for the owner to send to the member.
+       * `origin` scopes the URL to the site the admin is on (same pattern as
+       * requestPasswordReset) — required when generateClaimLink is true.
+       */
+      generateClaimLink: z.boolean().default(false),
+      origin: z.string().url().optional(),
+      /**
+       * Entitlement assignment, both optional and both defaulting to NULL.
+       *
+       * An admin-created member used to land with hasAccess=true but NO plan and
+       * NO interval, which made them invisible to every plan/interval query
+       * until someone backfilled by hand. These make it settable at creation.
+       *
+       * There is deliberately NO default plan here: choosing which plan a
+       * hand-created account lands on is a pricing/policy decision the owner has
+       * not delegated to this procedure. NULL means "unassigned", not "monthly".
+       */
+      stripePlanId: z.string().min(1).max(64).nullable().default(null),
+      /** plan_prices.id — WHICH billing interval, not just which plan. */
+      planPriceId: z.number().int().positive().nullable().default(null),
     }))
     .mutation(async ({ input }) => {
-      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role}`);
+      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role} stripePlanId=${input.stripePlanId ?? "(none)"} planPriceId=${input.planPriceId ?? "(none)"} generateClaimLink=${input.generateClaimLink}`);
+
+      // ── [STEP 0] Resolve entitlement + password BEFORE any DB write ────────
+      // planPriceId is the single client-sent fact; slug and expiry are derived
+      // server-side through the SAME computeExpiryMsForPrice the webhook uses,
+      // so the modal cannot submit a plan/expiry combination the catalog does
+      // not define. Legacy calls without planPriceId keep verbatim behaviour.
+      let stripePlanId = input.stripePlanId;
+      let expiryDate = input.expiryDate;
+      if (input.planPriceId != null) {
+        const derived = deriveEntitlementFromPrice(await listAllPlans(), input.planPriceId, Date.now());
+        if (!derived.ok) throw new TRPCError({ code: "BAD_REQUEST", message: derived.error });
+        stripePlanId = derived.entitlement.stripePlanId;
+        expiryDate = derived.entitlement.expiryDate;
+        console.log(`[AppAdmin][createUser][STATE] derived stripePlanId=${stripePlanId} expiryDate=${expiryDate ?? "null (lifetime)"}`);
+      }
+
+      const pw = resolveCreationPassword({ password: input.password, generateClaimLink: input.generateClaimLink });
+      if (!pw.ok) throw new TRPCError({ code: "BAD_REQUEST", message: pw.error });
+      if (input.generateClaimLink && !input.origin) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "origin is required to build the claim link." });
+      }
+
       // ── retryOnce: automatically retry on TiDB cold-start transient errors ──
       return retryOnce(async () => {
         // [STEP 1] Parallel uniqueness checks — run concurrently to halve DB round-trips
@@ -655,8 +889,8 @@ export const appUsersRouter = router({
         if (existingUsername) throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
 
         // [STEP 2] Hash password with cost=10 (OWASP-compliant, ~110ms vs ~250ms for cost=12)
-        console.log(`[AppAdmin][createUser][STEP] hashing password cost=10`);
-        const passwordHash = await bcrypt.hash(input.password, 10);
+        console.log(`[AppAdmin][createUser][STEP] hashing password cost=10 generated=${pw.generated}`);
+        const passwordHash = await bcrypt.hash(pw.password, 10);
         console.log(`[AppAdmin][createUser][STATE] password hash OK`);
 
         // [STEP 3] Insert new user
@@ -667,10 +901,56 @@ export const appUsersRouter = router({
           passwordHash,
           role: input.role,
           hasAccess: input.hasAccess,
-          expiryDate: input.expiryDate ?? undefined,
+          expiryDate: expiryDate ?? undefined,
+          // Written verbatim — null included. This is one of only two paths that
+          // INSERT into app_users (the other is the Stripe webhook), so what is
+          // omitted here can only be repaired by a backfill.
+          stripePlanId,
+          planPriceId: input.planPriceId,
         });
-        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username}`);
-        return { success: true };
+        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username} stripePlanId=${stripePlanId ?? "null"} planPriceId=${input.planPriceId ?? "null"}`);
+
+        // [STEP 4] Audit trail (avenues #5/#10). A hand-created account that
+        // starts with access is a manual grant and must be as reconstructable
+        // as a webhook grant — this row is what makes "why does this user have
+        // access with no plan?" answerable from the database (the rudedog
+        // question, 2026-08-01). Best-effort: recordEntitlementEvent never throws.
+        const createdUser = await getAppUserByEmail(input.email.toLowerCase());
+        if (createdUser) {
+          await recordEntitlementEvent({
+            userId: createdUser.id,
+            stripeEventId: null,
+            eventType: "admin.create_user",
+            reason: "manual_create",
+            actor: "owner",
+            after: {
+              hasAccess: input.hasAccess,
+              planId: stripePlanId,
+              expiryDate: expiryDate ?? null,
+            },
+          });
+        }
+
+        // [STEP 5] Claim link — single-use, 7-day, consumed by the existing
+        // resetPassword mutation (only the sha256 hash is stored). Minted after
+        // the insert so a token can never exist for an account that does not.
+        let claimUrl: string | null = null;
+        if (input.generateClaimLink && createdUser && input.origin) {
+          const claim = mintClaimToken(Date.now());
+          await updateAppUser(createdUser.id, {
+            passwordResetToken: claim.tokenHash,
+            passwordResetExpiresAt: claim.expiresAt,
+          });
+          claimUrl = buildClaimUrl(input.origin, createdUser.id, claim.rawToken);
+          console.log(`[AppAdmin][createUser][STATE] claim link minted userId=${createdUser.id} expiresAt=${new Date(claim.expiresAt).toISOString()}`);
+        }
+
+        return {
+          success: true,
+          userId: createdUser?.id ?? null,
+          claimUrl,
+          entitlement: { stripePlanId: stripePlanId ?? null, planPriceId: input.planPriceId ?? null, expiryDate: expiryDate ?? null },
+        };
       }, '[AppAdmin][createUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
         const msg = (err as Error)?.message ?? String(err);
@@ -679,6 +959,151 @@ export const appUsersRouter = router({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create account. Please try again.',
         });
+      });
+    }),
+
+  /**
+   * backfillEntitlement — owner-only bulk assignment of a plan + billing
+   * interval to every member that is missing it.
+   *
+   * WHY THIS EXISTS: nothing wrote app_users.planPriceId on the normal paths
+   * until now, so members exist with a plan and a NULL interval — and
+   * admin-created members exist with neither. Repairing that took an ad-hoc
+   * script run by hand against production (2026-07-31, @suprax718). This is the
+   * same repair, owner-authenticated, dry-runnable and re-runnable.
+   *
+   * Invariants:
+   *  - role='user' ONLY. `admin` and `owner` rows are never touched: their
+   *    access does not come from a subscription and giving them a plan slug
+   *    would misreport paid seats.
+   *  - expiryDate is NOT in the SET clause. NULL already means lifetime
+   *    (drizzle/schema.ts); changing an expiry is a separate decision with its
+   *    own blast radius, and a backfill must not smuggle one in.
+   *  - Idempotent: the WHERE clause excludes rows that ALREADY hold exactly
+   *    hasAccess=1 + this slug + this price id, so a second run matches nothing.
+   *    That also makes retryOnce safe here.
+   */
+  backfillEntitlement: ownerProcedure
+    .input(z.object({
+      planSlug: z.string().min(1).max(64),
+      planPriceId: z.number().int().positive(),
+      /** Report what WOULD change and write nothing. */
+      dryRun: z.boolean().optional().default(false),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const TAG = "[AppAdmin][backfillEntitlement]";
+      console.log(`${TAG} [INPUT] planSlug=${input.planSlug} planPriceId=${input.planPriceId} dryRun=${input.dryRun} owner=${ctx.appUser.username}(id=${ctx.appUser.id})`);
+
+      return retryOnce(async () => {
+        const db = await getDb();
+        if (!db) {
+          console.error(`${TAG} [VERIFY] FAIL — DB unavailable`);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable. Please try again.' });
+        }
+
+        // [STEP 1] "Missing this exact entitlement" — spelled out NULL-safely.
+        // `planPriceId <> 7` is NULL (not TRUE) for a NULL row in SQL, so the
+        // isNull() legs are required: without them the backfill would skip
+        // precisely the rows it exists to fix.
+        const missingEntitlement = and(
+          eq(appUsersTable.role, "user"),
+          or(
+            eq(appUsersTable.hasAccess, false),
+            isNull(appUsersTable.stripePlanId),
+            ne(appUsersTable.stripePlanId, input.planSlug),
+            isNull(appUsersTable.planPriceId),
+            ne(appUsersTable.planPriceId, input.planPriceId),
+          ),
+        );
+
+        // [STEP 2] Read the affected rows FIRST — the usernames are the whole
+        // point of dryRun, and they are also what makes the write auditable.
+        // Annotated: getDb()'s handle is loosely typed here, so the row shape
+        // would otherwise land as implicit `any` in the map below.
+        // hasAccess/plan/expiry ride along as the audit rows' BEFORE state —
+        // captured in the same read that decides membership, so the trail can
+        // never describe a row this query did not actually see.
+        const rows: Array<{ id: number; username: string; hasAccess: boolean; stripePlanId: string | null; expiryDate: number | null }> = await db
+          .select({
+            id: appUsersTable.id,
+            username: appUsersTable.username,
+            hasAccess: appUsersTable.hasAccess,
+            stripePlanId: appUsersTable.stripePlanId,
+            expiryDate: appUsersTable.expiryDate,
+          })
+          .from(appUsersTable)
+          .where(missingEntitlement);
+        const usernames = rows.map((r) => r.username);
+        console.log(`${TAG} [STATE] matched=${rows.length} usernames=${usernames.length ? usernames.join(",") : "(none)"}`);
+
+        if (input.dryRun) {
+          console.log(`${TAG} [OUTPUT] DRY RUN — no rows written matched=${rows.length}`);
+          console.log(`${TAG} [VERIFY] PASS`);
+          return { ok: true, matched: rows.length, updated: 0, usernames };
+        }
+        if (rows.length === 0) {
+          console.log(`${TAG} [OUTPUT] Nothing to do — every role='user' row already holds this plan + interval`);
+          console.log(`${TAG} [VERIFY] PASS`);
+          return { ok: true, matched: 0, updated: 0, usernames };
+        }
+
+        // [STEP 3] One UPDATE over the SAME predicate. expiryDate is absent on
+        // purpose (see the invariants above).
+        const result = await db.update(appUsersTable).set({
+          hasAccess: true,
+          stripePlanId: input.planSlug,
+          planPriceId: input.planPriceId,
+        }).where(missingEntitlement);
+
+        // mysql2 returns [ResultSetHeader, FieldPacket[]]; fall back to the
+        // matched count rather than reporting an unknown number of writes.
+        const header = (Array.isArray(result) ? result[0] : result) as { affectedRows?: number } | undefined;
+        const updated = typeof header?.affectedRows === "number" ? header.affectedRows : rows.length;
+
+        // [STEP 4] Entitlement is cached per user (30s by-id cache + the circuit
+        // breaker's fallback copy). Without this the members just granted access
+        // keep being served their pre-backfill state.
+        for (const r of rows) {
+          invalidateAppUserByIdCache(r.id);
+          invalidateCachedAppUser(r.id);
+        }
+
+        // [STEP 5] Audit trail (avenues #5/#10): one row per repaired member.
+        // The 2026-07-31 ad-hoc repair left no entitlement_events rows, which
+        // is why "who was backfilled, when, by whom" needed an ops memory
+        // instead of a query. Best-effort and sequential — this is an
+        // owner-run, low-frequency path and recordEntitlementEvent never throws.
+        //
+        // `after` is READ BACK from the row, never asserted from the inputs:
+        // this UPDATE deliberately leaves expiryDate alone, and afterExpiryDate
+        // NULL means LIFETIME in this system — writing the input's shape would
+        // stamp every backfilled member with a lifetime claim their row does
+        // not hold. The read-back also keeps the trail honest when a concurrent
+        // write made the UPDATE skip a matched row (updated < matched): the
+        // row records whatever state the member ACTUALLY ended up in.
+        for (const r of rows) {
+          const fresh = await getAppUserById(r.id).catch(() => null);
+          await recordEntitlementEvent({
+            userId: r.id,
+            stripeEventId: null,
+            eventType: "admin.backfill_entitlement",
+            reason: "backfill",
+            actor: "owner",
+            before: { hasAccess: r.hasAccess, planId: r.stripePlanId, expiryDate: r.expiryDate },
+            after: fresh
+              ? { hasAccess: fresh.hasAccess, planId: fresh.stripePlanId ?? null, expiryDate: fresh.expiryDate ?? null }
+              : { hasAccess: true, planId: input.planSlug, expiryDate: r.expiryDate },
+          });
+        }
+
+        console.log(`${TAG} [OUTPUT] matched=${rows.length} updated=${updated} planSlug=${input.planSlug} planPriceId=${input.planPriceId} (expiryDate untouched)`);
+        console.log(`${TAG} [VERIFY] ${updated === rows.length ? 'PASS' : `PASS (updated=${updated} differs from matched=${rows.length} — concurrent writes)`}`);
+        return { ok: true, matched: rows.length, updated, usernames };
+      }, TAG).catch((err) => {
+        if (err instanceof TRPCError) throw err;
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`${TAG} [FAIL] planSlug=${input.planSlug} planPriceId=${input.planPriceId} error=${msg}`);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to backfill entitlements. Please try again.' });
       });
     }),
 
@@ -733,6 +1158,34 @@ export const appUsersRouter = router({
         console.log(`[AppAdmin][updateUser][STEP] writing fields=${JSON.stringify(Object.keys(updateData))} userId=${id}`);
         await updateAppUser(id, updateData as Parameters<typeof updateAppUser>[1]);
         console.log(`[AppAdmin][updateUser][OUTPUT] SUCCESS userId=${id}`);
+
+        // [STEP 6] Audit trail (avenues #5/#10) — only when an entitlement
+        // field actually moved. Email/username/password edits are identity
+        // maintenance, not entitlement changes, and would bury the trail in
+        // noise. Best-effort: recordEntitlementEvent never throws.
+        const accessChanged = rest.hasAccess !== undefined && rest.hasAccess !== existing.hasAccess;
+        const expiryChanged = rest.expiryDate !== undefined && rest.expiryDate !== (existing.expiryDate ?? null);
+        if (accessChanged || expiryChanged) {
+          await recordEntitlementEvent({
+            userId: id,
+            stripeEventId: null,
+            eventType: "admin.update_user",
+            reason: accessChanged
+              ? (rest.hasAccess ? "manual_grant" : "manual_revoke")
+              : "manual_expiry_change",
+            actor: "owner",
+            before: {
+              hasAccess: existing.hasAccess,
+              planId: existing.stripePlanId ?? null,
+              expiryDate: existing.expiryDate ?? null,
+            },
+            after: {
+              hasAccess: rest.hasAccess ?? existing.hasAccess,
+              planId: existing.stripePlanId ?? null,
+              expiryDate: rest.expiryDate !== undefined ? rest.expiryDate : (existing.expiryDate ?? null),
+            },
+          });
+        }
         return { success: true };
       }, '[AppAdmin][updateUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
@@ -746,14 +1199,36 @@ export const appUsersRouter = router({
     }),
 
   deleteUser: ownerProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({
+      id: z.number().int().positive(),
+      /**
+       * Permanently remove the row instead of retiring it. Refused when the
+       * account owns anything, since nothing would clean those rows up.
+       * Default (false) sets deletedAt: the account stops existing to the app,
+       * its history stays attributed, and the action is reversible.
+       */
+      hard: z.boolean().optional().default(false),
+    }))
     .mutation(async ({ ctx, input }) => {
       if (input.id === ctx.appUser.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete your own account" });
       }
       try {
-        await deleteAppUser(input.id);
+        // Retire by default. A hard delete is opt-in and still refuses to strand
+        // data — with soft delete available that refusal costs nothing, because
+        // "retire it instead" is now a real option that keeps the history.
+        if (input.hard) {
+          await deleteAppUser(input.id);
+        } else {
+          await softDeleteAppUser(input.id);
+        }
       } catch (err) {
+        // Refusal, not a fault: the account owns rows that nothing would clean
+        // up. See appUserDeletion.ts — this is the guard that stops another
+        // 60002 (278 verified bets stranded by a hard delete).
+        if (err instanceof AppUserHasDataError) {
+          throw new TRPCError({ code: "CONFLICT", message: err.message });
+        }
         const msg = (err as Error)?.message ?? String(err);
         console.error(`[AppAdmin] deleteUser: DB error for userId=${input.id}: ${msg}`);
         if (msg.includes('Circuit is OPEN') || msg.includes('Database not available') || msg.includes('timed out')) {
@@ -1113,10 +1588,15 @@ export const appUsersRouter = router({
   resetPassword: publicProcedure
     .input(z.object({
       uid: z.number().int().positive(),
-      token: z.string().length(64).regex(/^[0-9a-f]+$/i, "Invalid token format"),
+      /**
+       * Two token eras, one consumer: legacy 64-hex reset tokens and compact
+       * 22-char base64url invite tokens (adminAccountProvisioning.mintClaimToken).
+       * Validation is format-only — authenticity is the sha256 comparison below.
+       */
+      token: z.string().min(20).max(64).regex(/^[0-9a-zA-Z_-]+$/, "Invalid token format"),
       password: z.string().min(8, "Password must be at least 8 characters"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       console.log(`[PasswordReset] resetPassword | uid=${input.uid}`);
 
       // [STEP] Load user
@@ -1152,18 +1632,36 @@ export const appUsersRouter = router({
       // [STEP] Hash new password (cost=10: OWASP-compliant, ~110ms vs ~250ms for cost=12)
       const passwordHash = await bcrypt.hash(input.password, 10);
 
-      // [STEP] Update password, clear reset token, invalidate all sessions
+      // [STEP] Update password, clear reset token, invalidate all sessions.
+      // Also CLEAR any per-account lockout: a password reset is the sanctioned
+      // recovery path for a user who got locked out (their own fat-fingering or
+      // a targeted lockout attempt), so it must lift the lock immediately.
       await updateAppUser(input.uid, {
         passwordHash,
         passwordResetToken: null,
         passwordResetExpiresAt: null,
+        failedLoginCount: 0,
+        firstFailedLoginAt: null,
+        lockedUntil: null,
       });
       // Invalidate all existing sessions by incrementing tokenVersion
-      await incrementTokenVersion(input.uid);
+      const newTokenVersion = await incrementTokenVersion(input.uid);
       invalidateCachedAppUser(input.uid);
 
-      console.log(`[PasswordReset] [OUTPUT] success | uid=${input.uid} username=${user.username} sessionsInvalidated=true`);
-      return { success: true };
+      // [STEP] Auto-login: possession of the single-use token + a fresh
+      // password is the same trust basis completeAccountSetup already logs in
+      // on. Signed with the NEW tokenVersion (old sessions stay dead). This is
+      // what makes the invite claim seamless: set password → signed in → the
+      // "Connect Discord" CTA on the welcome screen works immediately.
+      const token = await signAppUserToken(input.uid, user.role, newTokenVersion);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(APP_USER_COOKIE, token, {
+        ...cookieOptions,
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days — same as completeAccountSetup
+      });
+
+      console.log(`[PasswordReset] [OUTPUT] success | uid=${input.uid} username=${user.username} sessionsInvalidated=true autoLoggedIn=true`);
+      return { success: true, autoLoggedIn: true };
     }),
   // ─── Manual Discord ID Pre-Registration ─────────────────────────────────────
   /*

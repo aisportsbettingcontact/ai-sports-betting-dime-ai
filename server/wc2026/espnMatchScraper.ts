@@ -25,7 +25,7 @@
  * ║    • Parallel fetch with concurrency cap (max 4 simultaneous)              ║
  * ║    • HTTPS enforcement (ESPN internal URLs use http://)                     ║
  * ║                                                                              ║
- * ║  Logging: EspnLogger — dual-channel (terminal + .manus-logs/espn-scraper.log) ║
+ * ║  Logging: EspnLogger — dual-channel (terminal + .scraper-logs/espn-scraper.log) ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  */
 
@@ -331,7 +331,7 @@ export interface EspnDeferredSection {
 // ─── UTILITIES ────────────────────────────────────────────────────────────────
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+  return new Promise(r => setTimeout(r, ms));
 }
 
 function jitter(): number {
@@ -344,7 +344,10 @@ function forceHttps(url: string): string {
 
 // ─── HTTP FETCH ───────────────────────────────────────────────────────────────
 
-function rawFetch(url: string, ua: string): Promise<{ body: Buffer; statusCode: number; contentEncoding: string }> {
+function rawFetch(
+  url: string,
+  ua: string
+): Promise<{ body: Buffer; statusCode: number; contentEncoding: string }> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     const lib = parsed.protocol === "https:" ? https : http;
@@ -356,7 +359,8 @@ function rawFetch(url: string, ua: string): Promise<{ body: Buffer; statusCode: 
       "Accept-Encoding": "gzip, deflate, br",
       Referer: "https://www.espn.com/",
       Origin: "https://www.espn.com",
-      "sec-ch-ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+      "sec-ch-ua":
+        '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
       "sec-ch-ua-mobile": "?0",
       "sec-ch-ua-platform": '"macOS"',
       "sec-fetch-dest": "empty",
@@ -367,7 +371,13 @@ function rawFetch(url: string, ua: string): Promise<{ body: Buffer; statusCode: 
     };
 
     const req = lib.request(
-      { hostname: parsed.hostname, path: parsed.pathname + parsed.search, method: "GET", headers, timeout: REQUEST_TIMEOUT_MS },
+      {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        method: "GET",
+        headers,
+        timeout: REQUEST_TIMEOUT_MS,
+      },
       (res: http.IncomingMessage) => {
         const chunks: Buffer[] = [];
         res.on("data", (c: Buffer) => chunks.push(c));
@@ -382,21 +392,37 @@ function rawFetch(url: string, ua: string): Promise<{ body: Buffer; statusCode: 
       }
     );
     req.on("error", reject);
-    req.on("timeout", () => { req.destroy(); reject(new Error(`Timeout after ${REQUEST_TIMEOUT_MS}ms`)); });
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error(`Timeout after ${REQUEST_TIMEOUT_MS}ms`));
+    });
     req.end();
   });
 }
 
 function decompress(buf: Buffer, encoding: string): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    if (encoding === "gzip") zlib.gunzip(buf, (e: Error | null, r: Buffer) => (e ? reject(e) : resolve(r)));
-    else if (encoding === "br") zlib.brotliDecompress(buf, (e: Error | null, r: Buffer) => (e ? reject(e) : resolve(r)));
-    else if (encoding === "deflate") zlib.inflate(buf, (e: Error | null, r: Buffer) => (e ? reject(e) : resolve(r)));
+    if (encoding === "gzip")
+      zlib.gunzip(buf, (e: Error | null, r: Buffer) =>
+        e ? reject(e) : resolve(r)
+      );
+    else if (encoding === "br")
+      zlib.brotliDecompress(buf, (e: Error | null, r: Buffer) =>
+        e ? reject(e) : resolve(r)
+      );
+    else if (encoding === "deflate")
+      zlib.inflate(buf, (e: Error | null, r: Buffer) =>
+        e ? reject(e) : resolve(r)
+      );
     else resolve(buf);
   });
 }
 
-async function fetchWithRetry(url: string, label: string, logger: EspnLogger): Promise<unknown> {
+async function fetchWithRetry(
+  url: string,
+  label: string,
+  logger: EspnLogger
+): Promise<unknown> {
   const safeUrl = forceHttps(url);
   const t0 = Date.now();
 
@@ -405,7 +431,13 @@ async function fetchWithRetry(url: string, label: string, logger: EspnLogger): P
 
     if (attempt > 1) {
       const delay = RETRY_DELAYS_MS[attempt - 2] ?? 4000;
-      logger.retry(safeUrl, attempt, MAX_RETRIES + 1, delay, `attempt ${attempt - 1} failed`);
+      logger.retry(
+        safeUrl,
+        attempt,
+        MAX_RETRIES + 1,
+        delay,
+        `attempt ${attempt - 1} failed`
+      );
       await sleep(delay);
     }
 
@@ -420,7 +452,13 @@ async function fetchWithRetry(url: string, label: string, logger: EspnLogger): P
 
       if (statusCode >= 400) {
         const errMsg = `HTTP ${statusCode}`;
-        logger.http("RES", safeUrl, { attempt, statusCode, bytes: body.length, durationMs: Date.now() - t0, error: errMsg });
+        logger.http("RES", safeUrl, {
+          attempt,
+          statusCode,
+          bytes: body.length,
+          durationMs: Date.now() - t0,
+          error: errMsg,
+        });
         if (attempt <= MAX_RETRIES) continue;
         throw new Error(`${errMsg} for ${label}`);
       }
@@ -429,14 +467,21 @@ async function fetchWithRetry(url: string, label: string, logger: EspnLogger): P
       const text = decompressed.toString("utf-8");
       const elapsed = Date.now() - t0;
 
-      logger.http("RES", safeUrl, { attempt, statusCode, bytes: decompressed.length, durationMs: elapsed });
+      logger.http("RES", safeUrl, {
+        attempt,
+        statusCode,
+        bytes: decompressed.length,
+        durationMs: elapsed,
+      });
 
       try {
         const parsed = JSON.parse(text);
         logger.verify("PASS", `${label} — valid JSON received`, {
           bytes: decompressed.length,
           elapsed_ms: elapsed,
-          type: Array.isArray(parsed) ? `array(${parsed.length})` : `object(${Object.keys(parsed as object).length}keys)`,
+          type: Array.isArray(parsed)
+            ? `array(${parsed.length})`
+            : `object(${Object.keys(parsed as object).length}keys)`,
         });
         return parsed;
       } catch (e) {
@@ -445,9 +490,16 @@ async function fetchWithRetry(url: string, label: string, logger: EspnLogger): P
     } catch (err) {
       const elapsed = Date.now() - t0;
       const errMsg = err instanceof Error ? err.message : String(err);
-      logger.error(`Fetch failed: ${label} attempt ${attempt}`, err, { elapsed_ms: elapsed, url: safeUrl });
+      logger.error(`Fetch failed: ${label} attempt ${attempt}`, err, {
+        elapsed_ms: elapsed,
+        url: safeUrl,
+      });
       if (attempt > MAX_RETRIES) {
-        logger.verify("FAIL", `${label} — exhausted all ${MAX_RETRIES + 1} attempts`, { error: errMsg });
+        logger.verify(
+          "FAIL",
+          `${label} — exhausted all ${MAX_RETRIES + 1} attempts`,
+          { error: errMsg }
+        );
         throw err;
       }
     }
@@ -471,7 +523,9 @@ async function concurrentMap<T, R>(
       results[i] = await fn(items[i], i);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, worker)
+  );
   return results;
 }
 
@@ -490,7 +544,11 @@ export function extractGameId(urlOrId: string): string {
 // ─── PARSERS ─────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseHeader(data: any, gameId: string, logger: EspnLogger): EspnMatchHeader {
+function parseHeader(
+  data: any,
+  gameId: string,
+  logger: EspnLogger
+): EspnMatchHeader {
   logger.parse("Parsing match header");
   const h = data?.header ?? {};
   const comp = h?.competitions?.[0] ?? {};
@@ -513,13 +571,18 @@ function parseHeader(data: any, gameId: string, logger: EspnLogger): EspnMatchHe
         alternateColor: String(t?.alternateColor ?? ""),
         logo: String(t?.logo ?? ""),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        links: (t?.links ?? []).map((l: any) => ({ href: l?.href ?? "", text: l?.text ?? "" })),
+        links: (t?.links ?? []).map((l: any) => ({
+          href: l?.href ?? "",
+          text: l?.text ?? "",
+        })),
       } as EspnTeamInfo,
       homeAway: (c?.homeAway ?? "home") as "home" | "away",
       score: String(c?.score ?? "0"),
       winner: Boolean(c?.winner),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      linescores: (c?.linescores ?? []).map((ls: any) => Number(ls?.value ?? 0)),
+      linescores: (c?.linescores ?? []).map((ls: any) =>
+        Number(ls?.value ?? 0)
+      ),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       records: (c?.records ?? []).map((r: any) => String(r?.summary ?? "")),
     };
@@ -553,14 +616,34 @@ function parseHeader(data: any, gameId: string, logger: EspnLogger): EspnMatchHe
       region: String(b?.region ?? ""),
     })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    officials: (data?.gameInfo?.officials ?? []).map((o: any) => String(o?.fullName ?? o?.displayName ?? "")),
+    officials: (data?.gameInfo?.officials ?? []).map((o: any) =>
+      String(o?.fullName ?? o?.displayName ?? "")
+    ),
     seasonYear: Number(h?.season?.year ?? 0),
     seasonType: Number(h?.season?.type ?? 0),
     week: h?.week != null ? Number(h.week) : null,
   };
 
-  const home = competitors.find((c: { homeAway: string; team: EspnTeamInfo; score: string; winner: boolean; linescores: number[]; records: string[] }) => c.homeAway === "home");
-  const away = competitors.find((c: { homeAway: string; team: EspnTeamInfo; score: string; winner: boolean; linescores: number[]; records: string[] }) => c.homeAway === "away");
+  const home = competitors.find(
+    (c: {
+      homeAway: string;
+      team: EspnTeamInfo;
+      score: string;
+      winner: boolean;
+      linescores: number[];
+      records: string[];
+    }) => c.homeAway === "home"
+  );
+  const away = competitors.find(
+    (c: {
+      homeAway: string;
+      team: EspnTeamInfo;
+      score: string;
+      winner: boolean;
+      linescores: number[];
+      records: string[];
+    }) => c.homeAway === "away"
+  );
   logger.output("Header parsed", {
     match: `${home?.team.abbreviation ?? "?"} ${home?.score ?? "?"} - ${away?.score ?? "?"} ${away?.team.abbreviation ?? "?"}`,
     status: header.status.shortDetail,
@@ -569,7 +652,11 @@ function parseHeader(data: any, gameId: string, logger: EspnLogger): EspnMatchHe
     attendance: header.attendance ?? "N/A",
     officials: header.officials.length,
   });
-  logger.verify(competitors.length >= 2 ? "PASS" : "FAIL", "header.competitors count >= 2", { count: competitors.length });
+  logger.verify(
+    competitors.length >= 2 ? "PASS" : "FAIL",
+    "header.competitors count >= 2",
+    { count: competitors.length }
+  );
 
   return header;
 }
@@ -583,14 +670,20 @@ function parseTeamStats(data: any, logger: EspnLogger): EspnTeamStats[] {
     (entry: any) => {
       const t = entry?.team ?? {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const statistics: EspnTeamStat[] = (entry?.statistics ?? []).map((s: any) => ({
-        name: String(s?.name ?? ""),
-        displayValue: String(s?.displayValue ?? ""),
-        value: s?.value != null ? Number(s.value) : null,
-        label: String(s?.label ?? s?.name ?? ""),
-      }));
+      const statistics: EspnTeamStat[] = (entry?.statistics ?? []).map(
+        (s: any) => ({
+          name: String(s?.name ?? ""),
+          displayValue: String(s?.displayValue ?? ""),
+          value: s?.value != null ? Number(s.value) : null,
+          label: String(s?.label ?? s?.name ?? ""),
+        })
+      );
       return {
-        team: { id: String(t?.id ?? ""), abbreviation: String(t?.abbreviation ?? ""), displayName: String(t?.displayName ?? "") },
+        team: {
+          id: String(t?.id ?? ""),
+          abbreviation: String(t?.abbreviation ?? ""),
+          displayName: String(t?.displayName ?? ""),
+        },
         homeAway: (entry?.homeAway ?? "home") as "home" | "away",
         statistics,
       };
@@ -598,9 +691,14 @@ function parseTeamStats(data: any, logger: EspnLogger): EspnTeamStats[] {
   );
 
   for (const t of result) {
-    logger.state(`Team stats: ${t.team.abbreviation}`, { statCount: t.statistics.length, homeAway: t.homeAway });
+    logger.state(`Team stats: ${t.team.abbreviation}`, {
+      statCount: t.statistics.length,
+      homeAway: t.homeAway,
+    });
   }
-  logger.verify(result.length > 0 ? "PASS" : "WARN", "teamStats populated", { count: result.length });
+  logger.verify(result.length > 0 ? "PASS" : "WARN", "teamStats populated", {
+    count: result.length,
+  });
   return result;
 }
 
@@ -617,11 +715,13 @@ function parseKeyEvents(data: any, logger: EspnLogger): EspnKeyEvent[] {
         name: String(p?.athlete?.displayName ?? ""),
         athleteId: String(p?.athlete?.id ?? ""),
       }));
-      const scorer = participants.find((p: { type: string; name: string; athleteId: string }) =>
-        p.type.toLowerCase().includes("scorer")
+      const scorer = participants.find(
+        (p: { type: string; name: string; athleteId: string }) =>
+          p.type.toLowerCase().includes("scorer")
       );
-      const assist = participants.find((p: { type: string; name: string; athleteId: string }) =>
-        p.type.toLowerCase().includes("assist")
+      const assist = participants.find(
+        (p: { type: string; name: string; athleteId: string }) =>
+          p.type.toLowerCase().includes("assist")
       );
       return {
         type: String(ev?.type?.text ?? ev?.type?.name ?? ""),
@@ -638,12 +738,20 @@ function parseKeyEvents(data: any, logger: EspnLogger): EspnKeyEvent[] {
     }
   );
 
-  const goals = result.filter((e) => e.type.toLowerCase().includes("goal"));
-  const cards = result.filter((e) => e.type.toLowerCase().includes("card"));
-  const subs = result.filter((e) => e.type.toLowerCase().includes("sub"));
-  logger.output("Key events parsed", { total: result.length, goals: goals.length, cards: cards.length, subs: subs.length });
+  const goals = result.filter(e => e.type.toLowerCase().includes("goal"));
+  const cards = result.filter(e => e.type.toLowerCase().includes("card"));
+  const subs = result.filter(e => e.type.toLowerCase().includes("sub"));
+  logger.output("Key events parsed", {
+    total: result.length,
+    goals: goals.length,
+    cards: cards.length,
+    subs: subs.length,
+  });
   for (const g of goals) {
-    logger.state(`GOAL: ${g.clock}' ${g.team} — ${g.scorerName}${g.assistName ? ` (assist: ${g.assistName})` : ""}`, { text: g.text });
+    logger.state(
+      `GOAL: ${g.clock}' ${g.team} — ${g.scorerName}${g.assistName ? ` (assist: ${g.assistName})` : ""}`,
+      { text: g.text }
+    );
   }
   logger.verify("PASS", "keyEvents parsed", { count: result.length });
   return result;
@@ -685,29 +793,45 @@ function parseOdds(data: any, logger: EspnLogger): EspnOdds[] {
 
     result.push({
       provider: providerName,
-      homeTeamOdds: homeOdds ? {
-        moneyLine: homeOdds?.moneyLine != null ? Number(homeOdds.moneyLine) : null,
-        spreadOdds: homeOdds?.spreadOdds != null ? Number(homeOdds.spreadOdds) : null,
-        favorite: Boolean(homeOdds?.favorite),
-        teamId: String(homeOdds?.teamId ?? ""),
-      } : null,
-      awayTeamOdds: awayOdds ? {
-        moneyLine: awayOdds?.moneyLine != null ? Number(awayOdds.moneyLine) : null,
-        spreadOdds: awayOdds?.spreadOdds != null ? Number(awayOdds.spreadOdds) : null,
-        favorite: Boolean(awayOdds?.favorite),
-        teamId: String(awayOdds?.teamId ?? ""),
-      } : null,
-      drawOdds: drawOdds ? { moneyLine: drawOdds?.moneyLine != null ? Number(drawOdds.moneyLine) : null } : null,
+      homeTeamOdds: homeOdds
+        ? {
+            moneyLine:
+              homeOdds?.moneyLine != null ? Number(homeOdds.moneyLine) : null,
+            spreadOdds:
+              homeOdds?.spreadOdds != null ? Number(homeOdds.spreadOdds) : null,
+            favorite: Boolean(homeOdds?.favorite),
+            teamId: String(homeOdds?.teamId ?? ""),
+          }
+        : null,
+      awayTeamOdds: awayOdds
+        ? {
+            moneyLine:
+              awayOdds?.moneyLine != null ? Number(awayOdds.moneyLine) : null,
+            spreadOdds:
+              awayOdds?.spreadOdds != null ? Number(awayOdds.spreadOdds) : null,
+            favorite: Boolean(awayOdds?.favorite),
+            teamId: String(awayOdds?.teamId ?? ""),
+          }
+        : null,
+      drawOdds: drawOdds
+        ? {
+            moneyLine:
+              drawOdds?.moneyLine != null ? Number(drawOdds.moneyLine) : null,
+          }
+        : null,
       overUnder: o?.overUnder != null ? Number(o.overUnder) : null,
       spread: o?.spread != null ? Number(o.spread) : null,
       overOdds: o?.overOdds != null ? Number(o.overOdds) : null,
       underOdds: o?.underOdds != null ? Number(o.underOdds) : null,
-      moneylineWinner: o?.moneylineWinner != null ? Boolean(o.moneylineWinner) : null,
+      moneylineWinner:
+        o?.moneylineWinner != null ? Boolean(o.moneylineWinner) : null,
       spreadWinner: o?.spreadWinner != null ? Boolean(o.spreadWinner) : null,
     });
   }
 
-  logger.output("Odds parsed", { providers: result.map((o) => o.provider).join(", ") || "none" });
+  logger.output("Odds parsed", {
+    providers: result.map(o => o.provider).join(", ") || "none",
+  });
   return result;
 }
 
@@ -738,13 +862,18 @@ function parseAthleteData(athleteData: any): EspnPlayerEntry["athlete"] {
     position: String(athleteData?.position?.name ?? ""),
     positionAbbreviation: String(athleteData?.position?.abbreviation ?? ""),
     headshot: String(athleteData?.headshot?.href ?? ""),
-    nationality: String(athleteData?.citizenship ?? athleteData?.nationality ?? ""),
+    nationality: String(
+      athleteData?.citizenship ?? athleteData?.nationality ?? ""
+    ),
     birthDate: athleteData?.dateOfBirth ?? null,
     height: athleteData?.displayHeight ?? null,
     weight: athleteData?.displayWeight ?? null,
     age: athleteData?.age != null ? Number(athleteData.age) : null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    links: (athleteData?.links ?? []).map((l: any) => ({ href: l?.href ?? "", text: l?.text ?? "" })),
+    links: (athleteData?.links ?? []).map((l: any) => ({
+      href: l?.href ?? "",
+      text: l?.text ?? "",
+    })),
   };
 }
 
@@ -757,18 +886,30 @@ async function scrapeRoster(
   logger: EspnLogger,
   errors: string[]
 ): Promise<EspnRoster> {
-  logger.step(`ROSTER:${competitorId}`, `Scraping roster for competitor ${competitorId} (${homeAway})`);
+  logger.step(
+    `ROSTER:${competitorId}`,
+    `Scraping roster for competitor ${competitorId} (${homeAway})`
+  );
 
   const rosterUrl = `${ESPN_CORE_BASE}/events/${gameId}/competitions/${gameId}/competitors/${competitorId}/roster?lang=en&region=us`;
 
   let rosterData: unknown;
   try {
-    rosterData = await fetchWithRetry(rosterUrl, `roster:${competitorId}`, logger);
+    rosterData = await fetchWithRetry(
+      rosterUrl,
+      `roster:${competitorId}`,
+      logger
+    );
   } catch (err) {
     const msg = `roster fetch failed for competitor ${competitorId}`;
     errors.push(`${msg}: ${err}`);
     logger.error(msg, err);
-    return { team: { id: competitorId, abbreviation: competitorId, displayName: "" }, homeAway, formation: "", entries: [] };
+    return {
+      team: { id: competitorId, abbreviation: competitorId, displayName: "" },
+      homeAway,
+      formation: "",
+      entries: [],
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -779,7 +920,8 @@ async function scrapeRoster(
   logger.state(`Roster fetched for competitor ${competitorId}`, {
     formation,
     entryCount: rawEntries.length,
-    starters: rawEntries.filter((e: { starter?: boolean }) => e?.starter).length,
+    starters: rawEntries.filter((e: { starter?: boolean }) => e?.starter)
+      .length,
   });
 
   // Build entry metadata list
@@ -804,17 +946,21 @@ async function scrapeRoster(
     active: Boolean(entry?.active),
     subbedIn: Boolean(entry?.subbedIn?.value ?? entry?.subbedIn),
     subbedOut: Boolean(entry?.subbedOut?.value ?? entry?.subbedOut),
-    formationPlace: entry?.formationPlace != null ? Number(entry.formationPlace) : null,
+    formationPlace:
+      entry?.formationPlace != null ? Number(entry.formationPlace) : null,
     period: Number(entry?.period ?? 0),
     athleteRef: forceHttps(entry?.athlete?.$ref ?? ""),
     statsRef: forceHttps(entry?.statistics?.$ref ?? ""),
   }));
 
-  logger.state(`Processing ${entryMeta.length} players in parallel (max ${MAX_CONCURRENT} concurrent)`, {
-    competitorId,
-    homeAway,
-    total: entryMeta.length,
-  });
+  logger.state(
+    `Processing ${entryMeta.length} players in parallel (max ${MAX_CONCURRENT} concurrent)`,
+    {
+      competitorId,
+      homeAway,
+      total: entryMeta.length,
+    }
+  );
 
   // Parallel fetch all athlete profiles + player stats
   const playerEntries = await concurrentMap(
@@ -826,20 +972,32 @@ async function scrapeRoster(
       // Fetch athlete profile
       if (meta.athleteRef) {
         try {
-          athleteData = await fetchWithRetry(meta.athleteRef, `athlete:${meta.playerId}`, logger);
+          athleteData = await fetchWithRetry(
+            meta.athleteRef,
+            `athlete:${meta.playerId}`,
+            logger
+          );
         } catch (err) {
           errors.push(`athlete fetch failed playerId=${meta.playerId}: ${err}`);
-          logger.error(`Athlete fetch failed`, err, { playerId: meta.playerId });
+          logger.error(`Athlete fetch failed`, err, {
+            playerId: meta.playerId,
+          });
         }
       }
 
       // Fetch player stats
       if (meta.statsRef) {
         try {
-          statsData = await fetchWithRetry(meta.statsRef, `playerStats:${meta.playerId}`, logger);
+          statsData = await fetchWithRetry(
+            meta.statsRef,
+            `playerStats:${meta.playerId}`,
+            logger
+          );
         } catch (err) {
           errors.push(`stats fetch failed playerId=${meta.playerId}: ${err}`);
-          logger.error(`Player stats fetch failed`, err, { playerId: meta.playerId });
+          logger.error(`Player stats fetch failed`, err, {
+            playerId: meta.playerId,
+          });
         }
       }
 
@@ -850,7 +1008,12 @@ async function scrapeRoster(
 
       // Count non-zero stats for signal
       const nonZeroStats = statistics.reduce((acc, cat) => {
-        return acc + Object.values(cat.stats).filter((v) => v !== "0" && v !== "0.0" && v !== "0.00" && v !== "").length;
+        return (
+          acc +
+          Object.values(cat.stats).filter(
+            v => v !== "0" && v !== "0.0" && v !== "0.00" && v !== ""
+          ).length
+        );
       }, 0);
 
       logger.playerScraped(
@@ -887,7 +1050,11 @@ async function scrapeRoster(
 
   if (teamRef) {
     try {
-      const teamData = await fetchWithRetry(teamRef, `team:${competitorId}`, logger);
+      const teamData = await fetchWithRetry(
+        teamRef,
+        `team:${competitorId}`,
+        logger
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const td = teamData as any;
       teamAbbr = String(td?.abbreviation ?? competitorId);
@@ -900,8 +1067,8 @@ async function scrapeRoster(
     }
   }
 
-  const starters = playerEntries.filter((p) => p.starter).length;
-  const subs = playerEntries.filter((p) => p.subbedIn).length;
+  const starters = playerEntries.filter(p => p.starter).length;
+  const subs = playerEntries.filter(p => p.subbedIn).length;
 
   logger.output(`Roster complete: ${teamAbbr}`, {
     formation,
@@ -910,7 +1077,11 @@ async function scrapeRoster(
     total: playerEntries.length,
     homeAway,
   });
-  logger.verify(playerEntries.length > 0 ? "PASS" : "WARN", `roster for ${teamAbbr}`, { count: playerEntries.length });
+  logger.verify(
+    playerEntries.length > 0 ? "PASS" : "WARN",
+    `roster for ${teamAbbr}`,
+    { count: playerEntries.length }
+  );
 
   return {
     team: { id: teamId, abbreviation: teamAbbr, displayName: teamDisplayName },
@@ -931,13 +1102,25 @@ async function scrapeRoster(
  *   { teams: [ { team: { id, abbreviation }, homeAway, statistics: [ ... ] } ] }
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseDeferredSection(data: any, sectionName: string, apiUrl: string): EspnDeferredSection {
+function parseDeferredSection(
+  data: any,
+  sectionName: string,
+  apiUrl: string
+): EspnDeferredSection {
   const teamRows: EspnDeferredStatRow[] = [];
   const playerRows: EspnDeferredPlayerRow[] = [];
   const rawKeys: string[] = [];
 
   if (!data) {
-    return { sectionName, apiUrl, fetched: false, teamRows, playerRows, rawKeys, error: "no data" };
+    return {
+      sectionName,
+      apiUrl,
+      fetched: false,
+      teamRows,
+      playerRows,
+      rawKeys,
+      error: "no data",
+    };
   }
 
   // ── Pattern A: boxscore.teams (team-level comparison) ──────────────────────
@@ -945,9 +1128,11 @@ function parseDeferredSection(data: any, sectionName: string, apiUrl: string): E
   const bxTeams = data?.boxscore?.teams ?? data?.teams ?? [];
   if (bxTeams.length >= 2) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const home = bxTeams.find((t: any) => (t?.homeAway ?? "") === "home") ?? bxTeams[0];
+    const home =
+      bxTeams.find((t: any) => (t?.homeAway ?? "") === "home") ?? bxTeams[0];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const away = bxTeams.find((t: any) => (t?.homeAway ?? "") === "away") ?? bxTeams[1];
+    const away =
+      bxTeams.find((t: any) => (t?.homeAway ?? "") === "away") ?? bxTeams[1];
     const homeId = String(home?.team?.id ?? "");
     const awayId = String(away?.team?.id ?? "");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1006,7 +1191,11 @@ function parseDeferredSection(data: any, sectionName: string, apiUrl: string): E
   // ── Pattern C: direct stats array (flat) ──────────────────────────────────
   // Shape: { statistics: [ { name, displayValue } ] }
   const directStats = data?.statistics ?? [];
-  if (Array.isArray(directStats) && directStats.length > 0 && teamRows.length === 0) {
+  if (
+    Array.isArray(directStats) &&
+    directStats.length > 0 &&
+    teamRows.length === 0
+  ) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     directStats.forEach((s: any) => {
       const k = String(s?.name ?? "");
@@ -1023,16 +1212,24 @@ function parseDeferredSection(data: any, sectionName: string, apiUrl: string): E
     const teamAbbr = String(teamBlock?.team?.abbreviation ?? "");
     const homeAway = (teamBlock?.homeAway ?? "home") as "home" | "away";
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const statNames: string[] = (teamBlock?.statistics?.[0]?.names ?? teamBlock?.statistics?.map((s: any) => s?.name) ?? []).map(String);
+    const statNames: string[] = (
+      teamBlock?.statistics?.[0]?.names ??
+      teamBlock?.statistics?.map((s: any) => s?.name) ??
+      []
+    ).map(String);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const athleteEntry of (teamBlock?.athletes ?? [])) {
+    for (const athleteEntry of teamBlock?.athletes ?? []) {
       const ath = athleteEntry?.athlete ?? athleteEntry;
       const playerId = String(ath?.id ?? "");
       const playerName = String(ath?.displayName ?? ath?.shortName ?? "");
       const jersey = String(ath?.jersey ?? "");
-      const position = String(ath?.position?.abbreviation ?? ath?.position?.name ?? "");
+      const position = String(
+        ath?.position?.abbreviation ?? ath?.position?.name ?? ""
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawStatValues: string[] = (athleteEntry?.stats ?? []).map((v: any) => String(v ?? ""));
+      const rawStatValues: string[] = (athleteEntry?.stats ?? []).map(
+        (v: any) => String(v ?? "")
+      );
       const stats: Record<string, string> = {};
       statNames.forEach((name, i) => {
         stats[name] = rawStatValues[i] ?? "";
@@ -1041,14 +1238,33 @@ function parseDeferredSection(data: any, sectionName: string, apiUrl: string): E
       if (rawStatValues.length === 0 && athleteEntry?.statistics) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (athleteEntry.statistics ?? []).forEach((s: any) => {
-          stats[String(s?.name ?? "")] = String(s?.displayValue ?? s?.value ?? "");
+          stats[String(s?.name ?? "")] = String(
+            s?.displayValue ?? s?.value ?? ""
+          );
         });
       }
-      playerRows.push({ teamId, teamAbbr, homeAway, playerId, playerName, jersey, position, stats });
+      playerRows.push({
+        teamId,
+        teamAbbr,
+        homeAway,
+        playerId,
+        playerName,
+        jersey,
+        position,
+        stats,
+      });
     }
   }
 
-  return { sectionName, apiUrl, fetched: true, teamRows, playerRows, rawKeys, error: null };
+  return {
+    sectionName,
+    apiUrl,
+    fetched: true,
+    teamRows,
+    playerRows,
+    rawKeys,
+    error: null,
+  };
 }
 
 /**
@@ -1062,15 +1278,24 @@ async function scrapeCoreDeferredSection(
   errors: string[]
 ): Promise<EspnDeferredSection> {
   const safeUrl = forceHttps(url);
-  logger.step(`DEFERRED:${sectionName}`, `Fetching deferred section: ${sectionName}`);
+  logger.step(
+    `DEFERRED:${sectionName}`,
+    `Fetching deferred section: ${sectionName}`
+  );
   logger.state(`${sectionName} URL`, { url: safeUrl });
 
   try {
-    const data = await fetchWithRetry(safeUrl, `deferred:${sectionName}`, logger);
+    const data = await fetchWithRetry(
+      safeUrl,
+      `deferred:${sectionName}`,
+      logger
+    );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const d = data as any;
     const topKeys = Object.keys(d ?? {});
-    logger.state(`${sectionName} response top-level keys`, { keys: topKeys.join(", ") });
+    logger.state(`${sectionName} response top-level keys`, {
+      keys: topKeys.join(", "),
+    });
 
     const section = parseDeferredSection(d, sectionName, safeUrl);
     logger.output(`${sectionName} parsed`, {
@@ -1079,16 +1304,26 @@ async function scrapeCoreDeferredSection(
       rawKeys: section.rawKeys.slice(0, 15).join(", "),
     });
     logger.verify(
-      section.teamRows.length > 0 || section.playerRows.length > 0 || section.rawKeys.length > 0 ? "PASS" : "WARN",
+      section.teamRows.length > 0 ||
+        section.playerRows.length > 0 ||
+        section.rawKeys.length > 0
+        ? "PASS"
+        : "WARN",
       `${sectionName} has data`,
-      { teamRows: section.teamRows.length, playerRows: section.playerRows.length, keys: section.rawKeys.length }
+      {
+        teamRows: section.teamRows.length,
+        playerRows: section.playerRows.length,
+        keys: section.rawKeys.length,
+      }
     );
     return section;
   } catch (err) {
     const msg = `${sectionName} fetch failed: ${err}`;
     errors.push(msg);
     logger.error(`Deferred section failed: ${sectionName}`, err);
-    logger.verify("FAIL", `${sectionName} — fetch error`, { error: String(err) });
+    logger.verify("FAIL", `${sectionName} — fetch error`, {
+      error: String(err),
+    });
     return {
       sectionName,
       apiUrl: safeUrl,
@@ -1158,10 +1393,17 @@ export async function scrapeEspnMatch(
 
   let competitorsData: unknown;
   try {
-    competitorsData = await fetchWithRetry(competitorsUrl, "competitors", logger);
+    competitorsData = await fetchWithRetry(
+      competitorsUrl,
+      "competitors",
+      logger
+    );
   } catch (err) {
     errors.push(`competitors fetch failed: ${err}`);
-    logger.error("Competitors fetch failed — will use summary rosters as fallback", err);
+    logger.error(
+      "Competitors fetch failed — will use summary rosters as fallback",
+      err
+    );
     competitorsData = { items: [] };
   }
 
@@ -1169,13 +1411,20 @@ export async function scrapeEspnMatch(
   const competitorItems: any[] = (competitorsData as any)?.items ?? [];
   logger.state("Competitor items received", {
     count: competitorItems.length,
-    refs: competitorItems.map((i) => i?.$ref?.slice(-40) ?? "?").join(" | "),
+    refs: competitorItems.map(i => i?.$ref?.slice(-40) ?? "?").join(" | "),
   });
 
   // ── PHASE 3: Competitor details + stats ─────────────────────────────────────
-  logger.step("COMP_STATS", "Fetching competitor details and team-level statistics");
+  logger.step(
+    "COMP_STATS",
+    "Fetching competitor details and team-level statistics"
+  );
 
-  interface CompDetail { id: string; homeAway: "home" | "away"; statsRef: string; }
+  interface CompDetail {
+    id: string;
+    homeAway: "home" | "away";
+    statsRef: string;
+  }
   const competitorDetails: CompDetail[] = [];
   const competitorStatsList: EspnCompetitorStats[] = [];
 
@@ -1184,10 +1433,16 @@ export async function scrapeEspnMatch(
     if (!ref) continue;
 
     try {
-      const compData = await fetchWithRetry(ref, `competitor:${ref.slice(-12)}`, logger);
+      const compData = await fetchWithRetry(
+        ref,
+        `competitor:${ref.slice(-12)}`,
+        logger
+      );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cd = compData as any;
-      const compId = String(cd?.id ?? ref.match(/\/competitors\/(\d+)/)?.[1] ?? "");
+      const compId = String(
+        cd?.id ?? ref.match(/\/competitors\/(\d+)/)?.[1] ?? ""
+      );
       const homeAway = (cd?.homeAway ?? "home") as "home" | "away";
       const statsRef = forceHttps(cd?.statistics?.$ref ?? "");
       const score = cd?.score?.value ?? cd?.score ?? "?";
@@ -1205,7 +1460,11 @@ export async function scrapeEspnMatch(
       // Fetch competitor-level stats
       if (statsRef) {
         try {
-          const statsData = await fetchWithRetry(statsRef, `compStats:${compId}`, logger);
+          const statsData = await fetchWithRetry(
+            statsRef,
+            `compStats:${compId}`,
+            logger
+          );
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const cats = parseSplitCategories((statsData as any)?.splits);
           competitorStatsList.push({
@@ -1214,9 +1473,13 @@ export async function scrapeEspnMatch(
             categories: cats,
           });
           logger.state(`Competitor stats: ${compId}`, {
-            categories: cats.map((c) => `${c.name}(${Object.keys(c.stats).length})`).join(", "),
+            categories: cats
+              .map(c => `${c.name}(${Object.keys(c.stats).length})`)
+              .join(", "),
           });
-          logger.verify("PASS", `compStats for ${compId}`, { categoryCount: cats.length });
+          logger.verify("PASS", `compStats for ${compId}`, {
+            categoryCount: cats.length,
+          });
         } catch (err) {
           errors.push(`compStats fetch failed for ${compId}: ${err}`);
           logger.error(`Competitor stats fetch failed`, err, { compId });
@@ -1224,7 +1487,9 @@ export async function scrapeEspnMatch(
       }
     } catch (err) {
       errors.push(`competitor detail fetch failed: ${err}`);
-      logger.error("Competitor detail fetch failed", err, { ref: ref.slice(-40) });
+      logger.error("Competitor detail fetch failed", err, {
+        ref: ref.slice(-40),
+      });
     }
   }
 
@@ -1239,14 +1504,19 @@ export async function scrapeEspnMatch(
 
   // Article
   const art = sd?.article;
-  const article = art ? {
-    headline: String(art?.headline ?? ""),
-    description: String(art?.description ?? ""),
-    type: String(art?.type ?? ""),
-    published: String(art?.published ?? ""),
-    byline: String(art?.byline ?? ""),
-  } : null;
-  logger.parse("Article", { present: !!article, headline: article?.headline?.slice(0, 80) ?? "none" });
+  const article = art
+    ? {
+        headline: String(art?.headline ?? ""),
+        description: String(art?.description ?? ""),
+        type: String(art?.type ?? ""),
+        published: String(art?.published ?? ""),
+        byline: String(art?.byline ?? ""),
+      }
+    : null;
+  logger.parse("Article", {
+    present: !!article,
+    headline: article?.headline?.slice(0, 80) ?? "none",
+  });
 
   // Videos
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1267,10 +1537,16 @@ export async function scrapeEspnMatch(
     country: String(giAddress?.country ?? ""),
     attendance: gi?.attendance != null ? Number(gi.attendance) : null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    officials: (gi?.officials ?? []).map((o: any) => String(o?.fullName ?? o?.displayName ?? "")),
+    officials: (gi?.officials ?? []).map((o: any) =>
+      String(o?.fullName ?? o?.displayName ?? "")
+    ),
     capacity: giVenue?.capacity != null ? Number(giVenue.capacity) : null,
   };
-  logger.parse("Game info", { venue: gameInfo.venue, city: gameInfo.city, attendance: gameInfo.attendance ?? "N/A" });
+  logger.parse("Game info", {
+    venue: gameInfo.venue,
+    city: gameInfo.city,
+    attendance: gameInfo.attendance ?? "N/A",
+  });
 
   // Last 5 games
   const lastFiveGames = (sd?.lastFiveGames ?? []).map(
@@ -1298,7 +1574,14 @@ export async function scrapeEspnMatch(
       }),
     })
   );
-  logger.parse("Last 5 games", { teams: lastFiveGames.map((t: { teamAbbr: string; events: unknown[] }) => `${t.teamAbbr}(${t.events.length})`).join(", ") });
+  logger.parse("Last 5 games", {
+    teams: lastFiveGames
+      .map(
+        (t: { teamAbbr: string; events: unknown[] }) =>
+          `${t.teamAbbr}(${t.events.length})`
+      )
+      .join(", "),
+  });
 
   // Head-to-head
   const headToHead = (sd?.headToHeadGames ?? []).map(
@@ -1310,8 +1593,20 @@ export async function scrapeEspnMatch(
         const comp = ev?.competitions?.[0] ?? {};
         const competitors = comp?.competitors ?? [];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const home = competitors.find((c: { homeAway?: string; team?: Record<string,string>; score?: string }) => c?.homeAway === "home");
-        const away = competitors.find((c: { homeAway?: string; team?: Record<string,string>; score?: string }) => c?.homeAway === "away");
+        const home = competitors.find(
+          (c: {
+            homeAway?: string;
+            team?: Record<string, string>;
+            score?: string;
+          }) => c?.homeAway === "home"
+        );
+        const away = competitors.find(
+          (c: {
+            homeAway?: string;
+            team?: Record<string, string>;
+            score?: string;
+          }) => c?.homeAway === "away"
+        );
         return {
           date: String(comp?.date ?? ""),
           homeTeam: String(home?.team?.abbreviation ?? ""),
@@ -1359,7 +1654,11 @@ export async function scrapeEspnMatch(
     lastPlayWallClock: metaRaw?.lastPlayWallClock ?? null,
     syncUrl: String(metaRaw?.syncUrl ?? ""),
   };
-  logger.parse("Format + Meta", { periods: format.periods, gameState: meta.gameState, lastUpdated: meta.lastUpdatedAt });
+  logger.parse("Format + Meta", {
+    periods: format.periods,
+    gameState: meta.gameState,
+    lastUpdated: meta.lastUpdatedAt,
+  });
 
   // Broadcasts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1375,30 +1674,47 @@ export async function scrapeEspnMatch(
   let rosters: EspnRoster[] = [];
 
   if (includePlayerStats && competitorDetails.length > 0) {
-    logger.step("PLAYER_STATS", `Fetching rosters + per-player stats for ${competitorDetails.length} teams`);
+    logger.step(
+      "PLAYER_STATS",
+      `Fetching rosters + per-player stats for ${competitorDetails.length} teams`
+    );
 
     rosters = await Promise.all(
-      competitorDetails.map((cd) =>
+      competitorDetails.map(cd =>
         scrapeRoster(cd.id, cd.homeAway, gameId, logger, errors)
       )
     );
 
     const totalPlayers = rosters.reduce((a, r) => a + r.entries.length, 0);
     logger.output("All rosters scraped", {
-      teams: rosters.map((r) => `${r.team.abbreviation}(${r.entries.length})`).join(", "),
+      teams: rosters
+        .map(r => `${r.team.abbreviation}(${r.entries.length})`)
+        .join(", "),
       totalPlayers,
-      formations: rosters.map((r) => `${r.team.abbreviation}:${r.formation}`).join(", "),
+      formations: rosters
+        .map(r => `${r.team.abbreviation}:${r.formation}`)
+        .join(", "),
     });
-    logger.verify(totalPlayers > 0 ? "PASS" : "WARN", "player stats populated", { totalPlayers });
+    logger.verify(
+      totalPlayers > 0 ? "PASS" : "WARN",
+      "player stats populated",
+      { totalPlayers }
+    );
   } else if (includePlayerStats) {
     // Fallback: use summary rosters (no per-player stats)
-    logger.state("Fallback: using summary API rosters (no competitor details available)");
+    logger.state(
+      "Fallback: using summary API rosters (no competitor details available)"
+    );
     rosters = (sd?.rosters ?? []).map(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (teamEntry: any) => {
         const t = teamEntry?.team ?? {};
         return {
-          team: { id: String(t?.id ?? ""), abbreviation: String(t?.abbreviation ?? ""), displayName: String(t?.displayName ?? "") },
+          team: {
+            id: String(t?.id ?? ""),
+            abbreviation: String(t?.abbreviation ?? ""),
+            displayName: String(t?.displayName ?? ""),
+          },
           homeAway: (teamEntry?.homeAway ?? "home") as "home" | "away",
           formation: "",
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1434,40 +1750,83 @@ export async function scrapeEspnMatch(
         };
       }
     );
-    logger.verify("WARN", "Using fallback summary rosters — no per-player stats", { rosterCount: rosters.length });
+    logger.verify(
+      "WARN",
+      "Using fallback summary rosters — no per-player stats",
+      { rosterCount: rosters.length }
+    );
   }
 
   // ── PHASE 6: Deferred Core API Sections (8 sections) ──────────────────────────
   // These sections are deferred in the ESPN React app and must be fetched from
   // the Core API separately. Each section maps to a named stats endpoint.
   // URL pattern: /events/{gameId}/competitions/{gameId}/statistics?statGroup=<name>
-  logger.step("DEFERRED_SECTIONS", "Fetching 8 deferred Core API sections (shots, attack, passes, xG, GK, defense, duels, fouls)");
+  logger.step(
+    "DEFERRED_SECTIONS",
+    "Fetching 8 deferred Core API sections (shots, attack, passes, xG, GK, defense, duels, fouls)"
+  );
 
   const coreStatsBase = `${ESPN_CORE_BASE}/events/${gameId}/competitions/${gameId}/statistics`;
 
-  const deferredSectionDefs: { key: string; name: string; statGroup: string }[] = [
-    { key: "shotsDetail",         name: "Shots Detail",     statGroup: "shots" },
-    { key: "attack",              name: "Attack",           statGroup: "attack" },
-    { key: "passes",              name: "Passes",           statGroup: "passing" },
-    { key: "expectedGoalsSplits", name: "Expected Goals",   statGroup: "expectedGoals" },
-    { key: "goalkeeping",         name: "Goalkeeping",      statGroup: "goalkeeping" },
-    { key: "defense",             name: "Defense",          statGroup: "defense" },
-    { key: "duels",               name: "Duels",            statGroup: "duels" },
-    { key: "foulsOffsides",       name: "Fouls & Offsides", statGroup: "foulsAndOffsides" },
+  const deferredSectionDefs: {
+    key: string;
+    name: string;
+    statGroup: string;
+  }[] = [
+    { key: "shotsDetail", name: "Shots Detail", statGroup: "shots" },
+    { key: "attack", name: "Attack", statGroup: "attack" },
+    { key: "passes", name: "Passes", statGroup: "passing" },
+    {
+      key: "expectedGoalsSplits",
+      name: "Expected Goals",
+      statGroup: "expectedGoals",
+    },
+    { key: "goalkeeping", name: "Goalkeeping", statGroup: "goalkeeping" },
+    { key: "defense", name: "Defense", statGroup: "defense" },
+    { key: "duels", name: "Duels", statGroup: "duels" },
+    {
+      key: "foulsOffsides",
+      name: "Fouls & Offsides",
+      statGroup: "foulsAndOffsides",
+    },
   ];
 
   const deferredResults = await concurrentMap(
     deferredSectionDefs,
-    async (def) => {
+    async def => {
       const url = `${coreStatsBase}?lang=en&region=us&statGroup=${def.statGroup}`;
-      const section = await scrapeCoreDeferredSection(url, def.name, logger, errors);
+      const section = await scrapeCoreDeferredSection(
+        url,
+        def.name,
+        logger,
+        errors
+      );
       // Fallback: try base stats URL if statGroup returned nothing
-      if (!section.fetched || (section.teamRows.length === 0 && section.playerRows.length === 0 && section.rawKeys.length === 0)) {
-        logger.state(`${def.name}: statGroup returned no data, trying base stats URL`);
+      if (
+        !section.fetched ||
+        (section.teamRows.length === 0 &&
+          section.playerRows.length === 0 &&
+          section.rawKeys.length === 0)
+      ) {
+        logger.state(
+          `${def.name}: statGroup returned no data, trying base stats URL`
+        );
         const baseUrl = `${coreStatsBase}?lang=en&region=us`;
-        const fallback = await scrapeCoreDeferredSection(baseUrl, `${def.name}(base)`, logger, errors);
-        if (fallback.teamRows.length > 0 || fallback.playerRows.length > 0 || fallback.rawKeys.length > 0) {
-          return { key: def.key, section: { ...fallback, sectionName: def.name } };
+        const fallback = await scrapeCoreDeferredSection(
+          baseUrl,
+          `${def.name}(base)`,
+          logger,
+          errors
+        );
+        if (
+          fallback.teamRows.length > 0 ||
+          fallback.playerRows.length > 0 ||
+          fallback.rawKeys.length > 0
+        ) {
+          return {
+            key: def.key,
+            section: { ...fallback, sectionName: def.name },
+          };
         }
       }
       return { key: def.key, section };
@@ -1479,34 +1838,53 @@ export async function scrapeEspnMatch(
   for (const { key, section } of deferredResults) {
     deferredMap[key] = section;
     logger.verify(
-      section.fetched && (section.teamRows.length > 0 || section.playerRows.length > 0 || section.rawKeys.length > 0) ? "PASS" : "WARN",
+      section.fetched &&
+        (section.teamRows.length > 0 ||
+          section.playerRows.length > 0 ||
+          section.rawKeys.length > 0)
+        ? "PASS"
+        : "WARN",
       `DEFERRED: ${section.sectionName}`,
-      { teamRows: section.teamRows.length, playerRows: section.playerRows.length, keys: section.rawKeys.length, error: section.error ?? "none" }
+      {
+        teamRows: section.teamRows.length,
+        playerRows: section.playerRows.length,
+        keys: section.rawKeys.length,
+        error: section.error ?? "none",
+      }
     );
   }
 
   const emptySection = (name: string): EspnDeferredSection => ({
-    sectionName: name, apiUrl: "", fetched: false, teamRows: [], playerRows: [], rawKeys: [], error: "not fetched"
+    sectionName: name,
+    apiUrl: "",
+    fetched: false,
+    teamRows: [],
+    playerRows: [],
+    rawKeys: [],
+    error: "not fetched",
   });
 
-  const shotsDetail         = deferredMap["shotsDetail"]         ?? emptySection("Shots Detail");
-  const attack              = deferredMap["attack"]              ?? emptySection("Attack");
-  const passes              = deferredMap["passes"]              ?? emptySection("Passes");
-  const expectedGoalsSplits = deferredMap["expectedGoalsSplits"] ?? emptySection("Expected Goals");
-  const goalkeeping         = deferredMap["goalkeeping"]         ?? emptySection("Goalkeeping");
-  const defense             = deferredMap["defense"]             ?? emptySection("Defense");
-  const duels               = deferredMap["duels"]              ?? emptySection("Duels");
-  const foulsOffsides       = deferredMap["foulsOffsides"]       ?? emptySection("Fouls & Offsides");
+  const shotsDetail =
+    deferredMap["shotsDetail"] ?? emptySection("Shots Detail");
+  const attack = deferredMap["attack"] ?? emptySection("Attack");
+  const passes = deferredMap["passes"] ?? emptySection("Passes");
+  const expectedGoalsSplits =
+    deferredMap["expectedGoalsSplits"] ?? emptySection("Expected Goals");
+  const goalkeeping = deferredMap["goalkeeping"] ?? emptySection("Goalkeeping");
+  const defense = deferredMap["defense"] ?? emptySection("Defense");
+  const duels = deferredMap["duels"] ?? emptySection("Duels");
+  const foulsOffsides =
+    deferredMap["foulsOffsides"] ?? emptySection("Fouls & Offsides");
 
   logger.output("All 8 deferred sections fetched", {
-    shotsDetail:          `${shotsDetail.teamRows.length}rows/${shotsDetail.rawKeys.length}keys`,
-    attack:               `${attack.teamRows.length}rows/${attack.rawKeys.length}keys`,
-    passes:               `${passes.teamRows.length}rows/${passes.rawKeys.length}keys`,
-    expectedGoalsSplits:  `${expectedGoalsSplits.teamRows.length}rows/${expectedGoalsSplits.rawKeys.length}keys`,
-    goalkeeping:          `${goalkeeping.teamRows.length}rows/${goalkeeping.rawKeys.length}keys`,
-    defense:              `${defense.teamRows.length}rows/${defense.rawKeys.length}keys`,
-    duels:                `${duels.teamRows.length}rows/${duels.rawKeys.length}keys`,
-    foulsOffsides:        `${foulsOffsides.teamRows.length}rows/${foulsOffsides.rawKeys.length}keys`,
+    shotsDetail: `${shotsDetail.teamRows.length}rows/${shotsDetail.rawKeys.length}keys`,
+    attack: `${attack.teamRows.length}rows/${attack.rawKeys.length}keys`,
+    passes: `${passes.teamRows.length}rows/${passes.rawKeys.length}keys`,
+    expectedGoalsSplits: `${expectedGoalsSplits.teamRows.length}rows/${expectedGoalsSplits.rawKeys.length}keys`,
+    goalkeeping: `${goalkeeping.teamRows.length}rows/${goalkeeping.rawKeys.length}keys`,
+    defense: `${defense.teamRows.length}rows/${defense.rawKeys.length}keys`,
+    duels: `${duels.teamRows.length}rows/${duels.rawKeys.length}keys`,
+    foulsOffsides: `${foulsOffsides.teamRows.length}rows/${foulsOffsides.rawKeys.length}keys`,
   });
 
   // ── PHASE 7: Assemble + validate ─────────────────────────────────────────────
@@ -1553,34 +1931,93 @@ export async function scrapeEspnMatch(
   };
 
   // Final validation gates
-  logger.verify(result.header.competitors.length >= 2 ? "PASS" : "FAIL", "header has 2 competitors");
-  logger.verify(result.teamStats.length > 0 ? "PASS" : "WARN", "teamStats populated", { count: result.teamStats.length });
-  logger.verify(result.keyEvents.length > 0 ? "PASS" : "WARN", "keyEvents populated", { count: result.keyEvents.length });
-  logger.verify(result.rosters.length > 0 ? "PASS" : "WARN", "rosters populated", { count: result.rosters.length });
-  logger.verify(errors.length === 0 ? "PASS" : "WARN", `error count = ${errors.length}`, { errors: errors.slice(0, 3) });
+  logger.verify(
+    result.header.competitors.length >= 2 ? "PASS" : "FAIL",
+    "header has 2 competitors"
+  );
+  logger.verify(
+    result.teamStats.length > 0 ? "PASS" : "WARN",
+    "teamStats populated",
+    { count: result.teamStats.length }
+  );
+  logger.verify(
+    result.keyEvents.length > 0 ? "PASS" : "WARN",
+    "keyEvents populated",
+    { count: result.keyEvents.length }
+  );
+  logger.verify(
+    result.rosters.length > 0 ? "PASS" : "WARN",
+    "rosters populated",
+    { count: result.rosters.length }
+  );
+  logger.verify(
+    errors.length === 0 ? "PASS" : "WARN",
+    `error count = ${errors.length}`,
+    { errors: errors.slice(0, 3) }
+  );
   // Deferred section gates
-  logger.verify(result.shotsDetail.fetched ? "PASS" : "WARN", "shotsDetail fetched", { rows: result.shotsDetail.teamRows.length, keys: result.shotsDetail.rawKeys.length });
-  logger.verify(result.attack.fetched ? "PASS" : "WARN", "attack fetched", { rows: result.attack.teamRows.length, keys: result.attack.rawKeys.length });
-  logger.verify(result.passes.fetched ? "PASS" : "WARN", "passes fetched", { rows: result.passes.teamRows.length, keys: result.passes.rawKeys.length });
-  logger.verify(result.expectedGoalsSplits.fetched ? "PASS" : "WARN", "expectedGoalsSplits fetched", { rows: result.expectedGoalsSplits.teamRows.length, keys: result.expectedGoalsSplits.rawKeys.length });
-  logger.verify(result.goalkeeping.fetched ? "PASS" : "WARN", "goalkeeping fetched", { rows: result.goalkeeping.teamRows.length, keys: result.goalkeeping.rawKeys.length });
-  logger.verify(result.defense.fetched ? "PASS" : "WARN", "defense fetched", { rows: result.defense.teamRows.length, keys: result.defense.rawKeys.length });
-  logger.verify(result.duels.fetched ? "PASS" : "WARN", "duels fetched", { rows: result.duels.teamRows.length, keys: result.duels.rawKeys.length });
-  logger.verify(result.foulsOffsides.fetched ? "PASS" : "WARN", "foulsOffsides fetched", { rows: result.foulsOffsides.teamRows.length, keys: result.foulsOffsides.rawKeys.length });
+  logger.verify(
+    result.shotsDetail.fetched ? "PASS" : "WARN",
+    "shotsDetail fetched",
+    {
+      rows: result.shotsDetail.teamRows.length,
+      keys: result.shotsDetail.rawKeys.length,
+    }
+  );
+  logger.verify(result.attack.fetched ? "PASS" : "WARN", "attack fetched", {
+    rows: result.attack.teamRows.length,
+    keys: result.attack.rawKeys.length,
+  });
+  logger.verify(result.passes.fetched ? "PASS" : "WARN", "passes fetched", {
+    rows: result.passes.teamRows.length,
+    keys: result.passes.rawKeys.length,
+  });
+  logger.verify(
+    result.expectedGoalsSplits.fetched ? "PASS" : "WARN",
+    "expectedGoalsSplits fetched",
+    {
+      rows: result.expectedGoalsSplits.teamRows.length,
+      keys: result.expectedGoalsSplits.rawKeys.length,
+    }
+  );
+  logger.verify(
+    result.goalkeeping.fetched ? "PASS" : "WARN",
+    "goalkeeping fetched",
+    {
+      rows: result.goalkeeping.teamRows.length,
+      keys: result.goalkeeping.rawKeys.length,
+    }
+  );
+  logger.verify(result.defense.fetched ? "PASS" : "WARN", "defense fetched", {
+    rows: result.defense.teamRows.length,
+    keys: result.defense.rawKeys.length,
+  });
+  logger.verify(result.duels.fetched ? "PASS" : "WARN", "duels fetched", {
+    rows: result.duels.teamRows.length,
+    keys: result.duels.rawKeys.length,
+  });
+  logger.verify(
+    result.foulsOffsides.fetched ? "PASS" : "WARN",
+    "foulsOffsides fetched",
+    {
+      rows: result.foulsOffsides.teamRows.length,
+      keys: result.foulsOffsides.rawKeys.length,
+    }
+  );
 
   // Run summary
   const outcome =
     logger.getErrorCount() > 8
       ? "FAILED"
       : errors.length > 5
-      ? "PARTIAL"
-      : "SUCCESS";
+        ? "PARTIAL"
+        : "SUCCESS";
 
   const stats = logger.summary(outcome as "SUCCESS" | "PARTIAL" | "FAILED", {
     gameId,
     status: header.status.shortDetail,
-    match: `${header.competitors.find((c) => c.homeAway === "home")?.team.abbreviation ?? "?"} vs ${header.competitors.find((c) => c.homeAway === "away")?.team.abbreviation ?? "?"}`,
-    score: `${header.competitors.find((c) => c.homeAway === "home")?.score ?? "?"}-${header.competitors.find((c) => c.homeAway === "away")?.score ?? "?"}`,
+    match: `${header.competitors.find(c => c.homeAway === "home")?.team.abbreviation ?? "?"} vs ${header.competitors.find(c => c.homeAway === "away")?.team.abbreviation ?? "?"}`,
+    score: `${header.competitors.find(c => c.homeAway === "home")?.score ?? "?"}-${header.competitors.find(c => c.homeAway === "away")?.score ?? "?"}`,
     players: rosters.reduce((a, r) => a + r.entries.length, 0),
     commentary: commentary.length,
     logFile: logger.getLogFile(),
@@ -1601,14 +2038,28 @@ export interface EspnScoreboardEvent {
   date: string;
   status: string;
   statusDetail: string;
-  homeTeam: { id: string; abbreviation: string; displayName: string; score: string; logo: string };
-  awayTeam: { id: string; abbreviation: string; displayName: string; score: string; logo: string };
+  homeTeam: {
+    id: string;
+    abbreviation: string;
+    displayName: string;
+    score: string;
+    logo: string;
+  };
+  awayTeam: {
+    id: string;
+    abbreviation: string;
+    displayName: string;
+    score: string;
+    logo: string;
+  };
   venue: string;
   broadcasts: string[];
   league: string;
 }
 
-export async function scrapeEspnScoreboard(dateYYYYMMDD: string): Promise<EspnScoreboardEvent[]> {
+export async function scrapeEspnScoreboard(
+  dateYYYYMMDD: string
+): Promise<EspnScoreboardEvent[]> {
   const logger = createEspnLogger(`scoreboard:${dateYYYYMMDD}`);
   logger.input("scrapeEspnScoreboard called", { date: dateYYYYMMDD });
   logger.step("SCOREBOARD_API", `Fetching ESPN scoreboard for ${dateYYYYMMDD}`);
@@ -1651,7 +2102,9 @@ export async function scrapeEspnScoreboard(dateYYYYMMDD: string): Promise<EspnSc
         awayTeam: makeTeam(away),
         venue: String(comp?.venue?.fullName ?? ""),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        broadcasts: (comp?.broadcasts ?? []).map((b: any) => String(b?.media?.shortName ?? b?.names?.[0] ?? "")),
+        broadcasts: (comp?.broadcasts ?? []).map((b: any) =>
+          String(b?.media?.shortName ?? b?.names?.[0] ?? "")
+        ),
         league: String(d?.leagues?.[0]?.abbreviation ?? ""),
       };
     }
@@ -1660,9 +2113,11 @@ export async function scrapeEspnScoreboard(dateYYYYMMDD: string): Promise<EspnSc
   logger.output("Scoreboard scraped", {
     date: dateYYYYMMDD,
     eventCount: events.length,
-    events: events.map((e) => `${e.shortName}[${e.statusDetail}]`).join(", "),
+    events: events.map(e => `${e.shortName}[${e.statusDetail}]`).join(", "),
   });
-  logger.verify(events.length > 0 ? "PASS" : "WARN", "scoreboard has events", { count: events.length });
+  logger.verify(events.length > 0 ? "PASS" : "WARN", "scoreboard has events", {
+    count: events.length,
+  });
   logger.summary("SUCCESS", { date: dateYYYYMMDD, events: events.length });
 
   return events;

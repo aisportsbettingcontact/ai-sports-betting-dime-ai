@@ -1,11 +1,11 @@
 /**
  * Dime 1.0 client — OpenAI-compatible chat completions over HTTPS.
  * ---------------------------------------------------------------
- * v1 architecture: Railway is the control plane (auth, entitlement, rate
- * limits, retrieval, prompt construction, deterministic math, response
- * validation, logging). The GPU execution plane is a private RunPod
- * Serverless endpoint running vLLM with the 4-bit Dime 1.0 checkpoint.
- * Runbook: ml/dime-1.0/README.md
+ * Reserved future integration scaffold. The provider is frozen and no
+ * production checkpoint, endpoint, or execution plane is approved. A later
+ * promotion must satisfy ml/dime-1.0/README.md and
+ * ml/dime-1.0/docs/RELEASE_GATES.md without changing the control-plane
+ * responsibilities in this application.
  *
  * Endpoint resolution (first match wins):
  *   DIME_MODEL_BASE_URL     → full OpenAI-compatible base URL including /v1
@@ -16,10 +16,15 @@
  *   DIME_MODEL_API_SECRET → private load-balancing endpoint secret
  *   RUNPOD_API_KEY        → RunPod account API key (serverless vLLM worker)
  *
- * Served model name: DIME_MODEL_VERSION (e.g. "dime-1.0-v1.0.0"), falling
- * back to "dime-1.0". Must match the endpoint's served model name so a
- * version mismatch fails loudly instead of silently answering from the
- * wrong checkpoint.
+ * The resolution behavior below is retained for a future owner-authorized
+ * integration. It is unreachable while DIME_CHAT_LLM_PROVIDER is "frozen".
+ *
+ * STATUS 2026-08-04 (owner decision): Dime Chat is API-based (provider
+ * "anthropic"); the custom-model lane is DORMANT — PR #289 (dataset freeze)
+ * closed with its branch preserved, the RunPod serving endpoint is
+ * decommissioned, and RUNPOD_* / DIME_RESEARCH_ALPHA_* variables were
+ * removed from production. This scaffold stays retained-but-dormant; any
+ * revival remains gated by ml/dime-1.0/docs/RELEASE_GATES.md.
  */
 
 import { DIME1_DEFAULT_SERVED_MODEL } from "./dime1Model";
@@ -42,11 +47,34 @@ function readEnv(env: Dime1Env, name: string): string | undefined {
   return value ? value : undefined;
 }
 
+/**
+ * The request body carries DIME_CHAT_SYSTEM_PROMPT — the blueprint file, i.e.
+ * model IP. Operators are free to self-host (DIME_MODEL_BASE_URL is documented
+ * as an arbitrary private endpoint), so the HOST is deliberately not
+ * allowlisted; what is enforced is that the prompt never crosses the network
+ * in plaintext. Loopback is exempt so local development works over http.
+ */
+export function isAllowedDime1Endpoint(baseUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === "https:") return true;
+  return (
+    parsed.protocol === "http:" &&
+    (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")
+  );
+}
+
 export function resolveDime1Config(env: Dime1Env = process.env): Dime1Config | null {
   const explicitBase = readEnv(env, "DIME_MODEL_BASE_URL");
   const endpointId = readEnv(env, "RUNPOD_ENDPOINT_ID");
   const baseUrl = explicitBase ?? (endpointId ? `https://api.runpod.ai/v2/${endpointId}/openai/v1` : undefined);
   if (!baseUrl) return null;
+  // Refuse to ship the system prompt over plaintext http (loopback aside).
+  if (!isAllowedDime1Endpoint(baseUrl)) return null;
 
   const timeoutRaw = Number(readEnv(env, "DIME_MODEL_TIMEOUT_MS"));
   return {

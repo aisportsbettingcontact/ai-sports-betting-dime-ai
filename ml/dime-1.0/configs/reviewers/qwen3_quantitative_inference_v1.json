@@ -1,0 +1,43 @@
+{
+  "schema_version": "dime-foundation-reviewer-inference-policy-v1",
+  "policy_id": "dime-foundation-quantitative-inference-v1",
+  "reviewer_id": "dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980",
+  "model_id": "Qwen/Qwen3-32B",
+  "model_revision": "9216db5781bf21249d130ec9da846c4624c16137",
+  "input_policy": {
+    "evidence_only": true,
+    "external_network_allowed": false,
+    "production_tools_allowed": false,
+    "embedded_instructions_are_untrusted": true
+  },
+  "sampling": {
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "top_k": 20,
+    "max_tokens": 2048,
+    "seed": 0,
+    "response_format": "json_object"
+  },
+  "output_policy": {
+    "schema_version": "dime-foundation-reviewer-decision-v1",
+    "json_only": true,
+    "chain_of_thought_allowed": false,
+    "allowed_decisions": [
+      "approve",
+      "changes_requested",
+      "reject",
+      "recuse"
+    ]
+  },
+  "authorization_effect": {
+    "activates_reviewer": false,
+    "approves_data": false,
+    "authorizes_gpu_execution": false,
+    "authorizes_training": false,
+    "authorizes_locked_evaluation": false,
+    "authorizes_publication": false,
+    "authorizes_release": false,
+    "authorizes_serving": false,
+    "authorizes_provider_activation": false
+  }
+}

@@ -31,7 +31,7 @@ describe("Server startup — rate limiter initialization", () => {
         standardHeaders: "draft-7",
         legacyHeaders: false,
         message: { error: "Too many requests. Please slow down." },
-        skip: (req) => req.path === "/health",
+        skip: req => req.path === "/health",
       });
     }).not.toThrow();
   });
@@ -43,7 +43,10 @@ describe("Server startup — rate limiter initialization", () => {
         max: 5,
         standardHeaders: "draft-7",
         legacyHeaders: false,
-        message: { error: "Too many authentication attempts. Please wait 15 minutes before trying again." },
+        message: {
+          error:
+            "Too many authentication attempts. Please wait 15 minutes before trying again.",
+        },
       });
     }).not.toThrow();
   });
@@ -62,7 +65,7 @@ describe("Server startup — rate limiter initialization", () => {
         standardHeaders: "draft-7",
         legacyHeaders: false,
         message: { error: "Too many login attempts. Please wait 15 minutes." },
-        keyGenerator: (req) => {
+        keyGenerator: req => {
           // CORRECT: uses ipKeyGenerator helper — passes ERR_ERL_KEY_GEN_IPV6 validation
           const path = req.path.replace(/^\//, "");
           return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
@@ -92,7 +95,7 @@ describe("Server startup — rate limiter initialization", () => {
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 5,
-      keyGenerator: (req) => {
+      keyGenerator: req => {
         const path = req.path.replace(/^\//, "");
         return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
       },

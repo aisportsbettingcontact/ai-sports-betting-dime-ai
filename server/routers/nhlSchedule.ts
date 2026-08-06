@@ -24,7 +24,10 @@ import {
   backfillNhlScheduleHistory,
   type NhlScheduleRefreshResult,
 } from "../nhlScheduleHistoryService";
-import { seedNhlTomorrowGoalies, checkGoalieChanges } from "../nhlGoalieWatcher";
+import {
+  seedNhlTomorrowGoalies,
+  checkGoalieChanges,
+} from "../nhlGoalieWatcher";
 
 const TAG = "[NhlScheduleRouter]";
 
@@ -34,7 +37,10 @@ const zodAnSlug = z
   .string()
   .min(2)
   .max(64)
-  .regex(/^[a-z0-9-]+$/, "Invalid team slug — must be lowercase letters, digits, and hyphens only");
+  .regex(
+    /^[a-z0-9-]+$/,
+    "Invalid team slug — must be lowercase letters, digits, and hyphens only"
+  );
 
 /** YYYYMMDD date string for the AN API */
 const zodAnDate = z
@@ -67,7 +73,7 @@ export const nhlScheduleRouter = router({
     .query(async ({ input, ctx }) => {
       console.log(
         `${TAG}[getLast5ForMatchup] AUTHED userId=${ctx.appUser.id} Fetching Last 5 for matchup:` +
-        ` away="${input.awaySlug}" vs home="${input.homeSlug}"`
+          ` away="${input.awaySlug}" vs home="${input.homeSlug}"`
       );
       try {
         const { awayLast5, homeLast5 } = await getNhlLast5ForMatchup(
@@ -76,7 +82,7 @@ export const nhlScheduleRouter = router({
         );
         console.log(
           `${TAG}[getLast5ForMatchup] Returning` +
-          ` away=${awayLast5.length} games, home=${homeLast5.length} games`
+            ` away=${awayLast5.length} games, home=${homeLast5.length} games`
         );
         return { awayLast5, homeLast5 };
       } catch (err) {
@@ -155,7 +161,7 @@ export const nhlScheduleRouter = router({
         const stats = await getNhlSituationalStats(input.teamSlug);
         console.log(
           `${TAG}[getSituationalStats] Returning stats for team="${input.teamSlug}"` +
-          ` gamesAnalyzed=${stats.gamesAnalyzed}`
+            ` gamesAnalyzed=${stats.gamesAnalyzed}`
         );
         return stats;
       } catch (err) {
@@ -189,8 +195,8 @@ export const nhlScheduleRouter = router({
         const result = await refreshNhlScheduleForDate(input.date);
         console.log(
           `${TAG}[refreshScheduleForDate] Complete:` +
-          ` fetched=${result.fetched} upserted=${result.upserted}` +
-          ` errors=${result.errors.length}`
+            ` fetched=${result.fetched} upserted=${result.upserted}` +
+            ` errors=${result.errors.length}`
         );
         return result;
       } catch (err) {
@@ -222,13 +228,22 @@ export const nhlScheduleRouter = router({
       );
       try {
         const results = await backfillNhlScheduleHistory(input.daysBack);
-        const totalFetched  = results.reduce((s: number, r: NhlScheduleRefreshResult) => s + r.fetched, 0);
-        const totalUpserted = results.reduce((s: number, r: NhlScheduleRefreshResult) => s + r.upserted, 0);
-        const totalErrors   = results.reduce((s: number, r: NhlScheduleRefreshResult) => s + r.errors.length, 0);
+        const totalFetched = results.reduce(
+          (s: number, r: NhlScheduleRefreshResult) => s + r.fetched,
+          0
+        );
+        const totalUpserted = results.reduce(
+          (s: number, r: NhlScheduleRefreshResult) => s + r.upserted,
+          0
+        );
+        const totalErrors = results.reduce(
+          (s: number, r: NhlScheduleRefreshResult) => s + r.errors.length,
+          0
+        );
         console.log(
           `${TAG}[backfillSchedule] Complete:` +
-          ` dates=${results.length} totalFetched=${totalFetched}` +
-          ` totalUpserted=${totalUpserted} totalErrors=${totalErrors}`
+            ` dates=${results.length} totalFetched=${totalFetched}` +
+            ` totalUpserted=${totalUpserted} totalErrors=${totalErrors}`
         );
         return { results, totalFetched, totalUpserted, totalErrors };
       } catch (err) {
@@ -245,48 +260,54 @@ export const nhlScheduleRouter = router({
    * Owner-only: Manually seed tomorrow's NHL games with goalie data from RotoWire.
    * Triggers the NHL model for any tomorrow game that has both goalies populated.
    */
-  seedTomorrowGoalies: ownerProcedure
-    .mutation(async () => {
-      console.log(`${TAG}[seedTomorrowGoalies] Manual tomorrow goalie seed triggered`);
-      try {
-        const result = await seedNhlTomorrowGoalies("manual");
-        console.log(
-          `${TAG}[seedTomorrowGoalies] Complete:` +
+  seedTomorrowGoalies: ownerProcedure.mutation(async () => {
+    console.log(
+      `${TAG}[seedTomorrowGoalies] Manual tomorrow goalie seed triggered`
+    );
+    try {
+      const result = await seedNhlTomorrowGoalies("manual");
+      console.log(
+        `${TAG}[seedTomorrowGoalies] Complete:` +
           ` gamesChecked=${result.gamesChecked}` +
           ` changes=${result.changes.length}` +
           ` modelRerun=${result.modelRerun}` +
           ` errors=${result.errors.length}`
-        );
-        return result;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${TAG}[seedTomorrowGoalies] ERROR: ${msg}`);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Tomorrow goalie seed failed: ${msg}` });
-      }
-    }),
+      );
+      return result;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAG}[seedTomorrowGoalies] ERROR: ${msg}`);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Tomorrow goalie seed failed: ${msg}`,
+      });
+    }
+  }),
 
   /**
    * Owner-only: Manually trigger today's goalie change check and model re-run.
    */
-  checkGoaliesNow: ownerProcedure
-    .mutation(async () => {
-      console.log(`${TAG}[checkGoaliesNow] Manual goalie check triggered`);
-      try {
-        const result = await checkGoalieChanges("manual");
-        console.log(
-          `${TAG}[checkGoaliesNow] Complete:` +
+  checkGoaliesNow: ownerProcedure.mutation(async () => {
+    console.log(`${TAG}[checkGoaliesNow] Manual goalie check triggered`);
+    try {
+      const result = await checkGoalieChanges("manual");
+      console.log(
+        `${TAG}[checkGoaliesNow] Complete:` +
           ` gamesChecked=${result.gamesChecked}` +
           ` changes=${result.changes.length}` +
           ` modelRerun=${result.modelRerun}` +
           ` errors=${result.errors.length}`
-        );
-        return result;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${TAG}[checkGoaliesNow] ERROR: ${msg}`);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Goalie check failed: ${msg}` });
-      }
-    }),
+      );
+      return result;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAG}[checkGoaliesNow] ERROR: ${msg}`);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Goalie check failed: ${msg}`,
+      });
+    }
+  }),
 });
 
 export type NhlScheduleRouter = typeof nhlScheduleRouter;

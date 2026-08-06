@@ -12,7 +12,12 @@ import { parseAnAllMarketsHtml } from "./anHtmlParser";
 // Simulates one complete game (3 rows: SPREAD, TOTAL, ML) + separator row.
 // Column layout: [0]=game-info, [1]=open, [2]=DK NJ (with DK logo), [3..11]=other books
 
-function makeBookCell(awayLine: string, awayJuice: string, homeOrUnderLine: string, homeOrUnderJuice: string): string {
+function makeBookCell(
+  awayLine: string,
+  awayJuice: string,
+  homeOrUnderLine: string,
+  homeOrUnderJuice: string
+): string {
   return `<td>
     <div class="best-odds__odds-container">
       <div>
@@ -31,7 +36,12 @@ function makeBookCell(awayLine: string, awayJuice: string, homeOrUnderLine: stri
   </td>`;
 }
 
-function makeOpenCell(awayLine: string, awayJuice: string, homeLine: string, homeJuice: string): string {
+function makeOpenCell(
+  awayLine: string,
+  awayJuice: string,
+  homeLine: string,
+  homeJuice: string
+): string {
   return `<td>
     <div class="best-odds__open-container">
       <div class="best-odds__open-cell">
@@ -46,7 +56,12 @@ function makeOpenCell(awayLine: string, awayJuice: string, homeLine: string, hom
   </td>`;
 }
 
-function makeDkCell(awayLine: string, awayJuice: string, homeLine: string, homeJuice: string): string {
+function makeDkCell(
+  awayLine: string,
+  awayJuice: string,
+  homeLine: string,
+  homeJuice: string
+): string {
   return `<td>
     <div class="best-odds__odds-container">
       <div>

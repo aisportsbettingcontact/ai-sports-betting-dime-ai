@@ -4,7 +4,7 @@
  * Two categories of tests cannot run in this repository's GitHub Actions
  * environment as it actually exists (verified 2026-07-12: only 7 Actions
  * secrets are configured; DATABASE_URL, DISCORD_*, VSIN_*, GMAIL_APP_PASSWORD,
- * NBA_SHEET_ID, PUBLIC_ORIGIN and the OAuth values documented in ci.yml are
+ * PUBLIC_ORIGIN and the OAuth values documented in ci.yml are
  * NOT among them):
  *
  *   1. Presence/liveness probes — assert that a real credential exists or

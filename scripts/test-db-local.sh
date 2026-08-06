@@ -7,7 +7,7 @@
 #   docker run --rm -d --name dime-test-db -e MYSQL_ALLOW_EMPTY_PASSWORD=1 \
 #     -e MYSQL_DATABASE=dime_test -p 3307:3306 mysql:8
 #   DATABASE_URL="mysql://root@127.0.0.1:3307/dime_test" \
-#     pnpm exec drizzle-kit migrate && DATABASE_URL=... pnpm exec vitest run <suites>
+#     pnpm db:migrate:reconciled && DATABASE_URL=... pnpm exec vitest run <suites>
 #
 # Usage: scripts/test-db-local.sh [--keep]
 set -euo pipefail
@@ -52,10 +52,10 @@ for _ in $(seq 1 30); do [ -S "$SOCKET" ] && break; sleep 1; done
 
 "$MYSQL" --socket="$SOCKET" -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
 
-echo "[db-local] provisioning current schema (push, not migrate: history is not replayable from scratch — see ci.yml db-tests job)"
-DATABASE_URL="$DATABASE_URL" pnpm exec drizzle-kit push --force
+echo "[db-local] replaying the reconciled immutable migration chain"
+DATABASE_URL="$DATABASE_URL" pnpm db:migrate:reconciled
 
-echo "[db-local] running the five real-database suites"
+echo "[db-local] running the six real-database suites"
 # --no-file-parallelism: one shared DB + a global-mutation suite
 # (incrementAllTokenVersions) — parallel files invalidate each other's sessions.
 DATABASE_URL="$DATABASE_URL" pnpm exec vitest run --no-file-parallelism \
@@ -63,4 +63,5 @@ DATABASE_URL="$DATABASE_URL" pnpm exec vitest run --no-file-parallelism \
   server/appUsers.register.test.ts \
   server/completeAccountSetup.test.ts \
   server/passwordReset.test.ts \
-  server/tokenVersion.db.test.ts
+  server/tokenVersion.db.test.ts \
+  server/mlbDoubleheader.db.test.ts

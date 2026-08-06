@@ -18,8 +18,8 @@
  * ║    ERROR   → non-fatal error with full context                              ║
  * ║    FATAL   → scrape-aborting error                                          ║
  * ║                                                                              ║
- * ║  Log file: .manus-logs/espn-scraper.log   (plain text, append-only)        ║
- * ║  Stats file: .manus-logs/espn-scraper-stats.json  (per-run summary)        ║
+ * ║  Log file: .scraper-logs/espn-scraper.log   (plain text, append-only)      ║
+ * ║  Stats file: .scraper-logs/espn-scraper-stats.json  (per-run summary)      ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  */
 
@@ -146,7 +146,7 @@ export class EspnLogger {
   // Phase timers
   private phaseStartTimes: Map<string, number> = new Map();
 
-  constructor(gameId: string, logDir: string = ".manus-logs") {
+  constructor(gameId: string, logDir: string = ".scraper-logs") {
     this.gameId = gameId;
     this.runId = this.generateRunId();
     this.startTime = Date.now();
@@ -376,18 +376,27 @@ export class EspnLogger {
 
     // Write stats JSON
     try {
+      // No existsSync probe: reading and handling ENOENT is one filesystem
+      // resolution instead of two, so there is no window between the check and
+      // the read (the empty-array fallback is identical behaviour).
       let existing: RunStats[] = [];
-      if (fs.existsSync(this.statsFile)) {
-        try {
-          existing = JSON.parse(fs.readFileSync(this.statsFile, "utf-8"));
-          if (!Array.isArray(existing)) existing = [];
-        } catch {
-          existing = [];
-        }
+      try {
+        const raw = fs.readFileSync(this.statsFile, "utf-8");
+        existing = JSON.parse(raw);
+        if (!Array.isArray(existing)) existing = [];
+      } catch {
+        existing = [];
       }
       existing.unshift(stats); // newest first
       if (existing.length > 100) existing = existing.slice(0, 100); // keep last 100 runs
-      fs.writeFileSync(this.statsFile, JSON.stringify(existing, null, 2));
+      // Atomic replace. This route is publicly reachable, and a CLI scraper or
+      // a second process on the same volume could otherwise interleave with
+      // the read-modify-write and leave a torn file that the reader above
+      // silently discards as []. Same temp+rename idiom as
+      // scripts/provision-dime-credential-trust.mjs.
+      const tmpFile = `${this.statsFile}.${process.pid}.tmp`;
+      fs.writeFileSync(tmpFile, JSON.stringify(existing, null, 2));
+      fs.renameSync(tmpFile, this.statsFile);
     } catch {
       // non-fatal
     }

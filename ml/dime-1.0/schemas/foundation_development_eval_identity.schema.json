@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_development_eval_identity.schema.json",
+  "title": "Dime Foundation Development-Evaluation Remote Identity",
+  "description": "Binds the complete cases/**/*.jsonl inventory and evaluation manifest to one exact private Hugging Face dataset commit. Remote privacy, inventory equality, byte equality, explicit authentication, and no-fallback behavior are enforced by the verifier.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repo_type",
+    "repo_id",
+    "revision",
+    "manifest_path",
+    "manifest_sha256",
+    "case_root",
+    "case_files",
+    "case_files_sha256",
+    "case_count"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-development-eval-identity-v2"
+    },
+    "repo_type": {
+      "const": "dataset"
+    },
+    "repo_id": {
+      "const": "taileredsports/dime-eval-development"
+    },
+    "revision": {
+      "type": "string",
+      "description": "Exact lowercase 40-character Hugging Face commit SHA; branches and tags are prohibited.",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "manifest_path": {
+      "const": "evaluation_manifest.json"
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "case_root": {
+      "const": "cases"
+    },
+    "case_files": {
+      "type": "array",
+      "description": "Strictly path-sorted, exhaustive inventory of every remote path below cases/ whose name ends in .jsonl.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/case_file"
+      }
+    },
+    "case_files_sha256": {
+      "description": "SHA-256 of the UTF-8 canonical JSON serialization of the complete ordered case_files array, including its trailing newline.",
+      "$ref": "#/$defs/sha256"
+    },
+    "case_count": {
+      "type": "integer",
+      "description": "Sum of record_count across every declared case file.",
+      "minimum": 1
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "case_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "record_count"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "POSIX-relative remote repository path below cases/; traversal, absolute paths, symlinks, and non-JSONL paths are rejected by the verifier.",
+          "pattern": "^cases/[A-Za-z0-9][A-Za-z0-9._/-]*\\.jsonl$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "record_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
