@@ -10,6 +10,7 @@
  * Must be fast and must never fail: a clock that wedges a prompt is worse than
  * no clock. Prints nothing and exits 0 on any error.
  */
+import { execFileSync } from "child_process";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -100,7 +101,23 @@ try {
   overdue.sort((a, b) => (b.days ?? 1e9) - (a.days ?? 1e9));
   const shown = overdue.slice(0, 4).map((o) => (o.days === null ? `${o.id} (no observe_by)` : `${o.id} (${o.days}d)`));
   const more = overdue.length > shown.length ? ` +${overdue.length - shown.length} more` : "";
-  process.stdout.write(`[OS] ${overdue.length} item(s) overdue — ${shown.join(", ")}${more}.\n`);
+  // Name the ref. The clock reports on the WORKING TREE, which is correct — you
+  // should see the state of what you are editing — but a stale feature branch
+  // then reports items already fixed on main, and nothing said which tree it
+  // read. Observed 2026-08-06: ISSUE-012 reported overdue from a branch six
+  // commits behind, after the fix had landed.
+  let ref = "";
+  try {
+    ref = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      cwd: resolve(OS, ".."),
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    /* not a git tree; the report is still true of the files on disk */
+  }
+  const where = ref && ref !== "main" ? ` [${ref}]` : "";
+  process.stdout.write(`[OS]${where} ${overdue.length} item(s) overdue — ${shown.join(", ")}${more}.\n`);
 } catch {
   /* a clock must never wedge a prompt */
 }

@@ -57,6 +57,15 @@ beforeAll(() => {
   mkdirSync(join(sandbox, "scripts/os"), { recursive: true });
   mkdirSync(join(sandbox, "os/probe"), { recursive: true });
   cpSync(CLOCK, join(sandbox, "scripts/os/clock.mjs"));
+  // A git tree, so the clock can name the ref it read. Without one it still
+  // works — the ref lookup is best-effort — but the branch tests need it.
+  const g = (...a: string[]) =>
+    execFileSync("git", a, { cwd: sandbox, stdio: ["ignore", "pipe", "ignore"] });
+  g("init", "-q", "-b", "main");
+  g("config", "user.email", "t@e.com");
+  g("config", "user.name", "t");
+  g("add", "-A");
+  g("commit", "-qm", "base");
 });
 
 afterAll(() => {
@@ -165,6 +174,37 @@ describe("a clock must never wedge a prompt", () => {
       expect(runClock(sandbox, "2026-06-01").out).not.toMatch(/ZZ-0007/);
     } finally {
       rmSync(ap, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the clock says which tree it read", () => {
+  // Added after a real confusion: the per-prompt hook reported ISSUE-012 overdue
+  // from a feature branch six commits behind main, AFTER the fix had landed. The
+  // report was true of the files on disk and said nothing about which disk.
+  it("names a non-main branch in the report", () => {
+    const d = join(sandbox, "os/probe");
+    artifact(d, "ZZ-0100", "ACTIVE", "2026-01-01");
+    try {
+      execFileSync("git", ["checkout", "-q", "-b", "some/feature"], { cwd: sandbox });
+      const { out } = runClock(sandbox, "2026-06-01");
+      expect(out).toMatch(/\[some\/feature\]/);
+      expect(out).toMatch(/ZZ-0100/);
+    } finally {
+      execFileSync("git", ["checkout", "-q", "main"], { cwd: sandbox });
+      rmSync(join(d, "ZZ-0100.md"), { force: true });
+    }
+  });
+
+  it("stays quiet about the ref when it IS main — no noise on the common path", () => {
+    const d = join(sandbox, "os/probe");
+    artifact(d, "ZZ-0101", "ACTIVE", "2026-01-01");
+    try {
+      const { out } = runClock(sandbox, "2026-06-01");
+      expect(out).toMatch(/ZZ-0101/);
+      expect(out).not.toMatch(/\[main\]/);
+    } finally {
+      rmSync(join(d, "ZZ-0101.md"), { force: true });
     }
   });
 });
