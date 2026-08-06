@@ -79,17 +79,30 @@
    --mint-ink (signal), and the four compact states inherit the lifecycle
    remap of --text-secondary -> --foreground from .projection-card--compact
    above, which exists to hold AA through that state's 0.72 dim. Measured
-   composited contrast: scheduled 8.13:1 dark / 6.54:1 light, live 6.41 / 4.62,
-   settled 10.32 / 9.01 — all clear 4.5:1. What is shared across states is the
-   slot, the alignment, and the type register; see the page law. */
+   composited contrast (CORRECTED 2026-08-06, see the rule below): scheduled
+   8.13:1 dark / 6.54:1 light, live 6.25 / 4.4969, settled 10.10 / 8.79 — nine
+   of ten clear 4.5:1; light-theme live misses by 0.003. What is shared across
+   states is the slot, the alignment, and the type register; see the page law. */
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); font-variant-numeric: tabular-nums; }
 .projection-card__status--live { color: var(--mint-ink, #45e0a8); } /* live = signal; --mint-ink is theme-correct mint text (raw mint dark / #0A7C50 light) */
 /* 2026-08-05: lifecycle compaction dims the whole live card to 0.72, which
-   composites light-theme --mint-ink to ~3.1:1 on white — below AA for the
-   12px LIVE label. Darken the SAME mint hue (single-hue system; the analog
-   of v3's near-black-green foreground) just enough that the composited
-   label clears 4.5:1: color-mix 60% toward black composites to ~4.8:1 at
-   0.72 over white. Dark theme already composites ~6.5:1 and keeps the token. */
+   composites light-theme --mint-ink to ~2.97:1 on white — below AA for the
+   LIVE label (14.05px/600 at 1440, 12.00px at 375: normal text, so the floor
+   is 4.5:1). Darken the SAME mint hue (single-hue system; the analog of v3's
+   near-black-green foreground) toward that floor.
+
+   CORRECTED 2026-08-06 — this comment previously claimed the 60% mix reaches
+   "~4.8:1" and therefore clears AA. It does not. `opacity` composites the card
+   LAYER over the page, so page white bleeds into the text as well as the card
+   background:
+       effective text = 0.72 * color  + 0.28 * pageBackground
+       effective bg   = 0.72 * cardBg + 0.28 * pageBackground
+   The old figure composited the text over the already-dimmed card instead.
+   Measured on the deployed build: rgb(76,125,106) on rgb(249,249,249) =
+   **4.4969:1**, i.e. 0.003 SHORT of the floor this rule exists to reach.
+   Remedy, computed but not applied (brand-token change = owner territory):
+   mixing at 50% instead of 60% gives rgb(75,116,100) ≈ 4.96:1.
+   Dark theme composites 6.25:1 and keeps the plain token. */
 html:not(.dark) .projection-card--compact .projection-card__status--live {
   color: color-mix(in srgb, var(--mint-ink, #0a7c50) 60%, #000000);
 }
@@ -738,18 +751,43 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
      out-rank every one-class signal rule they guard against, and the chip's
      icon color moved from an inline style into EdgeIndicator.css, so plain
      cascade order is sufficient. PASS meaning is unchanged. */
+  /* 2026-08-06 (owner directive "unplayable games"): `--unplayable` joins every
+     selector below. On a PASS card these rules are a defensive backstop for an
+     invariant that already holds; on an unplayable card they are LOAD-BEARING —
+     a postponed game can and does carry real edges, so this is the only thing
+     standing between a dead game and a full mint EDGE chip. Same treatment,
+     opposite meanings: PASS = nothing worth acting on in a game that will be
+     played; unplayable = the game is not available to act on at all. */
   .projection-card--pass .market-table__model--signal,
   .projection-card--pass .market-table__result--edge,
   .projection-card__markets-popover--pass .market-table__model--signal,
   .projection-card__markets-popover--pass .market-table__result--edge,
-  .projection-card--pass .edge-indicator {
+  .projection-card--pass .edge-indicator,
+  .projection-card--unplayable .market-table__model--signal,
+  .projection-card--unplayable .market-table__result--edge,
+  .projection-card__markets-popover--unplayable .market-table__model--signal,
+  .projection-card__markets-popover--unplayable .market-table__result--edge,
+  .projection-card--unplayable .edge-indicator {
     color: var(--text-secondary, #a6a6a6);
     background: transparent;
     border-color: var(--border, #262626);
     box-shadow: none;
   }
-  .projection-card--pass .edge-indicator svg {
+  .projection-card--pass .edge-indicator svg,
+  .projection-card--unplayable .edge-indicator svg {
     color: var(--text-secondary, #a6a6a6);
+  }
+  /* The carousel advance arrow is `color: var(--brand-mint)` by default (see
+     `.projection-card .summary__next`). On an unplayable card it is a scroll
+     control, not a model signal — the same reasoning that already neutralizes
+     it on a ranked no-edge strip (`.summary-carousel--no-edge .summary__next`).
+     The doubled class is deliberate: `.projection-card--unplayable
+     .summary__next` alone is (0,2,0) — a tie with the mint default, won only by
+     source order. (0,3,0) wins outright and stays correct if these blocks are
+     ever reordered. */
+  .projection-card.projection-card--unplayable .summary__next {
+    color: var(--foreground, #fff);
+    box-shadow: none;
   }
 
 /* Item 4 — live indicator, at EVERY breakpoint (2026-08-05: the >=768 gate

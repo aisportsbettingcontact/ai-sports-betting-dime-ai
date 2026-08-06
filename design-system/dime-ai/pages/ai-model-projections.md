@@ -147,6 +147,9 @@
   missing logo file hides itself (clean text-only header). A league with no games that date renders no
   section. Within a section the existing slate order holds (first pitch
   asc; LIVE > upcoming > FINAL tiers).
+  *(AMENDED 2026-08-06: the third tier is now **settled** — FINAL plus
+  POSTPONED and SUSPENDED, which previously fell through into the upcoming
+  tier. See "Owner Directives — 2026-08-06 (unplayable games)".)*
 - **WC venue line drops trailing stadium parentheticals** —
   "MetLife Stadium (NY/NJ)" reads "MetLife Stadium · East Rutherford, NJ"
   (`wcDisplayStadium`; city matching still uses the raw stadium string).
@@ -274,6 +277,66 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   or one scorable no-edge candidate keeps the plain single summary with no
   arrow; a game with no scorable candidate shows the unavailable-data copy.
 
+### Owner Directives — 2026-08-06 (unplayable games: slate tier + mint rationing) — owner-approved
+
+> **APPROVED AND AUTHORIZED by the owner, 2026-08-06.** This section is
+> therefore live law, not a proposal.
+>
+> Closes two findings from the post-deploy audit of PR #409, both of which that
+> PR reported and deliberately did not fix because they were out of its scope.
+> Decision note: PR #413 (`fix/feed-unplayable-slate-rank`), evidence bundle
+> `docs/audits/2026-08-06-feed-unplayable-evidence/`.
+>
+> **Scope of the authorization — read this before citing it.** It covers exactly
+> the four bullets below: the settled-tier change, the zero-mint rule for
+> unplayable cards, the edge-content-stays clause, and the never-unplayable
+> ruling for LIVE. It does **not** authorize either open item that the same
+> audit surfaced and this directive leaves alone:
+>
+> 1. the light-theme LIVE status label measuring **4.4969:1** against a 4.5:1
+>    floor, whose recorded remedy (deepening the `color-mix` from 60% to 50%,
+>    ≈4.96:1) is a brand-token change still awaiting its own owner decision; and
+> 2. the `.projection-card--compact` salience inversion, which would require
+>    revisiting the lifecycle-compaction `opacity: 0.72`.
+>
+> Neither may be shipped on the strength of this approval.
+
+**"Unplayable" is a new, named card state: `postponed` or `suspended`.** It is
+NOT the same thing as PASS. PASS means the model found nothing worth acting on
+in a game that will be played. Unplayable means the game is not available to act
+on, whatever the model found. They look similar and they mean opposite things,
+so they get separate modifiers (`--pass`, `--unplayable`) that share one
+treatment.
+
+- **Slate tier (supersedes the "LIVE > upcoming > FINAL tiers" clause of
+  2026-07-18).** The tiers are now **LIVE > upcoming > settled**, where
+  *settled* = `final` + `postponed` + `suspended`. Previously postponed and
+  suspended fell through into the *upcoming* tier and sorted by their original
+  first pitch, which put games nobody can bet above the ones they can — on the
+  audited slate they held positions 2 and 3 of 5 at every breakpoint. Within a
+  tier the existing order still holds (first pitch ascending; `Array.sort` is
+  stable). The rank is now derived from the card's `status` through an
+  exhaustive `Record<GameStatus, number>`, not by sniffing the `timeLabel`
+  string, so a future lifecycle state cannot silently default into a tier —
+  it fails the typecheck instead.
+- **Zero mint on an unplayable card, even when the model has an edge**
+  (enforces MASTER.md "if it isn't signal (edge/pick/live/active), it isn't
+  mint"). A model edge on a game that will not be played is a stale opinion, not
+  signal. Previously `isPass` only neutralized mint when there were *no* edges,
+  so a postponed game kept a full mint `EDGE +x.x%` chip, mint model cells, mint
+  edge footers, and a mint carousel arrow directly beneath a POSTPONED header —
+  the strongest visual claim on the card arguing with the strongest textual one.
+- **The edge CONTENT stays; only the mint claim goes.** The readout, the pick,
+  the percentage, the market tables, and the popover trigger all still render,
+  in the neutral grey treatment PASS already uses. Removing the information
+  would be a product decision; removing the accent is brand-law enforcement.
+  Accessible names are unchanged and stay truthful: the card's own accessible
+  name already opens with "…, POSTPONED" / "…, SUSPENDED" (directive
+  2026-08-05), so a screen-reader user hears the lifecycle state before the
+  edge, and the visual and the announcement continue to agree.
+- **A LIVE card is never unplayable**, mirroring the 2026-07-23 ruling that a
+  LIVE card never takes the PASS treatment. In-play markets are actionable.
+
 ### Owner Directives — 2026-08-05 (card status header + pregame-only venue/time)
 
 > **SUPERSEDES** the 2026-07-17 "Gamecard matchup block" clause
@@ -310,9 +373,17 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   varies by state and is meant to:** live is `--mint-ink` (signal) with 0.08em
   tracking and the light-theme compaction-contrast correction, and the four
   compact states inherit the existing `--text-secondary → --foreground` remap
-  that holds AA through their `opacity: 0.72`. Measured composited contrast —
-  scheduled 8.13:1 dark / 6.54:1 light, live 6.41 / 4.62, settled 10.32 / 9.01;
-  all clear 4.5:1. Known consequence, logged for the owner rather than fixed
+  that holds AA through their `opacity: 0.72`. Measured composited contrast
+  (**corrected 2026-08-06** — the original figures composited the text over the
+  already-dimmed card instead of over the page, which `opacity` actually
+  composites against) — scheduled 8.13:1 dark / 6.54:1 light, live 6.25 /
+  **4.4969**, settled 10.10 / 8.79. Nine of the ten clear 4.5:1; **light-theme
+  live misses by 0.003** and is a pre-existing defect, not a consequence of this
+  directive — the colour and opacity rules that produce it are byte-identical
+  before and after. Derivation and a computed remedy (deepen the `color-mix` to
+  50%, giving ≈4.96:1) are in
+  `docs/audits/2026-08-05-feed-card-status-evidence/checklist.md`.
+  Second known consequence, logged for the owner rather than fixed
   here: that remap makes the four **non-actionable** states the brightest text
   in the slot, above the scheduled card a user can actually bet. Resolving it
   means touching the lifecycle-compaction dim itself, which is owner territory.

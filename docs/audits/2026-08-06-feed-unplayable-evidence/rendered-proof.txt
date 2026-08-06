@@ -1,0 +1,73 @@
+
+[dark] DOM order: live → scheduled → postponed → suspended → final
+  PASS  live is first
+  PASS  bettable scheduled card is second
+  PASS  scheduled ranks ABOVE postponed  — scheduled@1 postponed@2
+  PASS  scheduled ranks ABOVE suspended  — scheduled@1 suspended@3
+  PASS  postponed carries --unplayable
+  PASS  postponed does NOT carry --pass (distinct meanings)
+  PASS  postponed genuinely has an edge chip (premise of the mint test)  — Edge+8.2%
+  PASS  postponed chip color is not mint  — rgb(255, 255, 255)
+  PASS  postponed chip background is not mint  — rgba(0, 0, 0, 0)
+  PASS  postponed chip border is not mint  — rgb(38, 38, 38)
+  PASS  postponed chip icon is not mint  — rgb(255, 255, 255)
+  PASS  postponed chip arrow is not mint  — rgb(255, 255, 255)
+  PASS  postponed chip has no mint rail shadow  — none
+  PASS  suspended carries --unplayable
+  PASS  suspended does NOT carry --pass (distinct meanings)
+  PASS  suspended genuinely has an edge chip (premise of the mint test)  — Edge+8.2%
+  PASS  suspended chip color is not mint  — rgb(255, 255, 255)
+  PASS  suspended chip background is not mint  — rgba(0, 0, 0, 0)
+  PASS  suspended chip border is not mint  — rgb(38, 38, 38)
+  PASS  suspended chip icon is not mint  — rgb(255, 255, 255)
+  PASS  suspended chip arrow is not mint  — rgb(255, 255, 255)
+  PASS  suspended chip has no mint rail shadow  — none
+  PASS  live card is never unplayable
+  PASS  live card KEEPS its mint rail  — rgb(69, 224, 168)
+
+[light] DOM order: live → scheduled → postponed → suspended → final
+  PASS  live is first
+  PASS  bettable scheduled card is second
+  PASS  scheduled ranks ABOVE postponed  — scheduled@1 postponed@2
+  PASS  scheduled ranks ABOVE suspended  — scheduled@1 suspended@3
+  PASS  postponed carries --unplayable
+  PASS  postponed does NOT carry --pass (distinct meanings)
+  PASS  postponed genuinely has an edge chip (premise of the mint test)  — Edge+8.2%
+  PASS  postponed chip color is not mint  — rgb(0, 0, 0)
+  PASS  postponed chip background is not mint  — rgba(0, 0, 0, 0)
+  PASS  postponed chip border is not mint  — rgb(217, 217, 217)
+  PASS  postponed chip icon is not mint  — rgb(0, 0, 0)
+  PASS  postponed chip arrow is not mint  — rgb(0, 0, 0)
+  PASS  postponed chip has no mint rail shadow  — none
+  PASS  suspended carries --unplayable
+  PASS  suspended does NOT carry --pass (distinct meanings)
+  PASS  suspended genuinely has an edge chip (premise of the mint test)  — Edge+8.2%
+  PASS  suspended chip color is not mint  — rgb(0, 0, 0)
+  PASS  suspended chip background is not mint  — rgba(0, 0, 0, 0)
+  PASS  suspended chip border is not mint  — rgb(217, 217, 217)
+  PASS  suspended chip icon is not mint  — rgb(0, 0, 0)
+  PASS  suspended chip arrow is not mint  — rgb(0, 0, 0)
+  PASS  suspended chip has no mint rail shadow  — none
+  PASS  live card is never unplayable
+  PASS  live card KEEPS its mint rail  — rgb(69, 224, 168)
+
+[popover] {
+  "classes": "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden projection-card__markets-popover projection-card__markets-popover--unplayable",
+  "unplayableClass": true,
+  "isDescendantOfCard": false,
+  "signalCell": {
+    "color": "rgb(166, 166, 166)",
+    "bg": "rgba(0, 0, 0, 0)",
+    "shadow": "none"
+  },
+  "edgeFooter": {
+    "color": "rgb(166, 166, 166)",
+    "bg": "rgba(0, 0, 0, 0)"
+  }
+}
+  PASS  popover carries --unplayable
+  PASS  popover really does portal outside the card
+  PASS  popover signal cell is neutral  — {"color":"rgb(166, 166, 166)","bg":"rgba(0, 0, 0, 0)","shadow":"none"}
+  PASS  popover edge footer is neutral  — {"color":"rgb(166, 166, 166)","bg":"rgba(0, 0, 0, 0)"}
+
+ALL CHECKS PASSED

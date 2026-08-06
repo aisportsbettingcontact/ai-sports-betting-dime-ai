@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 import { WC_WINNER_MARKETS, buildFeedSections, slateStatusRank, wcDisplayCity, wcDisplayStadium, wcRoundLabel } from "./DimeModelFeed";
+import type { GameStatus } from "@/components/projections/types";
 
 /**
  * Regression guards for the Dime AI Model Projections surface
@@ -152,14 +153,52 @@ describe("DimeModelFeed — MLB bindings", () => {
     );
   });
 
-  it("LIVE games rank above upcoming, settled/final sink last (2026-07-18)", () => {
-    expect(slateStatusRank({ liveLabel: "LIVE · BOT 9TH", timeLabel: "9:40 PM ET" })).toBe(0);
-    expect(slateStatusRank({ liveLabel: null, timeLabel: "7:05 PM ET" })).toBe(1);
-    expect(slateStatusRank({ liveLabel: null, timeLabel: "FINAL" })).toBe(2);
-    expect(slateStatusRank({ liveLabel: null, timeLabel: "FINAL (PENS)" })).toBe(2);
+  it("LIVE games rank above upcoming, settled sinks last (2026-07-18, amended 2026-08-06)", () => {
+    expect(slateStatusRank({ status: "live" })).toBe(0);
+    expect(slateStatusRank({ status: "scheduled" })).toBe(1);
+    expect(slateStatusRank({ status: "final" })).toBe(2);
+    // 2026-08-06: postponed and suspended join the SETTLED tier. They used to
+    // fall through into the upcoming tier, sorting games nobody can bet above
+    // the ones they can.
+    expect(slateStatusRank({ status: "postponed" })).toBe(2);
+    expect(slateStatusRank({ status: "suspended" })).toBe(2);
     // The tier sort is applied to BOTH league sections of the combined slate
     // (per-section — the WC-above-MLB section order is absolute).
     expect(src.match(/\.sort\(\(a, b\) => slateStatusRank\(a\) - slateStatusRank\(b\)\)/g)).toHaveLength(2);
+  });
+
+  it("derives the tier from status, not from the timeLabel string", () => {
+    // Sniffing `timeLabel.startsWith("FINAL")` is what let postponed and
+    // suspended default silently into the upcoming tier. An exhaustive
+    // Record<GameStatus, number> makes a future lifecycle state a typecheck
+    // failure instead of a silent mis-tier.
+    expect(src).toMatch(/Record<GameStatus, number>/);
+    expect(src).not.toMatch(/timeLabel\.startsWith\("FINAL"\)/);
+  });
+
+  it("orders a real mixed slate: live, then upcoming by first pitch, then settled", () => {
+    const card = (status: GameStatus) => ({ status });
+    const slate = [
+      card("postponed"),
+      card("suspended"),
+      card("scheduled"),
+      card("live"),
+      card("final"),
+    ];
+    const ordered = [...slate].sort(
+      (a, b) => slateStatusRank(a) - slateStatusRank(b)
+    );
+    expect(ordered.map(c => c.status)).toEqual([
+      "live",
+      "scheduled",
+      "postponed",
+      "suspended",
+      "final",
+    ]);
+    // The bettable card is never below an unplayable one.
+    expect(ordered.findIndex(c => c.status === "scheduled")).toBeLessThan(
+      ordered.findIndex(c => c.status === "postponed")
+    );
   });
 });
 
