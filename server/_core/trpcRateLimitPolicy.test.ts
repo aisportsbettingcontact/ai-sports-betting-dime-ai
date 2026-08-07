@@ -361,7 +361,12 @@ describe("clientIpKey", () => {
 });
 
 describe("resolveClientIp", () => {
-  it("returns the leftmost XFF entry (true client) unnormalized", () => {
+  it("returns the leftmost XFF entry on a direct-to-origin hit", () => {
+    // Only true for a direct-to-origin request. Behind Cloudflare the leftmost
+    // XFF entry is the CF PoP, not the visitor — see the 2026-08-06 forensic
+    // audit (server/_core/clientIdentity.ts docblock) and the Cloudflare edge
+    // branch below, which resolves the same fixture's true client via
+    // cf-connecting-ip instead.
     expect(
       resolveClientIp(
         req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } })
@@ -401,11 +406,18 @@ describe("resolveClientIp — Cloudflare edge branch (Phase 4)", () => {
       },
     });
 
-  it("EDGE_MODE off: ignores cf-connecting-ip, byte-identical legacy behavior", () => {
+  it("EDGE_MODE off/unset: STILL keys on cf-connecting-ip when the origin proof passes (footgun fix)", () => {
+    // Superseded 2026-08-06: identity resolution used to gate the
+    // cf-connecting-ip branch on `edgeMode() !== "off"`, so the tempting
+    // one-step rollback `EDGE_MODE=off` instantly collapsed all six rate
+    // limiters onto per-CF-PoP buckets while DNS was still orange-clouded.
+    // resolveClientIp now delegates to resolveClientIdentity (see
+    // server/_core/clientIdentity.ts), which is DELIBERATELY NOT gated on
+    // edgeMode() — the cryptographic origin proof is self-sufficient. See
+    // .superpowers/sdd/task-3.1-brief.md.
     delete process.env.EDGE_MODE;
     process.env.EDGE_ORIGIN_SECRET = SECRET;
-    // Even with a full valid edge proof present, off-mode keys on leftmost XFF.
-    expect(resolveClientIp(edgeReq())).toBe(CF_UPSTREAM);
+    expect(resolveClientIp(edgeReq())).toBe("77.88.99.100");
   });
 
   it("EDGE_MODE on + valid proof: keys on cf-connecting-ip (true client)", () => {

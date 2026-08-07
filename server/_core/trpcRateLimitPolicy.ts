@@ -1,6 +1,5 @@
 import type { Request, RequestHandler, Response } from "express";
-import { ipKeyGenerator } from "express-rate-limit";
-import { cfConnectingIp, edgeMode, edgeProofPasses } from "./edgeProxy";
+import { resolveClientIdentity, clientIdentityKey } from "./clientIdentity";
 import { logSafe } from "./logSafe";
 
 /**
@@ -157,52 +156,24 @@ export function classifyTrpcProcedures(
 }
 
 /**
- * IPv6-normalized true-client key for rate limiters.
- *
- * Railway's edge sanitizes inbound `X-Forwarded-For` (verified in production
- * 2026-08-05: an injected XFF is discarded) and rewrites it as
- * `[trueClient, railwayEdgeInternal]`. Express `req.ip` under
- * `trust proxy = 1` resolves to the RIGHTMOST entry — the Railway edge node,
- * which rotates per connection (152.233.x.x) — so keying on `req.ip` both
- * multiplied the per-client budget (one client across N edge nodes) and let
- * unrelated clients behind one edge node share a budget. The true client is
- * the LEFTMOST sanitized entry. Global `trust proxy` is left at 1 on purpose:
- * raising it also shifts `x-forwarded-proto` resolution and would risk the
- * secure-cookie / `req.protocol` path — this fix is scoped to limiter keys.
- * `ipKeyGenerator` is mandatory for IPv6 /56 normalization (express-rate-limit
- * v8 throws ERR_ERL_KEY_GEN_IPV6 on a raw address).
+ * @deprecated Use `clientIdentityKey` from `./clientIdentity`. Kept as a thin
+ * alias so existing call sites keep compiling during the migration — see the
+ * 2026-08-06 forensic audit (TWELVE hand-rolled identity sites) tracked in
+ * `.superpowers/sdd/task-3.1-brief.md`.
  */
 export function clientIpKey(req: Pick<Request, "headers" | "ip">): string {
-  return ipKeyGenerator(resolveClientIp(req));
+  return clientIdentityKey(req);
 }
 
 /**
- * The raw resolved true-client IP.
- *
- * Behind Cloudflare (EDGE_MODE "log" or "on") the leftmost sanitized XFF token
- * is the CF PoP egress IP, not the visitor — keying on it would collapse every
- * user behind a PoP onto one limiter budget AND blind the private-range canary
- * (a public-but-wrong IP). So when the request cryptographically proves it came
- * through our Cloudflare edge (valid origin secret + CF-range upstream) we key
- * on `cf-connecting-ip` (Cloudflare's authoritative true-client header).
- *
- * This proof runs in BOTH "log" and "on" (edgeMode !== "off") and is INLINE —
- * it does not depend on the originLock middleware having run — so IP-keying is
- * decoupled from 403 enforcement. That makes "log" a fully healthy rollback
- * target: `EDGE_MODE=on → log` stops enforcement 403s while keeping keys
- * correct (no PoP collapse), the fast escape hatch from an edge fault.
- *
- * With EDGE_MODE unset/"off" this is byte-identical to the legacy behavior
- * (leftmost sanitized XFF, else req.ip) — the merge is inert.
+ * @deprecated Use `resolveClientIdentity` from `./clientIdentity`, which is
+ * the single source of truth and is DELIBERATELY NOT gated on `edgeMode()`
+ * (see that module's docblock for why the old `edgeMode() !== "off"` gate
+ * here was a live rollback footgun). Kept as a thin alias so existing call
+ * sites keep compiling during the migration.
  */
 export function resolveClientIp(req: Pick<Request, "headers" | "ip">): string {
-  if (edgeMode() !== "off") {
-    const cf = cfConnectingIp(req);
-    if (cf && edgeProofPasses(req)) return cf;
-  }
-  const xff = req.headers?.["x-forwarded-for"];
-  const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
-  return first || req.ip || "";
+  return resolveClientIdentity(req);
 }
 
 // Ranges a genuine internet client can NEVER legitimately have as its source
