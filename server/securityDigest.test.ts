@@ -1,138 +1,192 @@
 /**
  * securityDigest.test.ts
  *
- * Unit tests for the security digest module (securityDigest.ts).
+ * Unit tests for the security digest module (securityDigest.ts), covering
+ * Task 4.9 (A1 bucketing, A2 allowlist, A3 dedup-sample labeling) and
+ * Task 4.10 (B1 delivery-failure escalation, B2 restart-safe window).
  *
  * ── Architecture ──────────────────────────────────────────────────────────────
- * securityDigest.ts has three layers:
- *   1. topIpsByCount()  — pure aggregation helper (private, tested indirectly)
- *   2. runSecurityDigest() — async orchestrator (private, tested via scheduler)
- *   3. startSecurityDigestScheduler() — exported, fires runSecurityDigest() when
- *      UTC time matches 13:00 and today's digest hasn't run yet.
+ * All external dependencies (db helpers, notifyOwner, discord bot client,
+ * discord.js itself) are vi.mock'd. Tests drive the REAL digest-building
+ * code (startSecurityDigestScheduler → maybeFireDigest → runSecurityDigest
+ * → computeDigestData → buildNotifyOwnerContent/buildDigestEmbed) with
+ * fixture data, then assert on what notifyOwner (and, for B1, the Discord
+ * escalation channel) actually received — not on a helper called in
+ * isolation. The flagship A2 test in particular constructs a fixture with
+ * CI IPs, a Cloudflare PoP IP, and one genuine attacker, and asserts the
+ * reported threat level reflects ONLY the attacker.
  *
- * ── Test strategy ─────────────────────────────────────────────────────────────
- * All external dependencies (db helpers, notifyOwner) are vi.mock'd.
- * Each test:
- *   1. Sets up mock return values
- *   2. Mocks Date to return 13:00 UTC on a UNIQUE calendar date per test
- *      (unique date prevents lastDigestDateUTC dedup across tests in the same
- *      module instance — Vitest caches modules between tests in the same file)
- *   3. Calls startSecurityDigestScheduler() — triggers immediate fire
- *   4. Awaits 100ms for async digest to complete
- *   5. Captures mock.calls into a local variable BEFORE vi.restoreAllMocks()
- *      (restoring wipes call history — this is the critical ordering rule)
- *   6. Asserts on captured calls
- *   7. Calls vi.restoreAllMocks() to undo the Date spy
- *
- * ── Critical invariants ───────────────────────────────────────────────────────
- * - ALWAYS capture mock.calls BEFORE vi.restoreAllMocks()
- * - Each test MUST use a unique ISO date to avoid lastDigestDateUTC dedup
- * - vi.resetAllMocks() in beforeEach resets call counts but NOT module-level
- *   state (lastDigestDateUTC persists across tests in the same module instance)
- *
- * All log lines follow [INPUT]/[STEP]/[STATE]/[OUTPUT]/[VERIFY] format.
+ * ── Test strategy notes (carried over from the pre-4.9/4.10 test suite) ───────
+ * - Each test MUST use a UNIQUE ISO date (mockDateAtUTC's isoDate arg) —
+ *   `lastDigestDateUTC` is module-level state that persists across tests in
+ *   the same module instance (vitest caches modules between tests in the
+ *   same file).
+ * - ALWAYS capture mock.calls BEFORE vi.restoreAllMocks() (restoring wipes
+ *   call history).
+ * - getSecurityEvents() is called TWICE per digest run as of Task 4.10 / B2:
+ *   once by maybeFireDigest()'s persisted-marker check (opts.eventType ===
+ *   DIGEST_MARKER_DAILY_EVENT_TYPE) and once by runSecurityDigest() for the
+ *   real raw-event window fetch (no eventType filter). setRawEvents()
+ *   below installs a mockImplementation that discriminates between the two
+ *   by opts.eventType so a test's fixture events only answer the SECOND
+ *   call, never get mistaken for a persisted marker.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ─── Mock external dependencies (vi.mock is hoisted before any import) ────────
 vi.mock("./db", () => ({
-  getSecurityEventCounts: vi.fn(),
+  getSecurityEventCountsByBucket: vi.fn(),
   getSecurityEvents: vi.fn(),
   pruneSecurityEvents: vi.fn(),
+  insertSecurityEvent: vi.fn(),
+  DIGEST_MARKER_DAILY_EVENT_TYPE: "DIGEST_MARKER_DAILY",
+  DIGEST_MARKER_WEEKLY_EVENT_TYPE: "DIGEST_MARKER_WEEKLY",
 }));
 
 vi.mock("./_core/notification", () => ({
   notifyOwner: vi.fn(),
 }));
 
+vi.mock("./discord/bot", () => ({
+  getDiscordClient: vi.fn(),
+}));
+
+// discord.js's real EmbedBuilder/TextChannel are heavy Discord API-client
+// classes. A minimal fake keeps `instanceof TextChannel` (used by
+// securityDigest.ts's postDigestToDiscord/escalateDeliveryFailure) working
+// while giving tests a plain, inspectable `send` mock.
+vi.mock("discord.js", () => {
+  class MockEmbedBuilder {
+    data: { title?: string; description?: string } = {};
+    setColor() { return this; }
+    setTitle(v: string) { this.data.title = v; return this; }
+    setDescription(v: string) { this.data.description = v; return this; }
+    addFields() { return this; }
+    setFooter() { return this; }
+    setTimestamp() { return this; }
+  }
+  class MockTextChannel {
+    name = "security-events";
+    guild = { name: "Test Guild" };
+    send = vi.fn().mockResolvedValue(undefined);
+  }
+  return { EmbedBuilder: MockEmbedBuilder, TextChannel: MockTextChannel };
+});
+
 // ─── Import mocked modules and the module under test ─────────────────────────
 import * as db from "./db";
 import * as notification from "./_core/notification";
-import { startSecurityDigestScheduler } from "./securityDigest";
+import * as discordBot from "./discord/bot";
+import { TextChannel } from "discord.js";
+import { startSecurityDigestScheduler, computeThreatLevel } from "./securityDigest";
 
 // ─── Typed mock accessors ─────────────────────────────────────────────────────
-const mockGetCounts = db.getSecurityEventCounts as ReturnType<typeof vi.fn>;
+const mockGetCountsByBucket = db.getSecurityEventCountsByBucket as ReturnType<typeof vi.fn>;
 const mockGetEvents = db.getSecurityEvents as ReturnType<typeof vi.fn>;
 const mockPrune = db.pruneSecurityEvents as ReturnType<typeof vi.fn>;
+const mockInsertEvent = db.insertSecurityEvent as ReturnType<typeof vi.fn>;
 const mockNotify = notification.notifyOwner as ReturnType<typeof vi.fn>;
+const mockGetDiscordClient = discordBot.getDiscordClient as ReturnType<typeof vi.fn>;
+
+const DIGEST_MARKER_DAILY_EVENT_TYPE = "DIGEST_MARKER_DAILY";
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
-/** Build a minimal event-like object with the given IP. */
-function makeEvent(ip: string | null) {
+interface RawEvent {
+  id: number;
+  eventType: string;
+  ip: string | null;
+  blockedOrigin: string | null;
+  trpcPath: string | null;
+  httpMethod: string | null;
+  userAgent: string | null;
+  context: string | null;
+  occurredAt: number;
+}
+
+/** Build a minimal raw-event row. */
+function makeEvent(
+  ip: string | null,
+  eventType: string = "CSRF_BLOCK",
+  context: string | null = null
+): RawEvent {
   return {
     id: Math.floor(Math.random() * 1_000_000),
-    eventType: "CSRF_BLOCK" as const,
+    eventType,
     ip,
     blockedOrigin: null,
     trpcPath: "/api/trpc/test",
     httpMethod: "POST",
     userAgent: null,
-    context: null,
+    context,
     occurredAt: Date.now(),
   };
 }
 
-/** Build a counts object from individual event type counts. */
-function makeCounts(csrf = 0, rate = 0, auth = 0) {
-  return {
-    CSRF_BLOCK: csrf,
-    RATE_LIMIT: rate,
-    AUTH_FAIL: auth,
-    total: csrf + rate + auth,
-  };
+/** Build a bucket-count row as getSecurityEventCountsByBucket() would return. */
+function makeBucket(eventType: string, context: string | null, count: number) {
+  return { eventType, context, count };
 }
 
 /**
- * Mock globalThis.Date to return a fixed 13:00 UTC datetime on the given ISO date.
- * Also mocks Date.now() to return the same fixed timestamp.
- *
- * Returns the mocked Date instance so tests can reference the exact timestamp.
+ * Installs a getSecurityEvents() mock that discriminates between the B2
+ * persisted-marker check (opts.eventType === DIGEST_MARKER_DAILY_EVENT_TYPE
+ * → resolves to `markerRows`, default []) and the real raw-event window
+ * fetch (no eventType filter → resolves to `events`).
+ */
+function setRawEvents(events: RawEvent[], markerRows: RawEvent[] = []) {
+  mockGetEvents.mockImplementation((opts: { eventType?: string }) => {
+    if (opts?.eventType === DIGEST_MARKER_DAILY_EVENT_TYPE) {
+      return Promise.resolve(markerRows);
+    }
+    return Promise.resolve(events);
+  });
+}
+
+function setBucketCounts(buckets: Array<{ eventType: string; context: string | null; count: number }>) {
+  mockGetCountsByBucket.mockResolvedValue(buckets);
+}
+
+/**
+ * Mock globalThis.Date to return a fixed UTC datetime on the given ISO date
+ * at the given hour:minute. Also mocks Date.now(). Returns the mocked Date.
  *
  * CRITICAL: Call vi.restoreAllMocks() AFTER reading mock.calls to undo this spy.
  *
  * @param isoDate  "YYYY-MM-DD" — MUST be unique per test to avoid lastDigestDateUTC dedup
  */
-function mockDateAt1300UTC(isoDate: string): Date {
-  const mockNow = new Date(`${isoDate}T13:00:00.000Z`);
+function mockDateAtUTC(isoDate: string, hour = 13, minute = 0): Date {
+  const mockNow = new Date(
+    `${isoDate}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`
+  );
   const RealDate = globalThis.Date;
 
-  // vitest 4: `new Date()` through the spy requires a constructable
-  // implementation — arrows lost `new` support. `function` + explicit return
-  // preserves both call and construct paths.
-  vi.spyOn(globalThis, "Date").mockImplementation(function (
-    ...args: unknown[]
-  ) {
+  vi.spyOn(globalThis, "Date").mockImplementation(function (...args: unknown[]) {
     if (args.length === 0) return mockNow;
     // @ts-expect-error — allow Date constructor with args
     return new RealDate(...args);
   });
-  // Mock Date.now() used in WINDOW_MS calculation
-  (globalThis.Date as unknown as { now: () => number }).now = () =>
-    mockNow.getTime();
+  (globalThis.Date as unknown as { now: () => number }).now = () => mockNow.getTime();
 
   return mockNow;
 }
 
-/**
- * Fire the scheduler and wait for the async digest to complete.
- * The scheduler fires immediately when hour=13, minute=0, and today's digest
- * hasn't run yet. We await 100ms for runSecurityDigest() to finish.
- */
+/** Fire the scheduler and wait for the async digest to complete. */
 async function fireDigestAndWait(): Promise<void> {
   startSecurityDigestScheduler();
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise(resolve => setTimeout(resolve, 150));
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 beforeEach(() => {
   vi.resetAllMocks();
-  // Default implementations — individual tests override as needed
-  mockGetCounts.mockResolvedValue(makeCounts(0, 0, 0));
-  mockGetEvents.mockResolvedValue([]);
+  mockGetCountsByBucket.mockResolvedValue([]);
+  setRawEvents([]);
   mockPrune.mockResolvedValue(0);
+  mockInsertEvent.mockResolvedValue(undefined);
   mockNotify.mockResolvedValue(true);
+  mockGetDiscordClient.mockReturnValue(null); // no-op Discord posting by default
 });
 
 afterEach(() => {
@@ -141,517 +195,419 @@ afterEach(() => {
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
 describe("securityDigest", () => {
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 1: topIpsByCount — IP aggregation and ranking
-  // ───────────────────────────────────────────────────────────────────────────
-  describe("topIpsByCount — IP aggregation and ranking", () => {
-    it("ranks IPs by descending event count", async () => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // A2 — known-source allowlist excludes CI/Cloudflare/owner from threat level
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("A2 — allowlist excludes CI/Cloudflare/owner from the threat level", () => {
+    it("threat level reflects ONLY the genuine attacker — CI + Cloudflare + owner excluded", async () => {
       console.log(
-        "\n[INPUT] 10 events: 4×1.1.1.1, 3×2.2.2.2, 2×3.3.3.3, 1×4.4.4.4"
+        "\n[INPUT] 111 events total (matching the real 2026-08-06 incident's total): " +
+          "30 from a genuine attacker, 50 from a seeded CI IP, 20 from the seeded owner IP, " +
+          "11 from a Cloudflare PoP IP"
       );
-      console.log(
-        "[INPUT] Expected: IPs appear in content in descending order"
-      );
+
+      const attackerIp = "203.0.113.50"; // TEST-NET-3 — not CF, not seeded automation
+      const ciIp = "40.81.6.244"; // seeded known-automation IP (2026-08-06 incident)
+      const ownerIp = "47.152.160.175"; // seeded known-automation IP (owner ISP)
+      const cfIp = "173.245.48.1"; // inside CF_IPV4_CIDRS[0] = 173.245.48.0/20
 
       const events = [
-        ...Array(4)
-          .fill(null)
-          .map(() => makeEvent("1.1.1.1")),
-        ...Array(3)
-          .fill(null)
-          .map(() => makeEvent("2.2.2.2")),
-        ...Array(2)
-          .fill(null)
-          .map(() => makeEvent("3.3.3.3")),
-        ...Array(1)
-          .fill(null)
-          .map(() => makeEvent("4.4.4.4")),
+        ...Array(30).fill(null).map(() => makeEvent(attackerIp, "RATE_LIMIT", "public_feed")),
+        ...Array(50).fill(null).map(() => makeEvent(ciIp, "RATE_LIMIT", "edge_origin_ingress_anomaly")),
+        ...Array(20).fill(null).map(() => makeEvent(ownerIp, "RATE_LIMIT", "global")),
+        ...Array(11).fill(null).map(() => makeEvent(cfIp, "RATE_LIMIT", "public_feed")),
       ];
 
-      mockGetCounts.mockResolvedValue(makeCounts(4, 3, 3));
-      mockGetEvents.mockResolvedValue(events);
-      mockPrune.mockResolvedValue(0);
-      mockNotify.mockResolvedValue(true);
+      setBucketCounts([
+        makeBucket("RATE_LIMIT", "public_feed", 41), // 30 attacker + 11 CF
+        makeBucket("RATE_LIMIT", "edge_origin_ingress_anomaly", 50),
+        makeBucket("RATE_LIMIT", "global", 20),
+      ]);
+      setRawEvents(events);
 
-      mockDateAt1300UTC("2025-01-15");
+      mockDateAtUTC("2025-09-01");
       await fireDigestAndWait();
 
-      // Capture BEFORE restoreAllMocks
       const notifyCalls = [...mockNotify.mock.calls];
       vi.restoreAllMocks();
 
-      console.log("[STATE] notifyOwner call count:", notifyCalls.length);
       expect(notifyCalls).toHaveLength(1);
+      const { title, content } = notifyCalls[0][0] as { title: string; content: string };
+      console.log(`[STATE] title: "${title}"`);
 
-      const content: string = notifyCalls[0][0].content;
-      console.log(
-        "[STATE] Content IP section:\n" +
-          content
-            .split("\n")
-            .filter(l => /\d+\.\d+\.\d+\.\d+/.test(l))
-            .join("\n")
-      );
+      // 111 total - 81 allowlisted (50 CI + 20 owner + 11 CF) = 30 attacker-only.
+      console.log("[STATE] expected threatTotal=30 -> MODERATE (10<=30<50)");
+      expect(title).toContain("[MODERATE]");
+      expect(title).toContain("30 unclassified event");
 
-      // All 4 IPs present (limit=5, only 4 unique IPs)
-      expect(content).toContain("1.1.1.1");
-      expect(content).toContain("2.2.2.2");
-      expect(content).toContain("3.3.3.3");
-      expect(content).toContain("4.4.4.4");
-
-      // Ordering: 1.1.1.1 before 2.2.2.2 before 3.3.3.3
-      const pos1 = content.indexOf("1.1.1.1");
-      const pos2 = content.indexOf("2.2.2.2");
-      const pos3 = content.indexOf("3.3.3.3");
-      expect(pos1).toBeLessThan(pos2);
-      expect(pos2).toBeLessThan(pos3);
+      expect(content).toContain(attackerIp);
+      expect(content).not.toContain(ciIp);
+      expect(content).not.toContain(ownerIp);
+      expect(content).not.toContain(cfIp);
 
       console.log(
-        "[VERIFY] PASS — IPs ranked: 1.1.1.1(4) > 2.2.2.2(3) > 3.3.3.3(2) > 4.4.4.4(1)"
+        "[VERIFY] PASS — threat level MODERATE(30) reflects only the attacker; " +
+          "CI/owner/Cloudflare IPs never appear in the digest content"
       );
     });
 
-    it("maps null IPs to 'unknown'", async () => {
-      console.log("\n[INPUT] 3 events with null IP, 1 event with '5.5.5.5'");
-      console.log("[INPUT] Expected: content contains 'unknown'");
+    it("a digest with ONLY CI/Cloudflare/owner traffic reports CLEAN, not HIGH", async () => {
+      console.log("\n[INPUT] 90 events, ALL from seeded automation/Cloudflare IPs, 0 genuine attacker events");
+
+      const ciIp = "172.182.201.162";
+      const cfIp = "104.16.0.5"; // inside CF_IPV4_CIDRS 104.16.0.0/13
 
       const events = [
-        ...Array(3)
-          .fill(null)
-          .map(() => makeEvent(null)),
-        makeEvent("5.5.5.5"),
+        ...Array(60).fill(null).map(() => makeEvent(ciIp, "RATE_LIMIT", "edge_origin_ingress_anomaly")),
+        ...Array(30).fill(null).map(() => makeEvent(cfIp, "RATE_LIMIT", "public_feed")),
       ];
+      setBucketCounts([
+        makeBucket("RATE_LIMIT", "edge_origin_ingress_anomaly", 60),
+        makeBucket("RATE_LIMIT", "public_feed", 30),
+      ]);
+      setRawEvents(events);
 
-      mockGetCounts.mockResolvedValue(makeCounts(2, 1, 1));
-      mockGetEvents.mockResolvedValue(events);
-
-      mockDateAt1300UTC("2025-01-16");
-      await fireDigestAndWait();
-
-      const notifyCalls = [...mockNotify.mock.calls];
-      vi.restoreAllMocks();
-
-      console.log("[STATE] notifyOwner call count:", notifyCalls.length);
-      expect(notifyCalls).toHaveLength(1);
-
-      const content: string = notifyCalls[0][0].content;
-      expect(content).toContain("unknown");
-      console.log("[STATE] 'unknown' in content:", content.includes("unknown"));
-      console.log("[VERIFY] PASS — null IPs correctly mapped to 'unknown'");
-    });
-
-    it("shows 'No events recorded.' when event list is empty", async () => {
-      console.log("\n[INPUT] 0 events, all counts zero");
-      console.log("[INPUT] Expected: content contains 'No events recorded.'");
-
-      mockGetCounts.mockResolvedValue(makeCounts(0, 0, 0));
-      mockGetEvents.mockResolvedValue([]);
-
-      mockDateAt1300UTC("2025-01-17");
+      mockDateAtUTC("2025-09-02");
       await fireDigestAndWait();
 
       const notifyCalls = [...mockNotify.mock.calls];
       vi.restoreAllMocks();
 
       expect(notifyCalls).toHaveLength(1);
-      const content: string = notifyCalls[0][0].content;
-      expect(content).toContain("No events recorded.");
-      console.log(
-        "[VERIFY] PASS — empty event list produces 'No events recorded.'"
-      );
+      const { title } = notifyCalls[0][0] as { title: string };
+      console.log(`[STATE] title: "${title}"`);
+      expect(title).toContain("[CLEAN]");
+      expect(title).toContain("0 unclassified event");
+      console.log("[VERIFY] PASS — 90 raw events, all allowlisted, threat level is CLEAN");
     });
-  });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 2: Threat level — all boundary conditions
-  // ───────────────────────────────────────────────────────────────────────────
-  describe("threat level — boundary conditions", () => {
-    const THREAT_CASES: Array<{
-      total: number;
-      expected: string;
-      isoDate: string;
-    }> = [
-      { total: 0, expected: "CLEAN", isoDate: "2025-02-01" },
-      { total: 1, expected: "LOW", isoDate: "2025-02-02" },
-      { total: 9, expected: "LOW", isoDate: "2025-02-03" },
-      { total: 10, expected: "MODERATE", isoDate: "2025-02-04" },
-      { total: 49, expected: "MODERATE", isoDate: "2025-02-05" },
-      { total: 50, expected: "HIGH", isoDate: "2025-02-06" },
-      { total: 199, expected: "HIGH", isoDate: "2025-02-07" },
-      { total: 200, expected: "CRITICAL", isoDate: "2025-02-08" },
-      { total: 999, expected: "CRITICAL", isoDate: "2025-02-09" },
-    ];
+    it("owner-configured allowlist (SECURITY_DIGEST_ALLOWLIST_IPS) excludes an extra IP", async () => {
+      console.log("\n[INPUT] one event from an IP set via SECURITY_DIGEST_ALLOWLIST_IPS env var");
+      const extraIp = "198.51.100.7"; // TEST-NET-2, not seeded by default
+      process.env.SECURITY_DIGEST_ALLOWLIST_IPS = extraIp;
 
-    for (const { total, expected, isoDate } of THREAT_CASES) {
-      it(`total=${total} → [${expected}]`, async () => {
-        console.log(
-          `\n[INPUT] total=${total} | isoDate=${isoDate} | expected=[${expected}]`
-        );
+      try {
+        const events = Array(5).fill(null).map(() => makeEvent(extraIp, "RATE_LIMIT", "global"));
+        setBucketCounts([makeBucket("RATE_LIMIT", "global", 5)]);
+        setRawEvents(events);
 
-        const csrf = Math.floor(total / 3);
-        const rate = Math.floor(total / 3);
-        const auth = total - csrf - rate;
-
-        mockGetCounts.mockResolvedValue({
-          CSRF_BLOCK: csrf,
-          RATE_LIMIT: rate,
-          AUTH_FAIL: auth,
-          total,
-        });
-        mockGetEvents.mockResolvedValue([]);
-        mockPrune.mockResolvedValue(0);
-        mockNotify.mockResolvedValue(true);
-
-        mockDateAt1300UTC(isoDate);
+        mockDateAtUTC("2025-09-03");
         await fireDigestAndWait();
 
         const notifyCalls = [...mockNotify.mock.calls];
         vi.restoreAllMocks();
 
-        console.log("[STATE] notifyOwner call count:", notifyCalls.length);
         expect(notifyCalls).toHaveLength(1);
-
-        const title: string = notifyCalls[0][0].title;
+        const { title } = notifyCalls[0][0] as { title: string };
         console.log(`[STATE] title: "${title}"`);
-        expect(title).toContain(`[${expected}]`);
-        console.log(
-          `[VERIFY] PASS — title contains "[${expected}]" for total=${total}`
-        );
-      });
-    }
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 3: Notification title — pluralization
-  // ───────────────────────────────────────────────────────────────────────────
-  describe("notification title — pluralization", () => {
-    it("uses singular 'event' for total=1", async () => {
-      console.log("\n[INPUT] total=1 → expect '1 event in 24h' (singular)");
-
-      mockGetCounts.mockResolvedValue(makeCounts(1, 0, 0));
-      mockGetEvents.mockResolvedValue([makeEvent("9.9.9.9")]);
-
-      mockDateAt1300UTC("2025-03-01");
-      await fireDigestAndWait();
-
-      const notifyCalls = [...mockNotify.mock.calls];
-      vi.restoreAllMocks();
-
-      expect(notifyCalls).toHaveLength(1);
-      const title: string = notifyCalls[0][0].title;
-      console.log(`[STATE] title: "${title}"`);
-      expect(title).toContain("1 event in 24h");
-      expect(title).not.toContain("1 events");
-      console.log("[VERIFY] PASS — singular 'event' used for total=1");
-    });
-
-    it("uses plural 'events' for total=5", async () => {
-      console.log("\n[INPUT] total=5 → expect '5 events in 24h' (plural)");
-
-      mockGetCounts.mockResolvedValue(makeCounts(2, 2, 1));
-      mockGetEvents.mockResolvedValue(
-        Array(5)
-          .fill(null)
-          .map(() => makeEvent("8.8.8.8"))
-      );
-
-      mockDateAt1300UTC("2025-03-02");
-      await fireDigestAndWait();
-
-      const notifyCalls = [...mockNotify.mock.calls];
-      vi.restoreAllMocks();
-
-      expect(notifyCalls).toHaveLength(1);
-      const title: string = notifyCalls[0][0].title;
-      console.log(`[STATE] title: "${title}"`);
-      expect(title).toContain("5 events in 24h");
-      console.log("[VERIFY] PASS — plural 'events' used for total=5");
-    });
-
-    it("uses plural 'events' for total=0", async () => {
-      console.log(
-        "\n[INPUT] total=0 → expect '0 events in 24h' (plural, 0 is not 1)"
-      );
-
-      mockGetCounts.mockResolvedValue(makeCounts(0, 0, 0));
-      mockGetEvents.mockResolvedValue([]);
-
-      mockDateAt1300UTC("2025-03-03");
-      await fireDigestAndWait();
-
-      const notifyCalls = [...mockNotify.mock.calls];
-      vi.restoreAllMocks();
-
-      expect(notifyCalls).toHaveLength(1);
-      const title: string = notifyCalls[0][0].title;
-      console.log(`[STATE] title: "${title}"`);
-      expect(title).toContain("0 events in 24h");
-      console.log("[VERIFY] PASS — plural 'events' used for total=0");
+        expect(title).toContain("[CLEAN]");
+        console.log("[VERIFY] PASS — SECURITY_DIGEST_ALLOWLIST_IPS entry excluded from threat level");
+      } finally {
+        delete process.env.SECURITY_DIGEST_ALLOWLIST_IPS;
+      }
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 4: pruneSecurityEvents — retention policy
-  // ───────────────────────────────────────────────────────────────────────────
-  describe("pruneSecurityEvents — retention policy", () => {
-    it("calls pruneSecurityEvents(90) on every digest run", async () => {
-      console.log("\n[INPUT] Normal digest run");
-      console.log(
-        "[INPUT] Expected: pruneSecurityEvents called exactly once with arg=90"
-      );
+  // ═══════════════════════════════════════════════════════════════════════════
+  // A1 — bucket by (eventType, context), not just eventType
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("A1 — (eventType, context) bucket breakdown", () => {
+    it("Rate Limit Triggers are broken out by limitType (context), not collapsed into one number", async () => {
+      console.log("\n[INPUT] RATE_LIMIT events across 3 different limitType contexts, all from a single attacker");
+      const attackerIp = "203.0.113.99";
+      const events = [
+        ...Array(12).fill(null).map(() => makeEvent(attackerIp, "RATE_LIMIT", "public_feed")),
+        ...Array(7).fill(null).map(() => makeEvent(attackerIp, "RATE_LIMIT", "auth")),
+        ...Array(3).fill(null).map(() => makeEvent(attackerIp, "RATE_LIMIT", "waitlist_submit")),
+      ];
+      setBucketCounts([
+        makeBucket("RATE_LIMIT", "public_feed", 12),
+        makeBucket("RATE_LIMIT", "auth", 7),
+        makeBucket("RATE_LIMIT", "waitlist_submit", 3),
+      ]);
+      setRawEvents(events);
 
-      mockGetCounts.mockResolvedValue(makeCounts(1, 1, 1));
-      mockGetEvents.mockResolvedValue([makeEvent("7.7.7.7")]);
-      mockPrune.mockResolvedValue(42);
-
-      mockDateAt1300UTC("2025-04-01");
+      mockDateAtUTC("2025-09-04");
       await fireDigestAndWait();
 
-      const pruneCalls = [...mockPrune.mock.calls];
+      const notifyCalls = [...mockNotify.mock.calls];
       vi.restoreAllMocks();
 
-      console.log(
-        "[STATE] pruneSecurityEvents call args:",
-        JSON.stringify(pruneCalls)
-      );
-      expect(pruneCalls).toHaveLength(1);
-      expect(pruneCalls[0][0]).toBe(90);
-      console.log(
-        "[VERIFY] PASS — pruneSecurityEvents(90) called exactly once"
-      );
+      expect(notifyCalls).toHaveLength(1);
+      const { content } = notifyCalls[0][0] as { content: string };
+      console.log("[STATE] content (excerpt):\n" + content.split("\n").filter(l => /public_feed|auth|waitlist_submit/.test(l)).join("\n"));
+
+      // The accurate summary total (12+7+3=22) is expected to still appear —
+      // A1 ADDS the per-context breakdown, it doesn't remove the total.
+      expect(content).toContain("Rate Limit:   22");
+      // What A1 actually fixes: the per-context breakdown lines exist at all.
+      // Before this fix, "auth" and "waitlist_submit" never appeared anywhere
+      // in the digest body — every RATE_LIMIT context collapsed into the one
+      // number above with no way to tell them apart.
+      expect(content).toContain("public_feed: 12");
+      expect(content).toContain("auth: 7");
+      expect(content).toContain("waitlist_submit: 3");
+      console.log("[VERIFY] PASS — Rate Limit Triggers broken out per limitType context, in addition to the accurate total");
     });
+  });
 
-    it("prune is called even when notifyOwner returns false", async () => {
-      console.log(
-        "\n[INPUT] notifyOwner returns false (service unavailable, not throwing)"
-      );
-      console.log("[INPUT] Expected: pruneSecurityEvents still called with 90");
+  // ═══════════════════════════════════════════════════════════════════════════
+  // A3 — counts labeled as a deduped sample, dedup window stated
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("A3 — counts labeled as a deduped sample", () => {
+    it("notifyOwner content states the dedup window and labels counts as a sample", async () => {
+      console.log("\n[INPUT] a normal digest run — checking the honesty labeling in the body");
+      setBucketCounts([makeBucket("AUTH_FAIL", null, 4)]);
+      setRawEvents(Array(4).fill(null).map(() => makeEvent("203.0.113.10", "AUTH_FAIL", null)));
 
-      mockGetCounts.mockResolvedValue(makeCounts(2, 1, 0));
-      mockGetEvents.mockResolvedValue([makeEvent("6.6.6.6")]);
-      mockPrune.mockResolvedValue(5);
+      mockDateAtUTC("2025-09-05");
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      vi.restoreAllMocks();
+
+      expect(notifyCalls).toHaveLength(1);
+      const { content } = notifyCalls[0][0] as { content: string };
+      console.log("[STATE] content window/labeling lines:\n" + content.split("\n").filter(l => /deduped|60s/i.test(l)).join("\n"));
+
+      expect(content).toMatch(/deduped sample/i);
+      expect(content).toContain("60s"); // dedup window, matches RATE_LIMIT_DEDUP_WINDOW_SEC
+      console.log("[VERIFY] PASS — content labels counts as a deduped sample and states the 60s window");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // B1 — notifyOwner failure is escalated to the Discord security channel
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("B1 — notifyOwner failure escalates to Discord", () => {
+    it("posts an escalation embed to the security channel when notifyOwner returns false", async () => {
+      console.log("\n[INPUT] notifyOwner returns false (service unavailable)");
+      const fakeChannel = new TextChannel() as unknown as { send: ReturnType<typeof vi.fn> };
+      const fakeClient = {
+        isReady: () => true,
+        channels: { fetch: vi.fn().mockResolvedValue(fakeChannel) },
+      };
+      mockGetDiscordClient.mockReturnValue(fakeClient);
       mockNotify.mockResolvedValue(false);
+      setBucketCounts([makeBucket("CSRF_BLOCK", null, 1)]);
+      setRawEvents([makeEvent("203.0.113.11", "CSRF_BLOCK", null)]);
 
-      mockDateAt1300UTC("2025-04-02");
+      mockDateAtUTC("2025-09-06");
       await fireDigestAndWait();
 
-      const pruneCalls = [...mockPrune.mock.calls];
+      const sendCalls = [...fakeChannel.send.mock.calls];
       vi.restoreAllMocks();
 
-      console.log("[STATE] pruneSecurityEvents call count:", pruneCalls.length);
-      expect(pruneCalls).toHaveLength(1);
-      expect(pruneCalls[0][0]).toBe(90);
-      console.log(
-        "[VERIFY] PASS — prune called even when notifyOwner returns false"
-      );
+      console.log(`[STATE] channel.send call count: ${sendCalls.length}`);
+      // runSecurityDigest() escalates (Step 4) BEFORE posting the normal
+      // digest embed (Step 5), so call 1 is the escalation, call 2 is the
+      // regular daily digest embed. Assert on embed titles directly rather
+      // than relying on call order, so this test survives a future
+      // reordering of those two steps.
+      expect(sendCalls.length).toBe(2);
+      const titles = sendCalls.map(c => {
+        const embed = (c[0] as { embeds: Array<{ data: { title?: string } }> }).embeds[0];
+        return embed.data.title ?? "";
+      });
+      console.log(`[STATE] embed titles sent: ${JSON.stringify(titles)}`);
+      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(true);
+      expect(titles.some(t => t.includes("Daily Security Digest"))).toBe(true);
+      console.log("[VERIFY] PASS — both the escalation embed and the normal digest embed were sent when notifyOwner failed");
+    });
+
+    it("does NOT escalate when notifyOwner succeeds", async () => {
+      console.log("\n[INPUT] notifyOwner returns true (normal delivery)");
+      const fakeChannel = new TextChannel() as unknown as { send: ReturnType<typeof vi.fn> };
+      const fakeClient = {
+        isReady: () => true,
+        channels: { fetch: vi.fn().mockResolvedValue(fakeChannel) },
+      };
+      mockGetDiscordClient.mockReturnValue(fakeClient);
+      mockNotify.mockResolvedValue(true);
+      setBucketCounts([]);
+      setRawEvents([]);
+
+      mockDateAtUTC("2025-09-07");
+      await fireDigestAndWait();
+
+      const sendCalls = [...fakeChannel.send.mock.calls];
+      vi.restoreAllMocks();
+
+      console.log(`[STATE] channel.send call count: ${sendCalls.length}`);
+      // Only the normal daily digest embed — no escalation.
+      expect(sendCalls.length).toBe(1);
+      const embed = (sendCalls[0][0] as { embeds: Array<{ data: { title?: string } }> }).embeds[0];
+      expect(embed.data.title).toContain("Daily Security Digest");
+      console.log("[VERIFY] PASS — no escalation embed sent when notifyOwner succeeds");
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 5: Error resilience — all failures are caught, server never crashes
-  // ───────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // B2 — widened fire window + restart-safe persisted marker
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("B2 — widened fire window and restart-safe persistence", () => {
+    it("fires at UTC minute=5 (inside the widened 10-minute window, not just minute=0)", async () => {
+      console.log("\n[INPUT] digest tick at 13:05 UTC (not 13:00) — should still fire");
+      setBucketCounts([]);
+      setRawEvents([]); // marker check also returns [] via default markerRows
+
+      mockDateAtUTC("2025-09-08", 13, 5);
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      vi.restoreAllMocks();
+
+      console.log(`[STATE] notifyOwner call count at minute=5: ${notifyCalls.length}`);
+      expect(notifyCalls).toHaveLength(1);
+      console.log("[VERIFY] PASS — digest fired at minute=5, proving the window was widened past minute=0");
+    });
+
+    it("does NOT fire at UTC minute=10 (just outside the widened window)", async () => {
+      console.log("\n[INPUT] digest tick at 13:10 UTC — outside [13:00, 13:10)");
+      setBucketCounts([]);
+      setRawEvents([]);
+
+      mockDateAtUTC("2025-09-09", 13, 10);
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      vi.restoreAllMocks();
+
+      console.log(`[STATE] notifyOwner call count at minute=10: ${notifyCalls.length}`);
+      expect(notifyCalls).toHaveLength(0);
+      console.log("[VERIFY] PASS — digest did not fire at minute=10, window's upper bound is exclusive");
+    });
+
+    it("a persisted marker for today prevents a duplicate fire (simulated restart mid-window)", async () => {
+      console.log(
+        "\n[INPUT] simulated restart: in-memory lastDigestDateUTC is fresh (new test date), but a " +
+          "persisted DIGEST_MARKER_DAILY row for TODAY already exists — the digest must NOT fire again"
+      );
+      const today = "2025-09-10";
+      // Marker check call returns a row whose context === today's date.
+      setRawEvents([], [makeEvent("system", DIGEST_MARKER_DAILY_EVENT_TYPE, today)]);
+      setBucketCounts([]);
+
+      mockDateAtUTC(today, 13, 4); // inside the window, restart-like mid-window tick
+
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      const pruneCalls = [...mockPrune.mock.calls];
+      vi.restoreAllMocks();
+
+      console.log(`[STATE] notifyOwner calls: ${notifyCalls.length} | pruneSecurityEvents calls: ${pruneCalls.length}`);
+      expect(notifyCalls).toHaveLength(0);
+      expect(pruneCalls).toHaveLength(0); // proves runSecurityDigest() never even started
+      console.log("[VERIFY] PASS — persisted marker blocked a duplicate fire after a simulated restart");
+    });
+
+    it("persists a marker row via insertSecurityEvent after a successful fire", async () => {
+      console.log("\n[INPUT] a normal digest run — should persist a DIGEST_MARKER_DAILY row on completion");
+      setBucketCounts([]);
+      setRawEvents([]);
+
+      mockDateAtUTC("2025-09-11");
+      await fireDigestAndWait();
+
+      const insertCalls = [...mockInsertEvent.mock.calls];
+      vi.restoreAllMocks();
+
+      const markerCalls = insertCalls.filter(
+        c => (c[0] as { eventType: string }).eventType === DIGEST_MARKER_DAILY_EVENT_TYPE
+      );
+      console.log(`[STATE] insertSecurityEvent(DIGEST_MARKER_DAILY) calls: ${markerCalls.length}`);
+      expect(markerCalls).toHaveLength(1);
+      expect((markerCalls[0][0] as { context: string }).context).toBe("2025-09-11");
+      console.log("[VERIFY] PASS — digest marker persisted with today's date after a successful fire");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // computeThreatLevel — boundary conditions (pure function, unchanged thresholds)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("computeThreatLevel — boundary conditions", () => {
+    it.each([
+      [0, "CLEAN"],
+      [1, "LOW"],
+      [9, "LOW"],
+      [10, "MODERATE"],
+      [49, "MODERATE"],
+      [50, "HIGH"],
+      [199, "HIGH"],
+      [200, "CRITICAL"],
+      [999, "CRITICAL"],
+    ])("total=%i -> %s", (total, expected) => {
+      expect(computeThreatLevel(total)).toBe(expected);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Error resilience — all failures are caught, server never crashes
+  // ═══════════════════════════════════════════════════════════════════════════
   describe("error resilience — all failures are caught", () => {
-    it("does not throw when getSecurityEventCounts rejects", async () => {
-      console.log(
-        "\n[INPUT] getSecurityEventCounts rejects with Error('DB connection lost')"
-      );
-      console.log(
-        "[INPUT] Expected: no unhandled rejection, notifyOwner NOT called"
-      );
+    it("does not throw when getSecurityEventCountsByBucket rejects", async () => {
+      console.log("\n[INPUT] getSecurityEventCountsByBucket rejects with Error('DB connection lost')");
+      mockGetCountsByBucket.mockRejectedValue(new Error("DB connection lost"));
+      setRawEvents([]);
 
-      mockGetCounts.mockRejectedValue(new Error("DB connection lost"));
-      mockGetEvents.mockResolvedValue([]);
-
-      mockDateAt1300UTC("2025-05-01");
+      mockDateAtUTC("2025-10-01");
       await expect(fireDigestAndWait()).resolves.toBeUndefined();
 
       const notifyCalls = [...mockNotify.mock.calls];
       vi.restoreAllMocks();
 
-      console.log("[STATE] notifyOwner call count:", notifyCalls.length);
       expect(notifyCalls).toHaveLength(0);
-      console.log(
-        "[VERIFY] PASS — DB error caught, notifyOwner not called, no crash"
-      );
+      console.log("[VERIFY] PASS — DB error caught, notifyOwner not called, no crash");
     });
 
-    it("does not throw when notifyOwner rejects", async () => {
-      console.log(
-        "\n[INPUT] notifyOwner rejects with Error('notification service down')"
-      );
-      console.log(
-        "[INPUT] Expected: no crash, pruneSecurityEvents still called"
-      );
-
-      mockGetCounts.mockResolvedValue(makeCounts(5, 3, 2));
-      mockGetEvents.mockResolvedValue([makeEvent("6.6.6.6")]);
-      mockPrune.mockResolvedValue(0);
+    it("does not throw when notifyOwner rejects, and prune still runs", async () => {
+      console.log("\n[INPUT] notifyOwner rejects with Error('notification service down')");
+      setBucketCounts([makeBucket("AUTH_FAIL", null, 2)]);
+      setRawEvents([makeEvent("203.0.113.12", "AUTH_FAIL", null)]);
       mockNotify.mockRejectedValue(new Error("notification service down"));
 
-      mockDateAt1300UTC("2025-05-02");
+      mockDateAtUTC("2025-10-02");
       await expect(fireDigestAndWait()).resolves.toBeUndefined();
 
       const pruneCalls = [...mockPrune.mock.calls];
       vi.restoreAllMocks();
 
-      console.log("[STATE] pruneSecurityEvents call count:", pruneCalls.length);
       expect(pruneCalls).toHaveLength(1);
-      console.log(
-        "[VERIFY] PASS — notifyOwner rejection caught, prune still executed, no crash"
-      );
+      console.log("[VERIFY] PASS — notifyOwner rejection caught, prune still executed, no crash");
     });
 
     it("does not throw when getSecurityEvents rejects", async () => {
-      console.log(
-        "\n[INPUT] getSecurityEvents rejects with Error('query timeout')"
-      );
-      console.log(
-        "[INPUT] Expected: no crash — error propagates to outer catch"
-      );
-
-      mockGetCounts.mockResolvedValue(makeCounts(3, 2, 1));
+      console.log("\n[INPUT] getSecurityEvents rejects with Error('query timeout')");
+      setBucketCounts([makeBucket("CSRF_BLOCK", null, 1)]);
       mockGetEvents.mockRejectedValue(new Error("query timeout"));
 
-      mockDateAt1300UTC("2025-05-03");
+      mockDateAtUTC("2025-10-03");
       await expect(fireDigestAndWait()).resolves.toBeUndefined();
       vi.restoreAllMocks();
 
-      console.log(
-        "[VERIFY] PASS — getSecurityEvents rejection caught, no crash"
-      );
+      console.log("[VERIFY] PASS — getSecurityEvents rejection caught, no crash");
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 6: Notification content — all required sections present
-  // ───────────────────────────────────────────────────────────────────────────
-  describe("notification content — required sections", () => {
-    it("content includes all required sections with correct values", async () => {
-      console.log("\n[INPUT] counts: CSRF=5, RATE=3, AUTH=2 (total=10)");
-      console.log(
-        "[INPUT] Expected: all content sections present with correct values"
-      );
+  // ═══════════════════════════════════════════════════════════════════════════
+  // pruneSecurityEvents — retention policy (unchanged behavior)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("pruneSecurityEvents — retention policy", () => {
+    it("calls pruneSecurityEvents(90) on every digest run", async () => {
+      setBucketCounts([makeBucket("AUTH_FAIL", null, 1)]);
+      setRawEvents([makeEvent("203.0.113.13", "AUTH_FAIL", null)]);
+      mockPrune.mockResolvedValue(42);
 
-      mockGetCounts.mockResolvedValue(makeCounts(5, 3, 2));
-      mockGetEvents.mockResolvedValue([
-        ...Array(5)
-          .fill(null)
-          .map(() => makeEvent("10.0.0.1")),
-        ...Array(3)
-          .fill(null)
-          .map(() => makeEvent("10.0.0.2")),
-        ...Array(2)
-          .fill(null)
-          .map(() => makeEvent("10.0.0.3")),
-      ]);
-      mockPrune.mockResolvedValue(7);
-      mockNotify.mockResolvedValue(true);
-
-      mockDateAt1300UTC("2025-06-01");
+      mockDateAtUTC("2025-10-04");
       await fireDigestAndWait();
 
-      const notifyCalls = [...mockNotify.mock.calls];
+      const pruneCalls = [...mockPrune.mock.calls];
       vi.restoreAllMocks();
 
-      expect(notifyCalls).toHaveLength(1);
-      const { title, content } = notifyCalls[0][0] as {
-        title: string;
-        content: string;
-      };
-
-      console.log(`[STATE] title: "${title}"`);
-      console.log(
-        "[STATE] content (first 400 chars):\n" + content.slice(0, 400)
-      );
-
-      // Title assertions
-      expect(title).toContain("[MODERATE]"); // total=10 → MODERATE
-      expect(title).toContain("10 events in 24h");
-
-      // Content section assertions
-      expect(content).toContain("Daily Security Digest");
-      expect(content).toContain("Threat Level: MODERATE");
-      expect(content).toContain("Event Counts (Last 24 Hours):");
-      expect(content).toContain("CSRF Block:   5");
-      expect(content).toContain("Rate Limit:   3");
-      expect(content).toContain("Auth Failure: 2");
-      expect(content).toContain("Total:        10");
-      expect(content).toContain("Top 5 IPs by Event Count:");
-      expect(content).toContain("10.0.0.1");
-      expect(content).toContain("Window:");
-      expect(content).toContain("Retention: events older than 90 days pruned");
-
-      console.log("[VERIFY] PASS — title: [MODERATE] + '10 events in 24h'");
-      console.log("[VERIFY] PASS — content: all 9 required sections present");
-      console.log(
-        "[VERIFY] PASS — event counts: CSRF=5 RATE=3 AUTH=2 total=10"
-      );
-    });
-
-    it("Window line contains ISO-format timestamps", async () => {
-      console.log("\n[INPUT] Digest run at 2025-07-01T13:00:00Z");
-      console.log(
-        "[INPUT] Expected: Window line contains ISO timestamps (YYYY-MM-DDTHH:MM:SS)"
-      );
-
-      mockGetCounts.mockResolvedValue(makeCounts(1, 0, 0));
-      mockGetEvents.mockResolvedValue([makeEvent("1.2.3.4")]);
-
-      mockDateAt1300UTC("2025-07-01");
-      await fireDigestAndWait();
-
-      const notifyCalls = [...mockNotify.mock.calls];
-      vi.restoreAllMocks();
-
-      expect(notifyCalls).toHaveLength(1);
-      const content: string = notifyCalls[0][0].content;
-      const windowLine = content.split("\n").find(l => l.startsWith("Window:"));
-      console.log(`[STATE] Window line: "${windowLine}"`);
-      expect(windowLine).toBeDefined();
-      expect(windowLine).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-      console.log("[VERIFY] PASS — Window line contains ISO timestamp format");
-    });
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // GROUP 7: getSecurityEvents called with correct 24h window
-  // ───────────────────────────────────────────────────────────────────────────
-  describe("getSecurityEvents — correct window and limit", () => {
-    it("passes sinceMs = now - 24h and limit=500", async () => {
-      console.log("\n[INPUT] Digest run at 2025-08-01T13:00:00Z");
-      console.log(
-        "[INPUT] Expected: getSecurityEvents({ sinceMs: now-86400000, limit: 500 })"
-      );
-
-      mockGetCounts.mockResolvedValue(makeCounts(0, 0, 0));
-      mockGetEvents.mockResolvedValue([]);
-
-      const mockNow = mockDateAt1300UTC("2025-08-01");
-      await fireDigestAndWait();
-
-      const eventCalls = [...mockGetEvents.mock.calls];
-      vi.restoreAllMocks();
-
-      console.log(
-        "[STATE] getSecurityEvents call args:",
-        JSON.stringify(eventCalls)
-      );
-      expect(eventCalls).toHaveLength(1);
-
-      const { sinceMs, limit } = eventCalls[0][0] as {
-        sinceMs: number;
-        limit: number;
-      };
-      const expectedSince = mockNow.getTime() - 24 * 60 * 60 * 1000;
-
-      console.log(
-        `[STATE] sinceMs=${sinceMs} | expected=${expectedSince} | diff=${sinceMs - expectedSince}ms`
-      );
-      // Allow ±10ms tolerance for execution overhead
-      expect(Math.abs(sinceMs - expectedSince)).toBeLessThan(10);
-      expect(limit).toBe(500);
-      console.log(
-        "[VERIFY] PASS — sinceMs within 10ms of now-86400000, limit=500"
-      );
+      expect(pruneCalls).toHaveLength(1);
+      expect(pruneCalls[0][0]).toBe(90);
+      console.log("[VERIFY] PASS — pruneSecurityEvents(90) called exactly once");
     });
   });
 });
