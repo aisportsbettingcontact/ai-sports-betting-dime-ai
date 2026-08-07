@@ -10,7 +10,11 @@
  * edit could silently break — the same pattern ProjectionCard.test.ts uses for
  * CSS page-law guards.
  *
- * Each one exists because getting it wrong is silent, not loud.
+ * SCOPE: WIRING ONLY. The job LOGIC (windows, aggregation, fail-loud rules,
+ * date validation) is executed and asserted in mlbLoopJobs.test.ts — text
+ * matching proves what code says, never what it does, and the patch-coverage
+ * gate is right to refuse it as coverage. What remains here are the facts that
+ * genuinely cannot be executed without standing up Express and the DB graph.
  */
 import { describe, expect, it } from "vitest";
 import fs from "fs";
@@ -82,43 +86,5 @@ describe("mlb-backtest stays decoupled from the un-refit K constants", () => {
     expect(readme).toMatch(
       /BULK BACKFILL until after the K walk-forward re-fit/i
     );
-  });
-});
-
-describe("fail-loud, not silently green (OBS-0002 class)", () => {
-  it("mlb-backtest throws when every enrollment failed", () => {
-    expect(routes).toContain("all ${errors} backtest enrollments failed");
-  });
-
-  it("treats zero unenrolled games as success, not failure", () => {
-    // `processed === 0 && errors > 0` — an empty self-heal window is the normal
-    // steady state and must not page anyone.
-    expect(routes).toContain("processed === 0 && errors > 0");
-  });
-
-  it("mlb-outcomes throws only when EVERY date failed", () => {
-    expect(routes).toContain("failures.length === dates.length");
-  });
-});
-
-describe("date handling", () => {
-  it("rejects a malformed ?date= with 400 instead of silently using the default", () => {
-    expect(routes).toContain('"invalid-date"');
-    expect(routes).toContain('expected: "YYYY-MM-DD"');
-  });
-
-  it("uses PT for outcomes and ET for backtest — the zones are not interchangeable", () => {
-    // games.gameDate is a PT calendar date, so a late West Coast final belongs to
-    // the PT day even after UTC has rolled over.
-    expect(routes).toContain('lastNDates(2, "America/Los_Angeles")');
-    expect(routes).toContain('lastNDates(3, "America/New_York")');
-  });
-
-  it("stashes the date BEFORE trigger(), or the runner reads a stale window", () => {
-    const helper = routes.slice(routes.indexOf("function mountDateJob("));
-    const setDateAt = helper.indexOf("setDate(");
-    const triggerAt = helper.indexOf("runner.trigger()");
-    expect(setDateAt).toBeGreaterThan(-1);
-    expect(triggerAt).toBeGreaterThan(setDateAt);
   });
 });

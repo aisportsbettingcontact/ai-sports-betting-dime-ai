@@ -67,29 +67,12 @@ import { billingAlert } from "../_core/billingAlerts";
 import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
 import { captureClosingLines } from "../mlbScheduleHistoryService";
 import { runMultiMarketBacktestForDate } from "../mlbMultiMarketBacktest";
-
-/**
- * The most recent N calendar dates as YYYY-MM-DD in `timeZone`, oldest first.
- *
- * Why a timezone matters: games.gameDate is a calendar date in a specific zone,
- * not a UTC instant, so "yesterday" is a zone-relative question. A late West
- * Coast final lands on the PT date even though UTC has already rolled over.
- *
- * DST-safe at this granularity: subtracting fixed 86_400_000 ms windows and then
- * formatting IN the zone cannot skip or repeat a date across a 2-3 day lookback.
- * Do not extend N materially without re-deriving that.
- */
-function lastNDates(n: number, timeZone: string): string[] {
-  const out: string[] = [];
-  for (let i = n - 1; i >= 0; i -= 1) {
-    out.push(
-      new Date(Date.now() - i * 86_400_000).toLocaleDateString("en-CA", {
-        timeZone,
-      })
-    );
-  }
-  return out;
-}
+import {
+  lastNDates,
+  parseCronDateParam,
+  runBacktestJob,
+  runOutcomesJob,
+} from "./mlbLoopJobs";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -148,32 +131,12 @@ const mlbOutcomesRunner = new CronJobRunner("mlb-outcomes", async () => {
   const dates = mlbOutcomesDate
     ? [mlbOutcomesDate]
     : lastNDates(2, "America/Los_Angeles");
-  let written = 0;
-  let skipped = 0;
-  let rowErrors = 0;
-  const failures: string[] = [];
-  for (const d of dates) {
-    try {
-      const summary = await ingestMlbOutcomes(d);
-      written += summary.written;
-      skipped +=
-        summary.skippedAlreadyIngested +
-        summary.skippedNotFinal +
-        summary.skippedNoGamePk +
-        summary.skippedNoApiMatch;
-      rowErrors += summary.errors;
-    } catch (err) {
-      failures.push(`${d}: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
+  const r = await runOutcomesJob(dates, d => ingestMlbOutcomes(d));
   console.log(
-    `[Cron:mlb-outcomes] [OUTPUT] dates=[${dates.join(",")}] written=${written} skipped=${skipped} rowErrors=${rowErrors} dateFailures=${failures.length}`
+    `[Cron:mlb-outcomes] [OUTPUT] dates=[${r.dates.join(",")}] written=${r.written} ` +
+      `skipped=${r.skipped} rowErrors=${r.rowErrors} dateFailures=${r.errors.length}`
   );
-  // Fail loud rather than record a silently-green run (OBS-0002 class).
-  if (failures.length === dates.length) {
-    throw new Error(`all ${dates.length} outcome ingests failed: ${failures.join(" | ")}`);
-  }
-  return { dates, written, skipped, rowErrors, errors: failures };
+  return r;
 });
 
 // Closing-line capture — locks the closing odds snapshot for today's slate.
@@ -199,26 +162,17 @@ const mlbClosingCaptureRunner = new CronJobRunner("mlb-closing-capture", async (
 // The default is a 3-day ET rolling window: self-heal, not backfill. A `?date=`
 // bulk backfill should wait until after the K re-fit for the same reason.
 const mlbBacktestRunner = new CronJobRunner("mlb-backtest", async () => {
-  const dates = mlbBacktestDate ? [mlbBacktestDate] : lastNDates(3, "America/New_York");
-  let processed = 0;
-  let errors = 0;
-  for (const d of dates) {
-    const r = await runMultiMarketBacktestForDate(d, {
-      onlyUnenrolled: true,
-      runKProps: false,
-    });
-    processed += r.processed;
-    errors += r.errors;
-  }
-  console.log(
-    `[Cron:mlb-backtest] [OUTPUT] dates=[${dates.join(",")}] processed=${processed} errors=${errors}`
+  const dates = mlbBacktestDate
+    ? [mlbBacktestDate]
+    : lastNDates(3, "America/New_York");
+  const r = await runBacktestJob(dates, d =>
+    runMultiMarketBacktestForDate(d, { onlyUnenrolled: true, runKProps: false })
   );
-  // CRON-3b: a run where every enrollment failed must record ok:false, not a
-  // silently-green background run. Zero unenrolled games is NOT a failure.
-  if (processed === 0 && errors > 0) {
-    throw new Error(`all ${errors} backtest enrollments failed`);
-  }
-  return { dates, processed, errors };
+  console.log(
+    `[Cron:mlb-backtest] [OUTPUT] dates=[${r.dates.join(",")}] processed=${r.processed} ` +
+      `enrollErrors=${r.enrollErrors} dateFailures=${r.errors.length}`
+  );
+  return r;
 });
 
 function sanitizeForLog(value: string): string {
@@ -275,7 +229,8 @@ function mountDateJob(
     if (!requireCronSecret(req, res, label)) return;
 
     const raw = (req.query?.date ?? req.body?.date) as string | undefined;
-    if (raw !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(raw))) {
+    const parsed = parseCronDateParam(raw);
+    if (!parsed.ok) {
       console.log(
         `[Cron:${label}] [INPUT] REJECTED invalid date=${sanitizeForLog(String(raw))}`
       );
@@ -284,7 +239,7 @@ function mountDateJob(
         .json({ ok: false, error: "invalid-date", expected: "YYYY-MM-DD" });
       return;
     }
-    setDate(raw === undefined ? null : String(raw));
+    setDate(parsed.date);
 
     const reqAt = new Date().toISOString();
     const clientIpForLog = sanitizeForLog(resolveClientIdentity(req) || "?");
