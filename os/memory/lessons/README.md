@@ -26,3 +26,4 @@ retrieved automatically rather than buried in a postmortem *(doctrine §8, L7)*.
 | [A green cron is not a run](a-green-cron-is-not-a-run.md) | LOOP-002's first observation |
 | [An observer can manufacture its own findings](an-observer-can-manufacture-its-own-findings.md) | The LOOP-002 precision audit |
 | [A formatter can disable a control path](a-formatter-can-disable-a-control-path.md) | ISSUE-012 Phase 1 / Incident 63 |
+| [A healthy origin is not a new deploy](a-healthy-origin-is-not-a-new-deploy.md) | Incident 64 |
