@@ -378,7 +378,10 @@ export async function fetchMlbLiveScores(
   );
 
   const fetchStart = Date.now();
-  const resp = await fetch(url, { headers: FETCH_HEADERS });
+  const resp = await fetch(url, {
+    headers: FETCH_HEADERS,
+    signal: AbortSignal.timeout(15_000),
+  });
   const fetchMs = Date.now() - fetchStart;
 
   if (!resp.ok) {

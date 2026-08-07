@@ -316,7 +316,10 @@ export async function fetchActionNetworkOdds(
         "info",
         `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: fetch attempt ${attempt}/${MAX_ATTEMPTS}`
       );
-      const r = await fetch(url, { headers: AN_HEADERS });
+      const r = await fetch(url, {
+        headers: AN_HEADERS,
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!r.ok) {
         throw new Error(
           `[ActionNetwork][v2] HTTP ${r.status} for ${sport} ${date}`

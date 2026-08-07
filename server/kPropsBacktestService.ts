@@ -141,7 +141,10 @@ async function fetchGamePitcherKs(
     `[KBacktest] [STEP] Fetching box score for gamePk ${gamePk}: ${url}`
   );
 
-  const res = await fetch(url, { headers: AN_HEADERS });
+  const res = await fetch(url, {
+    headers: AN_HEADERS,
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!res.ok) {
     throw new Error(
       `[KBacktest] [ERROR] HTTP ${res.status} for gamePk ${gamePk}`
@@ -229,7 +232,10 @@ async function fetchGamePitcherKs(
  */
 async function isGameFinal(gamePk: number): Promise<boolean> {
   const url = `${MLB_STATS_BASE}/schedule?gamePk=${gamePk}&fields=dates,games,status,detailedState,abstractGameState`;
-  const res = await fetch(url, { headers: AN_HEADERS });
+  const res = await fetch(url, {
+    headers: AN_HEADERS,
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!res.ok) return false;
 
   const data = (await res.json()) as {
