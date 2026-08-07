@@ -2071,3 +2071,73 @@ describe("closure regression guards — lock the audited fixes (CL-01/03/08/17)"
     for (const p of pxSizes) expect(p).toBeGreaterThanOrEqual(10);
   });
 });
+
+describe("ProjectionCard — no published model is a THIRD state, not PASS", () => {
+  // The defect this pins: before `modelPublished` existed, a game the model had
+  // never touched fell through the same branch as a scored-but-efficient game
+  // and told the user "Every market is efficiently priced. No action." — an
+  // assertion about an analysis that never ran. The same branch is what the
+  // per-market publication gate (MLB_MARKET_GATE_MODE=on) routes gated games
+  // into, so it had to be split before that flag could ever be turned on.
+  const noModel = (): ProjectionGame => ({
+    ...wcFixture(),
+    modelPublished: false,
+  });
+
+  it("says no model was published instead of claiming the markets were priced", () => {
+    const html = render(noModel());
+    expect(html).toContain("No model projection published for this game.");
+    expect(html).not.toContain(
+      "Every market is efficiently priced. No action."
+    );
+  });
+
+  it("still uses the shared message slot, so layout is unchanged", () => {
+    const html = render(noModel());
+    expect(html).toContain('class="summary__item summary__item--message"');
+    expect(html).not.toContain("summary__signal");
+  });
+
+  it("takes --nomodel and NOT --pass", () => {
+    const html = render(noModel());
+    expect(html).toContain("projection-card--nomodel");
+    expect(html).not.toContain("projection-card--pass");
+  });
+
+  it("announces the absence in the accessible name, after the lifecycle state", () => {
+    const html = render(noModel());
+    expect(html).toContain(
+      "Spain at France, 3:00 PM ET, no model projection published"
+    );
+  });
+
+  it("a LIVE card is never --nomodel, mirroring the live-never-PASS ruling", () => {
+    const html = render({
+      ...noModel(),
+      status: "live",
+      statusLabel: "LIVE · 2ND HALF",
+    });
+    expect(html).not.toContain("projection-card--nomodel");
+  });
+
+  it("leaves a published game byte-for-byte unchanged (default is published)", () => {
+    expect(render(wcFixture())).toBe(
+      render({ ...wcFixture(), modelPublished: true })
+    );
+    expect(render(wcFixture())).toContain(
+      "Every market is efficiently priced. No action."
+    );
+  });
+
+  it("mirrors PASS's neutral values without touching the guarded PASS rule", () => {
+    // The PASS rule is asserted as literal text elsewhere in this file as a page
+    // -law guard; --nomodel must not dilute it into a selector list to share it.
+    expect(cardCss).toMatch(/^\.projection-card--pass \{ opacity: 0\.82; \}$/m);
+    expect(cardCss).toMatch(
+      /^\.projection-card--nomodel \{ opacity: 0\.82; \}$/m
+    );
+    expect(cardCss).toMatch(
+      /^\.projection-card--compact\.projection-card--nomodel \{ opacity: 0\.72; \}$/m
+    );
+  });
+});

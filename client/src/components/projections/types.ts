@@ -97,4 +97,19 @@ export interface ProjectionGame {
   /** Scheduled-MLB-only probable pitchers and batting orders from Rotowire. */
   pregameLineups?: ProjectionPregameLineups;
   markets: ProjectionMarket[];
+  /**
+   * FALSE when this game has no published model output at all — either the
+   * model never ran (`modelRunAt` is null) or every market was withheld by the
+   * per-market publication gate (`MLB_MARKET_GATE_MODE=on`).
+   *
+   * This is a THIRD card state, and it is not PASS. PASS means the model ran
+   * and found nothing worth acting on; "no model" means there was nothing to
+   * find anything with. The same distinction the owner drew between PASS and
+   * `unplayable` (pages/ai-model-projections.md, 2026-08-06: "They look similar
+   * and they mean opposite things, so they get separate modifiers").
+   *
+   * Optional and defaulting to published, so every existing caller and fixture
+   * keeps its current behavior.
+   */
+  modelPublished?: boolean;
 }

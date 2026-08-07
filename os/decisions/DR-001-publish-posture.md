@@ -1,6 +1,6 @@
 # DR-001 — Publish posture for nine markets Dime's own evidence gates BACKTEST-ONLY
 
-**Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
+**Status:** RULED — Option 1c, per-market split, 2026-08-07 · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
 **observe_by:** 2026-08-12
 **Urgency:** HIGHEST — live customer-facing claims contradict Dime's own evidence
 **Doctrine:** D5 (evaluation → adjustment) · D7 (relevance, not just execution) · D8 (acceptance
@@ -179,3 +179,186 @@ suppressing the two broken prop markets today, which is a much smaller change th
 - `mlbOutcomeIngestor.ts:162` still applies `/100` to probabilities the audit says are stored 0–1.
   If true in production, Brier scores in the `games` table are near-meaningless *today*, independent
   of this decision. Unchanged since 2026-07-23.
+
+---
+
+## Evidence added after drafting — 2026-08-07
+
+This record was written 2026-08-05. Three things have changed since, and one of them changes what a
+"yes" would mean. **No option, recommendation or requested ruling above has been edited** — this
+section only adds verified facts.
+
+### 1. The gate is now built and running in `log` mode
+
+PR #435 (`fix(mlb): make the BACKTEST-ONLY verdict enforceable — flag-gated, default off`, merged
+2026-08-07T11:50:59Z) landed `server/mlbMarketGates.ts`. `publish_*` went from **0 non-test readers
+to 13**. `MLB_MARKET_GATE_MODE` is set on the production service, and the live deploy logs show:
+
+```
+[MlbMarketGates] mode=log source=fresh
+  gated=[fg_ml,fg_rl,fg_total,f5_ml,f5_rl,f5_total,nrfi_yrfi,k_props,hr_props] missing=[]
+```
+
+**This resolves the open unknown above that this record calls "the single highest-value unknown in
+the mission".** All nine `publish_*` rows exist, all nine gate their market, the loader reads them
+successfully from production (`source=fresh`, `missing=[]`), and — because `log` changes no output —
+production is confirmed to be serving all nine markets **ungated** to real customers right now. The
+fail-open posture is no longer inferred from code analysis; it is observed.
+
+### 2. What is built behaves like Option 2 — because **Option 1 as written is not implementable**
+
+The field policy in `server/feedGating.ts` preserves exactly one field when a market is gated:
+
+```
+export const MLB_MARKET_GATE_NEVER_NULL = ["modelRunAt"] as const;
+```
+
+Everything else in a gated market is nulled. For `fg_ml` that is `modelAwayML`, `modelHomeML`,
+`modelAwayWinPct`, `modelHomeWinPct`, **`brierFgMl` and `fgMlCorrect`** — and
+`MLB_CROSS_MARKET_GAME_FIELDS` additionally nulls `modelAwayScore`/`modelHomeScore` when any
+full-game market is gated, the F5 scores, and the per-inning arrays. So arming `on` today would
+remove **the projections and the graded record** across **all nine markets**.
+
+In effect that is Option 2. **But it is not drift, and the fix is not to narrow the field sets.**
+
+Option 1 above says: *"continue showing the projection, **the implied-vs-projected comparison**, and
+the graded record — but suppress the Edge Detected classification."* Those two clauses are in
+tension, because **the implied-vs-projected comparison IS the edge**. Verified against the live
+public feed 2026-08-07 — a single unauthenticated `games.list` response carries both sides:
+
+```
+BOOK   awayBookSpread, bookTotal, awayRunLine, awayRunLineOdds, awaySpreadOdds, f5OverOdds …
+MODEL  modelAwayML, modelAwayWinPct, modelAwaySpreadOdds, modelTotal, modelAwayScore …
+```
+
+`edge = model − book` is subtraction on two visible fields. Suppressing a `spreadEdge` column while
+publishing `modelAwaySpreadOdds` next to `awaySpreadOdds` removes the *label*, not the *claim* — and
+DR-001's own compliance argument is about the claim.
+
+`server/mlbMarketGates.ts` and `MLB_CROSS_MARKET_GAME_FIELDS` reason this out explicitly, which is
+why the cross-market rules exist at all:
+
+> *"Leaving them would defeat the gate: the pair (awayScore, homeScore) yields the run-line margin
+> by difference, the total by sum, and the moneyline lean by the SIGN of the difference."*
+
+Two further details that show the design is considered rather than minimal:
+
+- `MLB_MARKET_GATE_NEVER_NULL` keeps `modelRunAt` for a specific documented reason — it is the
+  row-level freshness key, and the feed derives `hasModel = g.modelRunAt != null` to produce the "—"
+  state. Nulling it under one market's gate would silently blank all nine.
+- `fg_ml` — the one market the audit credits with **genuine skill** — carries **no edge field at
+  all**. Its entire set is projections and grades. Under a narrow "suppress only the edge" policy,
+  fg_ml would null nothing, i.e. would not be gated at all.
+
+**Nothing is wrong with #435.** It is flag-gated, default off, fail-open, and its header correctly
+points at `feedGating.ts` for field policy. The gap is in **this record**: Option 1 was specified
+before anyone checked whether the edge survives its own suppression. It does.
+
+*Correction, same day: an earlier draft of this section framed the implementation as having drifted
+into the rejected option. That reads the evidence backwards. What is built is a coherent response to
+a problem Option 1 did not account for; the record is what needs amending, not the code.*
+
+### 3. Arming `on` would freeze a static verdict — the ratchet
+
+`git grep` for a **writer** of `publish_*` outside tests returns **zero hits**. The nine rows are a
+snapshot written once by the 2026-07-25 audit. The module that computes verdicts —
+`server/mlbPublicationGate.ts`, 467 lines implementing all eight gate criteria and exporting
+`runMarketGate`, `buildPublicationGateReport`, `extractUnresolvedBlockers` — is still dead code
+(importers: itself and one test), exactly as described above.
+
+```
+mlbPublicationGate.ts   COMPUTES the verdict   →  DEAD, nothing calls it
+mlbMarketGates.ts       ENFORCES the verdict   →  LIVE, flag-gated
+```
+
+They are two halves of a loop and only one half runs. A market that later earns publication could
+never un-gate, because nothing recomputes its verdict. That is the same D5 evaluation→adjustment gap
+this record was raised about, relocated: enforcement now exists, evaluation still does not.
+
+### What this suggests for the ruling — three separable questions, not one
+
+1. **`log` is already live and costs nothing.** It is producing the evidence in §1 with no customer
+   impact. No ruling is needed to keep it there.
+
+2. **Option 1 needs respecifying before it can be ruled.** Not because the code drifted, but because
+   §2 shows the option is self-cancelling as written: it keeps the implied-vs-projected comparison,
+   which is the edge. A rulable version has to pick one of —
+
+   - **1a — Suppress the model output on gated markets** (what is built). The claim goes away
+     because the numbers do. Honest, and the strongest compliance posture; the cost is the one this
+     record already names — it guts the paid tiers and hides full-game moneyline, which the audit
+     credits with genuine skill.
+   - **1b — Keep everything, remove the verdict, label the evidence state.** Publish projections and
+     grades, drop the Pass/Monitor/**Edge Detected** classification on gated markets, and label them
+     "Backtest only — not yet proven against baseline". This accepts that a customer *can* subtract
+     book from model, and answers it with disclosure rather than suppression. It is the option that
+     matches this record's stated spirit — *"publish graded results and transparent projections; do
+     not sell edges the data does not yet support"* — because selling is the classification, not the
+     arithmetic. It needs the UI and copy work Option 1 always said it needed.
+   - **1c — Per-market split.** Gate the markets the audit found broken (`k_props`, `hr_props`) via
+     1a, and apply 1b to the rest. This is the graft this record already recommends in
+     *"Grafted from the runners-up"*, made explicit — and it is the only version where full-game
+     moneyline keeps publishing.
+
+   **The executor's recommendation is 1c**, on the grounds this record already argues: "broken" and
+   "unproven" are different states and should be treated differently.
+
+3. **Before `on`: decide the ratchet.** Either wire `runMarketGate` to recompute, or consciously
+   accept the 2026-07-25 snapshot as permanent policy. Both are defensible; inheriting it by
+   accident is not.
+
+*Recorded by the executor. Evidence and analysis only — the question, the three options, the
+recommendation and the requested ruling above are untouched. §2's respecification is offered for the
+DRI to adopt or discard; it is not a ruling and changes nothing on its own.*
+
+---
+
+## Ruling — 2026-08-07
+
+**RULED: Option 1c — the per-market split.** The nine gated markets are not in the same evidence
+state and will not be treated as though they are.
+
+| Markets | Treatment | Why |
+|---|---|---|
+| `k_props`, `hr_props` | **1a — suppress the model output** | The audit found these **broken**, not merely unproven: a units bug shrank every strikeout projection to ~72% of the book line, and HR props underperformed the league base rate. Publishing a projection from a model known to be miscalibrated is a different act from publishing one that is merely unproven. |
+| `fg_ml`, `fg_rl`, `fg_total`, `f5_ml`, `f5_rl`, `f5_total`, `nrfi_yrfi` | **1b — publish projections and grades, remove the verdict, label the evidence state** | These are *insufficient-sample* verdicts, not proven-worthless. Full-game moneyline shows genuine skill. Suppressing them would over-read the audit in the opposite direction. |
+
+This is the graft this record already proposed under *"Grafted from the runners-up"* — *"HR props and
+strikeout props should be suppressed outright, not merely down-classified… Treat 'broken' and
+'unproven' differently"* — adopted as the ruling rather than left as a note.
+
+It answers §2's problem honestly. The edge is derivable from projection minus book line, so 1b does
+not pretend to hide it; it removes the **claim** — the Pass/Monitor/**Edge Detected** verdict — and
+labels the evidence state instead. Selling is the classification, not the arithmetic. That is what
+the audit's own instruction asks for: *"publish graded results and transparent projections; do not
+sell edges the data does not yet support."*
+
+### What this ruling authorizes
+
+- Building the 1c field policy: `k_props` and `hr_props` keep their current suppression; the other
+  seven markets stop nulling projections and grades and instead lose the verdict.
+- The customer-facing evidence-state label ("Backtest only — not yet proven against baseline") and
+  its copy, routed through the voice/compliance gate and checked against the banned-certainty regex.
+- Publishing the graded record for the seven, which today is owner-only — the transparency
+  differentiator this record argues for.
+
+### What this ruling does NOT do
+
+- **It does not arm the gate.** `MLB_MARKET_GATE_MODE` stays at `log`. Moving it to `on` is a
+  separate, deliberate act by the DRI, after the 1c policy ships. Nothing about production changes
+  the moment this ruling merges.
+- **It does not decide the ratchet** (§3). `publish_*` still has no writer and `runMarketGate` is
+  still dead code, so a market that later earns publication cannot un-gate itself. That remains open
+  and must be settled before `on`, or the ruling above silently becomes permanent.
+- It does not resolve the open unknown about `mlbOutcomeIngestor.ts:162`'s `/100`, which is
+  independent of this decision and still unaddressed since 2026-07-23.
+
+### Recorded by
+
+The executor, on Prez's 2026-08-07 instruction to proceed and rule this record. **The decision is
+Prez's; the rationale above was drafted by the executor** from this record's own "broken vs unproven"
+argument and the 2026-08-07 evidence. **Amend this section before merge if it does not match your
+reasoning** — a ruling is the durable answer to *"why is it like this?"*, and it should be in your
+words where they differ from mine.
+
+Nothing is superseded; this is a first ruling. A later reversal supersedes rather than overwrites.
