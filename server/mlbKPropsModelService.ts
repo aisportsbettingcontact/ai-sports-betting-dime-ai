@@ -127,7 +127,7 @@ function poissonPmf(k: number, lambda: number): number {
 /**
  * Poisson CDF: P(X <= k) = sum_{i=0}^{k} P(X = i)
  */
-function poissonCdf(k: number, lambda: number): number {
+export function poissonCdf(k: number, lambda: number): number {
   let cdf = 0;
   for (let i = 0; i <= k; i++) cdf += poissonPmf(i, lambda);
   return Math.min(cdf, 1.0);
@@ -137,9 +137,34 @@ function poissonCdf(k: number, lambda: number): number {
  * P(X > threshold) for a Poisson distribution.
  * For half-lines (e.g. 4.5), threshold = floor(4.5) = 4, so P(X > 4) = P(X >= 5)
  */
-function poissonPOver(bookLine: number, lambda: number): number {
+export function poissonPOver(bookLine: number, lambda: number): number {
   const threshold = Math.floor(bookLine); // e.g. 4.5 → 4, 5.0 → 5
   return 1 - poissonCdf(threshold, lambda);
+}
+
+/**
+ * P(UNDER the book line) for a Poisson distribution — audit K-6.
+ *
+ * NOT the complement of poissonPOver on an INTEGER line. A strikeout prop at
+ * exactly 5.0 settles as a PUSH when the pitcher records exactly 5, so that
+ * mass belongs to neither side:
+ *
+ *   half line 4.5 -> over = X >= 5, under = X <= 4       (no push possible)
+ *   integer  5.0 -> over = X >= 6, under = X <= 4, PUSH at X == 5
+ *
+ * `1 - poissonPOver(5.0, lambda)` equals `poissonCdf(5, lambda)`, which folds
+ * the entire push mass P(X == 5) into pUnder — measured at 17.5pp for line 5.0
+ * at a league-average lambda of 5.2 — and overstates the under side by exactly
+ * that much on every integer-line prop.
+ *
+ * On a half line this is identical to the old expression, so the change is a
+ * no-op there by construction (pinned by test).
+ */
+export function poissonPUnder(bookLine: number, lambda: number): number {
+  const threshold = Number.isInteger(bookLine)
+    ? bookLine - 1 // 5.0 -> P(X <= 4); P(X == 5) is the push
+    : Math.floor(bookLine); // 4.5 -> P(X <= 4)
+  return poissonCdf(threshold, lambda);
 }
 
 /**
@@ -528,7 +553,7 @@ export async function modelKPropsForDate(
         MAX_P_OVER
       );
       const pUnder = clamp(
-        1 - poissonPOver(bookLine, lambdaUnder),
+        poissonPUnder(bookLine, lambdaUnder),
         MIN_P_OVER,
         MAX_P_OVER
       );

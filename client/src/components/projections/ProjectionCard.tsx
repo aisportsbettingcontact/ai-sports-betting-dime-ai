@@ -92,7 +92,17 @@ export function ProjectionCard({
   // live+no-edges is reachable (a mid-game model invalidation nulls every
   // model price). Live-ness wins that semantic conflict; lifecycle compaction
   // may still quiet the whole card independently of PASS.
-  const isPass = game.status !== "live" && edges.length === 0;
+  //
+  // A card with NO published model is not a PASS card either. PASS asserts the
+  // model priced the markets and found nothing; "no model" means it never
+  // priced anything. Before this flag existed both collapsed into isPass, and
+  // the empty summary told the user "Every market is efficiently priced. No
+  // action." for a game the model had never touched — an analysis claim about
+  // an analysis that did not happen. Same reasoning the owner used to split
+  // `unplayable` out of PASS (pages/ai-model-projections.md, 2026-08-06).
+  const modelPublished = game.modelPublished !== false;
+  const isNoModel = game.status !== "live" && !modelPublished;
+  const isPass = game.status !== "live" && modelPublished && edges.length === 0;
   // Unplayable (owner directive 2026-08-06): the game is not available to act
   // on, whatever the model found. Deliberately NOT folded into isPass — PASS
   // means "nothing worth acting on in a game that WILL be played", which is the
@@ -113,11 +123,16 @@ export function ProjectionCard({
   // entering each card. Deliberately NOT an aria-live region — a 15-game slate
   // polling every 60s would interrupt a screen-reader user continuously; the
   // status is simply first in the card's reading order.
-  const cardLabel = `${game.away.name} at ${game.home.name}, ${game.statusLabel}`;
+  // "no model" is appended, not substituted: the lifecycle state stays first
+  // (2026-08-05 directive) and the announcement continues to agree with what is
+  // rendered — the summary says the same thing in the same words.
+  const cardLabel = isNoModel
+    ? `${game.away.name} at ${game.home.name}, ${game.statusLabel}, no model projection published`
+    : `${game.away.name} at ${game.home.name}, ${game.statusLabel}`;
 
   return (
     <article
-      className={`projection-card ds-cq projection-card--${game.status}${isCompact ? " projection-card--compact" : ""}${showPregame ? " projection-card--with-pregame" : ""}${isPass ? " projection-card--pass" : ""}${isUnplayable ? " projection-card--unplayable" : ""}`}
+      className={`projection-card ds-cq projection-card--${game.status}${isCompact ? " projection-card--compact" : ""}${showPregame ? " projection-card--with-pregame" : ""}${isPass ? " projection-card--pass" : ""}${isNoModel ? " projection-card--nomodel" : ""}${isUnplayable ? " projection-card--unplayable" : ""}`}
       aria-label={cardLabel}
     >
       {/* One centered status slot for every lifecycle state (owner directive
@@ -160,6 +175,7 @@ export function ProjectionCard({
         <ProjectionSummary
           insight={displayInsights[0] ?? null}
           teams={[game.away, game.home]}
+          modelPublished={modelPublished}
         />
       )}
 

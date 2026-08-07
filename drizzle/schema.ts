@@ -1123,14 +1123,22 @@ export const games = mysqlTable("games", {
   brierFgTotal: decimal("brierFgTotal", { precision: 7, scale: 6 }),
   /**
    * Brier score for F5 Total prediction: (p_f5_over - outcome_f5_over)^2
-   * p_f5_over = modelF5OverRate / 100
+   * p_f5_over = modelF5OverRate  (ALREADY 0-1 — do NOT divide by 100)
+   *   Corrected 2026-08-07 (audit M-203). This line used to read "/ 100" and
+   *   the runtime obeyed it, scoring a genuine 0.52 as 0.0052. The producer is
+   *   mlbModelRunner.ts:4259 `p_f5_over.toFixed(4)` — no *100 anywhere.
+   *   KNOWN, NOT FIXED HERE: the column is decimal(5,2), so a 0-1 value is
+   *   truncated to 2 dp (0.5234 -> 0.52). Widening it is a migration and must
+   *   ride db-push.yml; tracked as F-3 in phase0/f5.md.
    * outcome_f5_over = 1 if actualF5Total > bookF5Total, 0 if under, null if push/no-line
    * Range [0, 1]. Lower = better calibration. Null if F5 book total or scores unavailable.
    */
   brierF5Total: decimal("brierF5Total", { precision: 7, scale: 6 }),
   /**
    * Brier score for NRFI prediction: (p_nrfi - outcome_nrfi)^2
-   * p_nrfi = modelPNrfi / 100
+   * p_nrfi = modelPNrfi  (ALREADY 0-1 — do NOT divide by 100)
+   *   Corrected 2026-08-07 (audit M-203); producer mlbModelRunner.ts:4284
+   *   `p_nrfi.toFixed(4)`. Same decimal(5,2) truncation caveat as above.
    * outcome_nrfi = actualNrfiBinary (1 = NRFI, 0 = YRFI)
    * Range [0, 1]. Lower = better calibration. Null if modelPNrfi or linescore unavailable.
    */
