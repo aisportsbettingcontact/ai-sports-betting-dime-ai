@@ -10,6 +10,14 @@
 # ml/** changes; this job re-verifies the manifest checksums cheaply on every
 # PR so drift in the pinned repo-side artifacts (the 2026-08-05 closure
 # incident class) surfaces immediately, not on the next ml/ touch.
+#
+# The federation-docs gate (added 2026-08-07) is the same class one layer up: the
+# design/engineering federation skills are a contract between the docs an agent loads
+# and the repo they describe, and a 2026-08-07 review found four recurring ways they
+# drift — dangling paths, ordinal citations of a smoke-check list that renumbers,
+# evidence-record fields renamed away from the vendored standard, and routing rows
+# advertising skills the Skill tool cannot invoke. scripts/check-federation-docs.mjs
+# asserts all four; see its header for why each one earned a rule.
 name: 08-contract-and-data-integrity
 
 on:
@@ -124,3 +132,11 @@ jobs:
 
       - name: "[GATE] Platform-knowledge catalog integrity (runtime prompt hash source)"
         run: npx vitest run server/_core/dimePlatformKnowledge.test.ts
+
+      # The federation skills are always-loaded routing documents — an agent acts on
+      # them without re-deriving their claims, so a stale line there is executed, not
+      # merely read. Pure file reads, no network, ~50ms.
+      - name: "[GATE] Federation docs — no dangling paths, ordinals, schema drift, or dead routing"
+        run: |
+          node scripts/check-federation-docs.mjs
+          npx vitest run scripts/check-federation-docs.test.ts
