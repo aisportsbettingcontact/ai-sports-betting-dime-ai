@@ -272,7 +272,10 @@ export function computeBrierScores(
   if (f5TotalActual !== null && bookF5TotalNum !== null && bookF5TotalNum > 0) {
     if (f5TotalActual !== bookF5TotalNum) {
       const outcomeF5Over: 0 | 1 = f5TotalActual > bookF5TotalNum ? 1 : 0;
-      brierF5Total = brierScore(probFromUnit(game.modelF5OverRate), outcomeF5Over);
+      brierF5Total = brierScore(
+        probFromUnit(game.modelF5OverRate),
+        outcomeF5Over
+      );
     }
     // Push → brierF5Total stays null
   }
@@ -280,7 +283,10 @@ export function computeBrierScores(
   // ── NRFI ──────────────────────────────────────────────────────────────────
   let brierNrfi: number | null = null;
   if (outcome.nrfiBinary !== null) {
-    brierNrfi = brierScore(probFromUnit(game.modelPNrfi), outcome.nrfiBinary as 0 | 1);
+    brierNrfi = brierScore(
+      probFromUnit(game.modelPNrfi),
+      outcome.nrfiBinary as 0 | 1
+    );
   }
 
   // ── FG ML ─────────────────────────────────────────────────────────────────
@@ -301,7 +307,10 @@ export function computeBrierScores(
     if (outcome.awayF5Runs !== outcome.homeF5Runs) {
       const outcomeF5HomeWin: 0 | 1 =
         outcome.homeF5Runs > outcome.awayF5Runs ? 1 : 0;
-      brierF5Ml = brierScore(probFromPct(game.modelF5HomeWinPct), outcomeF5HomeWin);
+      brierF5Ml = brierScore(
+        probFromPct(game.modelF5HomeWinPct),
+        outcomeF5HomeWin
+      );
     }
     // F5 tie (common) → brierF5Ml stays null
   }

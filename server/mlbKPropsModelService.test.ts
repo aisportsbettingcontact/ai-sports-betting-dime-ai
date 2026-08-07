@@ -58,9 +58,10 @@ describe("poissonPUnder — integer lines carry a push", () => {
   });
 
   it("over + under sums to 1 on a half line (no push to account for)", () => {
-    expect(
-      poissonPOver(4.5, LAMBDA) + poissonPUnder(4.5, LAMBDA)
-    ).toBeCloseTo(1, 10);
+    expect(poissonPOver(4.5, LAMBDA) + poissonPUnder(4.5, LAMBDA)).toBeCloseTo(
+      1,
+      10
+    );
   });
 
   it("agrees with the CDF definition", () => {
