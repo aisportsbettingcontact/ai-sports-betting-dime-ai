@@ -1588,3 +1588,102 @@ The gate landed first, deliberately, before any repair:
 
 A formatting change broke a control path, and every subsequent run reported success. Filed as
 `os/memory/lessons/a-formatter-can-disable-a-control-path.md`.
+
+---
+
+## Incident 64 — 2026-08-07 — A repository transfer silently stopped merge-to-main from deploying, and the deploy gate certified it anyway
+
+**Severity:** HIGH (silent) · **Customer impact:** none — production stayed healthy on the previous
+commit throughout · **Found by:** post-merge verification of PR #432, by hand
+
+### What was believed
+
+Dime's deploy law, stated in `CLAUDE.md`, `os/DOCTRINE.md` and every handoff: **merge to `main` IS a
+production deploy.** LOOP-001 names merge-to-main as its apply step and fires ~13×/day. Every merge
+from #419 through #429 produced two Railway deployments — one per service — within **2 seconds**.
+
+### What is actually true
+
+The GitHub repository was transferred from `aisportsbettingcontact/ai-sports-betting-dime-ai` to
+`tailered-ai/dime-ai` — a different account, not a rename in place. A transfer removes the
+repository from the old account's GitHub App installations, so Railway stopped receiving push
+events. Both Railway services still declared `source.repo = "aisportsbettingcontact/…"`.
+
+PR #432 merged at **10:33:42Z** and produced **no Railway deployment at all** — not queued, not
+building, not failed. No record existed. It was the first merge after the transfer.
+
+| Merge | Merged | Deployed | Lag |
+|---|---|---|---|
+| #419 | 12:35:28Z | 12:35:30Z | 2s |
+| #426 | 12:47:57Z | 12:47:59Z | 2s |
+| #427 | 12:53:31Z | 12:53:33Z | 2s |
+| #428 | 13:02:37Z | 13:02:39Z | 2s |
+| #429 | 13:19:45Z | 13:19:47Z | 2s |
+| **#432** | **10:33:42Z** | **— none —** | **~40 min, until fixed by hand** |
+
+The positive discriminator, not merely the absence of deploys: `railway-app[bot]` posts commit
+statuses when connected. On `bf51cb050`, the last pre-transfer merge, it posted four (pending then
+success, per service). On `0ead0ac7c`, the first post-transfer merge, it posted **zero**.
+
+### Why it is HIGH anyway
+
+1. **The deploy gate reported success against a deploy that had not happened.** `deploy-smoke` ran
+   `10:33:44Z → 10:38:04Z` on `0ead0ac7c` and concluded **success**. The Railway deployment for that
+   commit was not created until `11:13:08Z`, 35 minutes later. The workflow `sleep 240`s and then
+   smoke-tests the live origin; the origin was healthy — serving the *previous* commit — so it
+   passed. This is `tests-can-report-green-without-asserting` in the one gate whose entire job is to
+   verify a deployment.
+2. **Nothing can currently tell the two states apart.** `/health` returns
+   `{db, integrations, schema, status, ts}` — **no commit, version or build identifier.**
+   `scripts/smoke-deploy.mjs` asserts `/health → 200` and schema state. There is no assertion any
+   smoke test could make today that distinguishes "the new build is live" from "the old build is
+   live and healthy".
+3. **Every other signal was green and correct.** CI passed, `Gitleaks` passed, `os-ledger-append`
+   ran 2s after the merge and correctly recorded a cycle artifact for #432 with `outcome: null`. The
+   ledger did not lie — it recorded an action and left the outcome unobserved, which is the design
+   working. But nothing reads that `null` and asks "did this ever apply?"
+4. **The deploy law was false for ~40 minutes and no instrument noticed.** It was found only because
+   a human asked "is it deploying?" after the merge.
+
+### What changed
+
+Owner action, outside the repository — the fix is not reachable from any API:
+
+- The Railway GitHub App was installed/authorized on the `tailered-ai` account with access to
+  `dime-ai`. **GitHub exposes no API for creating an app installation**; it is a browser consent
+  flow only.
+- Both services' Source was reconnected to `tailered-ai/dime-ai`, branch `main`
+  (`ai-sports-betting-dime-ai` a46ea921…, `ai-sports-betting-backend` 3528dc9f…).
+
+### Verification
+
+Restoration is proven by two subsequent unassisted merges, not by the repaired one:
+
+| Merge | Merged | Deployed | Lag |
+|---|---|---|---|
+| #430 | 11:22:31Z | 11:22:33Z | **2s** |
+| #431 | 11:31:47Z | 11:31:49Z | **2s** |
+
+The 2-second lag matches the pre-transfer baseline exactly. `railway-app[bot]` statuses reappeared
+on the merge commits, and `get-service-config` now reports `source.repo = "tailered-ai/dime-ai"` for
+both services.
+
+### Not yet done
+
+- **A build stamp on `/health`, and a smoke assertion against it.** Until the running server can say
+  which commit it is, `deploy-smoke` remains structurally unable to detect this class of failure —
+  it would pass again tomorrow under the same conditions. This is the actual remediation; the
+  reconnection only fixed today's instance.
+- **Nothing watches the merge→deploy interval.** LOOP-001 records the merge; no instrument compares
+  it against a resulting deployment. A cycle artifact whose `outcome` stays `null` past a threshold
+  is exactly the observable signal that was available and unused.
+- **Stale references to the old repository path** across the tree. The GitHub API redirects the old
+  path, so they still resolve; two of them are `const`-pinned in
+  `config/dime-agent-access.schema.json` and `config/dime-control-plane-targets.schema.json`, and
+  `scripts/os/observe-crons.mts` and `scripts/graduate-ruleset.mjs` hardcode it.
+
+### Lesson
+
+A green deploy gate is not a deploy. The gate asserted the site was healthy, which was true, and
+inferred the deployment had happened, which was false — because nothing in the response identified
+the build. Candidate lesson: `a-healthy-origin-is-not-a-new-deploy`.
