@@ -1,7 +1,8 @@
 # Engineering federation routing — invocation surfaces and evidence contract
 
-Verified against this repo 2026-08-05. When this disagrees with the files on disk, the
-files win — update this doc.
+Verified against this repo 2026-08-05; invocation reality, the evidence-record section, and
+the DR-014 ruling re-verified 2026-08-07 (each dated in place). When this disagrees with the
+files on disk, the files win — update this doc.
 
 ## Precedence between the two standards
 
@@ -16,10 +17,28 @@ files win — update this doc.
 
 ## Skills
 
+**Invocation reality (verified 2026-08-07).** `.agents/skills/` is the cross-platform
+directory (17 agent platforms, per CLAUDE.md). **No entry is registered as a Claude Code
+skill by virtue of living there** — the Skill tool cannot invoke a copy in that tree, so
+anything living *only* there is Read-path only. That is why the two architect rows below
+changed. (A name may still be reachable from a *different* source: `stripe-best-practices`
+sits in `.agents/skills/` and is also invocable as `stripe:stripe-best-practices` — that
+is the stripe plugin's copy, not this one.)
+
+The converse does **not** hold: presence in `.claude/skills/` is necessary, not
+sufficient. Two verified counter-examples, each for a different reason —
+`review-animations` sets `disable-model-invocation: true` in its frontmatter
+(`.claude/skills/review-animations/SKILL.md`), and `frontend-design` has ordinary
+frontmatter yet is still not in the roster, which `design-federation` records as a plain
+observed fact ("**Not in the Skill roster.** Load via `Read`" —
+`design-federation/references/routing.md`; also its `registry.md`). So do not mark a row
+"Skill tool" because of where the file sits: **confirm the name is in the live roster,
+and if it is not, give the Read path.** The rows below were each checked that way.
+
 | Skill | ID / invocation | Role |
 | --- | --- | --- |
-| architect-backend-systems | Skill tool (also `.agents/skills/architect-backend-systems/`) | Lead for design/audit/modernize/implement/incident modes; carries its own `agents/` + `references/` |
-| architect-github-repos | Skill tool (`.agents/skills/`) | Repo-structure audits, dead/duplicated file classification |
+| architect-backend-systems | **Read-path only** — `.agents/skills/` is not a Claude Code skill directory. `Read .agents/skills/architect-backend-systems/SKILL.md`, then its `references/architecture-standard.md` for the mode you need | Lead for design/audit/modernize/implement/incident modes; carries its own `agents/` + `references/` |
+| architect-github-repos | **Read-path only** — same reason. `Read .agents/skills/architect-github-repos/SKILL.md` | Repo-structure audits, dead/duplicated file classification |
 | superpowers process skills | `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `superpowers:verification-before-completion`, `superpowers:writing-plans` (commands `/sp-tdd`, `/sp-debug`, `/sp-verify`, `/sp-plan`) | How, not what |
 | verify | Skill tool (`.claude/skills/verify/`) | Production build + boot + `smoke-deploy.mjs` + rendered proof; its Playwright snippet hardcodes remote-container paths — resolve per environment |
 | intended-vs-implemented | Skill tool (`.claude/skills/`) | Gap audits between documented intent and code |
@@ -35,31 +54,44 @@ files win — update this doc.
   environment approval; run BEFORE merging dependent code).
 - `gh workflow run deploy-smoke.yml` / automatic on main push — post-deploy smoke.
 
-## Evidence record template (§21.3, Dime-adapted)
+## Evidence record (§21.3, Dime-adapted)
 
-Attach to the PR (or paste in the final report). Verbatim command output backs every
-`recorded` field; absence of a section must be explained, not omitted.
+**Home:** the PR body, under `## Evidence record (engineering-federation §21.3)`.
 
-```yaml
-outcome: shipped | rejected | halted_attempts | halted_budget | halted_permission | halted_environment | failed_verification
-source_revision: <commit SHA>
-baseline: <revision + measured before-state captured in step 3>
-classification: <trust boundary + failure impact class>
-diff_scope: <complete changed-file inventory>
-contracts_changed: <tRPC routers/types, schema journal, config, policy, or none>
-artifact: <Railway deployment id + meta.commitHash, or none>
-migration_revision: <drizzle journal tag, or none>
-verification:
-  focused_checks: <recorded results>
-  full_gates: <tsc / gated vitest / build / class-specific gates, recorded>
-  live_proof: <smoke/verify-skill output, or explicit N/A + reason>
-production_mutation: true | false   # any merge to main is true (deploy law)
-approvals: <owner directives, db-push run URLs, PR approvals, or none>
-known_limitations: <explicit list>
-rollback_or_containment: <exact mechanism — env knob, revert, forward-fix plan>
-decision_notes: <ADR-style notes for any new component or budget change, or none>
+**Template:** `references/record-template.yaml` — a real file to copy from, so the block
+is never retyped from memory. Field names follow §21.3 verbatim.
+
+```bash
+cat .claude/skills/engineering-federation/references/record-template.yaml
+# strip the comment header, fill it, paste under the PR body heading above
 ```
+
+**Why the PR body and not a file.** The convention already exists and has run: PR #364
+(the federation's first production run) and PR #371 both carry a filled block. It decayed
+afterwards — of the 67 PRs merged since the skill landed (`f348c5ea4`, 2026-08-05), only
+those two carry a record — but the failure was **friction, not location**: the template
+was a fenced block buried in this file, and nothing in the PR template asked for it. Both
+are now fixed (a copyable file; a "Federation evidence" section in
+`.github/pull_request_template.md`).
+
+> **Settled — owner ruling, Prez, 2026-08-07. Do not relitigate.** The record **stays in
+> the PR body**; relocating it to a per-PR tracked file (`docs/audits/<date>-<slug>-evidence/record.yaml`
+> beside the design bundle) was proposed and **rejected**. Recorded as the partial ruling in
+> `os/decisions/DR-014-consolidation-ruling.md` (Ruling 2), which upholds that record's
+> "One file, one job … DR-005 must **not** mint a parallel evidence record." The path
+> forward is `os/decisions/DR-005-first-loop-selection.md`: this same PR-body block becomes
+> machine-validated via `shared/loop/evidenceRecord.ts` (zod) + `scripts/check-evidence-record.mjs`
+> — which is why the template's field names follow §21.3 verbatim rather than a local
+> dialect. Everything else in DR-014 is still AWAITING RULING; only the location was ruled.
+
+Verbatim command output backs every recorded field; absence of a section must be
+explained, not omitted (§23). Dime field meanings — `artifact_digest` = Railway
+deployment id + `meta.commitHash`, `migration_revision` = drizzle journal tag — are in
+`dime-mapping.md`, "Evidence record".
 
 Terminal-outcome rules (§21.4): `shipped` requires all required gates green at the
 authorized boundary; a partially implemented change is never `shipped`; missing authority
-is `halted_permission`, not a workaround.
+is `halted_permission`, not a workaround. The enum's **authoritative definition is §21.4
+of the vendored standard** (authority chain #3, above this adaptation);
+`record-template.yaml`, SKILL.md's "If claiming done" conditional, and the PR template
+restate it. If it ever changes, the standard is what changed — propagate outward from there.

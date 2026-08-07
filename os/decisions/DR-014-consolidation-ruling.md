@@ -137,6 +137,22 @@ reject them on day one.** Ruling: **one active seat at v1** (SEAT-001 run-record
 LOOP-002). SEAT-002 and SEAT-003 → DEFERRED with reasons. That is an honest Level-2→3 step, not a
 roster.
 
+> **PARTIAL RULING — Prez, 2026-08-07: evidence-record location only.** The engineering-federation
+> §21.3 evidence record **stays in the PR body**; it does **not** move to a per-PR tracked file
+> (a `docs/audits/<date>-<slug>-evidence/record.yaml` beside the design bundle was proposed and
+> **rejected**). This upholds the "Four per-PR JSON artifacts" row above — DR-005 does not mint a
+> parallel evidence record — and leaves DR-005's plan intact: the existing PR-body block becomes
+> machine-validated via `shared/loop/evidenceRecord.ts` (zod) + `scripts/check-evidence-record.mjs`.
+> Rationale: a validator is about to be built against the PR-body shape, so relocating now would
+> mean writing it twice; the reviewability argument for a tracked file is real but belongs in a
+> deliberate follow-up, not a docs change.
+>
+> **Scope of this partial ruling:** the evidence-record location sub-question ONLY. Every other
+> collision in this record — the three artifact substrates, ageing ownership, cron cadence,
+> frontmatter schemas, SessionStart hooks, the issue writer — and the four rulings in "Requested
+> ruling" below remain **AWAITING RULING** (`observe_by` 2026-08-12). Consumed by
+> `.claude/skills/engineering-federation/references/routing.md`, "Evidence record".
+
 ---
 
 ## Ruling 3 — The channel the whole set missed
