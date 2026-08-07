@@ -604,8 +604,9 @@ describe("parseTrpcProcedureList — path-segment evasion (2026-08-06 audit)", (
   // prefixing a segment, which previously yielded class=null (no limiter)
   // while tRPC still executed the procedure.
   it("classifies a single-segment-prefixed login as auth", () => {
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/x/appUsers.login")))
-      .toBe("auth");
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/x/appUsers.login"))
+    ).toBe("auth");
   });
 
   it("classifies a multi-segment-prefixed batched login as auth", () => {
@@ -625,23 +626,27 @@ describe("parseTrpcProcedureList — path-segment evasion (2026-08-06 audit)", (
   });
 
   it("classifies a prefixed waitlist submit as waitlist", () => {
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/x/waitlist.submit")))
-      .toBe("waitlist");
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/x/waitlist.submit"))
+    ).toBe("waitlist");
   });
 
   it("classifies a prefixed feed read as public_feed", () => {
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/x/games.list")))
-      .toBe("public_feed");
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/x/games.list"))
+    ).toBe("public_feed");
   });
 
   it("still classifies the ordinary unprefixed path", () => {
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.login")))
-      .toBe("auth");
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.login"))
+    ).toBe("auth");
   });
 
   it("preserves the URL-encoding defence (AUTH-004)", () => {
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.logi%6E")))
-      .toBe("auth");
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.logi%6E"))
+    ).toBe("auth");
   });
 
   it("preserves the comma-batch defence (AUTH-004)", () => {

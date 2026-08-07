@@ -1,8 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import {
-  resolveClientIdentity,
-  identitySource,
-} from "./clientIdentity";
+import { resolveClientIdentity, identitySource } from "./clientIdentity";
 
 const ORIGINAL_EDGE_MODE = process.env.EDGE_MODE;
 const ORIGINAL_SECRET = process.env.EDGE_ORIGIN_SECRET;
@@ -18,7 +15,11 @@ afterEach(() => {
  * in this repo used a single-token XFF, which is why the PoP-keying bug
  * survived — see server/loginStatus.test.ts (2026-08-06 audit).
  */
-function cfRequest(cfClient: string, pop = "104.22.17.115", railway = "84.17.44.227") {
+function cfRequest(
+  cfClient: string,
+  pop = "104.22.17.115",
+  railway = "84.17.44.227"
+) {
   return {
     headers: {
       "x-forwarded-for": `${pop}, ${railway}`,

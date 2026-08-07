@@ -222,7 +222,8 @@ describe("login identity keying (2026-08-06 audit)", () => {
   afterEach(() => {
     if (ORIGINAL_EDGE_MODE === undefined) delete process.env.EDGE_MODE;
     else process.env.EDGE_MODE = ORIGINAL_EDGE_MODE;
-    if (ORIGINAL_EDGE_ORIGIN_SECRET === undefined) delete process.env.EDGE_ORIGIN_SECRET;
+    if (ORIGINAL_EDGE_ORIGIN_SECRET === undefined)
+      delete process.env.EDGE_ORIGIN_SECRET;
     else process.env.EDGE_ORIGIN_SECRET = ORIGINAL_EDGE_ORIGIN_SECRET;
   });
 

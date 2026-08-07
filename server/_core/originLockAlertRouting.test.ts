@@ -304,7 +304,7 @@ describe("caseBody()'s comment-stripping actually strips comments before matchin
     expect(stripped).not.toMatch(/break;/);
   });
 
-  it("a decoy comment containing a literal `case \"` does not fool the next-case boundary search", () => {
+  it('a decoy comment containing a literal `case "` does not fool the next-case boundary search', () => {
     const decoy = [
       '  // see case "edge_deny" above for the blocking path',
       '  console.warn("observe only");',
@@ -324,7 +324,8 @@ describe("caseBody()'s comment-stripping actually strips comments before matchin
   });
 
   it("string literals that happen to contain comment-like tokens are left untouched — stripComments() is comment-aware, not just token-aware", () => {
-    const src = 'console.log("this // is not a comment, and neither is /* this */ inside a string");';
+    const src =
+      'console.log("this // is not a comment, and neither is /* this */ inside a string");';
     const stripped = stripComments(src);
     expect(stripped).toBe(src);
   });

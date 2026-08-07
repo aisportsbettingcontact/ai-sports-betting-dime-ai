@@ -11,9 +11,8 @@ import { describe, it, expect, vi, afterEach } from "vitest";
  */
 describe("runMlbCycleOnce re-entrancy guard", () => {
   it("a second concurrent call is skipped, not run", async () => {
-    const { __setMlbCycleWorkForTest, runMlbCycleOnce } = await import(
-      "./vsinAutoRefresh"
-    );
+    const { __setMlbCycleWorkForTest, runMlbCycleOnce } =
+      await import("./vsinAutoRefresh");
     let running = 0;
     let maxConcurrent = 0;
     __setMlbCycleWorkForTest(async () => {
@@ -23,15 +22,18 @@ describe("runMlbCycleOnce re-entrancy guard", () => {
       running -= 1;
     });
 
-    await Promise.all([runMlbCycleOnce(), runMlbCycleOnce(), runMlbCycleOnce()]);
+    await Promise.all([
+      runMlbCycleOnce(),
+      runMlbCycleOnce(),
+      runMlbCycleOnce(),
+    ]);
 
     expect(maxConcurrent).toBe(1);
   });
 
   it("a later call runs normally once the prior one settles", async () => {
-    const { __setMlbCycleWorkForTest, runMlbCycleOnce } = await import(
-      "./vsinAutoRefresh"
-    );
+    const { __setMlbCycleWorkForTest, runMlbCycleOnce } =
+      await import("./vsinAutoRefresh");
     let calls = 0;
     __setMlbCycleWorkForTest(async () => {
       calls += 1;
@@ -42,9 +44,8 @@ describe("runMlbCycleOnce re-entrancy guard", () => {
   });
 
   it("the guard releases even when the work throws", async () => {
-    const { __setMlbCycleWorkForTest, runMlbCycleOnce } = await import(
-      "./vsinAutoRefresh"
-    );
+    const { __setMlbCycleWorkForTest, runMlbCycleOnce } =
+      await import("./vsinAutoRefresh");
     let calls = 0;
     __setMlbCycleWorkForTest(async () => {
       calls += 1;

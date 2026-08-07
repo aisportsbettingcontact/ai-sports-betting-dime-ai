@@ -36,7 +36,8 @@ class FakeTextChannel {
 // TextChannel stays faked; it's only used for an `instanceof` check plus the
 // send()/name/guild surface the existing tests below drive directly.
 vi.mock("discord.js", async () => {
-  const actual = await vi.importActual<typeof import("discord.js")>("discord.js");
+  const actual =
+    await vi.importActual<typeof import("discord.js")>("discord.js");
   return {
     ...actual,
     TextChannel: FakeTextChannel,
@@ -70,7 +71,10 @@ class CapturingTextChannel extends FakeTextChannel {
   }
 }
 
-function clientWithCapturingChannel(name: string, sendImpl: () => Promise<unknown>) {
+function clientWithCapturingChannel(
+  name: string,
+  sendImpl: () => Promise<unknown>
+) {
   const channel = new CapturingTextChannel(name, sendImpl);
   return {
     client: { isReady: () => true, channels: { fetch: async () => channel } },
@@ -164,7 +168,9 @@ describe("discord security alerts — hostile input cannot forge log lines", () 
     // Message text updated by the 2026-08-06 fix: buildEmbed() now runs
     // inside the same try as the send, so this catch covers build failures
     // too, not just send failures — "Failed to build or send" reflects that.
-    expect(lines.some(l => l.includes("Failed to build or send embed"))).toBe(true);
+    expect(lines.some(l => l.includes("Failed to build or send embed"))).toBe(
+      true
+    );
   });
 
   it("sanitizes on the successful post path", async () => {
@@ -292,7 +298,9 @@ describe("embed field width clamping (2026-08-06 audit)", () => {
       context: "public_feed",
       occurredAt: 1_754_500_000_000,
     });
-    const uaField = (embed.data.fields ?? []).find(f => f.name.includes("User-Agent"));
+    const uaField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("User-Agent")
+    );
     expect(uaField?.value).toContain(fullUa);
   });
 });
@@ -323,21 +331,33 @@ describe("composed-value clamp + brute-force escalation (2026-08-06 review, Crit
   });
 
   it("Critical 1: buildBruteForceEmbed does not throw on a 1500-char ip; every field <= 1024; description <= 4096", async () => {
-    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
+    const { buildBruteForceEmbedForTest } =
+      await import("./discordSecurityAlert");
     const longIp = "9".repeat(1500);
     let embed: ReturnType<typeof buildBruteForceEmbedForTest> | undefined;
     expect(() => {
-      embed = buildBruteForceEmbedForTest(longIp, 4, 10 * 60 * 1000, "test-ua", 1_754_500_000_000);
+      embed = buildBruteForceEmbedForTest(
+        longIp,
+        4,
+        10 * 60 * 1000,
+        "test-ua",
+        1_754_500_000_000
+      );
     }).not.toThrow();
     for (const f of embed!.data.fields ?? []) {
       expect(f.value.length).toBeLessThanOrEqual(DISCORD_FIELD_MAX);
     }
-    expect((embed!.data.description ?? "").length).toBeLessThanOrEqual(DISCORD_DESCRIPTION_MAX);
+    expect((embed!.data.description ?? "").length).toBeLessThanOrEqual(
+      DISCORD_DESCRIPTION_MAX
+    );
   });
 
   it("Critical 2: postSecurityAlert's brute-force escalation actually posts for a 1500-char ip, with content <= 2000", async () => {
     const { postSecurityAlert } = await import("./discordSecurityAlert");
-    const { client, channel } = clientWithCapturingChannel("sec-events", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const longIp = "8".repeat(1500);
@@ -370,7 +390,9 @@ describe("composed-value clamp + brute-force escalation (2026-08-06 review, Crit
     );
     expect(bruteForceSend).toBeDefined();
     expect(typeof bruteForceSend!.content).toBe("string");
-    expect(bruteForceSend!.content.length).toBeLessThanOrEqual(DISCORD_CONTENT_MAX);
+    expect(bruteForceSend!.content.length).toBeLessThanOrEqual(
+      DISCORD_CONTENT_MAX
+    );
   });
 
   it("Critical 2 (isolated): postBruteForceAlert still posts when ip is long enough to overflow the RAW description/content", async () => {
@@ -383,7 +405,10 @@ describe("composed-value clamp + brute-force escalation (2026-08-06 review, Crit
     // which isolates and proves the Critical-2-specific fix (build inside
     // try + clampDescription/clampContent) independent of Critical 1.
     const { postSecurityAlert } = await import("./discordSecurityAlert");
-    const { client, channel } = clientWithCapturingChannel("sec-events-2", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events-2",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const longIp = "7".repeat(2500);
@@ -407,11 +432,14 @@ describe("composed-value clamp + brute-force escalation (2026-08-06 review, Crit
         typeof a === "object" && a !== null && "content" in a
     );
     expect(bruteForceSend).toBeDefined();
-    expect(bruteForceSend!.content.length).toBeLessThanOrEqual(DISCORD_CONTENT_MAX);
+    expect(bruteForceSend!.content.length).toBeLessThanOrEqual(
+      DISCORD_CONTENT_MAX
+    );
   });
 
   it("Critical 1b: sanitizeLoginIdentifier caps a 2000-char input at SANITIZED_IDENTIFIER_MAX", async () => {
-    const { sanitizeLoginIdentifier, SANITIZED_IDENTIFIER_MAX } = await import("../routers/appUsers");
+    const { sanitizeLoginIdentifier, SANITIZED_IDENTIFIER_MAX } =
+      await import("../routers/appUsers");
     const hostileEmail = "a@" + "x".repeat(2000);
     const sanitized = sanitizeLoginIdentifier(hostileEmail);
     expect(sanitized.length).toBeLessThanOrEqual(SANITIZED_IDENTIFIER_MAX);
@@ -420,7 +448,9 @@ describe("composed-value clamp + brute-force escalation (2026-08-06 review, Crit
 
     const hostileUsername = "u".repeat(2000);
     const sanitizedUsername = sanitizeLoginIdentifier(hostileUsername);
-    expect(sanitizedUsername.length).toBeLessThanOrEqual(SANITIZED_IDENTIFIER_MAX);
+    expect(sanitizedUsername.length).toBeLessThanOrEqual(
+      SANITIZED_IDENTIFIER_MAX
+    );
     expect(sanitizedUsername).toBe("uuu***");
   });
 });
@@ -438,7 +468,9 @@ describe("postSecurityAlert try/catch placement (2026-08-06 audit)", () => {
     const spy = vi
       .spyOn(EmbedBuilder.prototype, "addFields")
       .mockImplementation(() => {
-        throw new Error("forced embed failure — isolates try/catch placement from field clamping");
+        throw new Error(
+          "forced embed failure — isolates try/catch placement from field clamping"
+        );
       });
     try {
       clientState.value = clientWithChannel("ok", async () => ({ id: "1" }));
@@ -475,18 +507,25 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
   it("has metadata for every limitType in the union", async () => {
     const { LIMITER_META } = await import("./discordSecurityAlert");
     for (const slug of ALL_LIMIT_TYPES) {
-      expect(LIMITER_META[slug], `missing LIMITER_META entry for "${slug}"`).toBeDefined();
+      expect(
+        LIMITER_META[slug],
+        `missing LIMITER_META entry for "${slug}"`
+      ).toBeDefined();
     }
   });
 
   it("never claims 429 for the origin lock", async () => {
     const { LIMITER_META } = await import("./discordSecurityAlert");
-    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain("429");
+    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain(
+      "429"
+    );
   });
 
   it("the xff canary is always observe-only — never a block, never a 429", async () => {
     const { LIMITER_META } = await import("./discordSecurityAlert");
-    expect(LIMITER_META.xff_canary.action).toBe("observed only — request was served");
+    expect(LIMITER_META.xff_canary.action).toBe(
+      "observed only — request was served"
+    );
   });
 
   it("all six real limiters render the 429/blocked copy in the embed", async () => {
@@ -526,7 +565,7 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
   // canary, so that assertion was live-false for every alert actually
   // firing right now. The three tests below cover all three states the
   // fixed embed can render for this slug.
-  it("edge_origin_ingress_anomaly with limiterOutcome=\"blocked\" (the edge_deny call site) renders a 403 title/body — NOT the 429/blocked copy", async () => {
+  it('edge_origin_ingress_anomaly with limiterOutcome="blocked" (the edge_deny call site) renders a 403 title/body — NOT the 429/blocked copy', async () => {
     const { buildEmbedForTest } = await import("./discordSecurityAlert");
     const embed = buildEmbedForTest({
       eventType: "RATE_LIMIT",
@@ -544,7 +583,7 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
     expect(embed.data.description).not.toMatch(/temporarily blocked\./);
   });
 
-  it("edge_origin_ingress_anomaly with limiterOutcome=\"observed\" (the /api/trpc canary call site) renders observe-only — NOT 403, NOT 429 (the live-production case: EDGE_MODE=log, 2026-08-07)", async () => {
+  it('edge_origin_ingress_anomaly with limiterOutcome="observed" (the /api/trpc canary call site) renders observe-only — NOT 403, NOT 429 (the live-production case: EDGE_MODE=log, 2026-08-07)', async () => {
     const { buildEmbedForTest } = await import("./discordSecurityAlert");
     const embed = buildEmbedForTest({
       eventType: "RATE_LIMIT",
@@ -564,7 +603,8 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
   });
 
   it("edge_origin_ingress_anomaly with NO limiterOutcome supplied is non-committal — asserts neither 403 nor 429 (2026-08-07 review, Critical 2: the alert must never assert a status code it cannot prove)", async () => {
-    const { buildEmbedForTest, LIMITER_META } = await import("./discordSecurityAlert");
+    const { buildEmbedForTest, LIMITER_META } =
+      await import("./discordSecurityAlert");
     const embed = buildEmbedForTest({
       eventType: "RATE_LIMIT",
       ip: "1.2.3.4",
@@ -581,8 +621,12 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
     expect(embed.data.description).not.toContain("429 Too Many Requests");
     // The static LIMITER_META default itself must not assert a code either —
     // this is what buildEmbedForTest fell back to above.
-    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain("403");
-    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain("429");
+    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain(
+      "403"
+    );
+    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain(
+      "429"
+    );
   });
 
   it("xff_canary renders an observe-only title/body — nothing was blocked, no 429", async () => {
@@ -630,23 +674,43 @@ describe("RATE_LIMIT / BRUTE_FORCE remediation is not a self-DoS instruction (20
       context: "global",
       occurredAt: 1_754_500_000_000,
     });
-    expect(embed.data.description).not.toMatch(/consider permanently blocking it at the firewall/i);
+    expect(embed.data.description).not.toMatch(
+      /consider permanently blocking it at the firewall/i
+    );
     expect(embed.data.description).toMatch(/shared infrastructure/i);
   });
 
   it("BRUTE_FORCE description no longer instructs blocking the IP as 'the most effective action'", async () => {
-    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
-    const embed = buildBruteForceEmbedForTest("1.2.3.4", 4, 10 * 60 * 1000, "ua", 1_754_500_000_000);
+    const { buildBruteForceEmbedForTest } =
+      await import("./discordSecurityAlert");
+    const embed = buildBruteForceEmbedForTest(
+      "1.2.3.4",
+      4,
+      10 * 60 * 1000,
+      "ua",
+      1_754_500_000_000
+    );
     expect(embed.data.description).not.toMatch(/most effective action/i);
     expect(embed.data.description).toMatch(/shared infrastructure/i);
     expect(embed.data.description).toMatch(/Cloudflare/i);
   });
 
   it("BRUTE_FORCE's 'Recommended Immediate Action' field prefers an account lock over an IP block", async () => {
-    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
-    const embed = buildBruteForceEmbedForTest("1.2.3.4", 4, 10 * 60 * 1000, "ua", 1_754_500_000_000);
-    const actionField = (embed.data.fields ?? []).find(f => f.name.includes("Recommended Immediate Action"));
-    expect(actionField?.value).toMatch(/confirm it isn't.*shared infrastructure/i);
+    const { buildBruteForceEmbedForTest } =
+      await import("./discordSecurityAlert");
+    const embed = buildBruteForceEmbedForTest(
+      "1.2.3.4",
+      4,
+      10 * 60 * 1000,
+      "ua",
+      1_754_500_000_000
+    );
+    const actionField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("Recommended Immediate Action")
+    );
+    expect(actionField?.value).toMatch(
+      /confirm it isn't.*shared infrastructure/i
+    );
     expect(actionField?.value).not.toMatch(
       /^Block `1\.2\.3\.4` at the firewall\/CDN level — IP Access Rules\./
     );
@@ -656,7 +720,10 @@ describe("RATE_LIMIT / BRUTE_FORCE remediation is not a self-DoS instruction (20
 describe("dedup key includes path + context, not just (eventType, ip) (2026-08-07 review, Task 4.5)", () => {
   it("two DIFFERENT limiters (context values) firing for the SAME IP within the cooldown BOTH post", async () => {
     const { postSecurityAlert } = await import("./discordSecurityAlert");
-    const { client, channel } = clientWithCapturingChannel("sec-events-dedup", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events-dedup",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const ip = "203.0.113.9";
@@ -685,14 +752,18 @@ describe("dedup key includes path + context, not just (eventType, ip) (2026-08-0
     });
 
     const embedSends = channel.sentArgs.filter(
-      (a): a is { embeds: unknown[] } => typeof a === "object" && a !== null && "embeds" in a
+      (a): a is { embeds: unknown[] } =>
+        typeof a === "object" && a !== null && "embeds" in a
     );
     expect(embedSends.length).toBe(2);
   });
 
   it("the SAME (eventType, ip, path, context) posted twice within the cooldown IS still deduped", async () => {
     const { postSecurityAlert } = await import("./discordSecurityAlert");
-    const { client, channel } = clientWithCapturingChannel("sec-events-dedup-2", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events-dedup-2",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const ip = "203.0.113.10";
@@ -710,7 +781,8 @@ describe("dedup key includes path + context, not just (eventType, ip) (2026-08-0
     await postSecurityAlert({ ...one, occurredAt: now + 10 });
 
     const embedSends = channel.sentArgs.filter(
-      (a): a is { embeds: unknown[] } => typeof a === "object" && a !== null && "embeds" in a
+      (a): a is { embeds: unknown[] } =>
+        typeof a === "object" && a !== null && "embeds" in a
     );
     expect(embedSends.length).toBe(1);
   });
@@ -720,7 +792,10 @@ describe("global alert budget + time-based prune (2026-08-07 review, Task 4.6)",
   it("1000 events from 1000 distinct IPs in under a minute yields <= 21 embeds, and the dedup prune runs <= 1 time", async () => {
     const mod = await import("./discordSecurityAlert");
     const { postSecurityAlert, getAlertDedupPruneRunCountForTest } = mod;
-    const { client, channel } = clientWithCapturingChannel("sec-events-flood", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events-flood",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const now = Date.now();
@@ -745,7 +820,8 @@ describe("global alert budget + time-based prune (2026-08-07 review, Task 4.6)",
     expect(channel.sentArgs.length).toBeLessThanOrEqual(21);
 
     const embedSends = channel.sentArgs.filter(
-      (a): a is { embeds: unknown[] } => typeof a === "object" && a !== null && "embeds" in a
+      (a): a is { embeds: unknown[] } =>
+        typeof a === "object" && a !== null && "embeds" in a
     );
     expect(embedSends.length).toBeLessThanOrEqual(20);
 
@@ -758,7 +834,10 @@ describe("global alert budget + time-based prune (2026-08-07 review, Task 4.6)",
 
   it("posts exactly ONE budget-exhausted summary line, not one per suppressed alert", async () => {
     const { postSecurityAlert } = await import("./discordSecurityAlert");
-    const { client, channel } = clientWithCapturingChannel("sec-events-flood-summary", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events-flood-summary",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const now = Date.now();
@@ -779,7 +858,10 @@ describe("global alert budget + time-based prune (2026-08-07 review, Task 4.6)",
 
     const contentOnlySends = channel.sentArgs.filter(
       (a): a is { content: string } =>
-        typeof a === "object" && a !== null && "content" in a && !("embeds" in a)
+        typeof a === "object" &&
+        a !== null &&
+        "content" in a &&
+        !("embeds" in a)
     );
     expect(contentOnlySends.length).toBe(1);
     expect(contentOnlySends[0]!.content).toMatch(/alert budget reached/i);
@@ -799,7 +881,9 @@ describe("formatTimestamp emits the real zone abbreviation + UTC instant, not a 
       method: "POST",
       occurredAt: augustUtc,
     });
-    const timeField = (embed.data.fields ?? []).find(f => f.name.includes("Time of Event"));
+    const timeField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("Time of Event")
+    );
     expect(timeField?.value).toContain("EDT");
     expect(timeField?.value).not.toContain("EST");
     expect(timeField?.value).toContain(new Date(augustUtc).toISOString());
@@ -816,7 +900,9 @@ describe("formatTimestamp emits the real zone abbreviation + UTC instant, not a 
       method: "POST",
       occurredAt: januaryUtc,
     });
-    const timeField = (embed.data.fields ?? []).find(f => f.name.includes("Time of Event"));
+    const timeField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("Time of Event")
+    );
     expect(timeField?.value).toContain("EST");
     expect(timeField?.value).not.toContain("EDT");
     expect(timeField?.value).toContain(new Date(januaryUtc).toISOString());
@@ -844,7 +930,9 @@ describe("logSafe reaches embed values and content, and content additionally str
       context: "public_feed",
       occurredAt: 1_754_500_000_000,
     });
-    const pathField = (embed.data.fields ?? []).find(f => f.name.includes("Route / Endpoint Hit"));
+    const pathField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("Route / Endpoint Hit")
+    );
     expect(pathField?.value).toBeDefined();
     // logSafe escapes real newlines to the two-character sequence `\n` — a
     // raw newline must never survive into the field value.
@@ -870,7 +958,10 @@ describe("logSafe reaches embed values and content, and content additionally str
 
   it("the BRUTE_FORCE @here content strips backticks and @ from the ip — no forged mention, no code-span breakout", async () => {
     const { postSecurityAlert } = await import("./discordSecurityAlert");
-    const { client, channel } = clientWithCapturingChannel("sec-events-hostile-ip", async () => ({ id: "1" }));
+    const { client, channel } = clientWithCapturingChannel(
+      "sec-events-hostile-ip",
+      async () => ({ id: "1" })
+    );
     clientState.value = client;
 
     const hostileIp = "1.2.3.4`@everyone\nforged";
@@ -940,7 +1031,9 @@ describe("Discord Markdown cannot break out of an embed field (2026-08-07 review
       occurredAt: 1_754_500_000_000,
     });
     const fields = embed.data.fields ?? [];
-    const pathField = fields.find(f => f.name.includes("tRPC Procedure Targeted"));
+    const pathField = fields.find(f =>
+      f.name.includes("tRPC Procedure Targeted")
+    );
     const originField = fields.find(f => f.name.includes("Blocked Origin"));
     expect(pathField).toBeDefined();
     expect(originField).toBeDefined();
@@ -986,7 +1079,9 @@ describe("Discord Markdown cannot break out of an embed field (2026-08-07 review
       context: "public_feed",
       occurredAt: 1_754_500_000_000,
     });
-    const pathField = (embed.data.fields ?? []).find(f => f.name.includes("Route / Endpoint Hit"));
+    const pathField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("Route / Endpoint Hit")
+    );
     expect(pathField).toBeDefined();
     expect(countBackticks(pathField!.value)).toBe(2);
     expect(pathField!.value).not.toMatch(/(?<!\\)\*\*PWNED-BOLD(?<!\\)\*\*/);
@@ -1020,11 +1115,20 @@ describe("Discord Markdown cannot break out of an embed field (2026-08-07 review
   });
 
   it("BRUTE_FORCE: the payload cannot break out of the description, the ip field, or the Recommended Immediate Action field", async () => {
-    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
-    const embed = buildBruteForceEmbedForTest(PAYLOAD_ORIGIN, 4, 10 * 60 * 1000, "ua", 1_754_500_000_000);
+    const { buildBruteForceEmbedForTest } =
+      await import("./discordSecurityAlert");
+    const embed = buildBruteForceEmbedForTest(
+      PAYLOAD_ORIGIN,
+      4,
+      10 * 60 * 1000,
+      "ua",
+      1_754_500_000_000
+    );
     const fields = embed.data.fields ?? [];
     const ipField = fields.find(f => f.name.includes("Attacker IP Address"));
-    const actionField = fields.find(f => f.name.includes("Recommended Immediate Action"));
+    const actionField = fields.find(f =>
+      f.name.includes("Recommended Immediate Action")
+    );
     expect(ipField).toBeDefined();
     expect(actionField).toBeDefined();
 
@@ -1054,7 +1158,9 @@ describe("Discord Markdown cannot break out of an embed field (2026-08-07 review
       context: "public_feed",
       occurredAt: 1_754_500_000_000,
     });
-    const pathField = (embed.data.fields ?? []).find(f => f.name.includes("Route / Endpoint Hit"));
+    const pathField = (embed.data.fields ?? []).find(f =>
+      f.name.includes("Route / Endpoint Hit")
+    );
     expect(pathField).toBeDefined();
     expect(pathField!.value.length).toBeLessThanOrEqual(1024);
     // At most the wrapper's own 2 real backticks can survive — every one of
@@ -1075,13 +1181,13 @@ describe("fireRateLimitEvent threads an explicit blocked/observed indicator per 
     "utf8"
   );
 
-  it("fireRateLimitEvent's signature gains an `outcome` parameter defaulting to \"blocked\" (so the six real-limiter call sites, asserted verbatim by clientIdentityCallSites.test.ts, stay textually unchanged and still get the correct value)", () => {
+  it('fireRateLimitEvent\'s signature gains an `outcome` parameter defaulting to "blocked" (so the six real-limiter call sites, asserted verbatim by clientIdentityCallSites.test.ts, stay textually unchanged and still get the correct value)', () => {
     expect(INDEX_SRC).toMatch(
       /outcome:\s*"blocked"\s*\|\s*"observed"\s*=\s*"blocked"/
     );
   });
 
-  it("the console.warn tag reflects the real outcome — \"BLOCKED\" vs \"OBSERVED (not blocked)\" — not a hardcoded \"BLOCKED\" for all eight call sites (confirmed live 2026-08-07: BLOCKED logged for a request the HTTP log recorded as httpStatus:200)", () => {
+  it('the console.warn tag reflects the real outcome — "BLOCKED" vs "OBSERVED (not blocked)" — not a hardcoded "BLOCKED" for all eight call sites (confirmed live 2026-08-07: BLOCKED logged for a request the HTTP log recorded as httpStatus:200)', () => {
     expect(INDEX_SRC).toMatch(
       /outcome === "blocked" \? "BLOCKED" : "OBSERVED \(not blocked\)"/
     );
@@ -1091,7 +1197,7 @@ describe("fireRateLimitEvent threads an explicit blocked/observed indicator per 
     expect(INDEX_SRC).not.toMatch(/`\$\{tag\} BLOCKED \| IP=/);
   });
 
-  it("the edge_deny call site (origin lock) passes outcome=\"blocked\" — the only OriginLockEvent kind that actually 403s", () => {
+  it('the edge_deny call site (origin lock) passes outcome="blocked" — the only OriginLockEvent kind that actually 403s', () => {
     const start = INDEX_SRC.indexOf("Origin lock (Phase 4 edge defense)");
     const end = INDEX_SRC.indexOf("Security headers (helmet)");
     expect(start).toBeGreaterThan(-1);
@@ -1102,7 +1208,7 @@ describe("fireRateLimitEvent threads an explicit blocked/observed indicator per 
     );
   });
 
-  it("the xff_canary call site passes outcome=\"observed\" — it is observe-only by construction and never blocks", () => {
+  it('the xff_canary call site passes outcome="observed" — it is observe-only by construction and never blocks', () => {
     const start = INDEX_SRC.indexOf("XFF-sanitization canary");
     const mid = INDEX_SRC.indexOf("Edge-aware anomaly (Phase 4)");
     expect(start).toBeGreaterThan(-1);
@@ -1113,7 +1219,7 @@ describe("fireRateLimitEvent threads an explicit blocked/observed indicator per 
     );
   });
 
-  it("the /api/trpc edge_origin_ingress_anomaly canary call site passes outcome=\"observed\" — it always calls next() and never blocks, even though it shares its limitType slug with the genuinely-blocking edge_deny case (this is the live production case: EDGE_MODE=log)", () => {
+  it('the /api/trpc edge_origin_ingress_anomaly canary call site passes outcome="observed" — it always calls next() and never blocks, even though it shares its limitType slug with the genuinely-blocking edge_deny case (this is the live production case: EDGE_MODE=log)', () => {
     const start = INDEX_SRC.indexOf("Edge-aware anomaly (Phase 4)");
     const end = INDEX_SRC.indexOf("Global API rate limiter");
     expect(start).toBeGreaterThan(-1);
@@ -1134,16 +1240,23 @@ describe("fireRateLimitEvent threads an explicit blocked/observed indicator per 
       'fireRateLimitEvent(ip, req.path, req.method, "public_feed", ua);',
     ];
     for (const marker of realLimiterMarkers) {
-      expect(INDEX_SRC, `marker not found verbatim: ${marker}`).toContain(marker);
+      expect(INDEX_SRC, `marker not found verbatim: ${marker}`).toContain(
+        marker
+      );
     }
   });
 
   it("SecurityAlertPayload carries the outcome through to the embed: fireRateLimitEvent forwards it as limiterOutcome, not just to insertSecurityEvent's untyped context", () => {
     const fnStart = INDEX_SRC.indexOf("function fireRateLimitEvent(");
-    const fnEnd = INDEX_SRC.indexOf("\n}", INDEX_SRC.indexOf("postSecurityAlert({", fnStart));
+    const fnEnd = INDEX_SRC.indexOf(
+      "\n}",
+      INDEX_SRC.indexOf("postSecurityAlert({", fnStart)
+    );
     expect(fnStart).toBeGreaterThan(-1);
     expect(fnEnd).toBeGreaterThan(fnStart);
     const fnBody = INDEX_SRC.slice(fnStart, fnEnd);
-    expect(fnBody).toMatch(/postSecurityAlert\(\{[\s\S]*?limiterOutcome:\s*outcome,/);
+    expect(fnBody).toMatch(
+      /postSecurityAlert\(\{[\s\S]*?limiterOutcome:\s*outcome,/
+    );
   });
 });
