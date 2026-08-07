@@ -9,8 +9,13 @@ commits Prez to.
 
 ## Status
 
-**All fifteen are AWAITING RULING.** Nothing in Stage 3 or Stage 4 begins until they are ruled —
-that is the Stage 2 gate.
+**Eleven of fifteen are AWAITING RULING.** Nothing in Stage 3 or Stage 4 begins until they are
+ruled — that is the Stage 2 gate.
+
+**Ruled 2026-08-07 — four cuts upheld:** DR-007, DR-010, DR-011, DR-013. All four were cut by
+DR-014 Ruling 1 and none had been built, so confirming them closed four records with no
+implementation work and no change to the tree. Each carries its ruling, its date and its rationale
+in the record itself.
 
 ## Read in this order
 
