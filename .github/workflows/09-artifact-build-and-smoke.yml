@@ -90,6 +90,7 @@ jobs:
             -e DATABASE_URL="mysql://u:p@127.0.0.1:3306/db" \
             -e PUBLIC_ORIGIN="https://ai-sports-betting-dime-ai-production.up.railway.app" \
             -e DISABLE_BACKGROUND_JOBS=1 \
+            -e RAILWAY_GIT_COMMIT_SHA="${{ github.sha }}" \
             dime-pr:${{ github.sha }}
           for i in $(seq 1 40); do
             if curl -sf http://127.0.0.1:3910/health >/dev/null; then echo "up after ${i} polls"; break; fi
@@ -98,6 +99,13 @@ jobs:
           done
 
       - name: "[GATE] Full smoke suite against the running container"
+        # EXPECTED_COMMIT turns the build-identity check into a real end-to-end
+        # proof of the Incident 64 plumbing: the container is given the SHA, and
+        # the smoke suite asserts /health reports that exact commit back. If the
+        # variable ever stops reaching the runtime, this fails HERE — on the PR,
+        # before production — instead of after a deploy.
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
         run: node scripts/smoke-deploy.mjs http://127.0.0.1:3910
 
       - name: "[GATE] Synthetic critical transaction — checkout page + Stripe CSP + auth gates"
