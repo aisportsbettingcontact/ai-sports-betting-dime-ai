@@ -212,6 +212,10 @@ const csrfAlertLastSent = new Map<string, number>();
 
 function shouldSendCsrfAlert(ip: string): boolean {
   const now = Date.now();
+  // `ip` is header-derived (resolveClientIdentity) and therefore attacker-
+  // influenced. It stays RAW for the cooldown map key below — sanitizing a key
+  // would change bucketing — and only the log-facing copy is escaped.
+  const ipLog = logSafe(ip);
 
   // [STEP] Prune expired entries to prevent memory growth under sustained attack
   for (const [entryIp, lastSent] of Array.from(csrfAlertLastSent.entries())) {
@@ -226,7 +230,7 @@ function shouldSendCsrfAlert(ip: string): boolean {
     const remainingMs = CSRF_ALERT_WINDOW_MS - (now - lastSent);
     const remainingSec = Math.ceil(remainingMs / 1000);
     console.log(
-      `[CSRF] Alert suppressed for IP=${ip} — cooldown active, ${remainingSec}s remaining`
+      `[CSRF] Alert suppressed for IP=${ipLog} — cooldown active, ${remainingSec}s remaining`
     );
     return false;
   }
@@ -259,12 +263,22 @@ async function fireCsrfBlockAlert(
   path: string,
   method: string
 ): Promise<void> {
+  // Every one of these four is request-derived and attacker-influenceable, so
+  // each gets an escaped copy for console output. The RAW values are still what
+  // reach insertSecurityEvent / postSecurityAlert / the notifyOwner body — those
+  // are structured sinks with their own clamping (securityEventLimits.ts,
+  // discordSecurityAlert.ts), and sanitizing them here would corrupt stored
+  // forensic data rather than protect it.
+  const ipLog = logSafe(ip);
+  const originLog = logSafe(origin);
+  const pathLog = logSafe(path);
+
   // [STEP] Only fire in production — dev environments have misconfigured clients
   //        that would spam alerts during local development and testing.
   if (!ENV.isProduction) {
     console.log(
       `[CSRF] Alert suppressed — not in production (dev environment). ` +
-      `IP=${ip} Origin="${origin}" path=${path}`
+        `IP=${ipLog} Origin="${originLog}" path=${pathLog}`
     );
     return;
   }
@@ -304,7 +318,7 @@ async function fireCsrfBlockAlert(
     occurredAt: eventOccurredAt,
   }).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[CSRF] DB persist error (non-critical) | IP=${ip} | error="${msg}"`);
+    console.error(`[CSRF] DB persist error (non-critical) | IP=${ipLog} | error="${msg}"`);
   });
 
   // [STEP] Post structured embed to 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 Discord channel (async, non-blocking)
@@ -317,22 +331,22 @@ async function fireCsrfBlockAlert(
     occurredAt: eventOccurredAt,
   }).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[CSRF] Discord alert error (non-critical) | IP=${ip} | error="${msg}"`);
+    console.error(`[CSRF] Discord alert error (non-critical) | IP=${ipLog} | error="${msg}"`);
   });
 
   console.log(
-    `[CSRF] Firing owner alert for CSRF block | IP=${ip} Origin="${origin}" path=${path}`
+    `[CSRF] Firing owner alert for CSRF block | IP=${ipLog} Origin="${originLog}" path=${pathLog}`
   );
 
   try {
     const delivered = await notifyOwner({ title, content });
     if (delivered) {
       console.log(
-        `[CSRF] Owner alert delivered successfully | IP=${ip} Origin="${origin}"`
+        `[CSRF] Owner alert delivered successfully | IP=${ipLog} Origin="${originLog}"`
       );
     } else {
       console.warn(
-        `[CSRF] Owner alert delivery failed (notification service unavailable) | IP=${ip}`
+        `[CSRF] Owner alert delivery failed (notification service unavailable) | IP=${ipLog}`
       );
     }
   } catch (err: unknown) {
@@ -340,7 +354,7 @@ async function fireCsrfBlockAlert(
     // let the alert failure propagate or affect the CSRF block response.
     const msg = err instanceof Error ? err.message : String(err);
     console.error(
-      `[CSRF] Owner alert threw an error (non-critical) | IP=${ip} | error="${msg}"`
+      `[CSRF] Owner alert threw an error (non-critical) | IP=${ipLog} | error="${msg}"`
     );
   }
 }
@@ -386,9 +400,9 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
 
   // [STATE] Log every mutation attempt with full context
   console.log(
-    `[CSRF] ${method} /api/trpc/${path}` +
-    ` | IP=${ip}` +
-    ` | Origin=${origin ?? "NOT_SET"}` +
+    `[CSRF] ${logSafe(method)} /api/trpc/${logSafe(path)}` +
+    ` | IP=${logSafe(ip)}` +
+    ` | Origin=${logSafe(origin ?? "NOT_SET")}` +
     ` | isProduction=${ENV.isProduction}`
   );
 
@@ -398,9 +412,9 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
     // [OUTPUT] BLOCKED — origin not in allowed set
     console.warn(
       `[CSRF] BLOCKED — Origin mismatch` +
-      ` | path=${path}` +
-      ` | IP=${ip}` +
-      ` | Origin="${origin}"` +
+      ` | path=${logSafe(path)}` +
+      ` | IP=${logSafe(ip)}` +
+      ` | Origin="${logSafe(origin)}"` +
       ` | allowedOrigins=[${Array.from(ALLOWED_ORIGINS).join(", ")}]` +
       ` | This may indicate a CSRF attack or misconfigured client`
     );
@@ -425,7 +439,7 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
   if (origin) {
     // Only log when Origin is present (server-to-server has no Origin, no need to log)
     console.log(
-      `[CSRF] PASS — origin="${origin}" path=${path} IP=${ip}`
+      `[CSRF] PASS — origin="${logSafe(origin)}" path=${logSafe(path)} IP=${logSafe(ip)}`
     );
   }
 
@@ -468,9 +482,9 @@ const logStripeRequest = t.middleware(async ({ ctx, next, path }) => {
   const origin = req.get("origin") ?? "NOT_SET";
   const method = req.method?.toUpperCase() ?? "UNKNOWN";
   console.log(
-    `[Stripe] ${method} /api/trpc/${path}` +
-    ` | IP=${ip}` +
-    ` | Origin=${origin}` +
+    `[Stripe] ${logSafe(method)} /api/trpc/${logSafe(path)}` +
+    ` | IP=${logSafe(ip)}` +
+    ` | Origin=${logSafe(origin)}` +
     ` | CSRF_EXEMPT=true`
   );
   return next();

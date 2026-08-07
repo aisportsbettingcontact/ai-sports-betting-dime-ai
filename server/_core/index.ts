@@ -1055,7 +1055,7 @@ async function startServer() {
       const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       console.warn(
-        `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+        `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${logSafe(ip)} path=${logSafe(req.path)} ua=${logSafe(ua ?? "none")}`
       );
       fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);
       sendRateLimitResponse(
@@ -1091,7 +1091,7 @@ async function startServer() {
       const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       console.warn(
-        `[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+        `[WAITLIST_RATE_LIMIT] IP=${logSafe(ip)} path=${logSafe(req.path)} ua=${logSafe(ua ?? "none")}`
       );
       fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);
       sendRateLimitResponse(

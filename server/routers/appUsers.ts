@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
 import { publicProcedure, router, stripeProcedure, csrfOriginCheck } from "../_core/trpc";
 import { resolveClientIdentity } from "../_core/clientIdentity";
+import { logSafe } from "../_core/logSafe";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
@@ -420,7 +421,7 @@ export const appUsersRouter = router({
       // [STEP] Check login rate limit BEFORE any DB query (prevents timing attacks)
       const rateCheck = checkLoginRateLimit(clientIp);
       if (!rateCheck.allowed) {
-        console.warn(`[LoginRateLimit] BLOCKED login attempt | IP=${clientIp}`);
+        console.warn(`[LoginRateLimit] BLOCKED login attempt | IP=${logSafe(clientIp)}`);
         // Log as security event
         const blockedAt = Date.now();
         insertSecurityEvent({
@@ -474,8 +475,8 @@ export const appUsersRouter = router({
         const sanitizedId = sanitizeLoginIdentifier(rawId);
 
         console.warn(
-          `${tag} BLOCKED | IP=${ip} reason="${reason}"` +
-          ` identifier="${sanitizedId}" ua="${ua?.substring(0, 60) ?? "none"}"`
+          `${tag} BLOCKED | IP=${logSafe(ip)} reason="${logSafe(reason)}"` +
+          ` identifier="${logSafe(sanitizedId)}" ua="${logSafe(ua?.substring(0, 60) ?? "none")}"`
         );
         const authFailAt = Date.now();
         insertSecurityEvent({
@@ -638,7 +639,7 @@ export const appUsersRouter = router({
     const ip = resolveClientIdentity(ctx.req) || "unknown";
     const result = checkLoginRateLimit(ip);
     console.log(
-      `[getLoginStatus] IP=${ip} remaining=${result.remainingAttempts} ` +
+      `[getLoginStatus] IP=${logSafe(ip)} remaining=${result.remainingAttempts} ` +
       `locked=${!result.allowed} lockoutUntil=${result.lockoutUntil}`
     );
     return {
@@ -2067,7 +2068,7 @@ export function checkLoginRateLimit(ip: string): { allowed: boolean; remainingAt
     const windowResetMs = LOGIN_RATE_WINDOW_MS - (now - oldestFailure);
     const windowResetMin = Math.ceil(windowResetMs / 60_000);
     console.warn(
-      `[LoginRateLimit] BLOCKED | IP=${ip} failures=${entry.failTimestamps.length} ` +
+      `[LoginRateLimit] BLOCKED | IP=${logSafe(ip)} failures=${entry.failTimestamps.length} ` +
       `windowResetIn=${windowResetMin}min`
     );
     const lockoutUntil = oldestFailure + LOGIN_RATE_WINDOW_MS;

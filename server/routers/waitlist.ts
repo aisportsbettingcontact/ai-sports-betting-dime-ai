@@ -28,6 +28,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { ownerProcedure } from "./appUsers";
 import { resolveClientIdentity } from "../_core/clientIdentity";
+import { logSafe } from "../_core/logSafe";
 import type { WaitlistRow } from "../../drizzle/schema";
 import {
   submitWaitlist,
@@ -119,7 +120,7 @@ export const waitlistRouter = router({
         (req?.headers["user-agent"] as string | undefined) ?? "";
 
       console.log(
-        `[WaitlistRouter][STATE] ip=${ipAddress} ua=${userAgent.slice(0, 80)}`
+        `[WaitlistRouter][STATE] ip=${logSafe(ipAddress)} ua=${logSafe(userAgent.slice(0, 80))}`
       );
 
       // ── Delegate to DB helper ─────────────────────────────────────────────
