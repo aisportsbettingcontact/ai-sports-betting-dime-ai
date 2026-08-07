@@ -41,28 +41,40 @@ mechanism adds no query load, no latency, and no new failure surface.
 **Rollback is a variable edit, `on` → `off`.** No deploy, no cache purge, no
 migration. That is the whole reason the flag exists.
 
-## ⚠️ Decide this BEFORE flipping to `on`
+## ✅ RESOLVED — the blocking card-semantics defect is fixed
 
-The subscriber feed renders exactly **three** of the nine markets — Run Line,
-Total, and Moneyline (`fg_rl`, `fg_total`, `fg_ml`). All three are currently
-gated `0`. With `on`, all three null, and the card falls through to the
-`verdictOf(null)` branch, which renders **PASS**.
+⚠️ **CORRECTION (2026-08-07).** An earlier version of this section said the card
+"falls through to the `verdictOf(null)` branch, which renders **PASS**." That
+mechanism was wrong. `FeedCardSpec.verdict` is written at two sites in
+`DimeModelFeed.tsx` and **read nowhere** — it is dead code, and `verdictOf`
+never reached the screen.
 
-That is wrong, and it is the same class of defect as the `unplayable ≠ pass`
-fix in PR #413: *"we have no publishable model for this game"* is not the same
-statement as *"the model says pass on this game."* One is an absence, the other
-is a recommendation.
+The real user-visible defect was worse, and it was live for every model-less
+game long before any gate existed. `ProjectionSummary` reached its empty branch
+whenever nothing could be scored and printed:
 
-So flipping to `on` without a distinct "not published" card state would ship a
-misleading claim to paying subscribers. Two honest options:
+> "Every market is efficiently priced. No action."
 
-- **A — add the state first.** Route a `/ui-loop` change for a "model
-  withheld" treatment, then flip. Correct, and slower.
-- **B — flip selected markets only.** Set the rows for the markets you are
-  willing to withhold and leave the feed's three at `1`. The gate is per-market
+— an assertion that every market *was* priced and found efficient, about an
+analysis that never ran.
+
+**Fixed.** `ProjectionGame.modelPublished` now distinguishes the three states,
+and a game with no published model renders *"No model projection published for
+this game."* under its own `--nomodel` modifier, mirroring the owner's own
+PASS-vs-`unplayable` split (`pages/ai-model-projections.md`, 2026-08-06:
+"They look similar and they mean opposite things, so they get separate
+modifiers"). `ProjectionCard.isPass` now also requires `modelPublished`, so a
+model-less card no longer takes the PASS treatment.
+
+The feed still renders only three of the nine markets (`fg_rl`, `fg_total`,
+`fg_ml`), all currently gated `0`. Gating all three is now honest rather than
+misleading — but it does mean every MLB card shows the no-model state, which is
+a product call, not a correctness one. Both options remain open:
+
+- **A — flip all nine.** Now truthful: cards say no model is published.
+- **B — flip selected markets only.** Leave the feed's three at `1` and gate the
+  six that do not render on the subscriber feed. The gate is per-market
   precisely so this is possible.
-
-Do not flip all nine and accept PASS semantics.
 
 ## Flipping an individual market
 

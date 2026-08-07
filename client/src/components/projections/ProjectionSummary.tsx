@@ -38,6 +38,7 @@ export function spellOutPick(label: string, teams: ProjectionTeam[]): string {
 export function ProjectionSummary({
   insight,
   teams = [],
+  modelPublished = true,
   onNextEdge,
   nextEdgeLabel,
   nextEdgeTabIndex = 0,
@@ -45,6 +46,8 @@ export function ProjectionSummary({
 }: {
   insight: MarketInsight | null;
   teams?: ProjectionTeam[];
+  /** False when the game has NO published model output — see ProjectionGame. */
+  modelPublished?: boolean;
   onNextEdge?: () => void;
   nextEdgeLabel?: string;
   nextEdgeTabIndex?: number;
@@ -102,7 +105,9 @@ export function ProjectionSummary({
               <div className="summary__item summary__item--message">
                 <dt className="sr-only">Projection status</dt>
                 <dd className="summary__none ds-body-sm">
-                  Every market is efficiently priced. No action.
+                  {modelPublished
+                    ? "Every market is efficiently priced. No action."
+                    : "No model projection published for this game."}
                 </dd>
               </div>
             )}

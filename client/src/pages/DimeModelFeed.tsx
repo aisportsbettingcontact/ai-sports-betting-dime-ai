@@ -94,6 +94,9 @@ interface FeedCardSpec {
   /** Scheduled MLB only; ignored by the sport-generic market adapter. */
   pregameLineups?: ProjectionPregameLineups;
   markets: MarketColSpec[];
+  /** False when this game has no published model output at all. Optional: only
+   *  the MLB adapter sets it; soccer leaves it undefined (= published). */
+  modelPublished?: boolean;
   verdict: {
     pick: string;
     crest?: CrestSpec | null;
@@ -518,6 +521,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
                         key={g.id}
                         game={{
                           ...projectionGame,
+                          modelPublished: g.modelPublished,
                           pregameLineups:
                             projectionGame.status === "scheduled"
                               ? g.pregameLineups
@@ -767,6 +771,7 @@ export function mlbRowToCard(
     venueLine: g.venue || null,
     pregameLineups,
     markets: [rl, total, ml],
+    modelPublished: hasModel,
     verdict: verdictOf(best),
   };
 }
