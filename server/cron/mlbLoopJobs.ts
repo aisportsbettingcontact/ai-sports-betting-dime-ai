@@ -204,9 +204,7 @@ export function makeBacktestWork(
  * executable in a test. Returns what the route should do; the caller performs
  * the Express side effects.
  */
-export function resolveDateJobRequest(
-  raw: unknown
-):
+export function resolveDateJobRequest(raw: unknown):
   | {
       action: "reject";
       status: 400;
