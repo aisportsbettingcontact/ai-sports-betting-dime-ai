@@ -15,6 +15,7 @@ import {
   runOutcomesJob,
   makeOutcomesWork,
   makeBacktestWork,
+  makeClosingCaptureWork,
   resolveDateJobRequest,
   type OutcomeSummaryLike,
 } from "./mlbLoopJobs";
@@ -219,7 +220,12 @@ describe("runner work factories", () => {
 
   it("outcomes: uses the 2-date PT window when no ?date= was stashed", async () => {
     const ingest = vi.fn().mockResolvedValue(summary({ written: 1 }));
-    const work = makeOutcomesWork(() => null, ingest, silent, () => AT);
+    const work = makeOutcomesWork(
+      () => null,
+      ingest,
+      silent,
+      () => AT
+    );
     const r = await work();
     expect(r.dates).toEqual(["2026-08-05", "2026-08-06"]);
     expect(ingest).toHaveBeenCalledTimes(2);
@@ -228,7 +234,12 @@ describe("runner work factories", () => {
 
   it("outcomes: a stashed ?date= REPLACES the window, it does not extend it", async () => {
     const ingest = vi.fn().mockResolvedValue(summary());
-    const work = makeOutcomesWork(() => "2026-07-04", ingest, silent, () => AT);
+    const work = makeOutcomesWork(
+      () => "2026-07-04",
+      ingest,
+      silent,
+      () => AT
+    );
     const r = await work();
     expect(r.dates).toEqual(["2026-07-04"]);
     expect(ingest).toHaveBeenCalledExactlyOnceWith("2026-07-04");
@@ -239,7 +250,12 @@ describe("runner work factories", () => {
     // construction would pin whatever was there when the module loaded.
     let stash: string | null = null;
     const ingest = vi.fn().mockResolvedValue(summary());
-    const work = makeOutcomesWork(() => stash, ingest, silent, () => AT);
+    const work = makeOutcomesWork(
+      () => stash,
+      ingest,
+      silent,
+      () => AT
+    );
     stash = "2026-01-01";
     expect((await work()).dates).toEqual(["2026-01-01"]);
     stash = null;
@@ -248,7 +264,12 @@ describe("runner work factories", () => {
 
   it("backtest: uses the 3-date ET window and forwards the self-heal options", async () => {
     const runForDate = vi.fn().mockResolvedValue({ processed: 1, errors: 0 });
-    const work = makeBacktestWork(() => null, runForDate, silent, () => AT);
+    const work = makeBacktestWork(
+      () => null,
+      runForDate,
+      silent,
+      () => AT
+    );
     const r = await work();
     expect(r.dates).toEqual(["2026-08-05", "2026-08-06", "2026-08-07"]);
     expect(r.processed).toBe(3);
@@ -299,5 +320,31 @@ describe("resolveDateJobRequest — the route's decision, without Express", () =
       action: "run",
       date: "2026-08-07",
     });
+  });
+});
+
+describe("makeClosingCaptureWork", () => {
+  it("passes the capture result through and logs one OUTPUT line", async () => {
+    const lines: string[] = [];
+    const capture = vi.fn().mockResolvedValue({
+      scanned: 15,
+      locked: 12,
+      alreadyLocked: 2,
+      noOdds: 1,
+      errors: [],
+    });
+    const work = makeClosingCaptureWork(capture, m => lines.push(m));
+    const r = await work();
+    expect(r.locked).toBe(12);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("scanned=15 locked=12");
+  });
+
+  it("lets a capture failure propagate to the run-lock", async () => {
+    const work = makeClosingCaptureWork(
+      vi.fn().mockRejectedValue(new Error("AN unreachable")),
+      () => {}
+    );
+    await expect(work()).rejects.toThrow("AN unreachable");
   });
 });

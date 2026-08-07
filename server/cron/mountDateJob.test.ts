@@ -106,7 +106,12 @@ describe("mountDateJob", () => {
     const r = {
       trigger: vi.fn(() => {
         order.push("trigger");
-        return { started: true, skipped: false, lastRunAt: null, lastResult: null };
+        return {
+          started: true,
+          skipped: false,
+          lastRunAt: null,
+          lastResult: null,
+        };
       }),
     };
     const h = mount(r, () => order.push("setDate"));

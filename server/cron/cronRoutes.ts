@@ -67,7 +67,11 @@ import { billingAlert } from "../_core/billingAlerts";
 import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
 import { captureClosingLines } from "../mlbScheduleHistoryService";
 import { runMultiMarketBacktestForDate } from "../mlbMultiMarketBacktest";
-import { makeBacktestWork, makeOutcomesWork } from "./mlbLoopJobs";
+import {
+  makeBacktestWork,
+  makeClosingCaptureWork,
+  makeOutcomesWork,
+} from "./mlbLoopJobs";
 import { mountDateJob } from "./mountDateJob";
 
 // One runner per job — module-level so the run-lock survives across requests.
@@ -130,14 +134,10 @@ const mlbOutcomesRunner = new CronJobRunner(
 
 // Closing-line capture — locks the closing odds snapshot for today's slate.
 // Takes no date argument: it only ever scrapes the current slate.
-const mlbClosingCaptureRunner = new CronJobRunner("mlb-closing-capture", async () => {
-  const r = await captureClosingLines();
-  console.log(
-    `[Cron:mlb-closing-capture] [OUTPUT] scanned=${r.scanned} locked=${r.locked} ` +
-      `alreadyLocked=${r.alreadyLocked} noOdds=${r.noOdds} errors=${r.errors.length}`
-  );
-  return r;
-});
+const mlbClosingCaptureRunner = new CronJobRunner(
+  "mlb-closing-capture",
+  makeClosingCaptureWork(() => captureClosingLines())
+);
 
 // Backtest SELF-HEAL — enrolls FINAL games that have no mlb_game_backtest rows.
 //

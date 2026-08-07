@@ -181,15 +181,15 @@ export function makeOutcomesWork(
 /** Work fn for the mlb-backtest runner. */
 export function makeBacktestWork(
   getDate: () => string | null,
-  runForDate: (
-    date: string
-  ) => Promise<{ processed: number; errors: number }>,
+  runForDate: (date: string) => Promise<{ processed: number; errors: number }>,
   log: (msg: string) => void = console.log,
   now: () => number = Date.now
 ): () => Promise<BacktestJobResult> {
   return async () => {
     const stashed = getDate();
-    const dates = stashed ? [stashed] : lastNDates(3, "America/New_York", now());
+    const dates = stashed
+      ? [stashed]
+      : lastNDates(3, "America/New_York", now());
     const r = await runBacktestJob(dates, runForDate);
     log(
       `[Cron:mlb-backtest] [OUTPUT] dates=[${r.dates.join(",")}] processed=${r.processed} ` +
@@ -207,7 +207,11 @@ export function makeBacktestWork(
 export function resolveDateJobRequest(
   raw: unknown
 ):
-  | { action: "reject"; status: 400; body: { ok: false; error: string; expected: string } }
+  | {
+      action: "reject";
+      status: 400;
+      body: { ok: false; error: string; expected: string };
+    }
   | { action: "run"; date: string | null } {
   const parsed = parseCronDateParam(raw);
   if (!parsed.ok) {
@@ -218,4 +222,28 @@ export function resolveDateJobRequest(
     };
   }
   return { action: "run", date: parsed.date };
+}
+
+/** Work fn for the mlb-closing-capture runner. Takes no date: it only ever
+ *  scrapes the current slate. */
+export function makeClosingCaptureWork<
+  T extends {
+    scanned: number;
+    locked: number;
+    alreadyLocked: number;
+    noOdds: number;
+    errors: unknown[];
+  },
+>(
+  capture: () => Promise<T>,
+  log: (msg: string) => void = console.log
+): () => Promise<T> {
+  return async () => {
+    const r = await capture();
+    log(
+      `[Cron:mlb-closing-capture] [OUTPUT] scanned=${r.scanned} locked=${r.locked} ` +
+        `alreadyLocked=${r.alreadyLocked} noOdds=${r.noOdds} errors=${r.errors.length}`
+    );
+    return r;
+  };
 }
