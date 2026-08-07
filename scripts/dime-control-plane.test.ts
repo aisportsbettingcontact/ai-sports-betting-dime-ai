@@ -113,14 +113,12 @@ test("manifest validation rejects unreviewed extra keys", async () => {
 
 test("origin normalization accepts the reviewed HTTPS .git spelling only by identity", () => {
   assert.equal(
-    normalizeOrigin(
-      "https://github.com/tailered-ai/dime-ai.git"
-    ),
+    normalizeOrigin("https://github.com/tailered-ai/dime-ai.git"),
     "https://github.com/tailered-ai/dime-ai"
   );
   assert.notEqual(
     normalizeOrigin(
-      "https://github.com/another-owner/dime-ai.git"
+      "https://github.com/another-owner/ai-sports-betting-dime-ai.git"
     ),
     "https://github.com/tailered-ai/dime-ai"
   );
