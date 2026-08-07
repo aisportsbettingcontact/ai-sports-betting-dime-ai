@@ -1,6 +1,6 @@
 # DR-001 — Publish posture for nine markets Dime's own evidence gates BACKTEST-ONLY
 
-**Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
+**Status:** RULED — Option 1c, per-market split, 2026-08-07 · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
 **observe_by:** 2026-08-12
 **Urgency:** HIGHEST — live customer-facing claims contradict Dime's own evidence
 **Doctrine:** D5 (evaluation → adjustment) · D7 (relevance, not just execution) · D8 (acceptance
@@ -310,3 +310,55 @@ this record was raised about, relocated: enforcement now exists, evaluation stil
 *Recorded by the executor. Evidence and analysis only — the question, the three options, the
 recommendation and the requested ruling above are untouched. §2's respecification is offered for the
 DRI to adopt or discard; it is not a ruling and changes nothing on its own.*
+
+---
+
+## Ruling — 2026-08-07
+
+**RULED: Option 1c — the per-market split.** The nine gated markets are not in the same evidence
+state and will not be treated as though they are.
+
+| Markets | Treatment | Why |
+|---|---|---|
+| `k_props`, `hr_props` | **1a — suppress the model output** | The audit found these **broken**, not merely unproven: a units bug shrank every strikeout projection to ~72% of the book line, and HR props underperformed the league base rate. Publishing a projection from a model known to be miscalibrated is a different act from publishing one that is merely unproven. |
+| `fg_ml`, `fg_rl`, `fg_total`, `f5_ml`, `f5_rl`, `f5_total`, `nrfi_yrfi` | **1b — publish projections and grades, remove the verdict, label the evidence state** | These are *insufficient-sample* verdicts, not proven-worthless. Full-game moneyline shows genuine skill. Suppressing them would over-read the audit in the opposite direction. |
+
+This is the graft this record already proposed under *"Grafted from the runners-up"* — *"HR props and
+strikeout props should be suppressed outright, not merely down-classified… Treat 'broken' and
+'unproven' differently"* — adopted as the ruling rather than left as a note.
+
+It answers §2's problem honestly. The edge is derivable from projection minus book line, so 1b does
+not pretend to hide it; it removes the **claim** — the Pass/Monitor/**Edge Detected** verdict — and
+labels the evidence state instead. Selling is the classification, not the arithmetic. That is what
+the audit's own instruction asks for: *"publish graded results and transparent projections; do not
+sell edges the data does not yet support."*
+
+### What this ruling authorizes
+
+- Building the 1c field policy: `k_props` and `hr_props` keep their current suppression; the other
+  seven markets stop nulling projections and grades and instead lose the verdict.
+- The customer-facing evidence-state label ("Backtest only — not yet proven against baseline") and
+  its copy, routed through the voice/compliance gate and checked against the banned-certainty regex.
+- Publishing the graded record for the seven, which today is owner-only — the transparency
+  differentiator this record argues for.
+
+### What this ruling does NOT do
+
+- **It does not arm the gate.** `MLB_MARKET_GATE_MODE` stays at `log`. Moving it to `on` is a
+  separate, deliberate act by the DRI, after the 1c policy ships. Nothing about production changes
+  the moment this ruling merges.
+- **It does not decide the ratchet** (§3). `publish_*` still has no writer and `runMarketGate` is
+  still dead code, so a market that later earns publication cannot un-gate itself. That remains open
+  and must be settled before `on`, or the ruling above silently becomes permanent.
+- It does not resolve the open unknown about `mlbOutcomeIngestor.ts:162`'s `/100`, which is
+  independent of this decision and still unaddressed since 2026-07-23.
+
+### Recorded by
+
+The executor, on Prez's 2026-08-07 instruction to proceed and rule this record. **The decision is
+Prez's; the rationale above was drafted by the executor** from this record's own "broken vs unproven"
+argument and the 2026-08-07 evidence. **Amend this section before merge if it does not match your
+reasoning** — a ruling is the durable answer to *"why is it like this?"*, and it should be in your
+words where they differ from mine.
+
+Nothing is superseded; this is a first ruling. A later reversal supersedes rather than overwrites.
