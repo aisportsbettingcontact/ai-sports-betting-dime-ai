@@ -6,7 +6,7 @@ Verified against this repo 2026-08-05. When something here disagrees with the sk
 
 Reading order for any page build:
 
-1. `design-system/dime-ai/pages/<page-name>.md` — if it exists, its rules override the Master. Today: `ai-model-projections.md`, `signup.md`.
+1. `design-system/dime-ai/pages/<page-name>.md` — if it exists, its rules override the Master. **List the directory, never trust a list written here** (`ls design-system/dime-ai/pages/`): this line used to enumerate two files and went stale within hours when `betting-splits.md` was added, which is the worst way for it to be wrong — an override that exists but is not read means the Master's rules get applied to a surface that overrode them.
 2. `design-system/dime-ai/MASTER.md` — everything else, including the Pre-Delivery Checklist that gates delivery.
 3. `dime-ai/THREE-COLOR-LAW.md` — wins over MASTER.md wherever they disagree (MASTER.md's own SUPERSEDED note, 2026-07-13). Its v3 is the "dimensional" amendment and includes owner-approved **motion** rules (1–2px lift, small shadow expansion, optional restrained rotateX/rotateY, compressed press, non-bouncing spring return — on interactive projections cards/controls), which amend the 160ms one-curve law on that product. The Law's win is not limited to color.
 4. `design-system/dime-ai/TYPOGRAPHY.md` — orthogonal layer owning size, rhythm, measure, wrap (never color).
