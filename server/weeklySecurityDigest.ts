@@ -48,6 +48,7 @@ import {
   insertSecurityEvent,
 } from "./db";
 import { notifyOwner } from "./_core/notification";
+import { logSafe } from "./_core/logSafe";
 import { getDiscordClient } from "./discord/bot";
 import {
   topIpsByCount,
@@ -492,9 +493,9 @@ async function postWeeklyDigestToDiscord(
       return;
     }
     channel = raw;
-    console.log(`${TAG} [Discord] Channel resolved: #${channel.name} in ${channel.guild?.name ?? "unknown"}`);
+    console.log(`${TAG} [Discord] Channel resolved: #${logSafe(channel.name)} in ${logSafe(channel.guild?.name ?? "unknown")}`);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [Discord] Failed to fetch channel: ${msg}`);
     return;
   }
@@ -514,12 +515,12 @@ async function postWeeklyDigestToDiscord(
     await channel.send({ embeds: [embed] });
     console.log(
       `${TAG} [Discord] [OUTPUT] Weekly digest embed posted successfully` +
-        ` | channel=#${channel.name}` +
+        ` | channel=#${logSafe(channel.name)}` +
         ` | threatLevel=${threatLevel}` +
         ` | threatTotal=${threatTotal}`
     );
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [Discord] Failed to send weekly digest embed: ${msg}`);
   }
 }
@@ -633,7 +634,7 @@ async function runWeeklySecurityDigest(): Promise<void> {
       title: `[${threatLevel}] Weekly Security Report — ${threatTotal} unclassified event${threatTotal !== 1 ? "s" : ""} in 7 days`,
       content,
     }).catch((err: unknown) => {
-      console.error(`${TAG} [ERROR] notifyOwner threw: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`${TAG} [ERROR] notifyOwner threw: ${logSafe(err)}`);
       return false;
     });
     if (notified) {
@@ -665,7 +666,7 @@ async function runWeeklySecurityDigest(): Promise<void> {
       windowStart,
       runStart
     ).catch((err: unknown) => {
-      console.error(`${TAG} [ERROR] Discord weekly digest post failed (non-critical): ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`${TAG} [ERROR] Discord weekly digest post failed (non-critical): ${logSafe(err)}`);
     });
 
     // ── Step 9: Mark digest complete (in-memory + persisted marker) ─────────
@@ -673,7 +674,7 @@ async function runWeeklySecurityDigest(): Promise<void> {
     lastWeeklyDigestDateUTC = todayStr;
     await persistWeeklyDigestMarker(todayStr).catch((err: unknown) => {
       console.error(
-        `${TAG} [ERROR] Failed to persist weekly digest marker (in-memory guard still holds for this process): ${err instanceof Error ? err.message : String(err)}`
+        `${TAG} [ERROR] Failed to persist weekly digest marker (in-memory guard still holds for this process): ${logSafe(err)}`
       );
     });
 
@@ -685,7 +686,7 @@ async function runWeeklySecurityDigest(): Promise<void> {
     );
     console.log(`${TAG} [VERIFY] PASS — weekly digest complete`);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [ERROR] Weekly digest failed: ${msg}`);
     console.error(`${TAG} [VERIFY] FAIL — weekly digest did not complete`);
   } finally {
@@ -715,7 +716,7 @@ async function maybeFireWeeklyDigest(): Promise<void> {
 
   const persistedDate = await loadLastWeeklyDigestDate().catch((err: unknown) => {
     console.error(
-      `${TAG} [WARN] Failed to read persisted weekly digest marker — proceeding as not-yet-fired (best-effort): ${err instanceof Error ? err.message : String(err)}`
+      `${TAG} [WARN] Failed to read persisted weekly digest marker — proceeding as not-yet-fired (best-effort): ${logSafe(err)}`
     );
     return null;
   });
@@ -811,7 +812,7 @@ export async function triggerWeeklySecurityDigestNow(): Promise<{
     windowStart,
     runStart
   ).catch((err: unknown) => {
-    console.error(`${TAG} [MANUAL] Discord post failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`${TAG} [MANUAL] Discord post failed: ${logSafe(err)}`);
   });
 
   return {

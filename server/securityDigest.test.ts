@@ -730,4 +730,56 @@ describe("securityDigest", () => {
       console.log("[VERIFY] PASS — pruneSecurityEvents(90) called exactly once");
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // C1 — log injection via the Discord send-failure reason
+  //
+  // The reason string is built from the thrown Error's message, which is
+  // attacker-reachable: Discord's API echoes request content back in error
+  // text. An unsanitized CR/LF in that message forges whole lines in the
+  // `[TAG] [LEVEL]` stream the ops runbooks parse — and the same string is
+  // persisted into the digest marker and replayed on the next digest. The
+  // choke point is logSafe() where lastErrMsg is computed.
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe("C1 — a CRLF-bearing send error cannot forge log lines", () => {
+    it("escapes newlines in the failure reason persisted to the digest marker", async () => {
+      // A real newline plus a convincing forged CRITICAL line.
+      const forged =
+        "upstream rejected\n[SecurityDigest] [CRITICAL] [DIGEST_DELIVERY_FAILED] forged-by-attacker";
+      console.log("\n[INPUT] channel.send() rejects with an Error carrying a raw newline + a fake CRITICAL line");
+
+      const fakeChannel = new TextChannel() as unknown as { send: ReturnType<typeof vi.fn> };
+      fakeChannel.send.mockRejectedValue(new Error(forged));
+      const fakeClient = {
+        isReady: () => true,
+        channels: { fetch: vi.fn().mockResolvedValue(fakeChannel) },
+      };
+      mockGetDiscordClient.mockReturnValue(fakeClient);
+      setBucketCounts([makeBucket("CSRF_BLOCK", null, 1)]);
+      setRawEvents([makeEvent("203.0.113.77", "CSRF_BLOCK", null)]);
+
+      mockDateAtUTC("2025-11-02");
+      await fireDigestAndWait();
+
+      const insertCalls = [...mockInsertEvent.mock.calls];
+      vi.restoreAllMocks();
+
+      // The marker row carries the failure reason in its context field.
+      const markerContexts = insertCalls
+        .map(c => (c[0] as { eventType?: string; context?: string }))
+        .filter(a => a?.eventType === DIGEST_MARKER_DAILY_EVENT_TYPE)
+        .map(a => a.context ?? "");
+      console.log(`[STATE] marker rows persisted: ${markerContexts.length}`);
+
+      const withReason = markerContexts.find(c => c.includes("forged-by-attacker"));
+      expect(withReason).toBeDefined();
+      console.log(`[STATE] persisted reason contains a raw newline: ${/[\r\n]/.test(withReason!)}`);
+
+      // The whole point: the payload survived as DATA, escaped, on one line.
+      expect(withReason).not.toMatch(/[\r\n]/);
+      expect(withReason).toContain("\\n");
+      expect(withReason).toContain("forged-by-attacker");
+      console.log("[VERIFY] PASS — newline escaped to \\n; the forged CRITICAL line cannot stand alone");
+    });
+  });
 });

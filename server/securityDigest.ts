@@ -69,6 +69,7 @@ import {
 import { notifyOwner } from "./_core/notification";
 import { getDiscordClient } from "./discord/bot";
 import { isCloudflareEdgeIp, CF_CIDR_SNAPSHOT_DATE } from "./_core/edgeProxy";
+import { logSafe } from "./_core/logSafe";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TAG = "[SecurityDigest]";
@@ -1005,9 +1006,9 @@ async function postDigestToDiscord(
       return { status: "failed", reason: `Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched` };
     }
     channel = raw;
-    console.log(`${TAG} [Discord] Channel resolved: #${channel.name} in ${channel.guild?.name ?? "unknown"}`);
+    console.log(`${TAG} [Discord] Channel resolved: #${logSafe(channel.name)} in ${logSafe(channel.guild?.name ?? "unknown")}`);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Failed to fetch channel: ${msg}`);
     return { status: "failed", reason: `Channel fetch threw: ${msg}` };
   }
@@ -1022,14 +1023,14 @@ async function postDigestToDiscord(
       console.log(
         `${TAG} [Discord] [OUTPUT] Daily digest embed posted successfully` +
           (attempt > 1 ? ` (attempt ${attempt}/${MAX_SEND_ATTEMPTS}, after retry)` : "") +
-          ` | channel=#${channel.name}` +
+          ` | channel=#${logSafe(channel.name)}` +
           ` | threatLevel=${data.threatLevel}` +
           ` | threatTotal=${data.threatTotal}` +
           ` | totalAll=${data.totalAll}`
       );
       return { status: "sent" };
     } catch (err: unknown) {
-      lastErrMsg = err instanceof Error ? err.message : String(err);
+      lastErrMsg = logSafe(err);
       console.error(`${TAG} [Discord] Attempt ${attempt}/${MAX_SEND_ATTEMPTS} failed to send digest embed: ${lastErrMsg}`);
     }
   }
@@ -1111,7 +1112,7 @@ async function runSecurityDigest(): Promise<void> {
     // ── Step 1: Accurate (eventType, context) bucket counts ────────────────
     console.log(`${TAG} [STEP] Querying (eventType, context) bucket counts for the last 24 hours...`);
     const bucketCounts = await getSecurityEventCountsByBucket(windowStart);
-    console.log(`${TAG} [STATE] Buckets | ${bucketCounts.map(b => `${b.eventType}/${b.context ?? "-"}(${b.count})`).join(", ") || "none"}`);
+    console.log(`${TAG} [STATE] Buckets | ${bucketCounts.map(b => `${logSafe(b.eventType)}/${logSafe(b.context ?? "-")}(${b.count})`).join(", ") || "none"}`);
 
     // ── Step 2: Raw event sample for IP classification + top IPs ───────────
     console.log(`${TAG} [STEP] Fetching raw events for allowlist classification + top-IP analysis (limit=${RAW_EVENT_FETCH_LIMIT})...`);
@@ -1146,7 +1147,7 @@ async function runSecurityDigest(): Promise<void> {
       title: `[${data.threatLevel}] Security Digest — ${data.threatTotal} unclassified event${data.threatTotal !== 1 ? "s" : ""} in 24h`,
       content,
     }).catch((err: unknown) => {
-      console.error(`${TAG} [ERROR] notifyOwner threw: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`${TAG} [ERROR] notifyOwner threw: ${logSafe(err)}`);
       return false;
     });
     if (notified) {
@@ -1170,7 +1171,7 @@ async function runSecurityDigest(): Promise<void> {
     // postDigestToDiscord()'s own comment for the full Critical 2 design).
     const previousFailure = await loadLastDigestDeliveryFailure().catch((err: unknown) => {
       console.error(
-        `${TAG} [WARN] Failed to read previous delivery-failure marker (best-effort, proceeding without a carry-forward note): ${err instanceof Error ? err.message : String(err)}`
+        `${TAG} [WARN] Failed to read previous delivery-failure marker (best-effort, proceeding without a carry-forward note): ${logSafe(err)}`
       );
       return null;
     });
@@ -1183,7 +1184,7 @@ async function runSecurityDigest(): Promise<void> {
     console.log(`${TAG} [STEP] Posting daily digest embed to Discord security channel...`);
     const deliveryResult: DigestDeliveryResult = await postDigestToDiscord(data, windowStart, runStart, previousFailure).catch(
       (err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = logSafe(err);
         console.error(`${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord digest post threw unexpectedly: ${msg}`);
         return { status: "failed", reason: `threw unexpectedly: ${msg}` } as const;
       }
@@ -1203,7 +1204,7 @@ async function runSecurityDigest(): Promise<void> {
     lastDigestDateUTC = todayStr;
     await persistDigestMarker(todayStr, deliveryFailureReason).catch((err: unknown) => {
       console.error(
-        `${TAG} [ERROR] Failed to persist digest marker (in-memory guard still holds for this process): ${err instanceof Error ? err.message : String(err)}`
+        `${TAG} [ERROR] Failed to persist digest marker (in-memory guard still holds for this process): ${logSafe(err)}`
       );
     });
 
@@ -1215,7 +1216,7 @@ async function runSecurityDigest(): Promise<void> {
     );
     console.log(`${TAG} [VERIFY] PASS — digest complete`);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [ERROR] Digest failed: ${msg}`);
     console.error(`${TAG} [VERIFY] FAIL — digest did not complete`);
   } finally {
@@ -1252,7 +1253,7 @@ async function maybeFireDigest(): Promise<void> {
 
   const persistedDate = await loadLastDigestDate().catch((err: unknown) => {
     console.error(
-      `${TAG} [WARN] Failed to read persisted digest marker — proceeding as not-yet-fired (best-effort): ${err instanceof Error ? err.message : String(err)}`
+      `${TAG} [WARN] Failed to read persisted digest marker — proceeding as not-yet-fired (best-effort): ${logSafe(err)}`
     );
     return null;
   });
@@ -1337,7 +1338,7 @@ export async function triggerSecurityDigestNow(): Promise<{
   );
 
   await postDigestToDiscord(data, windowStart, runStart).catch((err: unknown) => {
-    console.error(`${TAG} [MANUAL] Discord post failed: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`${TAG} [MANUAL] Discord post failed: ${logSafe(err)}`);
   });
 
   return {
