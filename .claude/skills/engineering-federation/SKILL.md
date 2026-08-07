@@ -16,7 +16,7 @@ Skip it for: pure frontend/UI work (that's `design-federation` / `/ui-loop`) and
 1. Owner/user direction, and owner-gated boundaries (production mutation, destructive data changes, Railway operations per AGENTS.md operating rules).
 2. Repo law: merge to `main` IS a production deploy · schema reaches production via the manual `db-push.yml` workflow BEFORE dependent code deploys · pnpm only · never commit secrets · the feed data contracts (`design-system/dime-ai/pages/ai-model-projections.md`, `dime-ai/DIME-FEED-MIGRATION-DRAFT.md`).
 3. The vendored standard, as adapted by `references/dime-mapping.md` (tRPC not OpenAPI, MySQL/TiDB not Postgres, Railway not Kubernetes, single-replica law). An N/A control needs a concrete reason — silence is not evidence (§23).
-4. The routed skill's own guidance — including `architect-backend-systems`' internal `references/architecture-standard.md`, which governs *design method*; the vendored standard governs *controls and evidence*. Where they genuinely conflict, repo law then the vendored standard win, and the conflict is flagged to the owner.
+4. The routed skill's own guidance — including `.agents/skills/architect-backend-systems/references/architecture-standard.md`, which governs *design method*; the vendored standard governs *controls and evidence*. Where they genuinely conflict, repo law then the vendored standard win, and the conflict is flagged to the owner.
 5. Generic defaults.
 
 ## The loop (standard §21.1, mapped)

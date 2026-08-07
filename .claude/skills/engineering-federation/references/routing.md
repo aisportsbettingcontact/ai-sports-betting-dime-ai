@@ -37,7 +37,7 @@ and if it is not, give the Read path.** The rows below were each checked that wa
 
 | Skill | ID / invocation | Role |
 | --- | --- | --- |
-| architect-backend-systems | **Read-path only** — `.agents/skills/` is not a Claude Code skill directory. `Read .agents/skills/architect-backend-systems/SKILL.md`, then its `references/architecture-standard.md` for the mode you need | Lead for design/audit/modernize/implement/incident modes; carries its own `agents/` + `references/` |
+| architect-backend-systems | **Read-path only** — `.agents/skills/` is not a Claude Code skill directory. `Read .agents/skills/architect-backend-systems/SKILL.md`, then `.agents/skills/architect-backend-systems/references/architecture-standard.md` for the mode you need | Lead for design/audit/modernize/implement/incident modes; carries its own `agents/` + `references/` |
 | architect-github-repos | **Read-path only** — same reason. `Read .agents/skills/architect-github-repos/SKILL.md` | Repo-structure audits, dead/duplicated file classification |
 | superpowers process skills | `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `superpowers:verification-before-completion`, `superpowers:writing-plans` (commands `/sp-tdd`, `/sp-debug`, `/sp-verify`, `/sp-plan`) | How, not what |
 | verify | Skill tool (`.claude/skills/verify/`) | Production build + boot + `smoke-deploy.mjs` + rendered proof; its Playwright snippet hardcodes remote-container paths — resolve per environment |
