@@ -205,7 +205,7 @@ successfully from production (`source=fresh`, `missing=[]`), and — because `lo
 production is confirmed to be serving all nine markets **ungated** to real customers right now. The
 fail-open posture is no longer inferred from code analysis; it is observed.
 
-### 2. What is built implements Option 2 — the option this record rejects
+### 2. What is built behaves like Option 2 — because **Option 1 as written is not implementable**
 
 The field policy in `server/feedGating.ts` preserves exactly one field when a market is gated:
 
@@ -216,21 +216,47 @@ export const MLB_MARKET_GATE_NEVER_NULL = ["modelRunAt"] as const;
 Everything else in a gated market is nulled. For `fg_ml` that is `modelAwayML`, `modelHomeML`,
 `modelAwayWinPct`, `modelHomeWinPct`, **`brierFgMl` and `fgMlCorrect`** — and
 `MLB_CROSS_MARKET_GAME_FIELDS` additionally nulls `modelAwayScore`/`modelHomeScore` when any
-full-game market is gated, the F5 scores, and the per-inning arrays.
+full-game market is gated, the F5 scores, and the per-inning arrays. So arming `on` today would
+remove **the projections and the graded record** across **all nine markets**.
 
-So arming `on` today would remove **the projections and the graded record** across **all nine
-markets**, leaving a timestamp.
+In effect that is Option 2. **But it is not drift, and the fix is not to narrow the field sets.**
 
-Option 1 — the recommendation above — says the opposite: *"continue showing the projection, the
-implied-vs-projected comparison, and the graded record — but suppress the Edge Detected
-classification."* Option 2 — *"Hide gated markets from the feed"* — is the one this record rejects,
-for reasons that still hold: it "guts the paid tiers", "discards full-game moneyline, which the audit
-says has genuine skill", and shows "a paying customer an empty product with no explanation".
+Option 1 above says: *"continue showing the projection, **the implied-vs-projected comparison**, and
+the graded record — but suppress the Edge Detected classification."* Those two clauses are in
+tension, because **the implied-vs-projected comparison IS the edge**. Verified against the live
+public feed 2026-08-07 — a single unauthenticated `games.list` response carries both sides:
 
-**Nothing is wrong with #435.** It is flag-gated, default off, fail-open, and its own header states
-that the field policy lives in `feedGating.ts` and the wiring in `routers.ts`. The mismatch is
-between the field policy as built and the posture this record recommends, and it becomes
-load-bearing only at the moment someone sets `on`.
+```
+BOOK   awayBookSpread, bookTotal, awayRunLine, awayRunLineOdds, awaySpreadOdds, f5OverOdds …
+MODEL  modelAwayML, modelAwayWinPct, modelAwaySpreadOdds, modelTotal, modelAwayScore …
+```
+
+`edge = model − book` is subtraction on two visible fields. Suppressing a `spreadEdge` column while
+publishing `modelAwaySpreadOdds` next to `awaySpreadOdds` removes the *label*, not the *claim* — and
+DR-001's own compliance argument is about the claim.
+
+`server/mlbMarketGates.ts` and `MLB_CROSS_MARKET_GAME_FIELDS` reason this out explicitly, which is
+why the cross-market rules exist at all:
+
+> *"Leaving them would defeat the gate: the pair (awayScore, homeScore) yields the run-line margin
+> by difference, the total by sum, and the moneyline lean by the SIGN of the difference."*
+
+Two further details that show the design is considered rather than minimal:
+
+- `MLB_MARKET_GATE_NEVER_NULL` keeps `modelRunAt` for a specific documented reason — it is the
+  row-level freshness key, and the feed derives `hasModel = g.modelRunAt != null` to produce the "—"
+  state. Nulling it under one market's gate would silently blank all nine.
+- `fg_ml` — the one market the audit credits with **genuine skill** — carries **no edge field at
+  all**. Its entire set is projections and grades. Under a narrow "suppress only the edge" policy,
+  fg_ml would null nothing, i.e. would not be gated at all.
+
+**Nothing is wrong with #435.** It is flag-gated, default off, fail-open, and its header correctly
+points at `feedGating.ts` for field policy. The gap is in **this record**: Option 1 was specified
+before anyone checked whether the edge survives its own suppression. It does.
+
+*Correction, same day: an earlier draft of this section framed the implementation as having drifted
+into the rejected option. That reads the evidence backwards. What is built is a coherent response to
+a problem Option 1 did not account for; the record is what needs amending, not the code.*
 
 ### 3. Arming `on` would freeze a static verdict — the ratchet
 
@@ -253,13 +279,34 @@ this record was raised about, relocated: enforcement now exists, evaluation stil
 
 1. **`log` is already live and costs nothing.** It is producing the evidence in §1 with no customer
    impact. No ruling is needed to keep it there.
-2. **Before `on`: reconcile the field policy with the posture.** If Option 1 is still the intent,
-   `MLB_MARKET_GATE_NEVER_NULL` must grow to preserve projections and grades, with only the Edge
-   classification suppressed. If Option 2 is now the intent, that is a reversal of this record's
-   recommendation and should be recorded as one rather than inherited.
+
+2. **Option 1 needs respecifying before it can be ruled.** Not because the code drifted, but because
+   §2 shows the option is self-cancelling as written: it keeps the implied-vs-projected comparison,
+   which is the edge. A rulable version has to pick one of —
+
+   - **1a — Suppress the model output on gated markets** (what is built). The claim goes away
+     because the numbers do. Honest, and the strongest compliance posture; the cost is the one this
+     record already names — it guts the paid tiers and hides full-game moneyline, which the audit
+     credits with genuine skill.
+   - **1b — Keep everything, remove the verdict, label the evidence state.** Publish projections and
+     grades, drop the Pass/Monitor/**Edge Detected** classification on gated markets, and label them
+     "Backtest only — not yet proven against baseline". This accepts that a customer *can* subtract
+     book from model, and answers it with disclosure rather than suppression. It is the option that
+     matches this record's stated spirit — *"publish graded results and transparent projections; do
+     not sell edges the data does not yet support"* — because selling is the classification, not the
+     arithmetic. It needs the UI and copy work Option 1 always said it needed.
+   - **1c — Per-market split.** Gate the markets the audit found broken (`k_props`, `hr_props`) via
+     1a, and apply 1b to the rest. This is the graft this record already recommends in
+     *"Grafted from the runners-up"*, made explicit — and it is the only version where full-game
+     moneyline keeps publishing.
+
+   **The executor's recommendation is 1c**, on the grounds this record already argues: "broken" and
+   "unproven" are different states and should be treated differently.
+
 3. **Before `on`: decide the ratchet.** Either wire `runMarketGate` to recompute, or consciously
    accept the 2026-07-25 snapshot as permanent policy. Both are defensible; inheriting it by
    accident is not.
 
-*Recorded by the executor. Evidence only — the question, options, recommendation and requested
-ruling above are untouched.*
+*Recorded by the executor. Evidence and analysis only — the question, the three options, the
+recommendation and the requested ruling above are untouched. §2's respecification is offered for the
+DRI to adopt or discard; it is not a ruling and changes nothing on its own.*
