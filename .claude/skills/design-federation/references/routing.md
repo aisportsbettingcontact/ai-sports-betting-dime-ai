@@ -51,7 +51,7 @@ Known internal drift to respect, not resolve: MASTER.md still specifies IBM Plex
 
 ## 6. Observation — eyes and hands
 
-- **`verify` skill** (`.claude/skills/verify/SKILL.md`): production build + boot recipe, `node scripts/smoke-deploy.mjs <url>` (6 checks, works on localhost and live Railway), bot-prerender curl, Playwright rendered-page/screenshot recipe. Its Playwright snippet hardcodes remote-container paths (`/opt/pw-browsers/chromium`, `/home/user/...`) — resolve per environment; locally prefer the `playwright-cli` or `agent-browser` skills.
+- **`verify` skill** (`.claude/skills/verify/SKILL.md`): production build + boot recipe, `node scripts/smoke-deploy.mjs <url>` (works on localhost and live Railway; cite its checks **by name**, never by count or ordinal — inserting one silently renumbers the rest. Against armed-edge production it needs `EDGE_AGENT_BYPASS_KEY` set, or Cloudflare 403s it as a bot), bot-prerender curl, Playwright rendered-page/screenshot recipe. Its Playwright snippet hardcodes remote-container paths (`/opt/pw-browsers/chromium`, `/home/user/...`) — resolve per environment; locally prefer the `playwright-cli` or `agent-browser` skills.
 - Viewports for the bundle: 1440×900 and 390×844 minimum, plus a reduced-motion pass.
 - `/sp-verify` = superpowers:verification-before-completion — command output (tsc/tests/build). Required, and distinct from rendered proof.
 

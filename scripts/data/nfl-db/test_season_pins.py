@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Tests for the frozen-vs-live season partition (lib/season_pins.py).
+
+    python3 scripts/data/nfl-db/test_season_pins.py
+
+Why this exists. build_db.py used to assert aggregate row counts with exact
+equality -- `n_rs == 43856`, `n_dc == EXPECTED_TOTAL`. Those numbers were taken
+from the 2026-07-27 extract, when the 2026 season had published nothing. The
+moment upstream started serving 2026 rosters and depth charts, a fresh
+`fetch_raw.py` + `build_db.py` run failed three of those assertions and exited 1
+with no database written -- fail-closed on ordinary in-season growth.
+
+The fix splits the assertion by season finality, so both properties hold at
+once, and these tests pin BOTH:
+
+  * settled history stays exact -- rewriting a closed season must still fail
+    loudly, because that is what the corrections layer is for (PR #424);
+  * the in-progress season is conserved, not pinned -- it may grow freely, but
+    the loader is not allowed to silently drop its rows (the D6 defect: the
+    original loader dropped all 554,215 shape-B rows).
+"""
+from __future__ import annotations
+
+import os
+import sys
+import unittest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib"))
+
+import season_pins as sp  # noqa: E402
+
+
+#: The built database as of the 2026-07-27 extract, per season. Real numbers.
+DEPTH_CHART_0727 = {y: n for y, n in [
+    (2010, 38421), (2011, 37941), (2012, 37312), (2013, 37066), (2014, 32542),
+    (2015, 37058), (2016, 36612), (2017, 36620), (2018, 36560), (2019, 36308),
+    (2020, 36168), (2021, 37487), (2022, 37780), (2023, 37327), (2024, 37312),
+    (2025, 554215),
+]}
+ROSTER_0727 = {y: n for y, n in [
+    (2010, 2152), (2011, 2099), (2012, 2120), (2013, 2137), (2014, 2153),
+    (2015, 2190), (2016, 3061), (2017, 3082), (2018, 3142), (2019, 3114),
+    (2020, 3068), (2021, 2961), (2022, 3134), (2023, 3090), (2024, 3216),
+    (2025, 3137),
+]}
+
+
+class TestSplit(unittest.TestCase):
+    def test_partitions_on_frozen_through(self):
+        frozen, live = sp.split({2024: 10, 2025: 20, 2026: 30})
+        self.assertEqual((frozen, live), (30, 30))
+
+    def test_no_live_seasons_yields_zero(self):
+        frozen, live = sp.split(ROSTER_0727)
+        self.assertEqual(frozen, 43_856)
+        self.assertEqual(live, 0)
+
+    def test_frozen_through_is_the_last_settled_season(self):
+        # 2025 ended 2026-02-08; 2026 kicks off 2026-09-10 and is still being
+        # written. If this ever needs bumping it is a deliberate re-audit, not
+        # a constant nudge to make a build pass.
+        self.assertEqual(sp.FROZEN_THROUGH, 2025)
+
+
+class TestFrozenVerdict(unittest.TestCase):
+    """Settled history keeps exact equality -- the PR #424 property."""
+
+    def test_frozen_match_passes(self):
+        ok, _ = sp.frozen_verdict("roster_season", ROSTER_0727)
+        self.assertTrue(ok)
+
+    def test_frozen_match_passes_even_when_a_live_season_appears(self):
+        # The exact bug: 2026 rosters (+2,930) showed up and the aggregate
+        # assertion failed although settled history had not moved at all.
+        with_2026 = {**ROSTER_0727, 2026: 2930}
+        ok, _ = sp.frozen_verdict("roster_season", with_2026)
+        self.assertTrue(ok)
+
+    def test_rewritten_history_still_fails(self):
+        # Non-negotiable: if upstream revises a closed season, the build must
+        # still refuse. One row is enough.
+        tampered = {**ROSTER_0727, 2018: ROSTER_0727[2018] + 1}
+        ok, detail = sp.frozen_verdict("roster_season", tampered)
+        self.assertFalse(ok)
+        self.assertIn("43,857", detail)
+
+    def test_a_dropped_frozen_season_fails(self):
+        missing = {y: n for y, n in ROSTER_0727.items() if y != 2015}
+        ok, _ = sp.frozen_verdict("roster_season", missing)
+        self.assertFalse(ok)
+
+    def test_every_pinned_table_is_covered(self):
+        self.assertEqual(
+            set(sp.FROZEN_COUNTS),
+            {"player_game_stats", "snap_count", "roster_season", "depth_chart"},
+        )
+
+    def test_unknown_table_is_an_error_not_a_silent_pass(self):
+        with self.assertRaises(KeyError):
+            sp.frozen_verdict("no_such_table", {})
+
+
+class TestLiveVerdict(unittest.TestCase):
+    """The in-progress season is conserved, not pinned."""
+
+    def test_growth_is_allowed(self):
+        # 2026 depth charts went 0 -> 410,431 between Jul 27 and Aug 7.
+        ok, _ = sp.live_verdict("depth_chart", db_live_rows=410_431,
+                                source_live_rows=410_431)
+        self.assertTrue(ok)
+
+    def test_empty_live_season_is_allowed(self):
+        # Before a season publishes anything, zero is the correct answer.
+        ok, _ = sp.live_verdict("snap_count", db_live_rows=0, source_live_rows=0)
+        self.assertTrue(ok)
+
+    def test_silently_dropped_live_rows_fail(self):
+        # The D6 defect, reproduced against the live span: the source had rows
+        # and the loader kept none of them.
+        ok, detail = sp.live_verdict("depth_chart", db_live_rows=0,
+                                     source_live_rows=410_431)
+        self.assertFalse(ok)
+        self.assertIn("410,431", detail)
+
+    def test_partial_loss_fails(self):
+        ok, _ = sp.live_verdict("depth_chart", db_live_rows=410_430,
+                                source_live_rows=410_431)
+        self.assertFalse(ok)
+
+
+class TestDepthChartShapes(unittest.TestCase):
+    """depth_charts ships two schemas sharing only `gsis_id`; the shape split
+    is pinned across frozen seasons only."""
+
+    def test_frozen_shape_split_matches_the_audited_extract(self):
+        self.assertEqual(sp.FROZEN_SHAPE_A, 552_514)   # 2010-2024, 15-col
+        self.assertEqual(sp.FROZEN_SHAPE_B, 554_215)   # 2025 only, 12-col
+        self.assertEqual(sp.FROZEN_SHAPE_A + sp.FROZEN_SHAPE_B,
+                         sp.FROZEN_COUNTS["depth_chart"])
+
+    def test_shape_a_is_frozen_history_only(self):
+        # Shape A stopped at 2024 when nflverse changed the release format.
+        # It must never grow again; if it does, history was rewritten.
+        ok, _ = sp.frozen_shape_verdict(shape_a=552_514, shape_b=554_215)
+        self.assertTrue(ok)
+        ok, _ = sp.frozen_shape_verdict(shape_a=552_515, shape_b=554_215)
+        self.assertFalse(ok)
+
+    def test_frozen_shape_b_excludes_the_live_season(self):
+        # 2026 rows are shape B too. They must NOT be counted against the
+        # frozen shape-B pin -- that was the third failing assertion.
+        ok, _ = sp.frozen_shape_verdict(shape_a=552_514, shape_b=554_215 + 410_431)
+        self.assertFalse(ok, "live-season shape-B rows must be excluded first")
+
+
+class TestAgainstRealUpstream(unittest.TestCase):
+    """The numbers measured against live nflverse on 2026-08-07."""
+
+    LIVE_0807 = {
+        "roster_season": {**ROSTER_0727, 2026: 2930},                # 46,786
+        "depth_chart": {**DEPTH_CHART_0727, 2026: 410_431},          # 1,517,160
+    }
+
+    def test_todays_upstream_passes_the_frozen_pins(self):
+        for table, per_season in self.LIVE_0807.items():
+            ok, detail = sp.frozen_verdict(table, per_season)
+            self.assertTrue(ok, f"{table}: {detail}")
+
+    def test_todays_upstream_would_have_failed_the_old_aggregate_pin(self):
+        # Documents the regression this change fixes.
+        for table, per_season in self.LIVE_0807.items():
+            total = sum(per_season.values())
+            self.assertNotEqual(total, sp.FROZEN_COUNTS[table],
+                                f"{table} aggregate should have moved")
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

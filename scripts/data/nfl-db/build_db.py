@@ -62,6 +62,7 @@ import corrections                     # noqa: E402  data corrections, each asse
 import depth_charts as depth_lib       # noqa: E402  B3
 import player_dimension                # noqa: E402  B5
 import rowloss                         # noqa: E402  B4
+import season_pins                     # noqa: E402  frozen history vs in-progress season
 import snap_crosswalk                  # noqa: E402  B1
 import team_aliases                    # noqa: E402  B2
 
@@ -86,6 +87,18 @@ def check(p, name, ok, detail=""):
     results.append((p, name, ok, detail))
     print(f"    [{'PASS' if ok else 'FAIL'}] {name}" + (f" -- {detail}" if detail and not ok else ""))
     return ok
+
+
+def report(name, detail):
+    """State a fact without asserting it. Used for the in-progress season, whose
+    row count is not knowable in advance and must not gate the build."""
+    print(f"    [INFO] {name} -- {detail}")
+
+
+def per_season(conn, table):
+    """{season: rows} for a fact table. Feeds season_pins' frozen/live split."""
+    return {s: n for s, n in
+            conn.execute(f"SELECT season, COUNT(*) FROM {table} GROUP BY season")}
 
 
 def connect(path):
@@ -485,7 +498,9 @@ def build(conn, rows, teams, venues):
     dc_rows = []
     dc_ordinal = Counter()
     dc_shapes = Counter()
+    dc_src = 0                 # source rows streamed, for the conservation gate
     for raw in stream_csv(os.path.join(RAW, "depth_charts.csv")):
+        dc_src += 1
         shape = depth_lib.classify_shape(raw)
         rec = depth_lib.normalize(raw, calendar=calendar, team_map=team_map,
                                   espn_gsis=espn_gsis, shape=shape)
@@ -506,6 +521,7 @@ def build(conn, rows, teams, venues):
                         rec["unit"], rec["scheme"], rec["pos_slot"], rec["elias_id"]))
     conn.executemany("INSERT INTO depth_chart VALUES (" + ",".join("?" * 25) + ")", dc_rows)
     counts["depth_chart"] = len(dc_rows)
+    counts["depth_chart_src"] = dc_src
     counts["depth_shape_a"] = dc_shapes["A"]
     counts["depth_shape_b"] = dc_shapes["B"]
 
@@ -817,8 +833,17 @@ def pass_reconciliation(conn, rows, hist, new, counts):
           honest == 50.0, f"naive={naive} explicit={honest}")
 
     # ---- player layer ------------------------------------------------------
+    # Row counts are asserted per SEASON FINALITY, not in aggregate. Settled
+    # seasons (<= season_pins.FROZEN_THROUGH) are pinned exactly, so a rewrite
+    # of closed history still fails the build. The in-progress season is
+    # reported, because pinning it makes ordinary upstream growth -- rosters
+    # churning through camp, depth charts publishing all season -- indistinguishable
+    # from corruption. See lib/season_pins.py for why that distinction exists.
     n_ps = q("SELECT COUNT(*) FROM player_game_stats")[0]
-    check(2, "player_game_stats loaded", n_ps == 286843, f"{n_ps} rows")
+    frozen_ok, frozen_detail = season_pins.frozen_verdict(
+        "player_game_stats", per_season(conn, "player_game_stats"))
+    check(2, "player_game_stats: settled seasons match the audited extract",
+          frozen_ok, frozen_detail)
     orphan = q("""SELECT COUNT(*) FROM player_game_stats p
                   LEFT JOIN player pl ON pl.gsis_id=p.gsis_id WHERE pl.gsis_id IS NULL""")[0]
     check(2, "every player_game_stats row resolves to a known player", orphan == 0, f"{orphan}")
@@ -847,8 +872,10 @@ def pass_reconciliation(conn, rows, hist, new, counts):
         check(2, f"{tbl}.{col}: zero orphans against the player dimension", n == 0, f"{n}")
 
     # ---- D4/EX-1/EX-2: the snap NULL assertion nobody shipped ---------------
-    tot = q("SELECT COUNT(*) FROM snap_count")[0]
-    check(2, "snap_count loaded", tot == 324611, f"{tot} rows")
+    frozen_ok, frozen_detail = season_pins.frozen_verdict(
+        "snap_count", per_season(conn, "snap_count"))
+    check(2, "snap_count: settled seasons match the audited extract",
+          frozen_ok, frozen_detail)
     nulls = q("SELECT COUNT(*) FROM snap_count WHERE gsis_id IS NULL")[0]
     check(2, "snap_count.gsis_id IS NOT NULL on EVERY row (was 227 NULLs at 99.93%)",
           nulls == 0, f"{nulls} NULL gsis_id")
@@ -875,17 +902,44 @@ def pass_reconciliation(conn, rows, hist, new, counts):
         miss = q(f"SELECT COUNT(*) FROM {tbl} WHERE franchise_id IS NULL")[0]
         check(2, f"{tbl}: every row maps to a franchise", miss == 0, f"{miss} unmapped")
 
-    n_rs = q("SELECT COUNT(*) FROM roster_season")[0]
-    check(2, "roster_season loaded", n_rs == 43856, f"{n_rs} rows")
+    # 2026 rosters are the clearest case for the split: the 2026-07-27 R extract
+    # requested 2010-2025 only, while fetch_raw.py (#427) fetches through 2026.
+    # The 2,930 rows that appear are an entire in-progress season, not drift.
+    frozen_ok, frozen_detail = season_pins.frozen_verdict(
+        "roster_season", per_season(conn, "roster_season"))
+    check(2, "roster_season: settled seasons match the audited extract",
+          frozen_ok, frozen_detail)
 
     # ---- D6/D8: depth_chart holds BOTH shapes -------------------------------
+    # D6 was never really about a number -- it was about the old loader silently
+    # dropping all 554,215 shape-B rows. Conservation states that directly and
+    # keeps stating it as the source grows; an aggregate pin only said it until
+    # nflverse published the next season.
     n_dc = q("SELECT COUNT(*) FROM depth_chart")[0]
+    live_ok, live_detail = season_pins.live_verdict(
+        "depth_chart", n_dc, counts["depth_chart_src"])
     check(2, "depth_chart holds every source row, both shapes (D6)",
-          n_dc == depth_lib.EXPECTED_TOTAL, f"{n_dc} vs {depth_lib.EXPECTED_TOTAL}")
-    check(2, "depth_chart shape split matches B3 exactly",
-          (counts["depth_shape_a"], counts["depth_shape_b"])
-          == (depth_lib.EXPECTED_A, depth_lib.EXPECTED_B),
-          f"A={counts['depth_shape_a']} B={counts['depth_shape_b']}")
+          live_ok, live_detail)
+    dc_by_season = per_season(conn, "depth_chart")
+    frozen_ok, frozen_detail = season_pins.frozen_verdict("depth_chart", dc_by_season)
+    check(2, "depth_chart: settled seasons match the audited extract",
+          frozen_ok, frozen_detail)
+    # Shape A closed at 2024 and can never grow again; shape B spans 2025
+    # (settled) and 2026+ (live), so only its settled part is pinned.
+    dc_live = sum(n for s, n in dc_by_season.items() if s > season_pins.FROZEN_THROUGH)
+    shape_ok, shape_detail = season_pins.frozen_shape_verdict(
+        counts["depth_shape_a"], counts["depth_shape_b"] - dc_live)
+    check(2, "depth_chart shape split across settled seasons matches B3",
+          shape_ok, shape_detail)
+
+    # The in-progress season, stated rather than asserted. Its correctness is
+    # carried by the row-level invariants below -- every row resolves a real
+    # season, a real franchise and a real player -- which hold at any volume.
+    for tbl in ("player_game_stats", "snap_count", "roster_season", "depth_chart"):
+        _, live = season_pins.split(per_season(conn, tbl))
+        if live:
+            report(f"{tbl}: in-progress seasons (>{season_pins.FROZEN_THROUGH})",
+                   f"{live:,} rows, not pinned")
     check(2, "depth_chart holds only rows that carry a real season",
           q("SELECT COUNT(*) FROM depth_chart WHERE season IS NULL")[0] == 0)
     bad = q("SELECT COUNT(*) FROM depth_chart WHERE week IS NOT NULL AND week > 18")[0]
