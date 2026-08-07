@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 /**
  * Log-safety coverage for the Discord security-alert pipeline.
@@ -514,7 +516,17 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
     }
   });
 
-  it("edge_origin_ingress_anomaly renders a 403 title/body — NOT the 429/blocked copy", async () => {
+  // 2026-08-07 review, Critical 2: edge_origin_ingress_anomaly is fired from
+  // TWO call sites with OPPOSITE truth (edge_deny = a genuine 403;
+  // the /api/trpc canary = always observe-only). A single static default
+  // for this slug cannot be correct for both — the OLD version of this test
+  // asserted an unconditional 403 with no limiterOutcome supplied at all,
+  // which is exactly the bug: production runs EDGE_MODE=log, where 100% of
+  // currently-firing alerts for this slug come from the observe-only
+  // canary, so that assertion was live-false for every alert actually
+  // firing right now. The three tests below cover all three states the
+  // fixed embed can render for this slug.
+  it("edge_origin_ingress_anomaly with limiterOutcome=\"blocked\" (the edge_deny call site) renders a 403 title/body — NOT the 429/blocked copy", async () => {
     const { buildEmbedForTest } = await import("./discordSecurityAlert");
     const embed = buildEmbedForTest({
       eventType: "RATE_LIMIT",
@@ -523,12 +535,54 @@ describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)
       method: "GET",
       userAgent: "ua",
       context: "edge_origin_ingress_anomaly",
+      limiterOutcome: "blocked",
       occurredAt: 1_754_500_000_000,
     });
     expect(embed.data.title).toContain("403");
     expect(embed.data.description).toContain("403 Forbidden");
     expect(embed.data.description).not.toContain("429 Too Many Requests");
     expect(embed.data.description).not.toMatch(/temporarily blocked\./);
+  });
+
+  it("edge_origin_ingress_anomaly with limiterOutcome=\"observed\" (the /api/trpc canary call site) renders observe-only — NOT 403, NOT 429 (the live-production case: EDGE_MODE=log, 2026-08-07)", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: "/api/trpc/games.list",
+      method: "GET",
+      userAgent: "ua",
+      context: "edge_origin_ingress_anomaly",
+      limiterOutcome: "observed",
+      occurredAt: 1_754_500_000_000,
+    });
+    expect(embed.data.title).not.toMatch(/403/);
+    expect(embed.data.title).not.toMatch(/Blocked/);
+    expect(embed.data.description).not.toContain("403 Forbidden");
+    expect(embed.data.description).not.toContain("429 Too Many Requests");
+    expect(embed.data.description).toMatch(/Nothing was blocked/);
+  });
+
+  it("edge_origin_ingress_anomaly with NO limiterOutcome supplied is non-committal — asserts neither 403 nor 429 (2026-08-07 review, Critical 2: the alert must never assert a status code it cannot prove)", async () => {
+    const { buildEmbedForTest, LIMITER_META } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: "/api/trpc/games.list",
+      method: "GET",
+      userAgent: "ua",
+      context: "edge_origin_ingress_anomaly",
+      // limiterOutcome deliberately omitted.
+      occurredAt: 1_754_500_000_000,
+    });
+    expect(embed.data.title).not.toMatch(/403/);
+    expect(embed.data.title).not.toMatch(/429/);
+    expect(embed.data.description).not.toContain("403 Forbidden");
+    expect(embed.data.description).not.toContain("429 Too Many Requests");
+    // The static LIMITER_META default itself must not assert a code either —
+    // this is what buildEmbedForTest fell back to above.
+    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain("403");
+    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain("429");
   });
 
   it("xff_canary renders an observe-only title/body — nothing was blocked, no 429", async () => {
@@ -848,5 +902,248 @@ describe("logSafe reaches embed values and content, and content additionally str
   it("SECURITY_CHANNEL_ID is exported so server/_core/index.ts can import it instead of duplicating the literal", async () => {
     const { SECURITY_CHANNEL_ID } = await import("./discordSecurityAlert");
     expect(SECURITY_CHANNEL_ID).toBe("1492280227567501403");
+  });
+});
+
+describe("Discord Markdown cannot break out of an embed field (2026-08-07 review, Critical 1)", () => {
+  // The reviewer's EXACT two payloads, verified working live through the
+  // real EmbedBuilder before this fix: every field() call site wrapped its
+  // value in a single-backtick code span and logSafe() never touched
+  // backticks or Markdown, so an embedded backtick closed the span early
+  // and exposed live Markdown to Discord's real parser.
+  const PAYLOAD_PATH = "x`**PWNED-BOLD**`[phish](https://evil.example)y";
+  const PAYLOAD_ORIGIN = "https://evil.example`||spoiler-hide-this||`";
+
+  /**
+   * Every field() call site wraps its (escaped) value in exactly TWO real
+   * template-literal backticks of its own (the code-span wrapper) — those
+   * are expected and are not the vulnerability; the vulnerability was a
+   * THIRD-or-more backtick sneaking in from attacker-controlled content and
+   * closing that wrapper early. So the correct post-fix invariant is "the
+   * field value contains EXACTLY as many real backticks as its own static
+   * wrapper contributes", not "zero backticks" — asserting the count
+   * catches an attacker-supplied backtick surviving while still allowing
+   * the code's own wrapper.
+   */
+  function countBackticks(value: string): number {
+    return (value.match(/`/g) ?? []).length;
+  }
+
+  it("CSRF_BLOCK: the reviewer's exact path + blockedOrigin payloads render with no live bold, no live link, no live spoiler, and no attacker-controlled backtick", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "CSRF_BLOCK",
+      ip: "1.2.3.4",
+      blockedOrigin: PAYLOAD_ORIGIN,
+      path: PAYLOAD_PATH,
+      method: "POST",
+      occurredAt: 1_754_500_000_000,
+    });
+    const fields = embed.data.fields ?? [];
+    const pathField = fields.find(f => f.name.includes("tRPC Procedure Targeted"));
+    const originField = fields.find(f => f.name.includes("Blocked Origin"));
+    expect(pathField).toBeDefined();
+    expect(originField).toBeDefined();
+
+    // Exactly 2 real backticks survive in each field — the code's OWN
+    // wrapper (`` `${value}` ``) — even though PAYLOAD_PATH contains 2 of
+    // its own and PAYLOAD_ORIGIN contains 2 of its own. Every
+    // attacker-supplied backtick was neutralised; this is what makes the
+    // breakout impossible (an attacker who could add a 3rd/4th real
+    // backtick could still close the wrapper early).
+    expect(countBackticks(pathField!.value)).toBe(2);
+    expect(countBackticks(originField!.value)).toBe(2);
+
+    // The bold marker must be de-fanged (escaped), never live.
+    expect(pathField!.value).not.toMatch(/(?<!\\)\*\*PWNED-BOLD(?<!\\)\*\*/);
+    expect(pathField!.value).toContain("\\*\\*PWNED-BOLD\\*\\*");
+
+    // The masked-link syntax must be de-fanged, never a live clickable link.
+    expect(pathField!.value).not.toContain("[phish](https://evil.example)");
+    expect(pathField!.value).toContain("\\[phish\\]\\(https://evil.example\\)");
+
+    // The spoiler-tag pipes must be de-fanged, never a live spoiler.
+    expect(originField!.value).not.toContain("||spoiler-hide-this||");
+    expect(originField!.value).toContain("\\|\\|spoiler-hide-this\\|\\|");
+
+    // Forensic preservation: every original character is still legible in
+    // the rendered value (as an inert lookalike or backslash-escaped) — this
+    // is not a silent-deletion fix.
+    expect(pathField!.value).toContain("PWNED-BOLD");
+    expect(pathField!.value).toContain("phish");
+    expect(pathField!.value).toContain("evil.example");
+    expect(originField!.value).toContain("spoiler-hide-this");
+  });
+
+  it("RATE_LIMIT: the same path payload cannot break out of the Route/Endpoint field", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: PAYLOAD_PATH,
+      method: "GET",
+      userAgent: "ua",
+      context: "public_feed",
+      occurredAt: 1_754_500_000_000,
+    });
+    const pathField = (embed.data.fields ?? []).find(f => f.name.includes("Route / Endpoint Hit"));
+    expect(pathField).toBeDefined();
+    expect(countBackticks(pathField!.value)).toBe(2);
+    expect(pathField!.value).not.toMatch(/(?<!\\)\*\*PWNED-BOLD(?<!\\)\*\*/);
+    expect(pathField!.value).not.toContain("[phish](https://evil.example)");
+  });
+
+  it("AUTH_FAIL: the payload cannot break out of the targetIdentifier field (the directly attacker-controlled sanitizeLoginIdentifier() output) or the ip field", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "AUTH_FAIL",
+      ip: PAYLOAD_ORIGIN,
+      path: "appUsers.login",
+      method: "POST",
+      userAgent: "ua",
+      context: "invalid_password",
+      targetIdentifier: PAYLOAD_PATH,
+      occurredAt: 1_754_500_000_000,
+    });
+    const fields = embed.data.fields ?? [];
+    const targetField = fields.find(f => f.name.includes("Account Targeted"));
+    const ipField = fields.find(f => f.name.includes("Attacker IP Address"));
+    expect(targetField).toBeDefined();
+    expect(ipField).toBeDefined();
+    // targetField's value is `` `${escaped}` `` followed by static italic
+    // explainer text (no further backticks in that suffix) — still exactly 2.
+    expect(countBackticks(targetField!.value)).toBe(2);
+    expect(targetField!.value).not.toMatch(/(?<!\\)\*\*PWNED-BOLD(?<!\\)\*\*/);
+    expect(targetField!.value).not.toContain("[phish](https://evil.example)");
+    expect(countBackticks(ipField!.value)).toBe(2);
+    expect(ipField!.value).not.toContain("||spoiler-hide-this||");
+  });
+
+  it("BRUTE_FORCE: the payload cannot break out of the description, the ip field, or the Recommended Immediate Action field", async () => {
+    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildBruteForceEmbedForTest(PAYLOAD_ORIGIN, 4, 10 * 60 * 1000, "ua", 1_754_500_000_000);
+    const fields = embed.data.fields ?? [];
+    const ipField = fields.find(f => f.name.includes("Attacker IP Address"));
+    const actionField = fields.find(f => f.name.includes("Recommended Immediate Action"));
+    expect(ipField).toBeDefined();
+    expect(actionField).toBeDefined();
+
+    // Description interpolates `ip` once, wrapped in its own backtick pair.
+    expect(countBackticks(embed.data.description ?? "")).toBe(2);
+    expect(embed.data.description ?? "").not.toContain("||spoiler-hide-this||");
+    expect(countBackticks(ipField!.value)).toBe(2);
+    expect(ipField!.value).not.toContain("||spoiler-hide-this||");
+    expect(countBackticks(actionField!.value)).toBe(2);
+    expect(actionField!.value).not.toContain("||spoiler-hide-this||");
+  });
+
+  it("sanitise-then-clamp order: a value that is nothing but backticks never leaves more than the wrapper's own 2 backticks in the clamped field (a truncation can never reopen an escape)", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    // logSafe() caps its input at 300 chars by default before this ever
+    // reaches escapeDiscordMarkdown()/clampFieldValue() — this value is long
+    // enough to exercise that cap and prove escaping happens on the FULL
+    // (pre-clamp) sanitised value, not something clamped-then-escaped that
+    // could reintroduce a raw delimiter at the cut boundary.
+    const hostilePath = "`".repeat(2000);
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: hostilePath,
+      method: "GET",
+      userAgent: "ua",
+      context: "public_feed",
+      occurredAt: 1_754_500_000_000,
+    });
+    const pathField = (embed.data.fields ?? []).find(f => f.name.includes("Route / Endpoint Hit"));
+    expect(pathField).toBeDefined();
+    expect(pathField!.value.length).toBeLessThanOrEqual(1024);
+    // At most the wrapper's own 2 real backticks can survive — every one of
+    // the 2000 attacker-supplied backticks (or the 300 that make it past
+    // logSafe's own cap) is neutralised, no matter where any subsequent
+    // truncation lands.
+    expect(countBackticks(pathField!.value)).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("fireRateLimitEvent threads an explicit blocked/observed indicator per call site (2026-08-07 review, Importants 1&2)", () => {
+  // index.ts self-executes startServer() at import time, so — per the
+  // established precedent in originLockAlertRouting.test.ts and
+  // clientIdentityCallSites.test.ts — it is read as source text rather than
+  // imported.
+  const INDEX_SRC = readFileSync(
+    path.join(import.meta.dirname, "../_core/index.ts"),
+    "utf8"
+  );
+
+  it("fireRateLimitEvent's signature gains an `outcome` parameter defaulting to \"blocked\" (so the six real-limiter call sites, asserted verbatim by clientIdentityCallSites.test.ts, stay textually unchanged and still get the correct value)", () => {
+    expect(INDEX_SRC).toMatch(
+      /outcome:\s*"blocked"\s*\|\s*"observed"\s*=\s*"blocked"/
+    );
+  });
+
+  it("the console.warn tag reflects the real outcome — \"BLOCKED\" vs \"OBSERVED (not blocked)\" — not a hardcoded \"BLOCKED\" for all eight call sites (confirmed live 2026-08-07: BLOCKED logged for a request the HTTP log recorded as httpStatus:200)", () => {
+    expect(INDEX_SRC).toMatch(
+      /outcome === "blocked" \? "BLOCKED" : "OBSERVED \(not blocked\)"/
+    );
+    // The OLD unconditional literal must be gone from the log line itself
+    // (it still legitimately appears in this file's comments/doc-strings,
+    // so this checks the specific template-literal usage, not the whole file).
+    expect(INDEX_SRC).not.toMatch(/`\$\{tag\} BLOCKED \| IP=/);
+  });
+
+  it("the edge_deny call site (origin lock) passes outcome=\"blocked\" — the only OriginLockEvent kind that actually 403s", () => {
+    const start = INDEX_SRC.indexOf("Origin lock (Phase 4 edge defense)");
+    const end = INDEX_SRC.indexOf("Security headers (helmet)");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const originLockBlock = INDEX_SRC.slice(start, end);
+    expect(originLockBlock).toMatch(
+      /fireRateLimitEvent\(\s*ip,\s*req\.path,\s*req\.method,\s*"edge_origin_ingress_anomaly",\s*ua,\s*"blocked"\s*\)/
+    );
+  });
+
+  it("the xff_canary call site passes outcome=\"observed\" — it is observe-only by construction and never blocks", () => {
+    const start = INDEX_SRC.indexOf("XFF-sanitization canary");
+    const mid = INDEX_SRC.indexOf("Edge-aware anomaly (Phase 4)");
+    expect(start).toBeGreaterThan(-1);
+    expect(mid).toBeGreaterThan(start);
+    const xffCanaryBlock = INDEX_SRC.slice(start, mid);
+    expect(xffCanaryBlock).toMatch(
+      /fireRateLimitEvent\(\s*ip,\s*req\.path,\s*req\.method,\s*"xff_canary",\s*\(req\.headers\["user-agent"\][^;]*?,\s*"observed"\s*\)/
+    );
+  });
+
+  it("the /api/trpc edge_origin_ingress_anomaly canary call site passes outcome=\"observed\" — it always calls next() and never blocks, even though it shares its limitType slug with the genuinely-blocking edge_deny case (this is the live production case: EDGE_MODE=log)", () => {
+    const start = INDEX_SRC.indexOf("Edge-aware anomaly (Phase 4)");
+    const end = INDEX_SRC.indexOf("Global API rate limiter");
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const anomalyCanaryBlock = INDEX_SRC.slice(start, end);
+    expect(anomalyCanaryBlock).toMatch(
+      /fireRateLimitEvent\(\s*upstream \|\| ip,\s*req\.path,\s*req\.method,\s*"edge_origin_ingress_anomaly",\s*\(req\.headers\["user-agent"\][^;]*?,\s*"observed"\s*\)/
+    );
+  });
+
+  it("the six real rate-limiter call sites remain textually unchanged (no explicit outcome argument) — they rely on the default, which is correct because express-rate-limit only ever invokes their handler once a request has already been rejected with 429", () => {
+    const realLimiterMarkers = [
+      'fireRateLimitEvent(ip, req.path, req.method, "global", ua);',
+      'fireRateLimitEvent(ip, req.path, req.method, "auth", ua);',
+      'fireRateLimitEvent(ip, req.path, req.method, "trpc_auth", ua);',
+      'fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);',
+      'fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);',
+      'fireRateLimitEvent(ip, req.path, req.method, "public_feed", ua);',
+    ];
+    for (const marker of realLimiterMarkers) {
+      expect(INDEX_SRC, `marker not found verbatim: ${marker}`).toContain(marker);
+    }
+  });
+
+  it("SecurityAlertPayload carries the outcome through to the embed: fireRateLimitEvent forwards it as limiterOutcome, not just to insertSecurityEvent's untyped context", () => {
+    const fnStart = INDEX_SRC.indexOf("function fireRateLimitEvent(");
+    const fnEnd = INDEX_SRC.indexOf("\n}", INDEX_SRC.indexOf("postSecurityAlert({", fnStart));
+    expect(fnStart).toBeGreaterThan(-1);
+    expect(fnEnd).toBeGreaterThan(fnStart);
+    const fnBody = INDEX_SRC.slice(fnStart, fnEnd);
+    expect(fnBody).toMatch(/postSecurityAlert\(\{[\s\S]*?limiterOutcome:\s*outcome,/);
   });
 });

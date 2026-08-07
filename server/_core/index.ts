@@ -185,11 +185,16 @@ let edgeNoSecretLastEscalatedAt = 0;
 //
 // Deliberately NOT routed through fireRateLimitEvent()/postSecurityAlert():
 // postSecurityAlert() is typed to SecurityEventType ("CSRF_BLOCK" |
-// "RATE_LIMIT" | "AUTH_FAIL") and its RATE_LIMIT embed
-// (buildRateLimitEmbed in discordSecurityAlert.ts) hardcodes "The IP
-// received a `429 Too Many Requests` response and was temporarily
-// blocked" — false here; nothing was blocked or rate-limited. Extending
-// SecurityEventType with a fourth member is task 4.4's job, not this one.
+// "RATE_LIMIT" | "AUTH_FAIL"). As of the 2026-08-07 fix, the RATE_LIMIT
+// embed (buildRateLimitEmbed in discordSecurityAlert.ts) no longer
+// hardcodes a 429/blocked claim — it renders the TRUE per-alert
+// blocked/observed outcome threaded through fireRateLimitEvent()'s
+// `outcome` parameter. edge_no_secret still doesn't fit either value
+// though: it is a site-wide misconfiguration (every request just passes
+// through unlocked — not a per-request "blocked" OR "observed" rate-limit/
+// edge-lock outcome), so routing it through fireRateLimitEvent() would
+// still misrepresent it. Extending SecurityEventType with a fourth member
+// is task 4.4's job, not this one.
 //
 // Shape chosen: a direct getDiscordClient() + channel send, NOT a new
 // webhook module mirroring billingAlerts.ts. billingAlerts.ts's own header
@@ -277,7 +282,31 @@ function fireRateLimitEvent(
     | "public_feed"
     | "xff_canary"
     | "edge_origin_ingress_anomaly",
-  ua: string | null
+  ua: string | null,
+  // Explicit per-call-site indicator of whether THIS firing actually
+  // blocked the request, or merely observed it (2026-08-07 review, Critical
+  // 2 / Importants 1&2). Confirmed live 2026-08-07: this function logged
+  // "BLOCKED" unconditionally for every one of its eight call sites, even
+  // though only six of them are express-rate-limit `handler` callbacks that
+  // are exclusively invoked once a request has ALREADY been rejected with
+  // 429 — a request the HTTP log recorded as httpStatus:200 also logged
+  // "BLOCKED" here, and after the RATE_LIMIT embed fix the two disagreed
+  // with each other, which is worse for an investigator than the old
+  // uniformly-wrong state.
+  //
+  // Defaults to "blocked" so the six real limiter call sites below — each
+  // asserted VERBATIM by server/_core/clientIdentityCallSites.test.ts as
+  // `fireRateLimitEvent(ip, req.path, req.method, "<type>", ua);` with
+  // nothing after `ua` — stay textually unchanged and still get the
+  // correct value for free: they can only ever be invoked from a `handler`
+  // that express-rate-limit calls exclusively on an actual block, so
+  // "blocked" is unconditionally true there regardless of whether it's
+  // passed explicitly. The three call sites where "blocked" is NOT always
+  // true — edge_deny (multi-line call, "blocked" passed explicitly for
+  // clarity though it matches the default), xff_canary, and the /api/trpc
+  // edge_origin_ingress_anomaly canary (both "observed", overriding the
+  // default) — pass this argument explicitly.
+  outcome: "blocked" | "observed" = "blocked"
 ) {
   const now = Date.now();
   const dedupKey = `${ip}:${path}:${limitType}`;
@@ -293,7 +322,7 @@ function fireRateLimitEvent(
 
   const tag = `[RateLimit][${limitType.toUpperCase()}]`;
   console.warn(
-    `${tag} BLOCKED | IP=${logSafe(ip)} path=${logSafe(path)} method=${logSafe(method)}` +
+    `${tag} ${outcome === "blocked" ? "BLOCKED" : "OBSERVED (not blocked)"} | IP=${logSafe(ip)} path=${logSafe(path)} method=${logSafe(method)}` +
       ` ua="${logSafe(ua?.substring(0, 60) ?? "none")}"` +
       (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
   );
@@ -301,6 +330,12 @@ function fireRateLimitEvent(
   if (now - lastSent < RATE_LIMIT_DEDUP_MS) return; // deduplicated
   rateLimitLastPersisted.set(dedupKey, now);
 
+  // NOT persisted to security_events (no new column) — see this task's
+  // report for why: adding one needs a migration via db-push.yml before
+  // dependent code deploys, and the existing `context` (limitType) column
+  // already lets a reader correlate with Railway logs at this timestamp.
+  // The Discord embed is the surface that needed the true per-alert value,
+  // and it gets it via SecurityAlertPayload.limiterOutcome below.
   insertSecurityEvent({
     eventType: "RATE_LIMIT",
     ip,
@@ -321,6 +356,7 @@ function fireRateLimitEvent(
     method,
     userAgent: ua,
     context: limitType,
+    limiterOutcome: outcome,
     occurredAt: now,
   }).catch(err =>
     console.error(`${tag} Discord alert failed: ${(err as Error).message}`)
@@ -586,12 +622,16 @@ async function startServer() {
       switch (kind) {
         case "edge_deny":
           // The ONLY kind that actually 403'd the request. Alert.
+          // outcome="blocked" passed explicitly (2026-08-07 review, Critical
+          // 2 / Importants 1&2) — matches the helper's own default, but
+          // stated here so this call site's truth is not implicit.
           fireRateLimitEvent(
             ip,
             req.path,
             req.method,
             "edge_origin_ingress_anomaly",
-            ua
+            ua,
+            "blocked"
           );
           break;
         case "edge_would_deny":
@@ -919,12 +959,17 @@ async function startServer() {
   app.use("/api/trpc", (req, _res, next) => {
     const ip = resolveClientIp(req);
     if (ip && isReservedOrInternalIp(ip)) {
+      // Observe-only by construction — see this block's own header comment
+      // ("Observe-only; never blocks"). outcome="observed" passed explicitly
+      // (2026-08-07 review, Importants 1&2): the default is "blocked", which
+      // would be WRONG here.
       fireRateLimitEvent(
         ip,
         req.path,
         req.method,
         "xff_canary",
-        (req.headers["user-agent"] as string | undefined) ?? null
+        (req.headers["user-agent"] as string | undefined) ?? null,
+        "observed"
       );
     }
     // Edge-aware anomaly (Phase 4): the private-range canary above is
@@ -938,12 +983,23 @@ async function startServer() {
     if (edgeMode() !== "off") {
       const upstream = immediateUpstreamIp(req);
       if (!cfConnectingIp(req) || !isCloudflareEdgeIp(upstream)) {
+        // This canary ALWAYS calls next() below — it never blocks the
+        // request, even though it shares the "edge_origin_ingress_anomaly"
+        // limitType slug with the genuinely-blocking edge_deny case above.
+        // outcome="observed" passed explicitly (2026-08-07 review, Critical
+        // 2 / Importants 1&2) so the two call sites for this one slug can
+        // no longer be conflated in the resulting alert — this is the fix
+        // for the live case: production runs EDGE_MODE=log, where 100% of
+        // currently-firing alerts for this slug come from THIS call site,
+        // and the old code asserted a 403 that never happened for every one
+        // of them.
         fireRateLimitEvent(
           upstream || ip,
           req.path,
           req.method,
           "edge_origin_ingress_anomaly",
-          (req.headers["user-agent"] as string | undefined) ?? null
+          (req.headers["user-agent"] as string | undefined) ?? null,
+          "observed"
         );
       }
     }

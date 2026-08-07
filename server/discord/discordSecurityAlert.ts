@@ -191,6 +191,24 @@ export interface SecurityAlertPayload {
   /** Contextual label: limiter type for RATE_LIMIT, failure reason for AUTH_FAIL */
   context?: string | null;
   /**
+   * RATE_LIMIT only — explicit per-call-site indicator of whether the event
+   * that fired THIS alert actually blocked the request, or merely observed
+   * it (2026-08-07 review, Criticals 2 / Importants 1&2). Six of the eight
+   * `limitType` slugs are unconditionally one or the other (the six real
+   * rate limiters always block; `xff_canary` never blocks) — but
+   * `edge_origin_ingress_anomaly` is fired from TWO call sites with OPPOSITE
+   * truth (server/_core/index.ts's origin-lock `edge_deny` case is a genuine
+   * 403; the independent `/api/trpc` ingress-anomaly canary never blocks),
+   * and the payload previously carried no field able to tell them apart —
+   * so the RATE_LIMIT embed asserted a 403 that had not necessarily
+   * happened (confirmed live: production runs EDGE_MODE=log, where 100% of
+   * currently-firing edge_origin_ingress_anomaly alerts come from the
+   * always-observe-only canary, not a real 403). `undefined` means the
+   * caller did not thread a value — buildRateLimitEmbed() must render
+   * something NON-COMMITTAL in that case, never assert a specific code.
+   */
+  limiterOutcome?: "blocked" | "observed";
+  /**
    * AUTH_FAIL only — the sanitized login credential that was targeted.
    * Format: first 3 chars of local email part + *** + @domain (e.g. "ais***@gmail.com")
    * or first 3 chars of username + *** (e.g. "pre***").
@@ -455,6 +473,73 @@ function stripContentHazards(value: string): string {
   return value.replace(/[`@]/g, "");
 }
 
+/**
+ * Neutralises Discord Markdown in an attacker-controlled value BEFORE it is
+ * interpolated into an embed field/description (2026-08-07 review, Critical
+ * 1). Every call site wraps its value in a single-backtick inline code span
+ * (`` `${value}` ``) — the ONLY thing that made these fields look safe. They
+ * were not: `logSafe()` strips control characters, not Markdown, so a
+ * payload containing its OWN backtick closes that span early and exposes
+ * whatever text follows to Discord's real Markdown parser. Two payloads
+ * verified live through the real EmbedBuilder:
+ *
+ *   path          = "x`**PWNED-BOLD**`[phish](https://evil.example)y"
+ *   blockedOrigin = "https://evil.example`\|\|spoiler-hide-this\|\|`"
+ *
+ * rendered live **bold**, a clickable masked link to an attacker-controlled
+ * URL, and a spoiler tag inside what was meant to be inert diagnostic text
+ * in an alert the security team reads and trusts.
+ *
+ * Two different neutralisation strategies for two different reasons:
+ *
+ *   1. Backtick is replaced with U+02CB MODIFIER LETTER GRAVE ACCENT (ˋ), a
+ *      visually near-identical but functionally inert lookalike — NOT
+ *      backslash-escaped. CommonMark's code-span algorithm scans forward for
+ *      the next backtick run of matching length to find a span's closer and
+ *      does not consult backslash-escaping while doing so (backslash escapes
+ *      are explicitly documented as not working inside/around code-span
+ *      delimiters) — so `` \` `` still closes an already-open span exactly
+ *      like a bare backtick would. Replacing the character outright is the
+ *      only reliable way to stop it from ever being recognised as a
+ *      delimiter, which is why this file's own review explicitly allows
+ *      "replacing backticks with an inert lookalike" as a valid approach.
+ *      With every real backtick gone, the value can never prematurely close
+ *      the wrapper's own code span.
+ *   2. The remaining active characters (* _ ~ | > and the [ ] ( ) that form
+ *      the `[text](url)` link syntax) ARE backslash-escaped. CommonMark DOES
+ *      honour backslash-escaping for these outside a code span. This layer
+ *      is already redundant with every current call site wrapping the value
+ *      in real backticks — once no real backtick survives inside it, the
+ *      whole value is one literal code span, and code-span content is never
+ *      re-parsed for bold/italic/spoiler/links regardless of what characters
+ *      it contains. It exists as defense in depth: a future call site that
+ *      inserts a payload value into a field or description WITHOUT that
+ *      backtick wrapper does not silently reopen this exact vulnerability.
+ *
+ * Deleting the characters outright (a third option this review explicitly
+ * calls out as less defensible) was rejected: these fields are forensic
+ * evidence — the attacker's IP, path, user-agent, targeted origin — that an
+ * investigator reads to reconstruct what happened. Silently dropping bytes
+ * from that record is its own defect. Every original character survives
+ * here, either as an inert lookalike or backslash-escaped, so the rendered
+ * value stays a faithful (if de-fanged) transcript of exactly what the
+ * attacker sent.
+ *
+ * Composition order (must stay sanitise → then clamp): every call site
+ * applies this BEFORE the value is wrapped in template-literal backticks,
+ * and clampFieldValue()/clampDescription()/clampContent() wrap the FULLY
+ * COMPOSED string (wrapper backticks included) afterward. Escaping first
+ * means truncation can never reopen an escape — there are zero raw
+ * backticks left in the interior content by the time clamping's
+ * `substring()` runs, so a cut cannot manufacture a new one, and the only
+ * real backticks in the final string are the wrapper's own.
+ */
+function escapeDiscordMarkdown(value: string): string {
+  return value
+    .replace(/`/g, "ˋ")
+    .replace(/[*_~|>[\]()]/g, match => `\\${match}`);
+}
+
 // ─── Embed builders ───────────────────────────────────────────────────────────
 
 /**
@@ -528,16 +613,16 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .addFields(
       {
         name: "🌐 Blocked Origin (Where the Request Came From)",
-        value: clampFieldValue(`\`${field(logSafe(p.blockedOrigin), "none — Origin header was missing entirely")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.blockedOrigin), "none — Origin header was missing entirely"))}\``),
         inline: false,
       },
-      { name: "🔗 tRPC Procedure Targeted", value: clampFieldValue(`\`${field(logSafe(p.path), "unknown")}\``),   inline: true  },
-      { name: "📡 HTTP Method",             value: clampFieldValue(`\`${field(logSafe(p.method), "unknown")}\``), inline: true  },
-      { name: "🖥️ Attacker IP Address",     value: clampFieldValue(`\`${field(logSafe(p.ip), "unknown")}\``),     inline: true  },
+      { name: "🔗 tRPC Procedure Targeted", value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.path), "unknown"))}\``),   inline: true  },
+      { name: "📡 HTTP Method",             value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.method), "unknown"))}\``), inline: true  },
+      { name: "🖥️ Attacker IP Address",     value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.ip), "unknown"))}\``),     inline: true  },
       { name: "🕐 Time of Event",     value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(logSafe(p.userAgent), "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.userAgent), "none — no user-agent header provided"))}\``),
         inline: false,
       },
       {
@@ -566,12 +651,22 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
  *     "edge_deny" case fires it — that call is a genuine 403, the request
  *     never reached application code) AND a second, independent /api/trpc
  *     ingress-anomaly canary that NEVER blocks (it always calls next()
- *     after firing). Under EDGE_MODE=on the canary "mostly" can't fire
- *     because a real bypass is already 403'd upstream (see index.ts's own
- *     comment on that canary) — so in practice this label means "403" far
- *     more often than not — but the payload carries no field distinguishing
- *     which call site fired it, so the copy below cannot claim a single
- *     action with certainty and says so.
+ *     after firing). LIMITER_META alone cannot carry a single correct
+ *     default for this one slug — the two call sites disagree, and
+ *     production runs EDGE_MODE=log right now, where 100% of currently
+ *     firing alerts for this slug come from the always-observe-only canary
+ *     (verified live: a probe returned HTTP 200 AND fired the anomaly
+ *     event). Hardcoding "403 blocked at the edge" here shipped an alert
+ *     that asserted a 403 that had not happened (2026-08-07 review,
+ *     Critical 2) — the exact "alert lies about what happened" defect this
+ *     whole mechanism exists to remove. Fixed by threading an explicit
+ *     blocked/observed indicator through fireRateLimitEvent() from each of
+ *     its eight call sites (SecurityAlertPayload.limiterOutcome) —
+ *     buildRateLimitEmbed() below overrides this slug's rendered action
+ *     from that per-alert value instead of ever trusting a static default
+ *     for it. This entry's own `action` is deliberately non-committal (see
+ *     its own comment) — it is only reached as a last-resort fallback when
+ *     a caller failed to thread the indicator.
  *   - xff_canary is observe-only by construction (see index.ts) — it is
  *     never anything but "request was served".
  *
@@ -582,7 +677,8 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
 export type LimiterAction =
   | "429 rate-limited"
   | "403 blocked at the edge"
-  | "observed only — request was served";
+  | "observed only — request was served"
+  | "outcome unknown for this alert — check server logs";
 
 interface LimiterMeta {
   label: string;
@@ -678,17 +774,29 @@ export const LIMITER_META: Record<string, LimiterMeta> = {
   },
   edge_origin_ingress_anomaly: {
     label: "Cloudflare Origin-Lock Anomaly — NOT a conventional rate limiter",
-    action: "403 blocked at the edge",
+    // NON-COMMITTAL BY DESIGN (2026-08-07 review, Critical 2): this slug is
+    // fired from two call sites with OPPOSITE truth (edge_deny = a genuine
+    // 403; the /api/trpc canary = always observe-only, request served) — a
+    // single static default here CANNOT be correct for both, and hardcoding
+    // "403 blocked at the edge" shipped an alert that asserted a 403 that
+    // had not happened for the (currently 100% of firing) observe-only
+    // case. buildRateLimitEmbed() below overrides the RENDERED action from
+    // the real per-alert SecurityAlertPayload.limiterOutcome value instead
+    // of ever reading this field for this one slug — this default is only
+    // reached if a future caller fires this slug without threading that
+    // value, and it must stay non-committal (never assert 429 OR 403) if
+    // that ever happens.
+    action: "outcome unknown for this alert — check server logs",
     explanation:
       "A request reached the Railway origin without a verified Cloudflare " +
-      "hop. Under EDGE_MODE=on with the circuit breaker enforcing, this " +
-      "label most often means the origin lock itself already refused the " +
-      "request with 403 before it touched any application code. The same " +
-      "label can also fire, always observe-only (request served, nothing " +
-      "blocked), from a second, independent /api/trpc ingress-anomaly " +
-      "check — expected during an EDGE_MODE=log soak. Check the Railway " +
-      "logs at this timestamp for \"[edge][origin-lock]\" to confirm which " +
-      "occurred for this specific alert.",
+      "hop. This label is fired from two different places: the origin " +
+      "lock's real 403 enforcement (edge_deny, under EDGE_MODE=on) and a " +
+      "second, independent /api/trpc ingress-anomaly canary that NEVER " +
+      "blocks — expected during an EDGE_MODE=log soak. This alert's title " +
+      "and \"what the server did\" line above reflect which one actually " +
+      "fired THIS event. If they say the outcome is unknown, check the " +
+      "Railway logs at this timestamp for \"[edge][origin-lock]\" to " +
+      "confirm which occurred.",
     guidance:
       "Do NOT block this IP at the firewall — these are frequently real " +
       "users on carrier networks with a short-lived resolver cache, or " +
@@ -701,6 +809,7 @@ const RATE_LIMIT_TITLE: Record<LimiterAction, string> = {
   "429 rate-limited": "⚡ RATE LIMIT — IP Temporarily Blocked for Sending Too Many Requests",
   "403 blocked at the edge": "🚫 ORIGIN LOCK — Request Blocked at the Cloudflare Edge (403)",
   "observed only — request was served": "🔍 SECURITY OBSERVATION — Anomaly Detected, Request Was Served",
+  "outcome unknown for this alert — check server logs": "⚠️ SECURITY EVENT — Outcome Unknown (Check Server Logs)",
 };
 
 /** Per-action "what the server did" line — the only place a response code is asserted. */
@@ -711,7 +820,30 @@ const RATE_LIMIT_SERVER_ACTION: Record<LimiterAction, string> = {
     "The request was refused with `403 Forbidden` at the Cloudflare edge / origin lock — it never reached application code. No data was accessed.",
   "observed only — request was served":
     "**Nothing was blocked.** The request was served normally; this is a detection-only signal, not an enforcement action.",
+  "outcome unknown for this alert — check server logs":
+    "**Whether this request was blocked cannot be determined from this alert's payload.** Check the Railway logs at this timestamp for \"[edge][origin-lock]\" or \"[RateLimit]\" before assuming either outcome.",
 };
+
+/**
+ * edge_origin_ingress_anomaly is the one limitType slug fired from two call
+ * sites with opposite truth (see LIMITER_META's own comment on it) — every
+ * OTHER slug's static LIMITER_META.action is already unconditionally
+ * correct for every call site able to fire it, so only this one slug needs
+ * a per-alert override sourced from the real SecurityAlertPayload value
+ * (2026-08-07 review, Critical 2 / Importants 1&2).
+ */
+function resolveRateLimitAction(
+  rawContext: string,
+  meta: LimiterMeta,
+  outcome: SecurityAlertPayload["limiterOutcome"]
+): LimiterAction {
+  if (rawContext !== "edge_origin_ingress_anomaly") return meta.action;
+  if (outcome === "blocked") return "403 blocked at the edge";
+  if (outcome === "observed") return "observed only — request was served";
+  // Caller didn't thread limiterOutcome — fall back to the non-committal
+  // static default rather than guessing.
+  return meta.action;
+}
 
 function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
   const rawContext = p.context ?? "";
@@ -728,28 +860,29 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
       "Check server/_core/index.ts's limitType union against this file's " +
       "LIMITER_META for a slug that was added on one side and not the other.",
   };
+  const action = resolveRateLimitAction(rawContext, meta, p.limiterOutcome);
 
   return new EmbedBuilder()
     .setColor(EMBED_COLORS.RATE_LIMIT)
-    .setTitle(RATE_LIMIT_TITLE[meta.action])
+    .setTitle(RATE_LIMIT_TITLE[action])
     .setDescription(
       `**What happened:** ${meta.explanation}\n\n` +
-      `**What the server did:** ${RATE_LIMIT_SERVER_ACTION[meta.action]}\n\n` +
+      `**What the server did:** ${RATE_LIMIT_SERVER_ACTION[action]}\n\n` +
       `**What you should do:** ${meta.guidance}`
     )
     .addFields(
       {
         name: "🛡️ Which Limiter / Detector Was Triggered",
-        value: clampFieldValue(`\`${field(logSafe(meta.label), "unknown limiter")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(meta.label), "unknown limiter"))}\``),
         inline: false,
       },
-      { name: "🔗 Route / Endpoint Hit",   value: clampFieldValue(`\`${field(logSafe(p.path), "unknown")}\``),   inline: true  },
-      { name: "📡 HTTP Method",            value: clampFieldValue(`\`${field(logSafe(p.method), "unknown")}\``), inline: true  },
-      { name: "🖥️ IP Address",             value: clampFieldValue(`\`${field(logSafe(p.ip), "unknown")}\``),     inline: true  },
+      { name: "🔗 Route / Endpoint Hit",   value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.path), "unknown"))}\``),   inline: true  },
+      { name: "📡 HTTP Method",            value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.method), "unknown"))}\``), inline: true  },
+      { name: "🖥️ IP Address",             value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.ip), "unknown"))}\``),     inline: true  },
       { name: "🕐 Time of Event",    value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(logSafe(p.userAgent), "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.userAgent), "none — no user-agent header provided"))}\``),
         inline: false,
       }
     )
@@ -795,7 +928,7 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
     )
     .addFields(
       { name: "❌ Why the Login Failed",
-        value: clampFieldValue(`\`${field(reasonDisplay, "unknown reason")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(reasonDisplay, "unknown reason"))}\``),
         inline: false,
       },
       {
@@ -805,21 +938,26 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
         // The whole composed value (backticks + trailing explainer sentence) is clamped —
         // budgeting the inner field() call alone left ~104 chars of wrapper unaccounted
         // for and threw on a long targetIdentifier (2026-08-06 review, Critical 1).
+        // targetIdentifier is directly attacker-controlled: sanitizeLoginIdentifier()
+        // (server/routers/appUsers.ts) keeps the raw domain/username characters
+        // verbatim after the first 3 chars + "***" — a backtick there closes this
+        // field's code span exactly like the reviewer's `path`/`blockedOrigin`
+        // payloads (2026-08-07 review, Critical 1), hence escapeDiscordMarkdown().
         name: "🎯 Account Targeted (Sanitized — First 3 Chars Only)",
         value: clampFieldValue(
           p.targetIdentifier
-            ? `\`${field(logSafe(p.targetIdentifier), "unknown — identifier not captured")}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
+            ? `\`${escapeDiscordMarkdown(field(logSafe(p.targetIdentifier), "unknown — identifier not captured"))}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
             : "`unknown — identifier not captured`"
         ),
         inline: false,
       },
-      { name: "🔗 Login Procedure",       value: clampFieldValue(`\`${field(logSafe(p.path), "unknown")}\``),   inline: true  },
-      { name: "📡 HTTP Method",           value: clampFieldValue(`\`${field(logSafe(p.method), "unknown")}\``), inline: true  },
-      { name: "🖥️ Attacker IP Address",   value: clampFieldValue(`\`${field(logSafe(p.ip), "unknown")}\``),     inline: true  },
+      { name: "🔗 Login Procedure",       value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.path), "unknown"))}\``),   inline: true  },
+      { name: "📡 HTTP Method",           value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.method), "unknown"))}\``), inline: true  },
+      { name: "🖥️ Attacker IP Address",   value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.ip), "unknown"))}\``),     inline: true  },
       { name: "🕐 Time of Event",   value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(logSafe(p.userAgent), "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(p.userAgent), "none — no user-agent header provided"))}\``),
         inline: false,
       }
     )
@@ -845,7 +983,7 @@ function buildBruteForceEmbed(
       // (2026-08-06 review, Critical 2).
       clampDescription(
         `**@here — Immediate attention recommended.**\n\n` +
-        `**What happened:** The IP address \`${logSafe(ip)}\` has failed to log in **${count} times** ` +
+        `**What happened:** The IP address \`${escapeDiscordMarkdown(logSafe(ip))}\` has failed to log in **${count} times** ` +
         `within the last **${windowMins} minutes**. This is a strong signal that someone is ` +
         `running an automated password-guessing attack (also called a brute-force or credential-stuffing attack).\n\n` +
         "**What the server did:** Every login attempt was individually blocked. " +
@@ -870,14 +1008,14 @@ function buildBruteForceEmbed(
       )
     )
     .addFields(
-      { name: "🖥️ Attacker IP Address",        value: clampFieldValue(`\`${field(logSafe(ip), "unknown")}\``),         inline: true  },
+      { name: "🖥️ Attacker IP Address",        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(ip), "unknown"))}\``),         inline: true  },
       { name: "🔢 Failed Login Count",          value: clampFieldValue(`**${count}** failures in ${windowMins} min`),   inline: true  },
       { name: "⏱️ Detection Window",            value: clampFieldValue(`Last **${windowMins} minutes** (sliding)`),     inline: true  },
       { name: "🕐 Escalation Time",       value: clampFieldValue(formatTimestamp(occurredAt)),                    inline: true  },
       { name: "🛡️ Threshold",                   value: clampFieldValue(`\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``), inline: true },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(logSafe(userAgent), "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${escapeDiscordMarkdown(field(logSafe(userAgent), "none — no user-agent header provided"))}\``),
         inline: false,
       },
       {
@@ -887,7 +1025,7 @@ function buildBruteForceEmbed(
         // cap once `ip` was long (2026-08-06 review, Critical 1).
         name: "🔒 Recommended Immediate Action",
         value: clampFieldValue(
-          `Before blocking \`${field(logSafe(ip), "unknown")}\` at the firewall/CDN, confirm it isn't ` +
+          `Before blocking \`${escapeDiscordMarkdown(field(logSafe(ip), "unknown"))}\` at the firewall/CDN, confirm it isn't ` +
           "shared infrastructure (Cloudflare PoP, Railway edge, carrier CGNAT, CI runner, " +
           "verified crawler). Prefer locking the targeted account over blocking the IP."
         ),
