@@ -21,6 +21,7 @@
 
 import { getDb } from "../db";
 import { sql } from "drizzle-orm";
+import { isAnalyticsStore } from "../analytics/config";
 
 const TAG = "[SchemaGuard]";
 
@@ -136,6 +137,17 @@ export interface SchemaDrift {
   tableMissing: boolean;
 }
 
+export interface SchemaGuardResult {
+  ok: boolean;
+  drift: SchemaDrift[];
+  /**
+   * Set when the guard did not run because it does not apply to this instance.
+   * `ok: true` with a `skipped` reason means "not checked", NOT "verified clean" —
+   * callers that report schema health must not conflate the two.
+   */
+  skipped?: "analytics-store";
+}
+
 /** Compare declared expectations against information_schema. Read-only. */
 export async function detectSchemaDrift(
   required: Readonly<Record<string, readonly string[]>> = REQUIRED_COLUMNS
@@ -208,10 +220,31 @@ export function formatDrift(drift: readonly SchemaDrift[]): string {
  * Run once at boot. Never throws on its own failure — an unreachable database at
  * startup is the circuit breaker's problem, not this check's.
  */
-export async function assertSchemaCurrent(): Promise<{
-  ok: boolean;
-  drift: SchemaDrift[];
-}> {
+export async function assertSchemaCurrent(): Promise<SchemaGuardResult> {
+  // Both Railway services run the SAME build, but only one owns these tables.
+  // The analytics store (ai-sports-betting-backend, ANALYTICS_ROLE=store) points
+  // its DATABASE_URL at a different database that by design holds analytics_events
+  // and none of the product/billing tables declared above. So every one of them
+  // reads as "MISSING entirely" on every boot: ten tables, plus a "login, checkout,
+  // fulfilment will break" warning, none of it true there.
+  //
+  // That is worse than noise. This guard exists to make ONE failure impossible to
+  // miss — code deployed ahead of its migration, which took platform-wide login
+  // down on 2026-07-31 — and a guard that screams on every single boot of one
+  // service is precisely how the real alarm gets scrolled past.
+  //
+  // Scoped by ROLE, deliberately, not by drift shape. Treating "table missing
+  // entirely" as benign would have been the smaller diff and the wrong fix: that
+  // case IS the ledger miss described in REQUIRED_COLUMNS above, and it has to
+  // stay loud on the service that actually owns the tables.
+  if (isAnalyticsStore()) {
+    console.log(
+      `${TAG} [VERIFY] N/A — ANALYTICS_ROLE=store. This instance's DATABASE_URL is the ` +
+        `analytics store, which owns none of the product tables this guard checks, so drift ` +
+        `here would be meaningless. The product service reports the real verdict.`
+    );
+    return { ok: true, drift: [], skipped: "analytics-store" };
+  }
   try {
     const drift = await detectSchemaDrift();
     if (drift.length === 0) {

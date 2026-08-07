@@ -247,10 +247,12 @@ await check("rate-limit keying resists client-supplied identity headers", async 
   // still held, proving nothing about the header that actually decides identity.
   // A live 2026-08-07 production run showed exactly that (59 → 58, green).
   //
-  // Both headers are now spoofed together, so the assertion covers whichever
-  // tier is live: `cf-connecting-ip` (Cloudflare must overwrite an inbound one)
-  // AND `x-forwarded-for` (Railway must sanitize it). A regression in EITHER
-  // upstream mints a fresh budget and fails this check.
+  // Each header is now spoofed in its OWN request, because the two are refused
+  // at different layers and conflating them broke this gate once already:
+  // `x-forwarded-for` reaches the origin and must share the budget (Railway
+  // sanitizes it), while `cf-connecting-ip` never arrives at all — Cloudflare
+  // rejects the request outright with a 403. Sending both at once meant the
+  // XFF assertion could only ever see the 403, so it asserted nothing.
   //
   // Known limit, stated rather than papered over: this exercises the path
   // through the public edge only. The tier-2 (direct-to-origin) path cannot be
@@ -301,6 +303,14 @@ await check("rate-limit keying resists client-supplied identity headers", async 
     headers: { "cf-connecting-ip": "203.0.113.251" },
   });
   const r3 = remainingOf(spoofedCf);
+  // Closes the one hole in the branch below. A 5xx ALSO comes back without a
+  // RateLimit header, so without this line an origin error would be scored as
+  // "edge refused it" and pass green while proving nothing about limiter keying.
+  // Fail loudly instead: an origin error is a failed check, not a silent pass.
+  expect(
+    spoofedCf.status < 500,
+    `spoofed cf-connecting-ip got ${spoofedCf.status} from the origin — a 5xx says nothing about limiter keying and must not be scored as an edge refusal`
+  );
   let cfVerdict;
   if (spoofedCf.status === 403 || r3 === null) {
     cfVerdict = `edge refused it (status ${spoofedCf.status}, no origin hit)`;
