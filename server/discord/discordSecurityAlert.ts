@@ -85,7 +85,7 @@ export interface SecurityAlertPayload {
   path: string;
   /** HTTP method (GET / POST / etc.) */
   method: string;
-  /** User-Agent string (truncated to 120 chars for display) */
+  /** User-Agent string (shown in full, clamped only at Discord's field limit) */
   userAgent?: string | null;
   /** Contextual label: limiter type for RATE_LIMIT, failure reason for AUTH_FAIL */
   context?: string | null;
@@ -232,6 +232,22 @@ function formatTimestamp(epochMs: number): string {
   }) + " EST";
 }
 
+/**
+ * Discord hard-caps an embed field value at 1024 chars and THROWS
+ * (CombinedPropertyError) above it. `path` and `blockedOrigin` are
+ * attacker-controlled, so an over-long value used to throw inside
+ * buildEmbed() — which is called OUTSIDE the try — killing the alert
+ * entirely (2026-08-06 audit). Every field value goes through this.
+ *
+ * 1000 not 1024: leaves room for the backtick wrapping we add around values.
+ */
+const DISCORD_FIELD_MAX = 1000;
+
+function field(value: string | null | undefined, fallback: string): string {
+  const v = value === null || value === undefined || value === "" ? fallback : value;
+  return v.length > DISCORD_FIELD_MAX ? `${v.substring(0, DISCORD_FIELD_MAX)}…[truncated]` : v;
+}
+
 // ─── Embed builders ───────────────────────────────────────────────────────────
 
 /**
@@ -305,16 +321,16 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .addFields(
       {
         name: "🌐 Blocked Origin (Where the Request Came From)",
-        value: `\`${p.blockedOrigin ?? "none — Origin header was missing entirely"}\``,
+        value: `\`${field(p.blockedOrigin, "none — Origin header was missing entirely")}\``,
         inline: false,
       },
-      { name: "🔗 tRPC Procedure Targeted", value: `\`${p.path}\``,   inline: true  },
-      { name: "📡 HTTP Method",             value: `\`${p.method}\``, inline: true  },
-      { name: "🖥️ Attacker IP Address",     value: `\`${p.ip}\``,     inline: true  },
+      { name: "🔗 tRPC Procedure Targeted", value: `\`${field(p.path, "unknown")}\``,   inline: true  },
+      { name: "📡 HTTP Method",             value: `\`${field(p.method, "unknown")}\``, inline: true  },
+      { name: "🖥️ Attacker IP Address",     value: `\`${field(p.ip, "unknown")}\``,     inline: true  },
       { name: "🕐 Time of Event (EST)",     value: formatTimestamp(p.occurredAt), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${(p.userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
+        value: `\`${field(p.userAgent, "none — no user-agent header provided")}\``,
         inline: false,
       },
       {
@@ -367,16 +383,16 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .addFields(
       {
         name: "🛡️ Which Rate Limiter Was Triggered",
-        value: `\`${limiterDisplay}\``,
+        value: `\`${field(limiterDisplay, "unknown limiter")}\``,
         inline: false,
       },
-      { name: "🔗 Route / Endpoint Hit",   value: `\`${p.path}\``,   inline: true  },
-      { name: "📡 HTTP Method",            value: `\`${p.method}\``, inline: true  },
-      { name: "🖥️ Blocked IP Address",     value: `\`${p.ip}\``,     inline: true  },
+      { name: "🔗 Route / Endpoint Hit",   value: `\`${field(p.path, "unknown")}\``,   inline: true  },
+      { name: "📡 HTTP Method",            value: `\`${field(p.method, "unknown")}\``, inline: true  },
+      { name: "🖥️ Blocked IP Address",     value: `\`${field(p.ip, "unknown")}\``,     inline: true  },
       { name: "🕐 Time of Event (EST)",    value: formatTimestamp(p.occurredAt), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${(p.userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
+        value: `\`${field(p.userAgent, "none — no user-agent header provided")}\``,
         inline: false,
       }
     )
@@ -422,7 +438,7 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
     )
     .addFields(
       { name: "❌ Why the Login Failed",
-        value: `\`${reasonDisplay}\``,
+        value: `\`${field(reasonDisplay, "unknown reason")}\``,
         inline: false,
       },
       {
@@ -431,17 +447,17 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
         // can immediately see which account is under attack without exposing the full credential.
         name: "🎯 Account Targeted (Sanitized — First 3 Chars Only)",
         value: p.targetIdentifier
-          ? `\`${p.targetIdentifier}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
+          ? `\`${field(p.targetIdentifier, "unknown — identifier not captured")}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
           : "`unknown — identifier not captured`",
         inline: false,
       },
-      { name: "🔗 Login Procedure",       value: `\`${p.path}\``,   inline: true  },
-      { name: "📡 HTTP Method",           value: `\`${p.method}\``, inline: true  },
-      { name: "🖥️ Attacker IP Address",   value: `\`${p.ip}\``,     inline: true  },
+      { name: "🔗 Login Procedure",       value: `\`${field(p.path, "unknown")}\``,   inline: true  },
+      { name: "📡 HTTP Method",           value: `\`${field(p.method, "unknown")}\``, inline: true  },
+      { name: "🖥️ Attacker IP Address",   value: `\`${field(p.ip, "unknown")}\``,     inline: true  },
       { name: "🕐 Time of Event (EST)",   value: formatTimestamp(p.occurredAt), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${(p.userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
+        value: `\`${field(p.userAgent, "none — no user-agent header provided")}\``,
         inline: false,
       }
     )
@@ -476,20 +492,20 @@ function buildBruteForceEmbed(
       "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
     )
     .addFields(
-      { name: "🖥️ Attacker IP Address",        value: `\`${ip}\``,                                     inline: true  },
+      { name: "🖥️ Attacker IP Address",        value: `\`${field(ip, "unknown")}\``,                   inline: true  },
       { name: "🔢 Failed Login Count",          value: `**${count}** failures in ${windowMins} min`,   inline: true  },
       { name: "⏱️ Detection Window",            value: `Last **${windowMins} minutes** (sliding)`,     inline: true  },
       { name: "🕐 Escalation Time (EST)",       value: formatTimestamp(occurredAt),                    inline: true  },
       { name: "🛡️ Threshold",                   value: `\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``, inline: true },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${(userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
+        value: `\`${field(userAgent, "none — no user-agent header provided")}\``,
         inline: false,
       },
       {
         name: "🔒 Recommended Immediate Action",
         value:
-          `Block \`${ip}\` at the firewall/CDN level — IP Access Rules.\n` +
+          `Block \`${field(ip, "unknown")}\` at the firewall/CDN level — IP Access Rules.\n` +
           "Set rule: **Block** | **IP Address** | value: the IP above.",
         inline: false,
       }
@@ -505,6 +521,11 @@ function buildEmbed(p: SecurityAlertPayload): EmbedBuilder {
     case "RATE_LIMIT":  return buildRateLimitEmbed(p);
     case "AUTH_FAIL":   return buildAuthFailEmbed(p);
   }
+}
+
+/** Test-only surface for the embed builder. Not used by production paths. */
+export function buildEmbedForTest(payload: SecurityAlertPayload) {
+  return buildEmbed(payload);
 }
 
 // ─── Channel fetch helper ─────────────────────────────────────────────────────
@@ -645,8 +666,11 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
   if (!channel) return;
 
   // ── Step 6: Build and send the embed ──────────────────────────────────────
-  const embed = buildEmbed(payload);
+  // buildEmbed MUST be inside the try: discord.js throws on an over-long field
+  // value, and an escape here kills the alert silently at the call site's
+  // .catch() — the erasure primitive found in the 2026-08-06 audit.
   try {
+    const embed = buildEmbed(payload);
     await channel.send({ embeds: [embed] });
     console.log(
       `${tag} [OUTPUT] Alert posted successfully` +
@@ -657,8 +681,8 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(
-      `${tag} Failed to send embed to channel ${SECURITY_CHANNEL_ID}: ${logSafe(msg)}` +
-      ` | IP=${logSafe(payload.ip)}`
+      `${tag} Failed to build or send embed to channel ${SECURITY_CHANNEL_ID}: ${logSafe(msg)}` +
+      ` | IP=${logSafe(payload.ip)} eventType=${payload.eventType}`
     );
   }
 }

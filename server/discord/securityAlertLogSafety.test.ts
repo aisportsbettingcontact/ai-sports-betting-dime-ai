@@ -25,29 +25,21 @@ class FakeTextChannel {
   }
 }
 
-vi.mock("discord.js", () => ({
-  TextChannel: FakeTextChannel,
-  EmbedBuilder: class {
-    setColor() {
-      return this;
-    }
-    setTitle() {
-      return this;
-    }
-    setDescription() {
-      return this;
-    }
-    addFields() {
-      return this;
-    }
-    setTimestamp() {
-      return this;
-    }
-    setFooter() {
-      return this;
-    }
-  },
-}));
+// discord.js's REAL EmbedBuilder is used here (not a stub). The tests in the
+// "embed field width clamping" and "try/catch placement" blocks below exist
+// specifically to exercise its real CombinedPropertyError throw on an
+// over-long field value (2026-08-06 audit) — a stub with a no-op addFields()
+// would hide the exact bug this file exists to catch, and would make those
+// tests pass whether or not the production fix is present.
+// TextChannel stays faked; it's only used for an `instanceof` check plus the
+// send()/name/guild surface the existing tests below drive directly.
+vi.mock("discord.js", async () => {
+  const actual = await vi.importActual<typeof import("discord.js")>("discord.js");
+  return {
+    ...actual,
+    TextChannel: FakeTextChannel,
+  };
+});
 
 const clientState: { value: unknown } = { value: null };
 vi.mock("./bot", () => ({
@@ -133,7 +125,10 @@ describe("discord security alerts — hostile input cannot forge log lines", () 
     });
     await postSecurityAlert(payload(`fail-${FORGERY}`, "RATE_LIMIT"));
     assertNoForgedLines(lines);
-    expect(lines.some(l => l.includes("Failed to send embed"))).toBe(true);
+    // Message text updated by the 2026-08-06 fix: buildEmbed() now runs
+    // inside the same try as the send, so this catch covers build failures
+    // too, not just send failures — "Failed to build or send" reflects that.
+    expect(lines.some(l => l.includes("Failed to build or send embed"))).toBe(true);
   });
 
   it("sanitizes on the successful post path", async () => {
@@ -165,4 +160,137 @@ describe("discord security alerts — hostile input cannot forge log lines", () 
     await new Promise(r => setTimeout(r, 20));
     assertNoForgedLines(lines);
   }, 20_000);
+});
+
+describe("embed field width clamping (2026-08-06 audit)", () => {
+  const DISCORD_FIELD_MAX = 1024;
+
+  it("does not throw on a 2000-char path", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    expect(() =>
+      buildEmbedForTest({
+        eventType: "RATE_LIMIT",
+        ip: "1.2.3.4",
+        path: "/" + "a".repeat(1999),
+        method: "GET",
+        userAgent: "test",
+        context: "public_feed",
+        occurredAt: 1_754_500_000_000,
+      })
+    ).not.toThrow();
+  });
+
+  it("does not throw on a 2000-char blockedOrigin", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    expect(() =>
+      buildEmbedForTest({
+        eventType: "CSRF_BLOCK",
+        ip: "1.2.3.4",
+        blockedOrigin: "https://" + "a".repeat(1992),
+        path: "appUsers.login",
+        method: "POST",
+        occurredAt: 1_754_500_000_000,
+      })
+    ).not.toThrow();
+  });
+
+  it("clamps every field value to Discord's 1024 limit", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "9".repeat(2000),
+      path: "/" + "a".repeat(1999),
+      method: "GET",
+      userAgent: "u".repeat(2000),
+      context: "public_feed",
+      occurredAt: 1_754_500_000_000,
+    });
+    for (const field of embed.data.fields ?? []) {
+      expect(field.value.length).toBeLessThanOrEqual(DISCORD_FIELD_MAX);
+    }
+  });
+
+  it("does not throw on a 2000-char user-agent for CSRF_BLOCK", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    expect(() =>
+      buildEmbedForTest({
+        eventType: "CSRF_BLOCK",
+        ip: "1.2.3.4",
+        blockedOrigin: "https://evil.example",
+        path: "appUsers.login",
+        method: "POST",
+        userAgent: "u".repeat(2000),
+        occurredAt: 1_754_500_000_000,
+      })
+    ).not.toThrow();
+  });
+
+  it("does not throw on a 2000-char user-agent for AUTH_FAIL", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    expect(() =>
+      buildEmbedForTest({
+        eventType: "AUTH_FAIL",
+        ip: "1.2.3.4",
+        path: "appUsers.login",
+        method: "POST",
+        userAgent: "u".repeat(2000),
+        context: "invalid_password",
+        targetIdentifier: "pre***@example.com",
+        occurredAt: 1_754_500_000_000,
+      })
+    ).not.toThrow();
+  });
+
+  it("shows the full user-agent instead of the old 120-char cut", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    // The 120-char substring() cut used to render this UA as "…Safari/601.2.4 fac",
+    // hiding the client's real identity (2026-08-06 incident). The fix must show
+    // it in full, clamped only at Discord's 1024-char field limit.
+    const fullUa = "facebookexternalhit/1.1 Facebot Twitterbot/1.0";
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: "appUsers.login",
+      method: "GET",
+      userAgent: fullUa,
+      context: "public_feed",
+      occurredAt: 1_754_500_000_000,
+    });
+    const uaField = (embed.data.fields ?? []).find(f => f.name.includes("User-Agent"));
+    expect(uaField?.value).toContain(fullUa);
+  });
+});
+
+describe("postSecurityAlert try/catch placement (2026-08-06 audit)", () => {
+  // This block is deliberately independent of field-value length: it forces
+  // the embed builder to throw for ANY reason, to prove that postSecurityAlert
+  // survives the throw because buildEmbed() runs INSIDE the try — not because
+  // field() happens to have prevented the throw. If buildEmbed() is ever moved
+  // back outside the try, this test must fail (see task-2.3-report.md for the
+  // before/after discrimination-proof run).
+  it("does not let a throwing embed builder escape postSecurityAlert", async () => {
+    const { postSecurityAlert } = await import("./discordSecurityAlert");
+    const { EmbedBuilder } = await import("discord.js");
+    const spy = vi
+      .spyOn(EmbedBuilder.prototype, "addFields")
+      .mockImplementation(() => {
+        throw new Error("forced embed failure — isolates try/catch placement from field clamping");
+      });
+    try {
+      clientState.value = clientWithChannel("ok", async () => ({ id: "1" }));
+      await expect(
+        postSecurityAlert({
+          eventType: "RATE_LIMIT",
+          ip: "9.9.9.9",
+          path: "trpc.test",
+          method: "GET",
+          userAgent: "ua",
+          context: "public_feed",
+          occurredAt: Date.now(),
+        })
+      ).resolves.toBeUndefined();
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
