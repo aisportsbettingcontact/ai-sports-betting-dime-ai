@@ -742,9 +742,16 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _NFLDB = os.path.dirname(_HERE)
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_NFLDB)))
 
-EXPECTED_TOTAL = 1106729
-EXPECTED_A = 552514
-EXPECTED_B = 554215
+#: Re-exported from season_pins so there is ONE place these numbers live. They
+#: describe SETTLED seasons only (<= season_pins.FROZEN_THROUGH); the 2026 season
+#: publishes shape-B rows daily and is checked by conservation, not by a pin.
+from season_pins import (  # noqa: E402
+    FROZEN_THROUGH,
+    FROZEN_SHAPE_A as EXPECTED_A,
+    FROZEN_SHAPE_B as EXPECTED_B,
+)
+
+EXPECTED_FROZEN_TOTAL = EXPECTED_A + EXPECTED_B
 
 #: The CHECK constraints proposed for the rebuilt `depth_chart` table, as
 #: predicates over a normalised record. The self-check evaluates every one of
@@ -861,16 +868,29 @@ def _self_check(raw_dir=None, db_path=None, teams_json=None, identities=None):
                 if not pred(rec):
                     ddl_violations[name] += 1
 
+    # Settled seasons are pinned; the in-progress season is counted out first so
+    # that ordinary upstream growth cannot be mistaken for corruption.
+    b_live = sum(n for s, n in b_seasons.items() if s > FROZEN_THROUGH)
+    b_frozen = shapes["B"] - b_live
     expect("every row normalises", errors == 0, "%d failures" % errors)
-    expect("row count is %d" % EXPECTED_TOTAL, total == EXPECTED_TOTAL, total)
+    # Conservation, which holds at any volume: every streamed row got a shape.
+    # This is what "row count is N" was really asserting before the source grew.
+    expect("every source row is classified into a shape",
+           total == shapes["A"] + shapes["B"],
+           "%d streamed vs %d classified" % (total, shapes["A"] + shapes["B"]))
+    expect("settled row count is %d" % EXPECTED_FROZEN_TOTAL,
+           shapes["A"] + b_frozen == EXPECTED_FROZEN_TOTAL, shapes["A"] + b_frozen)
     expect("shape A = %d" % EXPECTED_A, shapes["A"] == EXPECTED_A, shapes["A"])
-    expect("shape B = %d (was dropped entirely)" % EXPECTED_B,
-           shapes["B"] == EXPECTED_B, shapes["B"])
+    expect("settled shape B = %d (was dropped entirely)" % EXPECTED_B,
+           b_frozen == EXPECTED_B, b_frozen)
     expect("every row resolves a franchise_id", no_franchise == 0, no_franchise)
     expect("shape-B natural key (ts, team, scheme, slot, rank) is unique",
            key_dupes == 0, key_dupes)
-    expect("all shape-B rows land in season 2025", set(b_seasons) == {2025},
-           dict(b_seasons))
+    # Shape B began at 2025 and continues forward. Pinning it to {2025} broke the
+    # moment 2026 published; asserting the FLOOR keeps both halves of the claim --
+    # 2025 is present, and nothing earlier ever appears in shape B.
+    expect("shape-B rows start at season 2025 and never precede it",
+           bool(b_seasons) and min(b_seasons) == 2025, dict(b_seasons))
     expect("shape-A rows span 2010-2024", set(a_seasons) == set(range(2010, 2025)),
            sorted(a_seasons))
     expect("unresolved gsis_id is exactly the %d itemised players"
