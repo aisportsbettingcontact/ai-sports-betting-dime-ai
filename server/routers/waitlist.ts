@@ -27,6 +27,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { ownerProcedure } from "./appUsers";
+import { resolveClientIdentity } from "../_core/clientIdentity";
 import type { WaitlistRow } from "../../drizzle/schema";
 import {
   submitWaitlist,
@@ -107,12 +108,13 @@ export const waitlistRouter = router({
 
       // ── Extract client metadata from request ──────────────────────────────
       const req = ctx.req as import("express").Request | undefined;
-      const ipAddress: string =
-        (req?.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          ?.trim() ??
-        req?.socket?.remoteAddress ??
-        "unknown";
+      // Persisted to waitlist.ipAddress. The leftmost XFF token behind
+      // Cloudflare is a PoP, so every row written since the orange-cloud
+      // holds a Cloudflare address rather than the signup's origin —
+      // irrecoverable, no second column holds the truth (2026-08-06 audit).
+      const ipAddress: string = req
+        ? resolveClientIdentity(req) || "unknown"
+        : "unknown";
       const userAgent: string =
         (req?.headers["user-agent"] as string | undefined) ?? "";
 
