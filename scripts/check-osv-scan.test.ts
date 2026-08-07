@@ -30,6 +30,103 @@ function osvReport(
   };
 }
 
+describe("osv-scanner gate — unrateable findings block (fail-closed)", () => {
+  // Before this, `vulnSeverity()` returned null for an advisory carrying neither
+  // database_specific.severity nor a CVSS rollup, and the caller's
+  // `severity && FAILING_SEVERITIES.has(severity)` sent null to the NON-blocking
+  // bucket. The gate failed open on precisely the advisories it understood least.
+  it("blocks a finding with no declared severity and no CVSS rollup", () => {
+    const { flagged, other } = evaluateScan(
+      osvReport([
+        {
+          name: "mystery-pkg",
+          version: "1.0.0",
+          vulns: [{ id: "GHSA-no-severity" }],
+        },
+      ])
+    );
+    expect(other).toEqual([]);
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]).toMatchObject({
+      pkg: "mystery-pkg",
+      id: "GHSA-no-severity",
+      severity: "UNKNOWN",
+    });
+  });
+
+  it("names the severity UNKNOWN rather than leaving it null, so the report can explain itself", () => {
+    const { flagged } = evaluateScan(
+      osvReport([{ name: "p", version: "1", vulns: [{ id: "GHSA-x" }] }])
+    );
+    expect(flagged[0].severity).toBe("UNKNOWN");
+    expect(flagged[0].severity).not.toBeNull();
+  });
+
+  it("blocks when max_severity is present but unparseable", () => {
+    const { flagged, other } = evaluateScan(
+      osvReport([
+        {
+          name: "p",
+          version: "1",
+          vulns: [{ id: "GHSA-nan", maxCvss: "not-a-number" }],
+        },
+      ])
+    );
+    expect(other).toEqual([]);
+    expect(flagged.map(f => f.severity)).toEqual(["UNKNOWN"]);
+  });
+
+  it("blocks when max_severity is 0 — a zero score is not a rating", () => {
+    const { flagged } = evaluateScan(
+      osvReport([
+        { name: "p", version: "1", vulns: [{ id: "GHSA-zero", maxCvss: "0" }] },
+      ])
+    );
+    expect(flagged.map(f => f.severity)).toEqual(["UNKNOWN"]);
+  });
+
+  it("still lets genuinely-rated MODERATE and LOW findings through as non-blocking", () => {
+    // The guard must not have been implemented by simply blocking everything —
+    // that would pass the tests above while breaking the gate's real purpose.
+    const { flagged, other } = evaluateScan(
+      osvReport([
+        {
+          name: "m",
+          version: "1",
+          vulns: [{ id: "GHSA-mod", maxCvss: "5.5" }],
+        },
+        {
+          name: "l",
+          version: "1",
+          vulns: [{ id: "GHSA-low", maxCvss: "2.1" }],
+        },
+      ])
+    );
+    expect(flagged).toEqual([]);
+    expect(other.map(o => o.severity).sort()).toEqual(["LOW", "MEDIUM"]);
+  });
+
+  it("separates rated blockers from unrateable ones in the same report", () => {
+    const { flagged, other } = evaluateScan(
+      osvReport([
+        {
+          name: "a",
+          version: "1",
+          vulns: [{ id: "GHSA-high", severity: "HIGH" }],
+        },
+        { name: "b", version: "1", vulns: [{ id: "GHSA-none" }] },
+        {
+          name: "c",
+          version: "1",
+          vulns: [{ id: "GHSA-low", maxCvss: "3.0" }],
+        },
+      ])
+    );
+    expect(flagged.map(f => f.id).sort()).toEqual(["GHSA-high", "GHSA-none"]);
+    expect(other.map(o => o.id)).toEqual(["GHSA-low"]);
+  });
+});
+
 describe("osv-scanner gate", () => {
   it("passes cleanly when results is an empty array (osv-scanner's real shape for zero findings)", () => {
     const { flagged, other } = evaluateScan({ results: [] });
