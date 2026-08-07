@@ -33,8 +33,15 @@
 # because it only fills genuine gaps. See server/cron/README.md.
 #
 # Required (same contract as the other cron workflows):
-#   vars.RAILWAY_APP_URL   — e.g. https://your-app.up.railway.app (no trailing slash)
-#   secrets.CRON_SECRET    — must match Railway → Variables
+#   RAILWAY_APP_URL — repo VARIABLE, e.g. https://your-app.up.railway.app (no trailing slash)
+#   CRON_SECRET     — repo SECRET, must match the value set in Railway -> Variables
+#
+# NB: those are written BARE above, deliberately. scripts/check-github-actions-security.mjs
+# scans the raw file text for the secrets-context prefix followed by an uppercase name, so
+# writing that form inside a COMMENT is counted as a real production-secret reference and
+# fails both contract rules (outside the Production environment, not scoped to a step).
+# cron-mlb-cycle.yml words its header the same way for the same reason.
+
 name: Cron — MLB learning loop
 
 on:
