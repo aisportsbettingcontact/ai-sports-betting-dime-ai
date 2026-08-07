@@ -68,7 +68,17 @@ export type OriginLockEvent =
   | "edge_would_deny"
   | "edge_no_secret"
   | "edge_breaker_tripped"
-  | "edge_breaker_recovered";
+  | "edge_breaker_recovered"
+  /**
+   * ALERT-ONLY. Cloudflare is up and verified traffic is flowing, but an
+   * unusually large share of ingress arrived unverified — the partial-bypass
+   * signature (real users reaching the origin directly and being 403'd). The
+   * request outcome is UNCHANGED by these two kinds; they exist because
+   * partial bypass is undetectable by the breaker's trip condition, which must
+   * stay un-gameable. See edgeCircuitBreaker.ts's header.
+   */
+  | "edge_partial_bypass_suspected"
+  | "edge_partial_bypass_cleared";
 
 export function originLock(
   onEvent?: (kind: OriginLockEvent, req: Request) => void,
@@ -113,6 +123,10 @@ export function originLock(
       breaker = nextState;
       if (event === "tripped") onEvent?.("edge_breaker_tripped", req);
       else if (event === "recovered") onEvent?.("edge_breaker_recovered", req);
+      else if (event === "partial_bypass_suspected")
+        onEvent?.("edge_partial_bypass_suspected", req);
+      else if (event === "partial_bypass_cleared")
+        onEvent?.("edge_partial_bypass_cleared", req);
     }
 
     if (verified) {

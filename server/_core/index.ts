@@ -675,6 +675,22 @@ async function startServer() {
             "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
           );
           break;
+        case "edge_partial_bypass_suspected":
+          // Cloudflare IS up (verified traffic is flowing) but a large share of
+          // ingress arrived unverified — real users are likely reaching the
+          // origin directly and getting 403'd. Enforcement is UNCHANGED: this
+          // is the detection-only path, because a fraction rule must never be
+          // allowed to drop the lock (an attacker controls the numerator).
+          // This is the 7-hour blind period from 2026-08-06 made visible.
+          console.error(
+            "[edge][origin-lock] CRITICAL partial bypass suspected — verified Cloudflare ingress is present, but a sustained majority of requests arrived UNVERIFIED. Real users may be reaching the origin directly and receiving 403s. Enforcement unchanged (this signal never downgrades the lock). Check DNS orange-cloud coverage, the www/apex split, and any client pinned to the raw origin host."
+          );
+          break;
+        case "edge_partial_bypass_cleared":
+          console.log(
+            "[edge][origin-lock] partial bypass cleared — unverified share back below the alert threshold."
+          );
+          break;
         default:
           // An OriginLockEvent kind this handler doesn't know about yet.
           // Log loudly rather than silently dropping it.
