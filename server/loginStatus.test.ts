@@ -13,7 +13,7 @@
  * Isolation: Each test clears loginRateMap before running to prevent cross-test pollution.
  */
 
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import {
   checkLoginRateLimit,
   recordLoginFailure,
@@ -23,6 +23,7 @@ import {
 } from "./routers/appUsers";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { resolveClientIdentity } from "./_core/clientIdentity";
 
 // ── Test IP constants ──────────────────────────────────────────────────────────
 const TEST_IP = "10.0.0.1";
@@ -211,5 +212,136 @@ describe("appUsers.getLoginStatus", () => {
     );
     expect(entry?.failTimestamps.length).toBe(failureCount);
     console.log("[VERIFY] PASS — getLoginStatus is read-only");
+  });
+});
+
+describe("login identity keying (2026-08-06 audit)", () => {
+  const ORIGINAL_EDGE_MODE = process.env.EDGE_MODE;
+  const ORIGINAL_EDGE_ORIGIN_SECRET = process.env.EDGE_ORIGIN_SECRET;
+
+  afterEach(() => {
+    if (ORIGINAL_EDGE_MODE === undefined) delete process.env.EDGE_MODE;
+    else process.env.EDGE_MODE = ORIGINAL_EDGE_MODE;
+    if (ORIGINAL_EDGE_ORIGIN_SECRET === undefined)
+      delete process.env.EDGE_ORIGIN_SECRET;
+    else process.env.EDGE_ORIGIN_SECRET = ORIGINAL_EDGE_ORIGIN_SECRET;
+  });
+
+  it("keys on the true visitor, not the Cloudflare PoP", () => {
+    process.env.EDGE_ORIGIN_SECRET = "test-secret";
+    process.env.EDGE_MODE = "on";
+    // The PRODUCTION shape. Every prior test in this file used a bare
+    // single-IP XFF, which is exactly why the PoP-keying defect survived.
+    const req = {
+      headers: {
+        "x-forwarded-for": "172.71.156.192, 152.233.23.193",
+        "cf-connecting-ip": "203.0.113.42",
+        "x-dime-edge-secret": "test-secret",
+      },
+      ip: "152.233.23.193",
+      socket: { remoteAddress: "152.233.23.193" },
+    };
+    expect(resolveClientIdentity(req)).toBe("203.0.113.42");
+    expect(resolveClientIdentity(req)).not.toBe("172.71.156.192");
+  });
+
+  it("two visitors behind ONE PoP do not share a login budget", () => {
+    process.env.EDGE_ORIGIN_SECRET = "test-secret";
+    process.env.EDGE_MODE = "on";
+    const pop = "172.71.156.192";
+    const mk = (client: string) => ({
+      headers: {
+        "x-forwarded-for": `${pop}, 152.233.23.193`,
+        "cf-connecting-ip": client,
+        "x-dime-edge-secret": "test-secret",
+      },
+      ip: "152.233.23.193",
+    });
+    expect(resolveClientIdentity(mk("203.0.113.1"))).not.toBe(
+      resolveClientIdentity(mk("203.0.113.2"))
+    );
+  });
+
+  // ── Integration proof ──────────────────────────────────────────────────────
+  // The two tests above exercise resolveClientIdentity() directly — they pass
+  // regardless of whether appUsers.ts's call sites were ever migrated to use
+  // it, so on their own they cannot prove the fix landed at the call site.
+  // These two drive the ACTUAL login mutation and getLoginStatus query through
+  // appRouter.createCaller with the production CF-shaped request, so they only
+  // pass once `clientIp` / `ip` in appUsers.ts resolve through the same
+  // identity as resolveClientIdentity().
+
+  it("login mutation blocks the true (cf-connecting-ip) visitor when THEY are locked out, before any DB query", async () => {
+    process.env.EDGE_ORIGIN_SECRET = "test-secret";
+    process.env.EDGE_MODE = "on";
+    const trueClient = "203.0.113.42";
+    const pop = "172.71.156.192";
+    // Only the true visitor is over the limit. Old (PoP-keyed) code would
+    // check `pop`, find it clean, and NOT block.
+    injectFailures(trueClient, LOGIN_RATE_MAX_FAILURES);
+
+    const ctx: TrpcContext = {
+      req: {
+        headers: {
+          "x-forwarded-for": `${pop}, 152.233.23.193`,
+          "cf-connecting-ip": trueClient,
+          "x-dime-edge-secret": "test-secret",
+        },
+        socket: { remoteAddress: "152.233.23.193" },
+        get: () => undefined,
+        method: "POST",
+        ip: "152.233.23.193",
+      } as unknown as TrpcContext["req"],
+      res: {
+        cookie: () => {},
+        clearCookie: () => {},
+      } as unknown as TrpcContext["res"],
+      user: null,
+    };
+    const caller = appRouter.createCaller(ctx);
+
+    // The rate-limit check runs BEFORE any DB lookup, so this assertion holds
+    // with no DATABASE_URL present.
+    await expect(
+      caller.appUsers.login({
+        emailOrUsername: "someone@example.com",
+        password: "irrelevant",
+        stayLoggedIn: false,
+      })
+    ).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+  });
+
+  it("getLoginStatus does not report a clean cf-connecting-ip visitor as locked out just because their Cloudflare PoP is", async () => {
+    process.env.EDGE_ORIGIN_SECRET = "test-secret";
+    process.env.EDGE_MODE = "on";
+    const pop = "172.71.156.192";
+    const cleanClient = "203.0.113.99";
+    // Simulate OTHER visitors behind this PoP having maxed out the OLD
+    // (PoP-keyed) shared budget. `cleanClient` themselves has no failures.
+    injectFailures(pop, LOGIN_RATE_MAX_FAILURES);
+
+    const ctx: TrpcContext = {
+      req: {
+        headers: {
+          "x-forwarded-for": `${pop}, 152.233.23.193`,
+          "cf-connecting-ip": cleanClient,
+          "x-dime-edge-secret": "test-secret",
+        },
+        socket: { remoteAddress: "152.233.23.193" },
+        get: () => undefined,
+        method: "GET",
+        ip: "152.233.23.193",
+      } as unknown as TrpcContext["req"],
+      res: {
+        cookie: () => {},
+        clearCookie: () => {},
+      } as unknown as TrpcContext["res"],
+      user: null,
+    };
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.appUsers.getLoginStatus();
+    expect(result.isLockedOut).toBe(false);
+    expect(result.remainingAttempts).toBe(LOGIN_RATE_MAX_FAILURES);
   });
 });

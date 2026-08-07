@@ -14,6 +14,7 @@
 import { and, asc, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
+import { logSafe } from "./_core/logSafe";
 import {
   waitlist,
   type WaitlistRow,
@@ -83,7 +84,7 @@ export async function submitWaitlist(input: {
 
   console.log(`[WaitlistDB][STEP] submitWaitlist — email=${normalizedEmail}`);
   console.log(
-    `[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set)" : "(none)"} unitSize=${input.unitSizeMin ?? "?"}-${input.unitSizeMax ?? "?"} step2=${input.step2Completed ?? false} ip=${input.ipAddress ?? "(none)"} utmSource=${input.utmSource ?? "(none)"}`
+    `[WaitlistDB][INPUT] fullName=${logSafe(input.fullName ?? "(none)")} whyText=${input.whyText ? "(set)" : "(none)"} unitSize=${input.unitSizeMin ?? "?"}-${input.unitSizeMax ?? "?"} step2=${input.step2Completed ?? false} ip=${logSafe(input.ipAddress ?? "(none)")} utmSource=${logSafe(input.utmSource ?? "(none)")}`
   );
 
   // ── Duplicate check ──────────────────────────────────────────────────────
@@ -498,7 +499,7 @@ export async function enrichStep2(input: {
 
   console.log(`[WaitlistDB][STEP] enrichStep2 — email=${normalizedEmail}`);
   console.log(
-    `[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set, len=" + input.whyText.length + ")" : "(none)"} unitSize=${input.unitSize ?? "(none)"} step2=${input.step2Completed}`
+    `[WaitlistDB][INPUT] fullName=${logSafe(input.fullName ?? "(none)")} whyText=${input.whyText ? "(set, len=" + input.whyText.length + ")" : "(none)"} unitSize=${input.unitSize ?? "(none)"} step2=${input.step2Completed}`
   );
 
   // ── Verify the row exists ─────────────────────────────────────────────────

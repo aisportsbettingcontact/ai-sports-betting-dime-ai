@@ -139,7 +139,10 @@ export async function fetchANKProps(dateStr: string): Promise<ANKPropsResult> {
 
   console.log(`[ANKProps][${dateStr}] [STEP] Fetching from: ${url}`);
 
-  const res = await fetch(url, { headers: AN_HEADERS });
+  const res = await fetch(url, {
+    headers: AN_HEADERS,
+    signal: AbortSignal.timeout(15_000),
+  });
 
   if (!res.ok) {
     throw new Error(

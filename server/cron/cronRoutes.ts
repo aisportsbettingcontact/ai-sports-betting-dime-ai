@@ -29,6 +29,7 @@
 
 import type { Express, Request, Response } from "express";
 import { requireCronSecret } from "./cronAuth";
+import { resolveClientIdentity } from "../_core/clientIdentity";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
@@ -72,13 +73,22 @@ const betGradeSweepRunner = new CronJobRunner("bet-grade-sweep", async () => {
   await runBetGradeSweep("cron_bet_grade_sweep");
 });
 
+function sanitizeForLog(value: string): string {
+  return value.replace(/[\r\n]/g, "");
+}
+
 /** Wire a POST endpoint that auth-guards, triggers the runner, responds 200. */
 function mountJob(app: Express, path: string, label: string, runner: CronJobRunner): void {
   app.post(path, (req: Request, res: Response) => {
     if (!requireCronSecret(req, res, label)) return;
 
     const reqAt = new Date().toISOString();
-    console.log(`[Cron:${label}] [INPUT] POST ${path} at ${reqAt} ip=${req.ip ?? "?"}`);
+    const clientIpForLog = sanitizeForLog(resolveClientIdentity(req) || "?");
+    // Cosmetic log line on an internal, secret-authed path — migrated for
+    // consistency with the single client-identity surface (2026-08-06 audit).
+    console.log(
+      `[Cron:${label}] [INPUT] POST ${path} at ${reqAt} ip=${clientIpForLog}`
+    );
 
     const outcome = runner.trigger();
 
