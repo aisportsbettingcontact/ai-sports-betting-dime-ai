@@ -80,7 +80,10 @@ From 22,466 re-derived ledger rows (GRADING-REPORT.md, ledgers in grading/):
    three authenticated cron endpoints added so ingestion, closing capture, and backtest
    enrollment survive `DISABLE_BACKGROUND_JOBS=1` deployments (no external workflow calls them
    yet — see Decisions); publication gate revived with per-market `publish_*` switches
-   (fail-open until verdicts land).
+   (fail-open until verdicts land). ⚠️ **ERRATUM (2026-08-07):** the gate revival
+   (commit `2f06b430f`) was resolved away by the PR #421 merge and never reached
+   `main`. A server-side reader shipped in the F1 remediation PR, inert unless
+   `MLB_MARKET_GATE_MODE=on`.
 
 ## 4. Provenance regime (enforced structurally)
 
@@ -175,7 +178,7 @@ carries its batch evidence in remediation-log.md; RECOMMENDED ONLY items are lis
 | 2 | Ten-market projection coverage 100% (live ∪ replay); zero unexplained nulls | census-v2 projectionCoverage: all nine market columns gap 0 over all finals; exemptions enumerated in census/exemptions.csv |
 | 3 | Every projection graded from raw values with corrected logic; ledgers reconcile | 142,048 unified grade rows across four series; independent grader agents re-derived ALL games-table grades with zero mismatches; two independently built ledgers agree 99.89% (disagreements were the corrected-score games) |
 | 4 | Root-cause + pipeline fixes landed, walk-forward validated, no regressions | Phase 4 commits (tsc clean, 280+ tests across clusters); before/after per market in §5; independent modeler agents re-derived every calibration scalar exactly; NHL/NCAAM shared-code paths untouched by diff-scope |
-| 5 | Publication gate live and enforced; verdicts for all markets | Gate module + tRPC + client wiring committed; GATE-TABLE.json (9 verdicts); publish_* rows written |
+| 5 | Publication gate live and enforced; verdicts for all markets | ⚠️ NOT MET as recorded. GATE-TABLE.json (9 verdicts) and the publish_* rows are real; the gate module + tRPC + client wiring (commit `2f06b430f`) were resolved away by the PR #421 merge and never reached `main`. A server-side reader shipped 2026-08-07, inert unless `MLB_MARKET_GATE_MODE=on` — so "enforced" remains an owner decision, not a merged fact |
 | 6 | CLV wherever closing lines exist; coverage map + sourcing proposal | 7,632 fg rows with CLV (4,504 DK closing, 3,128 labeled proxy); clv-coverage.csv; §7 proposal |
 | 7 | Provenance integrity: no live_pregame projection modified; snapshots + logged counts for every write batch | remediation-log.md (B1–B9, all snapshot-backed); replay confined to mlb_replay_* tables; provenance column separates series |
 

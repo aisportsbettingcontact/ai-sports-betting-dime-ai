@@ -1,12 +1,43 @@
 import { TRPCError } from "@trpc/server";
 import { gamesListInput } from "./gamesListInput";
 import {
+  applyMlbMarketGatesToGame,
+  applyMlbMarketGatesToHrProp,
+  applyMlbMarketGatesToStrikeoutProp,
+  isOwnerRequest,
   isRequestAuthenticated,
   setGatedCacheHeaders,
   stripGameModelFields,
   stripHrPropModelFields,
   stripStrikeoutPropModelFields,
 } from "./feedGating";
+import {
+  anyMarketGated,
+  getMlbMarketGateSnapshot,
+  mlbMarketGateMode,
+  type MlbMarketGates,
+} from "./mlbMarketGates";
+
+/**
+ * Resolve the MLB per-market publication gate for a PROP procedure.
+ *
+ * Returns null when nothing should be nulled, so callers skip the work
+ * entirely. Owner requests always return null: owner backtest surfaces are
+ * deliberately ungated — they are the BACKTEST-ONLY audience, and
+ * /admin/model-results consumes these PUBLIC prop procedures to render
+ * modelPHr / edgeOver / backtestResult.
+ *
+ * The owner check runs LAST so it costs nothing while the flag is off.
+ */
+async function resolveMlbPropGates(
+  req: Parameters<typeof isRequestAuthenticated>[0]
+): Promise<MlbMarketGates | null> {
+  if (mlbMarketGateMode() !== "on") return null;
+  const gates = await getMlbMarketGateSnapshot();
+  if (!anyMarketGated(gates)) return null;
+  if (await isOwnerRequest(req)) return null;
+  return gates;
+}
 import { z } from "zod";
 import {
   zodGameDate,
@@ -258,8 +289,27 @@ export const appRouter = router({
         // callers get the full payload. The feed SURFACE is already RequireAuth
         // -gated, so logged-in UX is unchanged; this closes the anonymous API
         // scrape of the model IP.
+        // MLB per-market publication gate. The 2026 audit ruled markets
+        // BACKTEST-ONLY and wrote publish_* verdict rows; this enforces them.
+        // Inert unless MLB_MARKET_GATE_MODE=on — in "off"/"log" the snapshot is
+        // the all-published identity, so `published` IS `stripped` (same array
+        // reference, same bytes). See server/mlbMarketGates.ts.
+        //
+        // Deliberately NO owner exemption here: TheModelResults consumes this
+        // procedure only for game ids and team names, and exempting owners
+        // would create a verification blind spot — the owner loading /feed with
+        // the gate enforced must see what a subscriber sees.
+        const marketGates = await getMlbMarketGateSnapshot();
+        const enforceMarketGates =
+          mlbMarketGateMode() === "on" && anyMarketGated(marketGates);
+        const published = enforceMarketGates
+          ? stripped.map(g =>
+              g.sport === "MLB" ? applyMlbMarketGatesToGame(g, marketGates) : g
+            )
+          : stripped;
+
         const authed = await isRequestAuthenticated(ctx.req);
-        const gated = authed ? stripped : stripped.map(g => stripGameModelFields(g));
+        const gated = authed ? published : published.map(g => stripGameModelFields(g));
 
         // Cache-Control + ETag. Authed responses carry the model IP and MUST NOT
         // be shared-cached (a CDN/edge could serve them to an anon); anon
@@ -276,8 +326,14 @@ export const appRouter = router({
         // Fast-follow: a responseMeta hook that emits the most-restrictive
         // Cache-Control across an arbitrary batch removes the race entirely.
         try {
+          // The fingerprint deliberately includes the gate state ONLY when
+          // enforcing: modelRunAt is never nulled by a market gate, so without
+          // this a gated response would share a validator with the ungated one
+          // and a cache could serve pre-gate bytes after a flip. When not
+          // enforcing, the input is byte-identical to before this change.
           const etag = createHash('md5')
             .update(JSON.stringify(gated.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
+            .update(enforceMarketGates ? JSON.stringify(marketGates) : '')
             .digest('hex')
             .slice(0, 16);
           ctx.res.setHeader(
@@ -1104,7 +1160,12 @@ export const appRouter = router({
         // IP gating: anon gets book lines only, model projections/edges nulled.
         const authed = await isRequestAuthenticated(ctx.req);
         setGatedCacheHeaders(ctx.res, authed);
-        return { props: authed ? rows : rows.map(r => stripStrikeoutPropModelFields(r)) };
+        // Publication gate (publish_k_props). Null for everyone except owners.
+        const propGates = await resolveMlbPropGates(ctx.req);
+        const published = propGates
+          ? rows.map(r => applyMlbMarketGatesToStrikeoutProp(r, propGates))
+          : rows;
+        return { props: authed ? published : published.map(r => stripStrikeoutPropModelFields(r)) };
       }),
 
     /**
@@ -1119,12 +1180,18 @@ export const appRouter = router({
         const map = await getStrikeoutPropsByGames(input.gameIds);
         const authed = await isRequestAuthenticated(ctx.req);
         setGatedCacheHeaders(ctx.res, authed);
+        // Publication gate (publish_k_props). Null for everyone except owners.
+        const propGates = await resolveMlbPropGates(ctx.req);
         // Convert Map to plain object for serialization; gate rows for anon.
         const result: Record<number, typeof map extends Map<number, infer V> ? V : never> = {};
         Array.from(map.entries()).forEach(([k, v]) => {
+          const gatedRows = (propGates
+            ? (v as unknown[]).map(r =>
+                applyMlbMarketGatesToStrikeoutProp(r as Record<string, unknown>, propGates))
+            : v) as typeof v;
           result[k] = (authed
-            ? v
-            : (v as unknown[]).map(r => stripStrikeoutPropModelFields(r as Record<string, unknown>))) as typeof v;
+            ? gatedRows
+            : (gatedRows as unknown[]).map(r => stripStrikeoutPropModelFields(r as Record<string, unknown>))) as typeof v;
         });
         return { propsByGame: result };
       }),
@@ -1366,7 +1433,12 @@ export const appRouter = router({
         const rows = await getHrPropsByGame(input.gameId);
         const authed = await isRequestAuthenticated(ctx.req);
         setGatedCacheHeaders(ctx.res, authed);
-        return { props: authed ? rows : rows.map(r => stripHrPropModelFields(r)) };
+        // Publication gate (publish_hr_props). Null for everyone except owners.
+        const propGates = await resolveMlbPropGates(ctx.req);
+        const published = propGates
+          ? rows.map(r => applyMlbMarketGatesToHrProp(r, propGates))
+          : rows;
+        return { props: authed ? published : published.map(r => stripHrPropModelFields(r)) };
       }),
 
     /**
@@ -1381,11 +1453,17 @@ export const appRouter = router({
         const map = await getHrPropsByGames(input.gameIds);
         const authed = await isRequestAuthenticated(ctx.req);
         setGatedCacheHeaders(ctx.res, authed);
+        // Publication gate (publish_hr_props). Null for everyone except owners.
+        const propGates = await resolveMlbPropGates(ctx.req);
         const result: Record<number, Awaited<ReturnType<typeof getHrPropsByGame>>> = {};
         Array.from(map.entries()).forEach(([k, v]) => {
+          const gatedRows = (propGates
+            ? (v as unknown[]).map(r =>
+                applyMlbMarketGatesToHrProp(r as Record<string, unknown>, propGates))
+            : v) as typeof v;
           result[k] = (authed
-            ? v
-            : (v as unknown[]).map(r => stripHrPropModelFields(r as Record<string, unknown>))) as typeof v;
+            ? gatedRows
+            : (gatedRows as unknown[]).map(r => stripHrPropModelFields(r as Record<string, unknown>))) as typeof v;
         });
         return { propsByGame: result };
       }),
