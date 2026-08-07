@@ -4,6 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
 import { publicProcedure, router, stripeProcedure, csrfOriginCheck } from "../_core/trpc";
+import { resolveClientIdentity } from "../_core/clientIdentity";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
@@ -408,10 +409,13 @@ export const appUsersRouter = router({
       stayLoggedIn: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
-      // [STEP] Extract client IP for rate limiting
-      const clientIp = (ctx.req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ?? ctx.req.socket?.remoteAddress ?? "unknown";
+      // [STEP] Extract the TRUE client identity for rate limiting.
+      // Never parse x-forwarded-for here: production XFF is
+      // [CF PoP, Railway edge] and the leftmost token is a Cloudflare PoP
+      // shared by an entire metro. Keying on it both aggregated unrelated
+      // users onto one login-failure budget AND diluted a real attacker's
+      // budget across rotating PoPs (2026-08-06 audit).
+      const clientIp = resolveClientIdentity(ctx.req) || "unknown";
 
       // [STEP] Check login rate limit BEFORE any DB query (prevents timing attacks)
       const rateCheck = checkLoginRateLimit(clientIp);
@@ -629,11 +633,9 @@ export const appUsersRouter = router({
    * [VERIFY] No side effects — does NOT record a failure attempt
    */
   getLoginStatus: publicProcedure.query(({ ctx }) => {
-    const ip =
-      (ctx.req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ??
-      (ctx.req.socket as any)?.remoteAddress ??
-      (ctx.req as any).ip ??
-      'unknown';
+    // Must use the SAME key as the login mutation, or this public endpoint
+    // reports another population's lockout state (2026-08-06 audit).
+    const ip = resolveClientIdentity(ctx.req) || "unknown";
     const result = checkLoginRateLimit(ip);
     console.log(
       `[getLoginStatus] IP=${ip} remaining=${result.remainingAttempts} ` +
