@@ -79,6 +79,7 @@ import { getDiscordBotHealth } from "../discord/bot";
 import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
+import { readBuildCommit } from "./buildIdentity";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
 import { logSafe } from "./logSafe";
 import {
@@ -613,6 +614,12 @@ async function startServer() {
     res.status(healthy ? 200 : 503).json({
       status: healthy ? "ok" : schemaMismatch ? "schema_mismatch" : "degraded",
       ts: Date.now(),
+      // Which commit is answering. Incident 64: a deploy silently never
+      // happened, and `deploy-smoke` passed because a healthy origin serving
+      // the PREVIOUS build is indistinguishable from a successful deploy when
+      // nothing in the response names the build. `null` when unknown — never a
+      // placeholder, so a smoke test cannot assert equality against "no idea".
+      commit: readBuildCommit(),
       db: {
         state: circuit.state,
         consecutiveFailures: circuit.consecutiveFailures,

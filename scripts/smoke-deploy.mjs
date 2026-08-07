@@ -81,6 +81,43 @@ await check("GET /health → 200", async () => {
   return (await res.text()).slice(0, 60);
 });
 
+await check("build identity — /health names the commit it is serving", async () => {
+  // Incident 64. This smoke test passed against an origin that was healthy and
+  // serving the PREVIOUS commit, because a deploy had silently never happened
+  // and nothing in /health identified the build. "The origin is healthy" and
+  // "what I built is what is answering" are different claims; this asserts the
+  // second one. See os/memory/lessons/a-healthy-origin-is-not-a-new-deploy.md.
+  const res = await sfetch(`${base}/health`, { redirect: "manual" });
+  let body = {};
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error("/health did not return JSON — cannot read the build identity");
+  }
+  const serving = typeof body.commit === "string" ? body.commit.trim() : "";
+  expect(
+    /^[0-9a-f]{7,40}$/i.test(serving),
+    `commit=${JSON.stringify(body.commit ?? null)} — the running build does not identify itself, so this test cannot tell a fresh deploy from a stale one still serving (Incident 64). Check that RAILWAY_GIT_COMMIT_SHA reaches the runtime.`
+  );
+
+  // Only assert equality when the caller said what it expects. Comparing
+  // against an absent value would re-create the false green this check exists
+  // to remove, so "no expectation supplied" is reported, never silently passed.
+  const expected = (process.env.EXPECTED_COMMIT ?? "").trim();
+  if (!expected) return `commit=${serving.slice(0, 9)} (no EXPECTED_COMMIT supplied — identity reported, not compared)`;
+  expect(
+    /^[0-9a-f]{7,40}$/i.test(expected),
+    `EXPECTED_COMMIT=${JSON.stringify(expected)} is not a commit SHA`
+  );
+  // Git abbreviates: either side may be short. Compare on the shorter length.
+  const n = Math.min(expected.length, serving.length);
+  expect(
+    expected.toLowerCase().slice(0, n) === serving.toLowerCase().slice(0, n),
+    `origin is serving ${serving.slice(0, 9)} but ${expected.slice(0, 9)} was expected — the deploy did not land (Incident 64). Check Railway for a deployment of this commit.`
+  );
+  return `commit=${serving.slice(0, 9)} matches expected`;
+});
+
 await check("schema/code agreement — live app_users schema is not behind the code", async () => {
   // Phase 1½: a code-ahead-of-migration deploy reports schema=schema_mismatch and
   // /health 503, so Railway keeps the previous deploy. If this smoke ever runs
