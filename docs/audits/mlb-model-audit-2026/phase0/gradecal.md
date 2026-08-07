@@ -1,5 +1,12 @@
 # Grading, Backtest, Drift & Calibration Machinery — Phase 0 Dossier
 
+> ⚠️ **ERRATUM (2026-08-07) — the 13 `[FIXED in Phase 4]` annotation(s) in this file are superseded.**
+> The Phase 4 code fixes were deliberately NOT merged (see `2af950d67`, which resolved the
+> #421 conflicts to `main` and recorded why). Every annotation in this dossier was verified
+> one at a time against `main`; **none** describes code that is actually on `main`.
+> Read [`../PHASE4-ANNOTATION-ERRATA.md`](../PHASE4-ANNOTATION-ERRATA.md) for the per-annotation
+> verdicts, the surviving live defects, and the outstanding re-implementation recommendation.
+
 Evidence classes: **VERIFIED** = code read at the cited location this session. **INFERRED** = reasoned from verified facts (reasoning stated). **UNKNOWN** = could not be established from code; listed as census questions.
 
 ---
