@@ -87,6 +87,17 @@ SNAP_ERA_START = 2012
 #: weekly_rosters (season+week+team+status), and the rejected same-name
 #: candidates were shown absent or inactive on that team in that week.
 MANUAL_PFR_TO_GSIS: dict[str, tuple[str, str]] = {
+    "WillRo08": (
+        "00-0037451",
+        "Rod Williams, TE, Tennessee-Martin. The snap feed's own `player` column reads "
+        "'Rodney Williams' on all 20 rows (PIT, 2023 and 2024) and nflverse players.csv "
+        "carries 00-0037451 as 'Rod Williams', TE, Tennessee-Martin -- the only Williams "
+        "TE on those Steelers rosters. Added 2026-08-07 because upstream now ships an "
+        "EMPTY pfr_id for this gsis: the July 2026 extract resolved him through a name "
+        "tier that a later players.csv revision silenced, which hard-stopped every fresh "
+        "build. The mapping itself is unchanged -- the shipped database has carried "
+        "these 20 rows under 00-0037451 since it was built.",
+    ),
     "BrowJo03": (
         "00-0032835",
         "PFR 'Jonathan Brown' is nflverse 'Jon Brown' (players.csv first_name=Jonathan), K, "

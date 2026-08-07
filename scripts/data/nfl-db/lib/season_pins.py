@@ -37,7 +37,33 @@ from __future__ import annotations
 #: closes, re-run the row-level audit over its rows (the process in PR #425),
 #: then move this line and the counts below together. Bumping it to make a
 #: failing build pass discards exactly the protection it exists to provide.
+#:
+#: APPLIES TO THREE OF THE FOUR TABLES ONLY. player_game_stats, snap_count and
+#: roster_season read `season` from a literal CSV column that stops changing when
+#: the season ends, so "season <= FROZEN_THROUGH" really does mean settled there.
+#: depth_chart does not -- see DEPTH_CHART_EXTRACT_CUTOFF.
 FROZEN_THROUGH = 2025
+
+#: depth_chart is partitioned by SNAPSHOT INSTANT, not by season. This is not a
+#: stylistic difference; partitioning it by season is a bug, and PR #433 shipped
+#: that bug:
+#:
+#:   Shape-B rows carry no season column. `derive_season_week()` recovers one
+#:   from the snapshot `dt` against GameCalendar's dead-zone rule, which assigns
+#:   season S to everything up to the MIDPOINT between S's Super Bowl and S+1's
+#:   opener -- boundary(2025) = 2026-05-26. Upstream, meanwhile, files those same
+#:   snapshots in `depth_charts_2026.csv`. The two disagree by ~2 months, so
+#:   179,903 rows that upstream calls 2026 derive to season 2025 and land in the
+#:   bucket the pins protect. A season-keyed frozen bucket therefore keeps
+#:   accepting new rows for ~3.5 months after the Super Bowl, and the build fails
+#:   claiming closed history was rewritten.
+#:
+#: The snapshot instant has no such ambiguity. The audited 2026-07-27 extract
+#: holds shape-B rows from 2025-08-03T10:09:07Z to exactly this value, so
+#: "snapshot_ts <= cutoff" is precisely "was in the audited extract" -- which is
+#: what the pin is actually asserting. Shape A carries snapshot_ts IS NULL and is
+#: closed history by construction (nflverse retired that release format in 2025).
+DEPTH_CHART_EXTRACT_CUTOFF = "2026-03-14T07:32:09Z"
 
 #: Exact row counts over seasons <= FROZEN_THROUGH, from the 2026-07-27 extract
 #: recorded in EXTRACT-NOTES.md and audited row-by-row in PR #425. Re-verified
@@ -79,19 +105,39 @@ def split(counts_by_season, frozen_through=FROZEN_THROUGH):
     return frozen, live
 
 
-def frozen_verdict(table, counts_by_season, frozen_through=FROZEN_THROUGH):
-    """Exact equality over settled seasons. Returns (ok, detail).
+def frozen_counts_verdict(table, frozen_rows, live_rows=0, basis="settled seasons"):
+    """Exact equality against an ALREADY-partitioned pair. Returns (ok, detail).
 
-    Raises KeyError for a table with no pin, so adding a table to the build
-    without pinning it is a loud error rather than a silent pass.
+    Callers that cannot partition by season -- depth_chart, whose season is
+    derived -- partition on their own axis and come here. Raises KeyError for a
+    table with no pin, so adding a table to the build without pinning it is a
+    loud error rather than a silent pass.
     """
     expected = FROZEN_COUNTS[table]
-    frozen, live = split(counts_by_season, frozen_through)
-    ok = frozen == expected
-    detail = f"{frozen:,} vs {expected:,} pinned (<={frozen_through})"
-    if live:
-        detail += f"; {live:,} live rows in seasons >{frozen_through} excluded"
+    ok = frozen_rows == expected
+    detail = f"{frozen_rows:,} vs {expected:,} pinned ({basis})"
+    if live_rows:
+        detail += f"; {live_rows:,} live rows excluded"
     return ok, detail
+
+
+def frozen_verdict(table, counts_by_season, frozen_through=FROZEN_THROUGH):
+    """Exact equality over settled seasons, partitioning by the `season` column.
+
+    Valid ONLY for tables whose season is a literal CSV column: player_game_stats,
+    snap_count, roster_season. depth_chart must not use this -- its season is
+    derived, so the bucket stays open past the season's end (see
+    DEPTH_CHART_EXTRACT_CUTOFF); it uses frozen_counts_verdict instead.
+    """
+    if table == "depth_chart":
+        raise ValueError(
+            "depth_chart's season is derived from the snapshot instant, so a "
+            "season-keyed frozen bucket keeps accepting rows for months after the "
+            "season ends. Partition on snapshot_ts against "
+            "DEPTH_CHART_EXTRACT_CUTOFF and call frozen_counts_verdict instead.")
+    frozen, live = split(counts_by_season, frozen_through)
+    return frozen_counts_verdict(table, frozen, live,
+                                 basis=f"<={frozen_through}")
 
 
 def live_verdict(table, db_live_rows, source_live_rows):

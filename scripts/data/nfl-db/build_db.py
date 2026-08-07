@@ -216,6 +216,18 @@ def build(conn, rows, teams, venues):
     dimension = player_dimension.build_player_dimension(
         os.path.join(RAW, "players.csv"), os.path.join(RAW, "rosters.csv"))
     dimension = corrections.apply_player_corrections(dimension)
+    # The depth-chart feed reaches rookies before players.csv does, under an
+    # ESPN-style id rather than a real gsis. depth_chart FKs this table, so
+    # without them the build dies on an IntegrityError long before any check.
+    n_players_csv = sum(1 for _ in stream_csv(os.path.join(RAW, "players.csv")))
+    counts["player_roster_derived"] = len(dimension) - n_players_csv
+    dimension, feed_only = player_dimension.add_feed_identities(
+        dimension,
+        ({"gsis_id": pick(r, "gsis_id"),
+          "display_name": pick(r, "player_name", "full_name"),
+          "position": pick(r, "pos_abb", "position")}
+         for r in stream_csv(os.path.join(RAW, "depth_charts.csv"))))
+    counts["player_feed_only"] = len(feed_only)
     canonical = player_dimension.CANONICAL_GSIS
     known_players = {r["gsis_id"] for r in dimension}
     missing_canonical = {v for v in canonical.values()} - known_players
@@ -414,6 +426,14 @@ def build(conn, rows, teams, venues):
     snap_fix = corrections.snap_count_corrections()
     snap_hits = Counter()
     sc_rows = []
+    # Unresolved ids are collected and reported together. Raising on the first one
+    # made every upstream drift a one-id-per-run bisection: nflverse revising
+    # players.csv can silently cost a name-inference match (it cost WillRo08
+    # between 2026-07-27 and 2026-08-07), and the old behaviour surfaced that as a
+    # traceback naming a single id, with no way to see how many more were behind
+    # it. Still fail-closed -- gsis_id is NOT NULL and a partial snap table is not
+    # a database -- just diagnosable in one run.
+    unresolved_pfr = Counter()
     for r in stream_csv(os.path.join(RAW, "snap_counts.csv")):
         season = as_int(pick(r, "season"))
         if not season:
@@ -421,8 +441,8 @@ def build(conn, rows, teams, venues):
         pfr = pick(r, "pfr_player_id", "pfr_id")
         gsis = pfr2gsis.get(pfr)
         if gsis is None:
-            raise RuntimeError(f"snap_counts pfr_player_id {pfr!r} unresolved -- "
-                               f"the crosswalk must cover every row (D4)")
+            unresolved_pfr[pfr] += 1
+            continue
         nfl_game_id = pick(r, "game_id")
         if nfl_game_id not in game_ids:
             raise RuntimeError(f"snap_counts row has unresolvable game_id {nfl_game_id!r}")
@@ -445,6 +465,15 @@ def build(conn, rows, teams, venues):
                         as_int(pick(r, "offense_snaps")), as_real(pick(r, "offense_pct")),
                         as_int(pick(r, "defense_snaps")), as_real(pick(r, "defense_pct")),
                         as_int(pick(r, "st_snaps")), as_real(pick(r, "st_pct"))))
+    if unresolved_pfr:
+        listing = ", ".join(f"{p!r} ({n} rows)"
+                            for p, n in sorted(unresolved_pfr.items()))
+        raise RuntimeError(
+            f"the crosswalk must cover every snap row (D4), but "
+            f"{len(unresolved_pfr)} pfr_player_id(s) covering "
+            f"{sum(unresolved_pfr.values())} rows are unresolved: {listing}. "
+            f"Upstream player data drifts; add each to "
+            f"lib/snap_crosswalk.MANUAL_PFR_TO_GSIS with cited evidence.")
     # D16's target is a GAME, so it matches once per row; the assertion is on
     # the per-game row count, which must reproduce B4/S2's 88/89/90/91 = 358.
     want_d16 = corrections.d16_expected_counts()
@@ -920,26 +949,41 @@ def pass_reconciliation(conn, rows, hist, new, counts):
         "depth_chart", n_dc, counts["depth_chart_src"])
     check(2, "depth_chart holds every source row, both shapes (D6)",
           live_ok, live_detail)
-    dc_by_season = per_season(conn, "depth_chart")
-    frozen_ok, frozen_detail = season_pins.frozen_verdict("depth_chart", dc_by_season)
-    check(2, "depth_chart: settled seasons match the audited extract",
+    # Partitioned on the SNAPSHOT INSTANT, never on season. depth_chart's season
+    # is derived from `dt` against the game calendar's dead-zone rule, which files
+    # a snapshot under season S until ~mid-May of S+1 -- so a season-keyed frozen
+    # bucket keeps absorbing new rows long after the season ends, and the build
+    # fails claiming closed history moved. season_pins.frozen_verdict() now
+    # refuses this table outright to keep the mistake from being made twice.
+    cutoff = season_pins.DEPTH_CHART_EXTRACT_CUTOFF
+    dc_frozen = q("""SELECT COUNT(*) FROM depth_chart
+                     WHERE source_shape='A' OR snapshot_ts <= ?""", cutoff)[0]
+    dc_live = q("""SELECT COUNT(*) FROM depth_chart
+                   WHERE source_shape='B' AND snapshot_ts > ?""", cutoff)[0]
+    frozen_ok, frozen_detail = season_pins.frozen_counts_verdict(
+        "depth_chart", dc_frozen, dc_live, basis=f"snapshot <= {cutoff}")
+    check(2, "depth_chart: the audited extract is present and unchanged",
           frozen_ok, frozen_detail)
-    # Shape A closed at 2024 and can never grow again; shape B spans 2025
-    # (settled) and 2026+ (live), so only its settled part is pinned.
-    dc_live = sum(n for s, n in dc_by_season.items() if s > season_pins.FROZEN_THROUGH)
+    # Shape A closed when nflverse retired that release format; it can never grow
+    # again. Shape B spans the audited window and everything published since, so
+    # only the audited part is pinned.
+    b_frozen = q("""SELECT COUNT(*) FROM depth_chart
+                    WHERE source_shape='B' AND snapshot_ts <= ?""", cutoff)[0]
     shape_ok, shape_detail = season_pins.frozen_shape_verdict(
-        counts["depth_shape_a"], counts["depth_shape_b"] - dc_live)
-    check(2, "depth_chart shape split across settled seasons matches B3",
+        counts["depth_shape_a"], b_frozen)
+    check(2, "depth_chart shape split across the audited window matches B3",
           shape_ok, shape_detail)
 
     # The in-progress season, stated rather than asserted. Its correctness is
     # carried by the row-level invariants below -- every row resolves a real
     # season, a real franchise and a real player -- which hold at any volume.
-    for tbl in ("player_game_stats", "snap_count", "roster_season", "depth_chart"):
+    for tbl in ("player_game_stats", "snap_count", "roster_season"):
         _, live = season_pins.split(per_season(conn, tbl))
         if live:
             report(f"{tbl}: in-progress seasons (>{season_pins.FROZEN_THROUGH})",
                    f"{live:,} rows, not pinned")
+    if dc_live:
+        report(f"depth_chart: snapshots after {cutoff}", f"{dc_live:,} rows, not pinned")
     check(2, "depth_chart holds only rows that carry a real season",
           q("SELECT COUNT(*) FROM depth_chart WHERE season IS NULL")[0] == 0)
     bad = q("SELECT COUNT(*) FROM depth_chart WHERE week IS NOT NULL AND week > 18")[0]
@@ -995,7 +1039,7 @@ def pass_reconciliation(conn, rows, hist, new, counts):
 
 
 # =========================================================== PASS 2b
-def pass_rowloss(db_path):
+def pass_rowloss(db_path, counts):
     """B4's harness, wired in as a gate (the mandated fifth module).
 
     rowloss.py is used AS SHIPPED and is not modified. Its replay_* functions
@@ -1043,11 +1087,19 @@ def pass_rowloss(db_path):
                      f"rows is in the database (key comparison superseded)",
                   ok, f"loaded={rec.loaded} source={rec.source_rows}")
         elif name == "player":
+            # The extras were pinned at 1,482 -- a snapshot of the 2026-07-27
+            # extract. players.csv and rosters.csv both grow, so that number is
+            # wrong the moment upstream moves (1,518 on 2026-08-07). What D5
+            # actually asserts is that every extra is ACCOUNTED FOR, so compare
+            # against the two sources that produce extras rather than a constant.
+            want_extra = counts["player_roster_derived"] + counts["player_feed_only"]
             ok = (n_missing == 0 and n_extra == rec.loaded - rec.source_rows
-                  and n_extra == 1482 and not rec.manifest_errors)
-            check(2, "rowloss[player]: zero missing; the 1,482 extras are exactly "
-                     "B5's fact-referenced additions (D5)", ok,
-                  f"missing={n_missing} extra={n_extra} loaded={rec.loaded}")
+                  and n_extra == want_extra and not rec.manifest_errors)
+            check(2, "rowloss[player]: zero missing; every extra is a "
+                     "roster-derived or feed-only addition (D5)", ok,
+                  f"missing={n_missing} extra={n_extra} want={want_extra} "
+                  f"(roster={counts['player_roster_derived']} "
+                  f"feed={counts['player_feed_only']}) loaded={rec.loaded}")
         elif name == "player_game_stats":
             ok = (missing == expect_missing and n_extra == len(expect_missing)
                   and not rec.duplicate_keys and not rec.manifest_errors)
@@ -1260,7 +1312,7 @@ def main():
     pass_structural(conn)
     pass_reconciliation(conn, rows, hist, new, counts)
     conn.commit()
-    pass_rowloss(tmp)
+    pass_rowloss(tmp, counts)
     if skip_external:
         print("\nPASS 3 - EXTERNAL: skipped (--no-external)")
     else:
