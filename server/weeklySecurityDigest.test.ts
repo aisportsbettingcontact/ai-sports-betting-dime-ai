@@ -153,11 +153,11 @@ describe("weeklySecurityDigest", () => {
   // 2025-09-07, 2025-09-14, 2025-09-21, 2025-09-28, 2025-10-05, 2025-10-12 are Sundays.
 
   describe("A2 — allowlist reaches the weekly threat level and day-bucket trend", () => {
-    it("weekly threat level reflects only the genuine attacker across the 7-day window", async () => {
+    it("weekly threat level reflects the attacker AND a Cloudflare-range IP — only CI (exact-IP) is excluded", async () => {
       console.log("\n[INPUT] 7-day window: 25 attacker events + 60 seeded-CI events + 15 Cloudflare events");
       const attackerIp = "203.0.113.60";
       const ciIp = "48.217.34.226"; // seeded known-automation IP
-      const cfIp = "162.158.0.10"; // inside CF_IPV4_CIDRS 162.158.0.0/15
+      const cfIp = "162.158.0.10"; // inside CF_IPV4_CIDRS 162.158.0.0/15 — NOT auto-excluded (Critical 1, 2026-08-07)
       const now = Date.parse("2025-09-07T13:00:00.000Z");
 
       const events = [
@@ -181,13 +181,14 @@ describe("weeklySecurityDigest", () => {
       const { title, content } = notifyCalls[0][0] as { title: string; content: string };
       console.log(`[STATE] title: "${title}"`);
 
-      // 100 total - 75 allowlisted (60 CI + 15 CF) = 25 attacker-only -> LOW (weekly scale: <50)
+      // 100 total - 60 allowlisted (CI only — CF_RANGE_ALLOWLIST_ENABLED=false,
+      // see securityDigest.ts) = 40 (25 attacker + 15 CF) -> LOW (weekly scale: <50)
       expect(title).toContain("[LOW]");
-      expect(title).toContain("25 unclassified event");
+      expect(title).toContain("40 unclassified event");
       expect(content).toContain(attackerIp);
+      expect(content).toContain(cfIp); // Cloudflare-range IP now counts — Critical 1 fix
       expect(content).not.toContain(ciIp);
-      expect(content).not.toContain(cfIp);
-      console.log("[VERIFY] PASS — weekly threat level LOW(25) reflects only the attacker");
+      console.log("[VERIFY] PASS — weekly threat level LOW(40) reflects the attacker AND the Cloudflare-range IP");
     });
   });
 
@@ -233,8 +234,13 @@ describe("weeklySecurityDigest", () => {
     });
   });
 
-  describe("B1 — notifyOwner failure escalates to Discord (weekly)", () => {
-    it("posts an escalation embed when notifyOwner returns false", async () => {
+  // INVERTED, not deleted (2026-08-07 review, Critical 2). notifyOwner() is a
+  // documented PERMANENT no-op that always returns false, so escalating that
+  // `false` fired a CRITICAL Discord alert on every scheduled run, forever —
+  // a guaranteed false alarm. Deleting this test would leave the new contract
+  // untested, so it now asserts the opposite. Mirrors the daily digest's pair.
+  describe("B1 — notifyOwner's false is never escalated (weekly)", () => {
+    it("posts ONLY the digest embed when notifyOwner returns false", async () => {
       const fakeChannel = new TextChannel() as unknown as { send: ReturnType<typeof vi.fn> };
       const fakeClient = {
         isReady: () => true,
@@ -252,14 +258,17 @@ describe("weeklySecurityDigest", () => {
       vi.restoreAllMocks();
 
       console.log(`[STATE] channel.send call count: ${sendCalls.length}`);
-      expect(sendCalls.length).toBe(2);
       const titles = sendCalls.map(c => {
         const embed = (c[0] as { embeds: Array<{ data: { title?: string } }> }).embeds[0];
         return embed.data.title ?? "";
       });
-      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(true);
+      console.log(`[STATE] embed titles sent: ${JSON.stringify(titles)}`);
+      // Exactly one embed: the report. A second would mean the escalation is
+      // back, i.e. a CRITICAL alert every Sunday, forever.
+      expect(sendCalls.length).toBe(1);
       expect(titles.some(t => t.includes("Weekly Security Threat Report"))).toBe(true);
-      console.log("[VERIFY] PASS — weekly digest escalates a notifyOwner failure to Discord");
+      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(false);
+      console.log("[VERIFY] PASS — notifyOwner's false produced no escalation; only the weekly report embed was sent");
     });
   });
 

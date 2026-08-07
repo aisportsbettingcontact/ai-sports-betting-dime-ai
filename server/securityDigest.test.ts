@@ -198,8 +198,8 @@ describe("securityDigest", () => {
   // ═══════════════════════════════════════════════════════════════════════════
   // A2 — known-source allowlist excludes CI/Cloudflare/owner from threat level
   // ═══════════════════════════════════════════════════════════════════════════
-  describe("A2 — allowlist excludes CI/Cloudflare/owner from the threat level", () => {
-    it("threat level reflects ONLY the genuine attacker — CI + Cloudflare + owner excluded", async () => {
+  describe("A2 — allowlist excludes CI/owner from the threat level; Cloudflare-range IPs no longer get a free pass", () => {
+    it("threat level reflects the attacker AND a Cloudflare-range IP — CI + owner excluded, Cloudflare is NOT", async () => {
       console.log(
         "\n[INPUT] 111 events total (matching the real 2026-08-06 incident's total): " +
           "30 from a genuine attacker, 50 from a seeded CI IP, 20 from the seeded owner IP, " +
@@ -235,36 +235,74 @@ describe("securityDigest", () => {
       const { title, content } = notifyCalls[0][0] as { title: string; content: string };
       console.log(`[STATE] title: "${title}"`);
 
-      // 111 total - 81 allowlisted (50 CI + 20 owner + 11 CF) = 30 attacker-only.
-      console.log("[STATE] expected threatTotal=30 -> MODERATE (10<=30<50)");
+      // 111 total - 70 allowlisted (50 CI + 20 owner ONLY — CF is no longer
+      // trusted on its own, CF_RANGE_ALLOWLIST_ENABLED=false) = 41.
+      console.log("[STATE] expected threatTotal=41 (30 attacker + 11 CF) -> MODERATE (10<=41<50)");
       expect(title).toContain("[MODERATE]");
-      expect(title).toContain("30 unclassified event");
+      expect(title).toContain("41 unclassified event");
 
       expect(content).toContain(attackerIp);
+      expect(content).toContain(cfIp); // Cloudflare-range IP now counts — Critical 1 fix
       expect(content).not.toContain(ciIp);
       expect(content).not.toContain(ownerIp);
-      expect(content).not.toContain(cfIp);
 
       console.log(
-        "[VERIFY] PASS — threat level MODERATE(30) reflects only the attacker; " +
-          "CI/owner/Cloudflare IPs never appear in the digest content"
+        "[VERIFY] PASS — threat level MODERATE(41) reflects the attacker AND the Cloudflare-range IP; " +
+          "only CI/owner (exact-IP known automation) are excluded"
       );
     });
 
-    it("a digest with ONLY CI/Cloudflare/owner traffic reports CLEAN, not HIGH", async () => {
-      console.log("\n[INPUT] 90 events, ALL from seeded automation/Cloudflare IPs, 0 genuine attacker events");
+    // ═══════════════════════════════════════════════════════════════════════
+    // Important 2 (2026-08-07 review) — filterDigestMarkers() was UNTESTED.
+    // Review neutralised it to a no-op passthrough and all 33 tests still
+    // passed, so its correctness was unproven. The digest persists its
+    // "already fired today" marker AS a security_events row, so without this
+    // filter the digest's own bookkeeping would be counted as a security
+    // event and could surface in Top IPs — self-inflicted noise of exactly
+    // the kind this whole task exists to remove. This test drives the real
+    // digest path with a marker row present and fails if the filter is
+    // neutralised.
+    // ═══════════════════════════════════════════════════════════════════════
+    it("Important 2 — a persisted digest marker row is never counted or listed as a security event", async () => {
+      console.log("\n[INPUT] 12 genuine attacker events + 5 DIGEST_MARKER_DAILY bookkeeping rows");
 
-      const ciIp = "172.182.201.162";
-      const cfIp = "104.16.0.5"; // inside CF_IPV4_CIDRS 104.16.0.0/13
-
+      const attackerIp = "203.0.113.77";
+      const markerIp = "198.51.100.42"; // distinctive: must NOT appear anywhere in the digest
       const events = [
-        ...Array(60).fill(null).map(() => makeEvent(ciIp, "RATE_LIMIT", "edge_origin_ingress_anomaly")),
-        ...Array(30).fill(null).map(() => makeEvent(cfIp, "RATE_LIMIT", "public_feed")),
+        ...Array(12).fill(null).map(() => makeEvent(attackerIp, "CSRF_BLOCK", null)),
+        ...Array(5).fill(null).map(() => makeEvent(markerIp, db.DIGEST_MARKER_DAILY_EVENT_TYPE, null)),
       ];
-      setBucketCounts([
-        makeBucket("RATE_LIMIT", "edge_origin_ingress_anomaly", 60),
-        makeBucket("RATE_LIMIT", "public_feed", 30),
-      ]);
+      setBucketCounts([makeBucket("CSRF_BLOCK", null, 12)]);
+      setRawEvents(events);
+
+      mockDateAtUTC("2025-09-21");
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      vi.restoreAllMocks();
+
+      expect(notifyCalls).toHaveLength(1);
+      const { title, content } = notifyCalls[0][0] as { title: string; content: string };
+      console.log(`[STATE] title: "${title}"`);
+
+      // 12 attacker events only — the 5 marker rows must not inflate the total.
+      expect(title).toContain("12 unclassified event");
+      expect(content).toContain(attackerIp);
+      // The marker's IP must appear nowhere: not in Top IPs, not in the
+      // allowlist split, not in any count.
+      expect(content).not.toContain(markerIp);
+      expect(content).not.toContain(db.DIGEST_MARKER_DAILY_EVENT_TYPE);
+
+      console.log("[VERIFY] PASS — marker rows excluded from the count, Top IPs and the allowlist split");
+    });
+
+    it("a digest with ONLY seeded known-automation traffic (non-Cloudflare) reports CLEAN", async () => {
+      console.log("\n[INPUT] 60 events, ALL from a seeded automation IP (exact-IP match, not Cloudflare-range), 0 genuine attacker events");
+
+      const ciIp = "172.182.201.162"; // seeded known-automation IP (2026-08-06 incident), NOT a CF-range address
+
+      const events = Array(60).fill(null).map(() => makeEvent(ciIp, "RATE_LIMIT", "edge_origin_ingress_anomaly"));
+      setBucketCounts([makeBucket("RATE_LIMIT", "edge_origin_ingress_anomaly", 60)]);
       setRawEvents(events);
 
       mockDateAtUTC("2025-09-02");
@@ -278,7 +316,82 @@ describe("securityDigest", () => {
       console.log(`[STATE] title: "${title}"`);
       expect(title).toContain("[CLEAN]");
       expect(title).toContain("0 unclassified event");
-      console.log("[VERIFY] PASS — 90 raw events, all allowlisted, threat level is CLEAN");
+      console.log("[VERIFY] PASS — 60 raw events, all matched by exact-IP known automation, threat level is CLEAN");
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Critical 1 (2026-08-07 review) — the self-allowlisting bypass. Traced
+    // by review: edge_deny records the RAW, un-vetted immediate-hop IP
+    // (immediateUpstreamIp(), not resolveClientIdentity()) under context
+    // "edge_origin_ingress_anomaly". An attacker who proxies through their
+    // OWN free Cloudflare zone arrives from a genuine CF PoP IP, gets
+    // correctly 403'd, and — before this fix — that confirmed-malicious
+    // blocked event was excluded from the threat total via classifyIp()'s
+    // unconditional cloudflare_edge branch. These two tests construct that
+    // EXACT shape (a real CF CIDR IP on this exact context) and prove it now
+    // counts. The old A2 tests above never constructed this combination —
+    // CF IPs only ever appeared on non-edge contexts — which is why the bug
+    // shipped and 33/33 tests still passed.
+    // ═══════════════════════════════════════════════════════════════════════
+    it("Critical 1 — a Cloudflare-range IP on edge_origin_ingress_anomaly (the edge_deny attack shape) counts toward the threat total", async () => {
+      console.log(
+        "\n[INPUT] the attacker's exact shape: a RATE_LIMIT/edge_origin_ingress_anomaly event " +
+          "whose ip is inside a real Cloudflare CIDR (their own free CF zone, our secret not needed)"
+      );
+      const cfAttackerIp = "104.16.5.9"; // inside CF_IPV4_CIDRS 104.16.0.0/13 — a genuine CF PoP IP
+      const events = Array(15).fill(null).map(() => makeEvent(cfAttackerIp, "RATE_LIMIT", "edge_origin_ingress_anomaly"));
+      setBucketCounts([makeBucket("RATE_LIMIT", "edge_origin_ingress_anomaly", 15)]);
+      setRawEvents(events);
+
+      mockDateAtUTC("2025-08-30");
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      vi.restoreAllMocks();
+
+      expect(notifyCalls).toHaveLength(1);
+      const { title, content } = notifyCalls[0][0] as { title: string; content: string };
+      console.log(`[STATE] title: "${title}"`);
+      // Before the fix: threatTotal=0 (CLEAN), the blocked attack filed under
+      // "Expected Automation" and invisible in the threat total.
+      expect(title).toContain("[MODERATE]"); // 10 <= 15 < 50
+      expect(title).toContain("15 unclassified event");
+      expect(content).toContain(cfAttackerIp);
+      console.log(
+        "[VERIFY] PASS — the edge_deny self-allowlisting bypass is closed: a CF-range IP on " +
+          "edge_origin_ingress_anomaly is no longer excluded from the threat total"
+      );
+    });
+
+    it("Critical 1 (corrected scope) — a Cloudflare-range IP on a NON-edge context (public_feed) ALSO counts, because production runs EDGE_MODE=log", async () => {
+      console.log(
+        "\n[INPUT] a Cloudflare-range IP on 'public_feed' — NOT the edge_origin_ingress_anomaly context. " +
+          "Under EDGE_MODE=log (the verified live production mode as of this task), originLock does not " +
+          "block a secret-less request, so it reaches resolveClientIdentity(), which falls back to the raw " +
+          "leftmost XFF token when the secret doesn't validate — a genuine CF PoP IP for an attacker routing " +
+          "through their own free Cloudflare zone. A per-context carve-out would have missed this."
+      );
+      const cfAttackerIp = "162.158.1.1"; // inside CF_IPV4_CIDRS 162.158.0.0/15
+      const events = Array(12).fill(null).map(() => makeEvent(cfAttackerIp, "RATE_LIMIT", "public_feed"));
+      setBucketCounts([makeBucket("RATE_LIMIT", "public_feed", 12)]);
+      setRawEvents(events);
+
+      mockDateAtUTC("2025-08-31");
+      await fireDigestAndWait();
+
+      const notifyCalls = [...mockNotify.mock.calls];
+      vi.restoreAllMocks();
+
+      expect(notifyCalls).toHaveLength(1);
+      const { title, content } = notifyCalls[0][0] as { title: string; content: string };
+      console.log(`[STATE] title: "${title}"`);
+      expect(title).toContain("[MODERATE]"); // 10 <= 12 < 50
+      expect(title).toContain("12 unclassified event");
+      expect(content).toContain(cfAttackerIp);
+      console.log(
+        "[VERIFY] PASS — a Cloudflare-range IP on a non-edge context also counts toward the threat total; " +
+          "the fix is a global rule (CF_RANGE_ALLOWLIST_ENABLED=false), not a single-context special case"
+      );
     });
 
     it("owner-configured allowlist (SECURITY_DIGEST_ALLOWLIST_IPS) excludes an extra IP", async () => {
@@ -377,11 +490,21 @@ describe("securityDigest", () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // B1 — notifyOwner failure is escalated to the Discord security channel
+  // B1 — notifyOwner's `false` must NEVER escalate (2026-08-07 review, Crit 2)
+  //
+  // These assertions were INVERTED, not deleted. The original pair asserted
+  // that a `false` from notifyOwner posts an escalation embed. But
+  // notifyOwner() is a documented PERMANENT no-op that always returns false
+  // (server/_core/notification.ts), so that behaviour fired a CRITICAL
+  // Discord alert on every single scheduled run, forever — a guaranteed
+  // false alarm, which is the exact defect class this digest work exists to
+  // remove. Deleting the tests would have left the new contract untested,
+  // so they now assert the opposite: exactly ONE embed (the digest itself),
+  // never an escalation, whichever value notifyOwner returns.
   // ═══════════════════════════════════════════════════════════════════════════
-  describe("B1 — notifyOwner failure escalates to Discord", () => {
-    it("posts an escalation embed to the security channel when notifyOwner returns false", async () => {
-      console.log("\n[INPUT] notifyOwner returns false (service unavailable)");
+  describe("B1 — notifyOwner's false is never escalated", () => {
+    it("posts ONLY the digest embed when notifyOwner returns false", async () => {
+      console.log("\n[INPUT] notifyOwner returns false (its permanent, by-design state)");
       const fakeChannel = new TextChannel() as unknown as { send: ReturnType<typeof vi.fn> };
       const fakeClient = {
         isReady: () => true,
@@ -399,20 +522,17 @@ describe("securityDigest", () => {
       vi.restoreAllMocks();
 
       console.log(`[STATE] channel.send call count: ${sendCalls.length}`);
-      // runSecurityDigest() escalates (Step 4) BEFORE posting the normal
-      // digest embed (Step 5), so call 1 is the escalation, call 2 is the
-      // regular daily digest embed. Assert on embed titles directly rather
-      // than relying on call order, so this test survives a future
-      // reordering of those two steps.
-      expect(sendCalls.length).toBe(2);
       const titles = sendCalls.map(c => {
         const embed = (c[0] as { embeds: Array<{ data: { title?: string } }> }).embeds[0];
         return embed.data.title ?? "";
       });
       console.log(`[STATE] embed titles sent: ${JSON.stringify(titles)}`);
-      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(true);
+      // Exactly one embed: the digest. A second embed here would mean the
+      // escalation is back, i.e. a CRITICAL alert on every scheduled run.
+      expect(sendCalls.length).toBe(1);
       expect(titles.some(t => t.includes("Daily Security Digest"))).toBe(true);
-      console.log("[VERIFY] PASS — both the escalation embed and the normal digest embed were sent when notifyOwner failed");
+      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(false);
+      console.log("[VERIFY] PASS — notifyOwner's false produced no escalation; only the digest embed was sent");
     });
 
     it("does NOT escalate when notifyOwner succeeds", async () => {

@@ -33,8 +33,11 @@
  * file's header and inline comments for the full reasoning (allowlist
  * reliability per source, dedup-window semantics, escalation design). This
  * file imports the pure/reusable pieces (classifyIp, splitEventsByAllowlist,
- * topIpsByCount, computeThreatLevel-style helpers, escalateDeliveryFailure,
- * filterDigestMarkers) rather than re-implementing them.
+ * topIpsByCount, computeThreatLevel-style helpers, filterDigestMarkers)
+ * rather than re-implementing them. Note: escalateDeliveryFailure() was
+ * removed in the 2026-08-07 review (Critical 2) — notifyOwner() is a
+ * permanent no-op, so escalating its `false` fired a guaranteed false alarm
+ * on every run. See the Step 7 comment below.
  */
 
 import { EmbedBuilder, TextChannel } from "discord.js";
@@ -50,8 +53,10 @@ import {
   topIpsByCount,
   splitEventsByAllowlist,
   filterDigestMarkers,
-  escalateDeliveryFailure,
+  encodeDigestMarkerContext,
+  decodeDigestMarkerContext,
   type BucketCount,
+  type DigestDeliveryResult,
 } from "./securityDigest";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -258,8 +263,16 @@ function renderAsciiBarChart(buckets: DayBucket[]): string {
 }
 
 // ─── Digest marker persistence (Task 4.10 / B2) ───────────────────────────────
+//
+// Same encoding scheme as securityDigest.ts's daily marker (shared
+// encode/decode helpers, separate DIGEST_MARKER_WEEKLY_EVENT_TYPE row) —
+// see that file's persistDigestMarker()/loadLastDigestDeliveryFailure() for
+// the full Critical 2 (delivery-failure carry-forward) and Important 1 (B2
+// duplicate-over-skip ordering) reasoning. Ordering here is identical and
+// equally deliberate: this call is the LAST step of runWeeklySecurityDigest
+// (Step 9), after notifyOwner and the Discord post have both already run.
 
-async function persistWeeklyDigestMarker(dateStr: string): Promise<void> {
+async function persistWeeklyDigestMarker(dateStr: string, failureReason: string | null = null): Promise<void> {
   await insertSecurityEvent({
     eventType: DIGEST_MARKER_WEEKLY_EVENT_TYPE,
     ip: "system",
@@ -267,7 +280,7 @@ async function persistWeeklyDigestMarker(dateStr: string): Promise<void> {
     trpcPath: null,
     httpMethod: null,
     userAgent: "weekly-security-digest-scheduler",
-    context: dateStr,
+    context: encodeDigestMarkerContext(dateStr, failureReason),
     occurredAt: Date.now(),
   });
 }
@@ -277,7 +290,17 @@ async function loadLastWeeklyDigestDate(): Promise<string | null> {
     eventType: DIGEST_MARKER_WEEKLY_EVENT_TYPE,
     limit: 1,
   });
-  return rows[0]?.context ?? null;
+  return decodeDigestMarkerContext(rows[0]?.context)?.date ?? null;
+}
+
+async function loadLastWeeklyDigestDeliveryFailure(): Promise<{ date: string; reason: string } | null> {
+  const rows = await getSecurityEvents({
+    eventType: DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+    limit: 1,
+  });
+  const decoded = decodeDigestMarkerContext(rows[0]?.context);
+  if (!decoded || !decoded.failureReason) return null;
+  return { date: decoded.date, reason: decoded.failureReason };
 }
 
 // ─── Discord weekly digest embed builder ──────────────────────────────────────
@@ -428,7 +451,11 @@ function buildWeeklyDigestEmbed(
       }
     )
     .setFooter({
-      text: "AI Sports Betting · Weekly Security Report · Fires every Sunday ~08:00 EST",
+      // Static line (Critical 2, 2026-08-07 review): notifyOwner() is a
+      // documented permanent no-op, so its failure is never escalated. That
+      // fact is true on every run, so it is stated once here rather than
+      // fired as a repeating CRITICAL alert.
+      text: "AI Sports Betting · Weekly Security Report · Fires every Sunday ~08:00 EST · In-app notifications (notifyOwner) are disabled — this Discord channel is the confirmed delivery path",
     })
     .setTimestamp(windowEndMs);
 }
@@ -600,34 +627,29 @@ async function runWeeklySecurityDigest(): Promise<void> {
       "Counts above are a deduped sample: at most 1 row per (IP, path, type) per 60s.",
     ].join("\n");
 
-    // ── Step 7: Fire notifyOwner, escalate on failure (B1) ──────────────────
+    // ── Step 7: Fire notifyOwner (never escalated — see below) ──────────────
     console.log(`${TAG} [STEP] Firing notifyOwner (in-app notification)...`);
-    let notifyFailureReason = "";
     const notified = await notifyOwner({
       title: `[${threatLevel}] Weekly Security Report — ${threatTotal} unclassified event${threatTotal !== 1 ? "s" : ""} in 7 days`,
       content,
     }).catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      notifyFailureReason = `notifyOwner() threw: ${msg}`;
-      console.error(`${TAG} [ERROR] notifyOwner threw: ${msg}`);
+      console.error(`${TAG} [ERROR] notifyOwner threw: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     });
     if (notified) {
       console.log(`${TAG} [OUTPUT] In-app notification sent | threat=${threatLevel} threatTotal=${threatTotal}`);
     } else {
-      if (!notifyFailureReason) {
-        notifyFailureReason = "notifyOwner() returned false (notification service unavailable)";
-      }
-      console.error(`${TAG} [ERROR] notifyOwner failed — escalating to Discord | reason="${notifyFailureReason}"`);
-      await escalateDeliveryFailure({
-        digestName: "Weekly Security Report",
-        reason: notifyFailureReason,
-        threatLevel,
-        total: threatTotal,
-        windowLabel: "7 days",
-      }).catch((err: unknown) => {
-        console.error(`${TAG} [ERROR] Escalation itself failed: ${err instanceof Error ? err.message : String(err)}`);
-      });
+      // Mirrors the daily digest's Critical 2 fix (2026-08-07 review).
+      // notifyOwner() is a PERMANENT no-op (server/_core/notification.ts's
+      // own docblock) — it always returns false. Escalating a guaranteed
+      // false-return to a CRITICAL Discord alert fired on every single run,
+      // forever: a guaranteed false alarm, which is the exact defect class
+      // this digest work exists to remove. Still called (cheap, and
+      // forward-compatible if a real gateway is ever wired back to this
+      // signature), but `false` is no longer escalatable. The one durable
+      // fact worth telling a human is static and true on every run, so it
+      // lives as one line in the embed footer rather than a repeating alert.
+      console.log(`${TAG} [INFO] notifyOwner did not deliver (in-app channel is a documented permanent no-op) — not escalating`);
     }
 
     // ── Step 8: Post Discord weekly digest embed ────────────────────────────

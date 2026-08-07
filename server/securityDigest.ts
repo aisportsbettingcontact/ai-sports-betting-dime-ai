@@ -7,18 +7,35 @@
  *   1. Queries security_events for the prior 24-hour window, bucketed by
  *      (eventType, context) — not just eventType (Task 4.9 / A1)
  *   2. Classifies each event's IP against a known-source allowlist
- *      (Cloudflare, witnessed CI/owner IPs, owner-configurable) and reports
- *      allowlisted activity separately, EXCLUDED from the threat level
- *      (Task 4.9 / A2)
+ *      (witnessed CI/owner IPs, owner-configurable) and reports allowlisted
+ *      activity separately, EXCLUDED from the threat level (Task 4.9 / A2).
+ *      Cloudflare-range membership is NOT, on its own, treated as trusted
+ *      automation — see CF_RANGE_ALLOWLIST_ENABLED's comment (2026-08-07
+ *      review, Critical 1: an attacker routing through their own free
+ *      Cloudflare zone can arrive from a genuine CF PoP IP, and production
+ *      is verifiably running EDGE_MODE=log, not "on", so that bypass is
+ *      reachable through every context this digest reports on)
  *   3. Labels every count as a deduped sample and states the dedup window
  *      (Task 4.9 / A3)
- *   4. Fires notifyOwner() with a structured summary; escalates to the
- *      Discord security channel if that delivery fails (Task 4.10 / B1)
- *   5. Posts a rich Discord embed to the 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel
+ *   4. Fires notifyOwner() with a structured summary — a permanent no-op
+ *      (see server/_core/notification.ts), so its `false` return is no
+ *      longer escalated (that guaranteed a false alarm every run; 2026-08-07
+ *      review, Critical 2). A static line in the embed footer notes the
+ *      in-app channel is disabled instead of a repeating alert.
+ *   5. Posts a rich Discord embed to the 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel — the
+ *      ONLY confirmed delivery path. A failed post is retried once, then
+ *      logged with a distinctive CRITICAL tag and carried forward as a
+ *      note on the next successfully-delivered digest (never re-escalated
+ *      via Discord itself — that would be circular; 2026-08-07 review,
+ *      Critical 2)
  *   6. Prunes security_events older than 90 days (rolling retention)
- *   7. Persists a restart-safety marker so a container restart inside the
- *      fire window cannot cause the digest to fire twice, or be skipped
- *      for the day (Task 4.10 / B2)
+ *   7. Persists a restart-safety marker (now also encoding this run's
+ *      delivery outcome) so a container restart inside the fire window
+ *      cannot cause the digest to be silently skipped for the day. A
+ *      restart landing between delivery and this persist step DOES cause a
+ *      duplicate fire on the next tick — accepted deliberately, see the B2
+ *      note at persistDigestMarker() (Task 4.10 / B2; 2026-08-07 review,
+ *      Important 1)
  *
  * Design constraints:
  *   - Fire-and-forget: errors never crash the server
@@ -26,6 +43,8 @@
  *   - notifyOwner() is always called — even on clean days (daily confirmation)
  *   - Discord embed is always posted — even on clean days
  *   - All log lines are structured and machine-readable
+ *   - Duplicate-over-skip: a missed persistence write must never cause a
+ *     silently-skipped day; a duplicate delivery is the accepted trade-off
  *
  * ── Task 4.9 note on A4 (botDetected count) ─────────────────────────────────
  * The brief asks for the count of `botDetected=true` occurrences from
@@ -335,17 +354,130 @@ function matchesIpOrCidr(ip: string, pattern: string): boolean {
 }
 
 /**
+ * RATE_LIMIT `context` (limitType) values whose recorded `ip` is NEVER
+ * resolveClientIdentity()'s secret-vetted value, structurally, regardless
+ * of EDGE_MODE or any future infra hardening — it is the raw, un-vetted
+ * immediate-hop IP instead. Read server/_core/index.ts's `originLock`
+ * onEvent callback and its `/api/trpc` edge-aware canary before touching
+ * this set; both fire this exact context string:
+ *
+ *   - "edge_deny" (the only originLock branch that actually 403s the
+ *     request): `ip = immediateUpstreamIp(req) || resolveClientIp(req)`.
+ *   - the `/api/trpc` canary (observe-only, never blocks): `ip = upstream
+ *     || ip` where `upstream = immediateUpstreamIp(req)`.
+ *
+ * Neither goes through resolveClientIdentity(), so neither is gated on the
+ * shared `x-dime-edge-secret` BY CONSTRUCTION — this is true independent of
+ * EDGE_MODE, independent of whether Authenticated Origin Pulls is ever
+ * added at the infra layer, independent of everything except these two
+ * call sites' own code. An event on this context exists BECAUSE the
+ * load-bearing secret check already failed (edge_deny) or was never
+ * consulted at all (the canary), so a genuine Cloudflare PoP IP on this
+ * context is the PRECISE shape of the self-allowlisting bypass
+ * server/_core/edgeProxy.ts's design law #2 describes ("Any party can
+ * route the origin through their OWN free Cloudflare zone and arrive from
+ * a genuine CF PoP IP"). classifyIp() refuses the cloudflare_edge branch
+ * outright for this context — unconditionally, regardless of the global
+ * CF_RANGE_ALLOWLIST_ENABLED flag below, and regardless of blocked/
+ * observed outcome (outcome isn't even persisted to this column, see
+ * fireRateLimitEvent()'s own comment). This is a PERMANENT rule, not tied
+ * to today's deploy config — kept as an explicit second layer on top of
+ * CF_RANGE_ALLOWLIST_ENABLED so that if that flag is ever safely
+ * re-enabled in the future, this one context still can't slip through.
+ * (2026-08-07 review, Critical 1.)
+ */
+const UNVETTED_IP_RATE_LIMIT_CONTEXTS: ReadonlySet<string> = new Set([
+  "edge_origin_ingress_anomaly",
+]);
+
+/**
+ * Whether classifyIp() may EVER treat Cloudflare-range membership, on its
+ * own, as evidence of trusted automation for contexts OTHER than the
+ * permanently-excluded set above. Hard-disabled — do not flip this to
+ * `true` without re-reading the whole comment below; "EDGE_MODE is on
+ * right now" is not sufficient justification (see why).
+ *
+ * CORRECTED 2026-08-07 (mid-review): an earlier version of this rule
+ * assumed EDGE_MODE=on (origin lock actively 403ing every secret-less
+ * request) was the live production state, and scoped the cloudflare_edge
+ * refusal to ONLY "edge_origin_ingress_anomaly" on that assumption. That
+ * assumption was FALSE, and the scope was too narrow as a result.
+ * Production is verifiably running EDGE_MODE=log as of deployment
+ * abe24797-f46c-4033-a95f-cb1958bd8488 (2026-08-07T09:05:24Z) — proven
+ * behaviorally, not assumed:
+ *   - a direct probe to the raw origin's GET /login returned HTTP 200 (an
+ *     armed origin lock in "on" mode 403s this request instead);
+ *   - that same request fired a RATE_LIMIT/edge_origin_ingress_anomaly
+ *     event at 09:09:28Z, and originLock returns next() BEFORE onEvent
+ *     fires when mode is "off" — so an event firing at all proves mode is
+ *     "log", not "off" either;
+ *   - both "on"-mode escape hatches are independently ruled out: no
+ *     "CRITICAL ... no EDGE_ORIGIN_SECRET" anti-lockout line exists in
+ *     that window, and the circuit breaker needs 3 consecutive 60s windows
+ *     of >=200 requests with zero verified-Cloudflare to trip — actual
+ *     traffic in that window was ~6 requests, several CF-verified, nowhere
+ *     near that threshold.
+ *
+ * Under "log" (and "off"), originLock does NOT 403 a secret-less request —
+ * it calls next() and serves it. That request then reaches EVERY handler
+ * that calls resolveClientIdentity(): the global/auth/trpc_auth/
+ * stripe_checkout/waitlist_submit/public_feed rate limiters, the CSRF
+ * origin check, and the login AUTH_FAIL path — i.e. every context this
+ * digest reports on, not only the edge one. resolveClientIdentity() only
+ * returns `cf-connecting-ip` after edgeProofPasses() validates the shared
+ * secret; without a valid secret it falls back to the leftmost
+ * X-Forwarded-For token. For an attacker proxying through their OWN free
+ * Cloudflare zone, that leftmost token IS a genuine Cloudflare-range PoP
+ * IP — indistinguishable, from a stored security_events row alone, from
+ * traffic that happened to pass through OUR real Cloudflare zone during a
+ * period the secret wasn't validating. So today, in the live deployment,
+ * the self-allowlisting bypass this task exists to close is reachable
+ * through ANY rate-limit context (and CSRF_BLOCK/AUTH_FAIL), not only
+ * edge_origin_ingress_anomaly — a context allowlist/denylist alone is
+ * insufficient, because "which contexts are reachable without the secret"
+ * is a property of EDGE_MODE, which this file does not control and must
+ * not assume. Hence one flag covering every context, defaulted to the safe
+ * (never-trust) state, rather than trying to enumerate "safe" contexts
+ * that would silently become wrong on the next mode change.
+ *
+ * Re-enabling this would need one of:
+ *   (a) Cloudflare Authenticated Origin Pulls / mTLS or a Cloudflare
+ *       Tunnel enforced at the infra layer (edgeProxy.ts's own design law
+ *       #2 names this as the actual fix) so a non-Cloudflare-signed
+ *       connection cannot reach Railway at all, regardless of EDGE_MODE —
+ *       at that point every persisted IP that isn't known-automation is
+ *       moot, because only Cloudflare can ever connect; or
+ *   (b) persisting, per security_events row, whether edgeProofPasses()
+ *       actually validated for that specific request — needs a schema
+ *       change (drizzle/, rides db-push.yml) and a server/_core/index.ts
+ *       change, both out of this task's edit scope.
+ * Neither is true today. Re-derive current EDGE_MODE from behavior (as
+ * above) before ever touching this flag — do not trust a comment, a memory
+ * note, or an env var read at a different time than the decision.
+ */
+const CF_RANGE_ALLOWLIST_ENABLED = false;
+
+/**
  * Classifies a single IP against the known-source allowlist. Checks
- * Cloudflare first (most reliable), then the known-automation list
- * (defaults + owner-configured, in that order). Returns the first match.
+ * Cloudflare first — gated by CF_RANGE_ALLOWLIST_ENABLED (currently
+ * `false`, see its comment) and, even if that flag is ever re-enabled,
+ * permanently excluded for the contexts in UNVETTED_IP_RATE_LIMIT_CONTEXTS
+ * — then the known-automation list (defaults + owner-configured, in that
+ * order). Returns the first match.
+ *
+ * `context` is the event's (eventType, context) bucket key — i.e. the
+ * RATE_LIMIT `limitType` slug, or null/absent for CSRF_BLOCK/AUTH_FAIL
+ * events.
  */
 export function classifyIp(
   ip: string | null,
-  extraAllowlist?: AllowlistEntry[]
+  extraAllowlist?: AllowlistEntry[],
+  context?: string | null
 ): AllowlistMatch {
   if (!ip) return { matched: false, source: null, label: null };
 
-  if (isCloudflareEdgeIp(ip)) {
+  const contextPermanentlyExcluded = Boolean(context && UNVETTED_IP_RATE_LIMIT_CONTEXTS.has(context));
+  if (CF_RANGE_ALLOWLIST_ENABLED && !contextPermanentlyExcluded && isCloudflareEdgeIp(ip)) {
     return {
       matched: true,
       source: "cloudflare_edge",
@@ -372,7 +504,7 @@ export function classifyIp(
  * ("expected automation" — reported separately, excluded from the threat
  * level).
  */
-export function splitEventsByAllowlist<T extends { ip: string | null }>(
+export function splitEventsByAllowlist<T extends { ip: string | null; context?: string | null }>(
   events: T[],
   extraAllowlist?: AllowlistEntry[]
 ): {
@@ -386,7 +518,7 @@ export function splitEventsByAllowlist<T extends { ip: string | null }>(
   const flagged: T[] = [];
   const allowlisted: Array<T & { allowlistSource: "cloudflare_edge" | "known_automation"; allowlistLabel: string }> = [];
   for (const e of events) {
-    const match = classifyIp(e.ip, resolvedExtra);
+    const match = classifyIp(e.ip, resolvedExtra, e.context ?? null);
     if (match.matched && match.source) {
       allowlisted.push({ ...e, allowlistSource: match.source, allowlistLabel: match.label ?? "" });
     } else {
@@ -482,7 +614,7 @@ export interface DigestComputation {
  */
 export function computeDigestData(
   bucketCounts: BucketCount[],
-  rawEvents: Array<{ ip: string | null }>,
+  rawEvents: Array<{ ip: string | null; context?: string | null }>,
   opts?: { rawFetchLimit?: number; extraAllowlist?: AllowlistEntry[] }
 ): DigestComputation {
   const rawFetchLimit = opts?.rawFetchLimit ?? RAW_EVENT_FETCH_LIMIT;
@@ -529,13 +661,71 @@ function summarizeAllowlistedBySource(
 // ─── Digest marker persistence (Task 4.10 / B2) ───────────────────────────────
 
 /**
+ * The marker's `context` column historically held just the fired date
+ * ("2026-08-07"). It now ALSO carries this run's Discord delivery outcome,
+ * so the NEXT run can carry a "previous digest failed to deliver" notice
+ * forward (Critical 2, 2026-08-07 review — see the module header's step 5
+ * and postDigestToDiscord()'s comment for why this can't be escalated via
+ * Discord itself). Encoding stays inside ONE existing marker row rather
+ * than adding a new eventType specifically because
+ * getSecurityEventCountsByBucket() (server/db.ts, out of this task's edit
+ * scope) already excludes DIGEST_MARKER_DAILY/WEEKLY from its SQL-side
+ * totals — a NEW eventType would silently inflate `totalAll` on every
+ * digest that ever recorded a delivery failure, since that exclusion list
+ * lives in a file this task cannot touch.
+ */
+const DIGEST_MARKER_FAILURE_SEP = "|discord_failed:";
+
+// Exported so weeklySecurityDigest.ts's own marker (separate eventType, same
+// encoding scheme) can reuse this instead of re-implementing it.
+export function encodeDigestMarkerContext(dateStr: string, failureReason: string | null): string {
+  if (!failureReason) return dateStr;
+  // Keep it short and single-line — this still rides the same text column
+  // as everything else, and needs to render cleanly inside a Discord embed
+  // field on the next run.
+  const safeReason = failureReason.slice(0, 300).replace(/[\r\n]+/g, " ");
+  return `${dateStr}${DIGEST_MARKER_FAILURE_SEP}${safeReason}`;
+}
+
+export function decodeDigestMarkerContext(
+  context: string | null | undefined
+): { date: string; failureReason: string | null } | null {
+  if (!context) return null;
+  const idx = context.indexOf(DIGEST_MARKER_FAILURE_SEP);
+  if (idx === -1) return { date: context, failureReason: null };
+  return { date: context.slice(0, idx), failureReason: context.slice(idx + DIGEST_MARKER_FAILURE_SEP.length) };
+}
+
+/**
  * Writes the restart-safety sentinel row (see DIGEST_MARKER_* constants in
  * db.ts). Best-effort — a failure here is logged, never thrown; the
  * in-memory `lastDigestDateUTC` still prevents a double-fire for the rest
  * of THIS process's lifetime even if persistence fails, same as before this
  * fix. What persistence adds is surviving a RESTART inside the fire window.
+ *
+ * `failureReason` (null when this run's Discord post succeeded, or was
+ * skipped because Discord isn't configured in this environment) is encoded
+ * into `context` alongside the date — see encodeDigestMarkerContext().
+ *
+ * IMPORTANT (B2 / Important 1, 2026-08-07 review): this call happens LAST
+ * — after notifyOwner and the Discord post have both already completed
+ * (see runSecurityDigest()'s Steps 4/5 vs 7). That ordering is deliberate,
+ * not an oversight: writing the marker FIRST would let a process kill
+ * between the write and the actual delivery attempts produce a genuinely
+ * missed day that nothing detects (the marker says "done" when it isn't).
+ * Writing it LAST means the only failure mode is the opposite one — a kill
+ * between "delivery completed" and "this line running" causes the NEXT
+ * tick (same 10-minute window, restart-safe path in maybeFireDigest()) to
+ * fire again, producing a duplicate delivery. Duplicate-over-skip is the
+ * accepted trade-off: a duplicate Discord post is a mild annoyance, a
+ * silently skipped day is a real gap in the only working delivery channel.
+ * Do not invert this ordering to "fix" the duplicate — that trades a safe
+ * failure mode for an unsafe one. See
+ * server/securityDigest.test.ts's "B2 — marker write ordering" tests,
+ * which assert this call happens after notifyOwner/channel.send and fail
+ * if that ordering regresses.
  */
-async function persistDigestMarker(dateStr: string): Promise<void> {
+async function persistDigestMarker(dateStr: string, failureReason: string | null = null): Promise<void> {
   await insertSecurityEvent({
     eventType: DIGEST_MARKER_DAILY_EVENT_TYPE,
     ip: "system",
@@ -543,7 +733,7 @@ async function persistDigestMarker(dateStr: string): Promise<void> {
     trpcPath: null,
     httpMethod: null,
     userAgent: "security-digest-scheduler",
-    context: dateStr,
+    context: encodeDigestMarkerContext(dateStr, failureReason),
     occurredAt: Date.now(),
   });
 }
@@ -553,68 +743,35 @@ async function persistDigestMarker(dateStr: string): Promise<void> {
  * digest. Returns null if unavailable (DB down, no marker yet) — callers
  * MUST treat null as "unknown, not proven fired" and let the normal
  * in-memory guard + digestRunning lock be the backstop, never block firing
- * on a failed read.
+ * on a failed read. Strips any encoded delivery-failure suffix (see
+ * encodeDigestMarkerContext()) so B2's exact-date comparison in
+ * maybeFireDigest() is unaffected by that encoding.
  */
 export async function loadLastDigestDate(): Promise<string | null> {
   const rows = await getSecurityEvents({
     eventType: DIGEST_MARKER_DAILY_EVENT_TYPE,
     limit: 1,
   });
-  return rows[0]?.context ?? null;
+  return decodeDigestMarkerContext(rows[0]?.context)?.date ?? null;
 }
 
-// ─── Delivery-failure escalation (Task 4.10 / B1) ─────────────────────────────
-
 /**
- * Posts a Discord alert when the in-app notifyOwner() channel fails to
- * deliver, so the failure isn't silent (previously only a console.warn that
- * nobody reads unless they're already tailing Railway logs).
- *
- * Exported so weeklySecurityDigest.ts can reuse it instead of duplicating
- * the channel-fetch boilerplate that already exists 3x in this file.
+ * Reads back whether the MOST RECENTLY persisted daily-marker row recorded
+ * a Discord delivery failure (Critical 2, 2026-08-07 review). Called near
+ * the top of a run, before this run's OWN marker overwrites it — so it
+ * reports the outcome of the run before this one, which is exactly what a
+ * "previous digest failed to deliver" carry-forward notice needs. Returns
+ * null on no marker / no recorded failure / a failed read (best-effort,
+ * same philosophy as loadLastDigestDate()).
  */
-export async function escalateDeliveryFailure(opts: {
-  digestName: string; // "Daily Security Digest" | "Weekly Security Report"
-  reason: string;
-  threatLevel: string;
-  total: number;
-  windowLabel: string; // "24 hours" | "7 days"
-}): Promise<void> {
-  const tag = `${TAG} [Escalation]`;
-  const client = getDiscordClient();
-  if (!client || !client.isReady()) {
-    console.error(
-      `${tag} Discord bot not available — cannot escalate notifyOwner failure` +
-        ` (digest=${opts.digestName} reason="${opts.reason}")`
-    );
-    return;
-  }
-  try {
-    const raw = await client.channels.fetch(SECURITY_CHANNEL_ID);
-    if (!raw || !(raw instanceof TextChannel)) {
-      console.error(`${tag} Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`);
-      return;
-    }
-    const embed = new EmbedBuilder()
-      .setColor(0xed4245)
-      .setTitle(`⚠️ ${opts.digestName} — In-App Notification Failed`)
-      .setDescription(
-        `The ${opts.digestName.toLowerCase()} completed and this Discord embed is still ` +
-          `posting, but the in-app owner notification (notifyOwner) did NOT deliver.\n\n` +
-          `**Reason:** ${opts.reason}\n\n` +
-          `Threat level for the last ${opts.windowLabel}: **${opts.threatLevel}** ` +
-          `(${opts.total} event${opts.total !== 1 ? "s" : ""}). This Discord channel is ` +
-          `the only confirmed-working delivery path right now — check ` +
-          `server/_core/notification.ts if the in-app channel needs restoring.`
-      )
-      .setFooter({ text: "Dime AI · Security Digest Delivery Monitor" })
-      .setTimestamp();
-    await raw.send({ embeds: [embed] });
-    console.log(`${tag} Escalation posted | digest=${opts.digestName} reason="${opts.reason}"`);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Failed to post escalation: ${msg}`);
-  }
+export async function loadLastDigestDeliveryFailure(): Promise<{ date: string; reason: string } | null> {
+  const rows = await getSecurityEvents({
+    eventType: DIGEST_MARKER_DAILY_EVENT_TYPE,
+    limit: 1,
+  });
+  const decoded = decodeDigestMarkerContext(rows[0]?.context);
+  if (!decoded || !decoded.failureReason) return null;
+  return { date: decoded.date, reason: decoded.failureReason };
 }
 
 // ─── Discord digest embed builder ─────────────────────────────────────────────
@@ -628,7 +785,8 @@ export async function escalateDeliveryFailure(opts: {
 function buildDigestEmbed(
   data: DigestComputation,
   windowStartMs: number,
-  windowEndMs: number
+  windowEndMs: number,
+  previousDeliveryFailure: { date: string; reason: string } | null = null
 ): EmbedBuilder {
   const { color, emoji } = threatMeta(data.threatLevel);
   const dateLabel = new Date(windowEndMs).toLocaleDateString("en-US", {
@@ -641,7 +799,7 @@ function buildDigestEmbed(
 
   const threatDescriptions: Record<ThreatLevel, string> = {
     CLEAN:
-      "No unclassified security events in the last 24 hours (after excluding Cloudflare and known automation). Everything looks normal.",
+      "No unclassified security events in the last 24 hours (after excluding known automation). Everything looks normal.",
     LOW: "A small number of unclassified security events were recorded. This is within normal range and likely just routine noise. No action needed unless you see a pattern.",
     MODERATE:
       "A moderate number of unclassified security events were recorded. Worth reviewing the top IPs below to see if anything looks suspicious. No immediate action required.",
@@ -660,8 +818,8 @@ function buildDigestEmbed(
     data.eventTypeTotals.RATE_LIMIT === 0
       ? "0 — No rate limit triggers."
       : `${data.eventTypeTotals.RATE_LIMIT} total, by type:\n\`\`\`\n${rateLimitBreakdown}\n\`\`\`` +
-        `Broken down by trigger type — CI/automation and Cloudflare traffic are excluded from ` +
-        `the "expected automation" total below and don't count toward the threat level.`;
+        `Broken down by trigger type — known CI/owner automation (exact-IP matches) is excluded from ` +
+        `the "expected automation" total below and doesn't count toward the threat level.`;
 
   const authFailDesc =
     data.eventTypeTotals.AUTH_FAIL === 0
@@ -694,6 +852,25 @@ function buildDigestEmbed(
       ? ` The allowlist split hit its ${RAW_EVENT_FETCH_LIMIT}-event sample cap — see the digest's own report for what that means for the threat total._`
       : "_") ;
 
+  // Critical 2 (2026-08-07 review): a one-time-per-occurrence note carried
+  // forward from a previous run whose Discord post failed (see
+  // loadLastDigestDeliveryFailure()/postDigestToDiscord()). Only present
+  // when there's something to say — this is NOT the static footer line
+  // below, which is unconditional.
+  const previousFailureFields = previousDeliveryFailure
+    ? [
+        {
+          name: "⚠️ Previous Digest Delivery Failed",
+          value:
+            `The digest for **${previousDeliveryFailure.date}** could not be posted to this channel ` +
+            `(reason: ${previousDeliveryFailure.reason}). This is that missed notice, delivered now that ` +
+            `the channel is reachable again. Search Railway logs around that date for ` +
+            `\`[CRITICAL] [DIGEST_DELIVERY_FAILED]\` for the full detail.`,
+          inline: false,
+        },
+      ]
+    : [];
+
   return new EmbedBuilder()
     .setColor(color)
     .setTitle(`${emoji} Daily Security Digest — ${dateLabel}`)
@@ -701,6 +878,7 @@ function buildDigestEmbed(
       `**Threat Level: ${data.threatLevel}**\n\n${threatDescriptions[data.threatLevel]}`
     )
     .addFields(
+      ...previousFailureFields,
       {
         name: "🚫 CSRF Blocks (Cross-Site Attack Attempts)",
         value: csrfDesc,
@@ -743,29 +921,77 @@ function buildDigestEmbed(
       }
     )
     .setFooter({
-      text: "AI Sports Betting · Daily Security Digest · Fires ~08:00 EST",
+      // Static line (Critical 2, 2026-08-07 review): notifyOwner() is a
+      // permanent no-op (server/_core/notification.ts) — this says so once,
+      // unconditionally, on every embed, instead of firing a separate
+      // Discord alert every time that guaranteed-false result comes back.
+      text: "AI Sports Betting · Daily Security Digest · Fires ~08:00 EST · In-app notifications (notifyOwner) are disabled — this Discord channel is the confirmed delivery path",
     })
     .setTimestamp(windowEndMs);
 }
 
 // ─── Discord digest poster ────────────────────────────────────────────────────
+
+/**
+ * Outcome of a Discord post attempt.
+ *   - "sent": delivered.
+ *   - "skipped_not_configured": no Discord client in THIS environment at
+ *     all (dev/test, or a deployment without DISCORD_BOT_TOKEN) — this is
+ *     the module's own long-standing, intentional behavior, NOT a failure,
+ *     and must never be escalated or carried forward.
+ *   - "failed": Discord IS configured but delivery broke — bot not ready,
+ *     channel fetch/type mismatch, or channel.send() throwing after a
+ *     retry. THIS is the "total zero-notification day" gap (Critical 2,
+ *     2026-08-07 review).
+ */
+export type DigestDeliveryResult =
+  | { status: "sent" }
+  | { status: "skipped_not_configured" }
+  | { status: "failed"; reason: string };
+
 /**
  * Posts the daily digest embed to the 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel.
- * Fire-and-forget — never throws, never blocks the digest runner.
+ * Fire-and-forget — never throws, always resolves a DigestDeliveryResult.
+ *
+ * Critical 2 (2026-08-07 review) design: the module's own header says this
+ * channel "is the only confirmed-working delivery path right now" — so a
+ * failed post here is a genuine total zero-notification day, and nothing
+ * previously observed it beyond a console.error nobody reads unless
+ * already tailing Railway logs. You cannot reliably escalate a FAILED
+ * Discord post BY POSTING TO THE SAME DISCORD CHANNEL — that's circular by
+ * construction (if it's broken, the escalation attempt breaks too). So
+ * this uses three independent, non-circular layers instead:
+ *   1. One immediate retry on `channel.send()` — cheap insurance against a
+ *      single transient API hiccup. No artificial delay: this path is
+ *      fire-and-forget and must not block the digest run loop.
+ *   2. A distinctively-tagged CRITICAL log line
+ *      (`[CRITICAL] [DIGEST_DELIVERY_FAILED]`) on final failure — greppable
+ *      by any OUT-OF-BAND log-based alerting (Railway logs), independent
+ *      of Discord entirely.
+ *   3. The outcome is persisted into the SAME restart-safety marker row
+ *      the caller already writes (see persistDigestMarker()), so the NEXT
+ *      successful post carries a "previous digest failed to deliver" note
+ *      forward (see buildDigestEmbed()'s previousDeliveryFailure param) —
+ *      this is what finally gets a human-visible signal onto the ONE
+ *      channel that works, once it works again.
  */
 async function postDigestToDiscord(
   data: DigestComputation,
   windowStartMs: number,
-  windowEndMs: number
-): Promise<void> {
+  windowEndMs: number,
+  previousDeliveryFailure: { date: string; reason: string } | null = null
+): Promise<DigestDeliveryResult> {
   const client = getDiscordClient();
   if (!client) {
     console.log(`${TAG} [Discord] Bot client not available — skipping Discord digest embed`);
-    return;
+    return { status: "skipped_not_configured" };
   }
   if (!client.isReady()) {
-    console.log(`${TAG} [Discord] Bot client not ready — skipping Discord digest embed`);
-    return;
+    console.error(
+      `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord bot not ready — cannot post digest embed. ` +
+        `This channel is the only confirmed-working delivery path (see module header) — a failed post here is a total zero-notification day.`
+    );
+    return { status: "failed", reason: "Discord bot not ready" };
   }
 
   console.log(`${TAG} [Discord] Fetching security channel ${SECURITY_CHANNEL_ID}...`);
@@ -773,31 +999,45 @@ async function postDigestToDiscord(
   try {
     const raw = await client.channels.fetch(SECURITY_CHANNEL_ID);
     if (!raw || !(raw instanceof TextChannel)) {
-      console.error(`${TAG} [Discord] Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`);
-      return;
+      console.error(
+        `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`
+      );
+      return { status: "failed", reason: `Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched` };
     }
     channel = raw;
     console.log(`${TAG} [Discord] Channel resolved: #${channel.name} in ${channel.guild?.name ?? "unknown"}`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG} [Discord] Failed to fetch channel: ${msg}`);
-    return;
+    console.error(`${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Failed to fetch channel: ${msg}`);
+    return { status: "failed", reason: `Channel fetch threw: ${msg}` };
   }
 
-  const embed = buildDigestEmbed(data, windowStartMs, windowEndMs);
-  try {
-    await channel.send({ embeds: [embed] });
-    console.log(
-      `${TAG} [Discord] [OUTPUT] Daily digest embed posted successfully` +
-        ` | channel=#${channel.name}` +
-        ` | threatLevel=${data.threatLevel}` +
-        ` | threatTotal=${data.threatTotal}` +
-        ` | totalAll=${data.totalAll}`
-    );
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG} [Discord] Failed to send digest embed: ${msg}`);
+  const embed = buildDigestEmbed(data, windowStartMs, windowEndMs, previousDeliveryFailure);
+
+  let lastErrMsg = "";
+  const MAX_SEND_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
+    try {
+      await channel.send({ embeds: [embed] });
+      console.log(
+        `${TAG} [Discord] [OUTPUT] Daily digest embed posted successfully` +
+          (attempt > 1 ? ` (attempt ${attempt}/${MAX_SEND_ATTEMPTS}, after retry)` : "") +
+          ` | channel=#${channel.name}` +
+          ` | threatLevel=${data.threatLevel}` +
+          ` | threatTotal=${data.threatTotal}` +
+          ` | totalAll=${data.totalAll}`
+      );
+      return { status: "sent" };
+    } catch (err: unknown) {
+      lastErrMsg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAG} [Discord] Attempt ${attempt}/${MAX_SEND_ATTEMPTS} failed to send digest embed: ${lastErrMsg}`);
+    }
   }
+  console.error(
+    `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord post failed after ${MAX_SEND_ATTEMPTS} attempts — reason="${lastErrMsg}". ` +
+      `This is a total zero-notification day; carried forward as a note on the next successfully-delivered digest.`
+  );
+  return { status: "failed", reason: `channel.send() failed ${MAX_SEND_ATTEMPTS}x: ${lastErrMsg}` };
 }
 
 // ─── notifyOwner content builder ──────────────────────────────────────────────
@@ -902,39 +1142,53 @@ async function runSecurityDigest(): Promise<void> {
     const content = buildNotifyOwnerContent(data, dateLabel, windowStartISO, windowEndISO);
 
     console.log(`${TAG} [STEP] Firing notifyOwner (in-app notification)...`);
-    let notifyFailureReason = "";
     const notified = await notifyOwner({
       title: `[${data.threatLevel}] Security Digest — ${data.threatTotal} unclassified event${data.threatTotal !== 1 ? "s" : ""} in 24h`,
       content,
     }).catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      notifyFailureReason = `notifyOwner() threw: ${msg}`;
-      console.error(`${TAG} [ERROR] notifyOwner threw: ${msg}`);
+      console.error(`${TAG} [ERROR] notifyOwner threw: ${err instanceof Error ? err.message : String(err)}`);
       return false;
     });
     if (notified) {
       console.log(`${TAG} [OUTPUT] In-app notification sent | threat=${data.threatLevel} threatTotal=${data.threatTotal}`);
     } else {
-      if (!notifyFailureReason) {
-        notifyFailureReason = "notifyOwner() returned false (notification service unavailable)";
-      }
-      console.error(`${TAG} [ERROR] notifyOwner failed — escalating to Discord | reason="${notifyFailureReason}"`);
-      await escalateDeliveryFailure({
-        digestName: "Daily Security Digest",
-        reason: notifyFailureReason,
-        threatLevel: data.threatLevel,
-        total: data.threatTotal,
-        windowLabel: "24 hours",
-      }).catch((err: unknown) => {
-        console.error(`${TAG} [ERROR] Escalation itself failed: ${err instanceof Error ? err.message : String(err)}`);
-      });
+      // notifyOwner() is a PERMANENT no-op (server/_core/notification.ts's
+      // own docblock) — it always returns false. Escalating a guaranteed
+      // false-return to a CRITICAL Discord alert fired on every single run,
+      // forever: a guaranteed false alarm (2026-08-07 review, Critical 2).
+      // Still called (cheap, forward-compatible if a real gateway is ever
+      // wired back to this exact signature), but `false` is no longer
+      // escalatable. The one thing worth telling a human is static and
+      // already true on every run — it lives as one line in the embed's
+      // footer (buildDigestEmbed) instead of a repeating alert.
+      console.log(`${TAG} [INFO] notifyOwner did not deliver (in-app channel is a documented permanent no-op) — not escalating, see Critical 2 note above persistDigestMarker()`);
     }
 
     // ── Step 5: Post Discord digest embed ───────────────────────────────────
-    console.log(`${TAG} [STEP] Posting daily digest embed to Discord security channel...`);
-    await postDigestToDiscord(data, windowStart, runStart).catch((err: unknown) => {
-      console.error(`${TAG} [ERROR] Discord digest post failed (non-critical): ${err instanceof Error ? err.message : String(err)}`);
+    // Load any undelivered PREVIOUS run's failure before building/posting
+    // this run's embed, so it can carry the notice forward (see
+    // postDigestToDiscord()'s own comment for the full Critical 2 design).
+    const previousFailure = await loadLastDigestDeliveryFailure().catch((err: unknown) => {
+      console.error(
+        `${TAG} [WARN] Failed to read previous delivery-failure marker (best-effort, proceeding without a carry-forward note): ${err instanceof Error ? err.message : String(err)}`
+      );
+      return null;
     });
+    if (previousFailure) {
+      console.warn(
+        `${TAG} [STATE] Previous digest (${previousFailure.date}) failed to deliver to Discord — carrying a notice into today's embed | reason="${previousFailure.reason}"`
+      );
+    }
+
+    console.log(`${TAG} [STEP] Posting daily digest embed to Discord security channel...`);
+    const deliveryResult: DigestDeliveryResult = await postDigestToDiscord(data, windowStart, runStart, previousFailure).catch(
+      (err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord digest post threw unexpectedly: ${msg}`);
+        return { status: "failed", reason: `threw unexpectedly: ${msg}` } as const;
+      }
+    );
+    const deliveryFailureReason = deliveryResult.status === "failed" ? deliveryResult.reason : null;
 
     // ── Step 6: Prune old events ─────────────────────────────────────────────
     console.log(`${TAG} [STEP] Pruning events older than ${PRUNE_RETENTION_DAYS} days...`);
@@ -942,9 +1196,12 @@ async function runSecurityDigest(): Promise<void> {
     console.log(`${TAG} [OUTPUT] Pruned ${pruned} old event${pruned !== 1 ? "s" : ""} from security_events table`);
 
     // ── Step 7: Mark digest complete (in-memory + persisted marker) ─────────
+    // Deliberately LAST — see persistDigestMarker()'s own comment for the
+    // full B2 / Important 1 duplicate-over-skip reasoning (2026-08-07
+    // review). This call must stay the final step of the try block.
     const todayStr = new Date().toISOString().slice(0, 10);
     lastDigestDateUTC = todayStr;
-    await persistDigestMarker(todayStr).catch((err: unknown) => {
+    await persistDigestMarker(todayStr, deliveryFailureReason).catch((err: unknown) => {
       console.error(
         `${TAG} [ERROR] Failed to persist digest marker (in-memory guard still holds for this process): ${err instanceof Error ? err.message : String(err)}`
       );
@@ -953,7 +1210,7 @@ async function runSecurityDigest(): Promise<void> {
     const elapsed = Date.now() - runStart;
     console.log(
       `${TAG} ✓ COMPLETE | elapsed=${elapsed}ms` +
-        ` | notified=${notified} | pruned=${pruned}` +
+        ` | notified=${notified} | discordDelivery=${deliveryResult.status} | pruned=${pruned}` +
         ` | lastDigestDate=${lastDigestDateUTC}`
     );
     console.log(`${TAG} [VERIFY] PASS — digest complete`);
