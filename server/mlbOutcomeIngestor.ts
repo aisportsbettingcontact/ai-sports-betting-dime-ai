@@ -18,6 +18,31 @@
  *     brierF5Ml     — (p_f5_home_win - outcome_f5_home_win)^2 for F5 ML market
  *     outcomeIngestedAt — UTC ms timestamp of ingestion
  *
+ * PROBABILITY STORAGE SCALES (audit M-203) — READ BEFORE TOUCHING A BRIER CALL:
+ *   The games table stores model probabilities on TWO different scales, and
+ *   nothing in the schema or the column names distinguishes them.
+ *
+ *     0-100 (percent):  modelOverRate, modelHomeWinPct, modelF5HomeWinPct
+ *     0-1   (unit):     modelF5OverRate, modelPNrfi
+ *
+ *   Verified at the producers in server/mlbModelRunner.ts:
+ *     :4228 modelOverRate      = over_pct.toFixed(2)            -> 0-100
+ *     :4237 modelHomeWinPct    = home_win_pct.toFixed(2)        -> 0-100
+ *     :4261 modelF5HomeWinPct  = (p_f5_home_win * 100).toFixed(2) -> 0-100
+ *     :4259 modelF5OverRate    = p_f5_over.toFixed(4)           -> 0-1  (NO *100)
+ *     :4284 modelPNrfi         = p_nrfi.toFixed(4)              -> 0-1  (NO *100)
+ *
+ *   brierScore() used to divide EVERY input by 100, so the two unit-scaled
+ *   columns were scored at 1/100th of their real probability: a genuine
+ *   p_nrfi of 0.52 was scored as 0.0052, making brierNrfi ~0.99 on every
+ *   no-run first inning. brierF5Total and brierNrfi were therefore garbage
+ *   for the whole 2026 season. brierScore() now takes an ALREADY-NORMALIZED
+ *   [0,1] probability and every call site declares its scale explicitly via
+ *   probFromPct() or probFromUnit().
+ *
+ *   Historical rows do NOT self-heal: outcomeIngestedAt gates re-ingestion,
+ *   so correcting stored values needs a force re-ingest by the owner.
+ *
  * BRIER SCORE FORMULA:
  *   BS = (p - o)^2
  *   where p = model probability [0,1], o = binary outcome (0 or 1)
@@ -95,7 +120,7 @@ interface MlbApiGame {
 }
 
 /** Parsed outcome data from the MLB Stats API for a single game */
-interface GameOutcome {
+export interface GameOutcome {
   gamePk: number;
   awayAbbrev: string;
   homeAbbrev: string;
@@ -159,13 +184,35 @@ export interface OutcomeIngestSummary {
  * @param outcome       Binary outcome: 1 = event occurred, 0 = did not occur
  * @returns Brier score in [0, 1], or null if inputs are invalid
  */
-function brierScore(
-  modelProbPct: string | number | null | undefined,
+export function parseNumOrNull(
+  v: string | number | null | undefined
+): number | null {
+  if (v === null || v === undefined) return null;
+  const n = parseFloat(String(v));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** A 0-100 percent column -> [0,1] probability. */
+export function probFromPct(
+  v: string | number | null | undefined
+): number | null {
+  const n = parseNumOrNull(v);
+  return n === null ? null : n / 100;
+}
+
+/** A 0-1 unit column -> [0,1] probability (identity parse, named for intent). */
+export function probFromUnit(
+  v: string | number | null | undefined
+): number | null {
+  return parseNumOrNull(v);
+}
+
+export function brierScore(
+  p: number | null,
   outcome: 0 | 1 | null
 ): number | null {
-  if (modelProbPct === null || modelProbPct === undefined) return null;
+  if (p === null) return null;
   if (outcome === null) return null;
-  const p = parseFloat(String(modelProbPct)) / 100;
   if (isNaN(p) || p < 0 || p > 1) return null;
   const bs = Math.pow(p - outcome, 2);
   // Round to 6 decimal places (matches precision: 7, scale: 6 in schema)
@@ -179,7 +226,7 @@ function brierScore(
  * @param outcome     Parsed outcome from MLB Stats API
  * @returns Object with all 5 Brier scores (null if inputs unavailable)
  */
-function computeBrierScores(
+export function computeBrierScores(
   game: {
     bookTotal: string | null | undefined;
     modelOverRate: string | null | undefined;
@@ -210,7 +257,7 @@ function computeBrierScores(
     if (fgTotal !== bookTotalNum) {
       // Not a push — compute Brier
       const outcomeOver: 0 | 1 = fgTotal > bookTotalNum ? 1 : 0;
-      brierFgTotal = brierScore(game.modelOverRate, outcomeOver);
+      brierFgTotal = brierScore(probFromPct(game.modelOverRate), outcomeOver);
     }
     // Push → brierFgTotal stays null
   }
@@ -225,7 +272,7 @@ function computeBrierScores(
   if (f5TotalActual !== null && bookF5TotalNum !== null && bookF5TotalNum > 0) {
     if (f5TotalActual !== bookF5TotalNum) {
       const outcomeF5Over: 0 | 1 = f5TotalActual > bookF5TotalNum ? 1 : 0;
-      brierF5Total = brierScore(game.modelF5OverRate, outcomeF5Over);
+      brierF5Total = brierScore(probFromUnit(game.modelF5OverRate), outcomeF5Over);
     }
     // Push → brierF5Total stays null
   }
@@ -233,7 +280,7 @@ function computeBrierScores(
   // ── NRFI ──────────────────────────────────────────────────────────────────
   let brierNrfi: number | null = null;
   if (outcome.nrfiBinary !== null) {
-    brierNrfi = brierScore(game.modelPNrfi, outcome.nrfiBinary as 0 | 1);
+    brierNrfi = brierScore(probFromUnit(game.modelPNrfi), outcome.nrfiBinary as 0 | 1);
   }
 
   // ── FG ML ─────────────────────────────────────────────────────────────────
@@ -243,7 +290,7 @@ function computeBrierScores(
       // No tie in MLB (extra innings always produce a winner)
       const outcomeHomeWin: 0 | 1 =
         outcome.homeFgRuns > outcome.awayFgRuns ? 1 : 0;
-      brierFgMl = brierScore(game.modelHomeWinPct, outcomeHomeWin);
+      brierFgMl = brierScore(probFromPct(game.modelHomeWinPct), outcomeHomeWin);
     }
     // Tie (shouldn't happen in MLB but guard anyway) → brierFgMl stays null
   }
@@ -254,7 +301,7 @@ function computeBrierScores(
     if (outcome.awayF5Runs !== outcome.homeF5Runs) {
       const outcomeF5HomeWin: 0 | 1 =
         outcome.homeF5Runs > outcome.awayF5Runs ? 1 : 0;
-      brierF5Ml = brierScore(game.modelF5HomeWinPct, outcomeF5HomeWin);
+      brierF5Ml = brierScore(probFromPct(game.modelF5HomeWinPct), outcomeF5HomeWin);
     }
     // F5 tie (common) → brierF5Ml stays null
   }
