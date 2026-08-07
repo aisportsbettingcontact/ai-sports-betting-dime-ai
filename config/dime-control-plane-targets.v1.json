@@ -9,9 +9,9 @@
   },
   "github": {
     "host": "github.com",
-    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "repository": "tailered-ai/dime-ai",
     "defaultBranch": "main",
-    "originUrl": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai.git"
+    "originUrl": "https://github.com/tailered-ai/dime-ai.git"
   },
   "railway": {
     "workspace": {
@@ -30,13 +30,13 @@
       "application": {
         "id": "a46ea921-5c5d-4225-9254-92f742e95b51",
         "name": "ai-sports-betting-dime-ai",
-        "expectedRepository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+        "expectedRepository": "tailered-ai/dime-ai",
         "healthUrl": "https://aisportsbettingmodels.com/health"
       },
       "backend": {
         "id": "3528dc9f-a63b-45e9-94bb-6d1df25d6f3a",
         "name": "ai-sports-betting-backend",
-        "expectedRepository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+        "expectedRepository": "tailered-ai/dime-ai",
         "healthUrl": "https://ai-sports-betting-backend-production.up.railway.app/health"
       },
       "database": {

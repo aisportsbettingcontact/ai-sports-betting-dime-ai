@@ -73,17 +73,17 @@ Advisory (never in the required list until graduated per ROLLOUT.md):
 
 ```bash
 # Read current ruleset, edit required_status_checks in place:
-gh api repos/aisportsbettingcontact/ai-sports-betting-dime-ai/rulesets/18701573 > ruleset.json
+gh api repos/tailered-ai/dime-ai/rulesets/18701573 > ruleset.json
 # (edit: append the new contexts to rules[type=required_status_checks].parameters.required_status_checks
 #  with integration_id pinned to GitHub Actions app id 15368 — binds check identity
 #  to the Actions app so a same-named check from another app can't satisfy it)
-gh api -X PUT repos/aisportsbettingcontact/ai-sports-betting-dime-ai/rulesets/18701573 --input ruleset.json
+gh api -X PUT repos/tailered-ai/dime-ai/rulesets/18701573 --input ruleset.json
 ```
 
 Classic protection mirror (strict=true stays):
 
 ```bash
-gh api -X PATCH repos/aisportsbettingcontact/ai-sports-betting-dime-ai/branches/main/protection/required_status_checks \
+gh api -X PATCH repos/tailered-ai/dime-ai/branches/main/protection/required_status_checks \
   -f strict=true \
   $(printf -- '-f contexts[]=%q ' "Security Audit" "TypeScript Check" "Vitest" "Secret Scan (gitleaks)" \
     01-pr-proof-contract 02-codeql 03-semgrep-blocking 05-workflow-security 06-dependency-review \
