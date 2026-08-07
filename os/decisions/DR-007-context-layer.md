@@ -1,6 +1,6 @@
 # DR-007 — The Queryable Context Layer (L3): how Dime retrieves company context by goal, owner, and outcome
 
-**Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
+**Status:** RULED — cut upheld 2026-08-07 · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
 **observe_by:** 2026-08-12
 **Doctrine:** D6 §6 — the queryable company / artifact law: seven required artifact properties, semantic connections, preserve reasoning not only conclusions, minimize invisible consequential state, context parity (sufficient, current, goal-retrieved — not maximal) · D12 L3 §8 — queryable context: retrieval by goal/customer/project/owner/time/outcome, never tool-by-tool; the seven questions the layer must answer; 'currency beats completeness — flag staleness' · D12 L2 §8 — artifact system: `INCIDENTS.md` remains the append-only single source of truth, link to it, never move or rewrite it (the index reads it, synthesizes `INC-<n>` rows, and writes nothing back) · D14 §14 — the fifteen-stage sequence: visibility before autonomy, evaluation before scale; stages 5 (create artifacts until the process is legible) and 6 (provide employee-level context; the agent names what is missing) · D15 §15 — failure modes 3 (unqueryable work), 4 (data collection without meaning), 5 (insufficient context), 6 (context overload) · D16 §16 — 'organizational state stays current because it updates continuously'; the moat is cumulative connected artifacts · D4 §4 — one reality: specialized agents share one source of truth and may never maintain incompatible realities (the reason for the vocabulary graft from `shared/loop/queries.ts`) · D5 §5 — 'an action is not an outcome' (the `outcome:` frontmatter field); open loops fail silently (the nightly staleness issue) · §19 — evidence taxonomy (VERIFIED/INFERRED/UNKNOWN, enforced nowhere today per F6.9) and deploy law (merge to main IS a production deploy — the reason the nightly workflow commits nothing)
 
@@ -191,3 +191,21 @@ Concretely, approve: (1) mandatory YAML frontmatter on every `/os/**/*.md` artif
 - Whether `os/INDEX.json` merge conflicts will be tolerable at ~13 merged PRs/day. It is a generated file, so resolution is mechanical (`node scripts/os-index.mjs` and re-commit), but at this throughput it will happen often. Mitigation not yet chosen between: sorting rows by id for minimal diffs, splitting the index per `kind`, or generating it in CI and committing from the PR branch. *Resolves via:* measuring conflict frequency over the first week and picking then — deliberately deferred rather than guessed.
 - Whether the SessionStart hook budget is already spent. Two `SessionStart` hooks exist (`bootstrap-plugins.sh` at 300s, `bootstrap-dime-context.sh` at 45s). A third adds latency to every session start; the index read itself is milliseconds, but the `git log` calls per artifact are not free at scale. UNKNOWN what row count makes it noticeable. *Resolves via:* caching `last_touched` in `os/INDEX.json` at generation time (CI does the `git log` work) so the hook only reads JSON — this is the intended implementation and should be verified under load before the hook is registered.
 
+---
+
+## Ruling — 2026-08-07
+
+**RULED: cut upheld.** the OS Index / L3 retrieval layer is not built and will not be built under this record.
+
+DR-014 Ruling 1 absorbed L3 into DR-006's single artifact envelope. Verified 2026-08-07: nothing was built — no `os/INDEX.json`, no `os-index.mjs`, no `os-context` CI job — so the cut costs nothing to confirm and removes a record that would otherwise read as pending work.
+
+**Recorded by:** the executor, on Prez's 2026-08-07 instruction to proceed with the four cuts
+(DR-007, DR-010, DR-011, DR-013). The decision is Prez's; the rationale above was drafted by the
+executor from DR-014 Ruling 1 and the 2026-08-07 freshness audit, and is recorded here rather than
+left implicit so a future cycle can tell whether the reasoning still applies. **Amend this paragraph
+before merge if it does not match your reasoning** — per `os/decisions/README.md`, a ruling is the
+durable answer to *"why is it like this?"*, and it should be in your words where they differ from
+mine.
+
+This ruling does not reverse anything, so nothing is superseded. Reopening requires a new record
+citing what changed.

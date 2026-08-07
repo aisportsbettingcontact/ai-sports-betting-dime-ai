@@ -71,10 +71,27 @@ target it runs against: `deploy-smoke.yml` points at `https://aisportsbettingmod
 the spoofed request from `cf-connecting-ip` and the injected header was never consulted. A
 live production run on 2026-08-07 showed it passing green (59 → 58) while proving nothing.
 
-It now spoofs **both** identity headers — check *"rate-limit keying resists client-supplied
-identity headers"* — so the assertion covers whichever tier is live: Cloudflare must
-overwrite an inbound `cf-connecting-ip`, **and** Railway must sanitize `x-forwarded-for`. A
-regression in either upstream mints a fresh budget and fails the check.
+It now spoofs both identity headers — check *"rate-limit keying resists client-supplied
+identity headers"* — in **two separate requests**, because they are refused at different
+layers, and conflating them broke the gate once already (see below):
+
+| Spoofed header | Observed on production 2026-08-07 | Assertion |
+| --- | --- | --- |
+| `x-forwarded-for: 203.0.113.250` | `200`, `remaining` 59 → 58 | reaches the origin and must **share** the budget — Railway sanitizes it |
+| `cf-connecting-ip: 203.0.113.251` | **`403`, `server: cloudflare`, no origin hit** | must not mint a fresh budget. Cloudflare *refuses the request outright*, which is the strongest outcome — the spoof never reaches us |
+
+**Tier 1 is therefore not spoofable from outside at all.** That is a stronger guarantee
+than "Cloudflare overwrites the header": the request is rejected at the edge. If CF ever
+stops doing that, the check falls back to asserting a shared budget, and only a *fresh*
+budget fails.
+
+**How this gate broke itself (2026-08-07, worth not repeating).** The first repair sent
+both headers on one request and asserted a RateLimit header must come back. Cloudflare
+403s that request, so no header returns — and the check reported a defect for what was
+actually the edge doing its job. It went red on `main` post-merge. A gate that red-flags
+its own success is worse than no gate; it trains people to ignore it. Verify a gate
+against the real target before shipping it, not only against the invariant you have in
+your head.
 
 **Residual, stated rather than papered over:** this exercises the path through the public
 edge only. The tier-2 (direct-to-origin) path still cannot be asserted from CI, because the

@@ -1,6 +1,6 @@
 # DR-011 — The founder dashboard: a CI-generated artifact with GitHub-native escalation, not a React route
 
-**Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
+**Status:** RULED — cut upheld 2026-08-07 · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
 **observe_by:** 2026-08-12
 **Doctrine:** §13 D13 — Function loops, Founder/company level: state derived from underlying artifacts, never summaries-of-summaries; surfaces contradictions · §13 D13 — Revenue: the dashboard never shows a number without explanation · §6 D6 — The queryable company: artifact law, seven artifact properties, semantic connections, dashboards as structured queryable state, context parity and gap-reporting · §8 D12-L2 — Artifact system: no critical organizational state exists only in memory · §8 D12-L3 — Queryable context: retrieval by goal/owner/outcome; currency beats completeness, flag staleness · §8 D12-L6 — Evaluation: a generated artifact is not success · §8 D12-L7 — Memory: lessons attach to the process, retrieved automatically · §5 D5 — The closed loop: an open loop fails silently when inputs shift; generation is the beginning of execution, never proof of success · §14 D14 — Visibility before autonomy, evaluation before scale (stages 4, 5, 7) · §11 D10 — Token-maxing economics: the six ledger questions · §15 D15 — Failure modes 2 (open-loop automation), 3 (unqueryable work), 9 (generated output mistaken for completion) · §19 — Standing Dime rules: evidence taxonomy, design system (design-system/dime-ai/MASTER.md), deploy law (merge to main IS a production deploy)
 
@@ -152,3 +152,21 @@ Ruling requested on two coupled questions. (1) Do we build the founder dashboard
 - CONSTRAINT TO CONFIRM: the freshness gate as a fifth required check cuts against the current deliberate minimalism of four required checks on main, and it interacts with PR #362's own Wave-1 ruleset changes. Sequencing recommendation is to graduate os-brief-fresh only AFTER #362's Wave 1 has been stable for a week, so a red check is never ambiguous about which framework caused it.
 - PRE-WORK: the working tree does not typecheck (server/_core/aiCostMeter.ts:20 imports aiWorkflowCosts from drizzle/dime.schema, which has no such export). That is the reason panel 8 reads not_measured in v1, and it must be fixed before any spend number in this dashboard can become real.
 
+---
+
+## Ruling — 2026-08-07
+
+**RULED: cut upheld.** the founder dashboard and its GitHub-issue escalation is not built and will not be built under this record.
+
+DR-014 Ruling 1 cut this because it escalates through a channel with zero uses in company history. Verified 2026-08-07: `gh issue list --state all` still returns **0 issues, ever**, now across 444 PRs. The premise did not merely hold — it strengthened.
+
+**Recorded by:** the executor, on Prez's 2026-08-07 instruction to proceed with the four cuts
+(DR-007, DR-010, DR-011, DR-013). The decision is Prez's; the rationale above was drafted by the
+executor from DR-014 Ruling 1 and the 2026-08-07 freshness audit, and is recorded here rather than
+left implicit so a future cycle can tell whether the reasoning still applies. **Amend this paragraph
+before merge if it does not match your reasoning** — per `os/decisions/README.md`, a ruling is the
+durable answer to *"why is it like this?"*, and it should be in your words where they differ from
+mine.
+
+This ruling does not reverse anything, so nothing is superseded. Reopening requires a new record
+citing what changed.
