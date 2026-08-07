@@ -14,11 +14,25 @@
  *         namespace so the two mechanisms never collide during the migration).
  * Shape:  respond 200 immediately, run work in the background under a run-lock.
  *
- * SCOPE (first pass — "critical data-freshness first"):
- *   - POST /api/cron/vsin-odds → runVsinRefresh()      (NBA/NHL/MLB VSiN + AN odds)
- *   - POST /api/cron/scores    → refreshAllScoresNow()  (live score refresh)
- *   - POST /api/cron/mlb-cycle → runMlbCycleOnce()      (MLB lineups/K-props/backtest writes)
- *   - GET  /api/cron/status    → run-lock state for all jobs (observability)
+ * SCOPE — the ACTUAL mounted roster (corrected 2026-08-07, audit CRON-7; the
+ * previous list said "first pass" and named only four of the eight, so a reader
+ * checking whether a job was wired here got the wrong answer for half of them):
+ *   - POST /api/cron/vsin-odds        → runVsinRefresh()      (NBA/NHL/MLB VSiN + AN odds)
+ *   - POST /api/cron/scores           → refreshAllScoresNow() (live score refresh)
+ *   - POST /api/cron/mlb-cycle        → runMlbCycleOnce()     (MLB lineups/K-props/backtest writes)
+ *   - POST /api/cron/bet-grade        → bet auto-grading
+ *   - POST /api/cron/bet-grade-sweep  → nightly bet-grade sweep
+ *   - POST /api/cron/mlb-asg          → All-Star Game sync (hand-rolled, not mountJob)
+ *   - POST /api/cron/stripe-reconcile → Stripe↔DB reconciliation (hand-rolled)
+ *   - GET  /api/cron/status           → run-lock state for all jobs (observability)
+ *
+ * STILL NOT MOUNTED (audit M-208, CRON-2/3): outcome ingestion, closing-line
+ * capture and the backtest driver have no cron entry point, so they remain
+ * dependent on the in-process scheduler. captureClosingLines() exists at
+ * server/mlbScheduleHistoryService.ts and is reachable only from
+ * mlbScheduleHistoryScheduler.ts. Wiring them adds new authenticated public
+ * HTTP surface and is deliberately left to its own reviewed change rather than
+ * folded into a correctness PR.
  *
  * DELIBERATELY NOT wired here: MLB model sync. runMlbModelForDate() spawns
  * /usr/bin/python3 (400k Monte-Carlo sims) which fails on Railway with

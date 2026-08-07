@@ -757,6 +757,23 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 .projection-card--pass { --text-secondary: var(--foreground); --text-muted: var(--foreground); }
 .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
 
+/* ── --nomodel: no published model output ─────────────────────────────────────
+   A THIRD state, deliberately not folded into PASS. PASS asserts the model
+   priced the markets and found nothing; --nomodel means it priced nothing.
+   Same split the owner drew for --unplayable (pages/ai-model-projections.md,
+   2026-08-06: "They look similar and they mean opposite things, so they get
+   separate modifiers"). It mirrors PASS's neutralizing values EXACTLY.
+
+   Written as its own rule block rather than folded into the PASS selector
+   lists on purpose: ProjectionCard.test.ts guards the page law by matching
+   `.projection-card--pass { opacity: 0.82; }` as literal text, and a new
+   state must not dilute an existing law guard to make room for itself.
+   Zero mint is structural here — a card with no model has no edges to tint. */
+.projection-card--nomodel { opacity: 0.82; }
+.projection-card--compact.projection-card--nomodel { opacity: 0.72; }
+.projection-card--nomodel { --text-secondary: var(--foreground); --text-muted: var(--foreground); }
+.projection-card--nomodel .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
+
   /* Defensive PASS backstop (Round 4, from the W1 review — plan:
      docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, item 3):
      zero mint is already structurally guaranteed —
