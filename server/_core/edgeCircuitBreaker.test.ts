@@ -262,11 +262,15 @@ describe("edgeCircuitBreaker — partial bypass is detected, never self-healed",
       s = r.state;
       alerts += r.events.filter(e => e === "partial_bypass_suspected").length;
     }
-    console.log(`[STATE] baseline 449v/5u — alerts=${alerts} tripped=${s.tripped}`);
+    console.log(
+      `[STATE] baseline 449v/5u — alerts=${alerts} tripped=${s.tripped}`
+    );
     expect(alerts).toBe(0);
     expect(s.tripped).toBe(false);
     expect(isEnforcing(s)).toBe(true);
-    console.log("[VERIFY] PASS — healthy production traffic neither trips nor alerts");
+    console.log(
+      "[VERIFY] PASS — healthy production traffic neither trips nor alerts"
+    );
   });
 
   it("ALERTS on sustained partial bypass — and leaves enforcement ON", () => {
@@ -284,7 +288,9 @@ describe("edgeCircuitBreaker — partial bypass is detected, never self-healed",
     // The whole point: detection did NOT drop the lock.
     expect(s.tripped).toBe(false);
     expect(isEnforcing(s)).toBe(true);
-    console.log("[VERIFY] PASS — alerted, and the origin lock is still enforcing");
+    console.log(
+      "[VERIFY] PASS — alerted, and the origin lock is still enforcing"
+    );
   });
 
   it("fires the suspicion ONCE per streak, not once per window", () => {
@@ -295,18 +301,25 @@ describe("edgeCircuitBreaker — partial bypass is detected, never self-healed",
       s = r.state;
       fired += r.events.filter(e => e === "partial_bypass_suspected").length;
     }
-    console.log(`[STATE] suspicion events across 6 sustained windows: ${fired}`);
+    console.log(
+      `[STATE] suspicion events across 6 sustained windows: ${fired}`
+    );
     expect(fired).toBe(1);
-    console.log("[VERIFY] PASS — one-shot latch holds; no per-window alert flood");
+    console.log(
+      "[VERIFY] PASS — one-shot latch holds; no per-window alert flood"
+    );
   });
 
   it("clears when the unverified share returns to normal", () => {
     let s = initialBreakerState(0);
-    for (let w = 0; w < 3; w++) s = batch(s, window(3, 17), 1000 * (w + 1), BYPASS_CFG).state;
+    for (let w = 0; w < 3; w++)
+      s = batch(s, window(3, 17), 1000 * (w + 1), BYPASS_CFG).state;
     expect(s.bypassAlerted).toBe(true);
     const r = batch(s, window(19, 1), 4000, BYPASS_CFG);
     const r2 = batch(r.state, window(19, 1), 5000, BYPASS_CFG);
-    console.log(`[STATE] clear events=${JSON.stringify([...r.events, ...r2.events].filter(Boolean))}`);
+    console.log(
+      `[STATE] clear events=${JSON.stringify([...r.events, ...r2.events].filter(Boolean))}`
+    );
     expect([...r.events, ...r2.events]).toContain("partial_bypass_cleared");
     console.log("[VERIFY] PASS — signal clears once healthy ingress resumes");
   });

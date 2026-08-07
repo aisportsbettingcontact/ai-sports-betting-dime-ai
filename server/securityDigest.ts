@@ -277,19 +277,23 @@ const DEFAULT_KNOWN_AUTOMATION_IPS: readonly AllowlistEntry[] = [
   },
   {
     value: "40.81.6.244",
-    label: "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
+    label:
+      "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
   },
   {
     value: "172.182.201.162",
-    label: "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
+    label:
+      "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
   },
   {
     value: "48.217.34.226",
-    label: "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
+    label:
+      "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
   },
   {
     value: "20.49.13.182",
-    label: "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
+    label:
+      "Azure/GitHub Actions runner, witnessed 2026-08-06 — exact IP, not a range (see A2 note)",
   },
 ];
 
@@ -306,7 +310,10 @@ export function getOwnerConfiguredAllowlist(
     .split(",")
     .map(s => s.trim())
     .filter(Boolean)
-    .map(value => ({ value, label: "owner-configured (SECURITY_DIGEST_ALLOWLIST_IPS)" }));
+    .map(value => ({
+      value,
+      label: "owner-configured (SECURITY_DIGEST_ALLOWLIST_IPS)",
+    }));
 }
 
 function ipv4ToInt(ip: string): number | null {
@@ -335,7 +342,13 @@ function ipv4InCidr(ip: string, cidr: string): boolean {
   const bits = Number(bitsStr);
   const ipN = ipv4ToInt(ip);
   const netN = ipv4ToInt(net);
-  if (ipN === null || netN === null || Number.isNaN(bits) || bits < 0 || bits > 32) {
+  if (
+    ipN === null ||
+    netN === null ||
+    Number.isNaN(bits) ||
+    bits < 0 ||
+    bits > 32
+  ) {
     return false;
   }
   if (bits === 0) return true;
@@ -477,8 +490,14 @@ export function classifyIp(
 ): AllowlistMatch {
   if (!ip) return { matched: false, source: null, label: null };
 
-  const contextPermanentlyExcluded = Boolean(context && UNVETTED_IP_RATE_LIMIT_CONTEXTS.has(context));
-  if (CF_RANGE_ALLOWLIST_ENABLED && !contextPermanentlyExcluded && isCloudflareEdgeIp(ip)) {
+  const contextPermanentlyExcluded = Boolean(
+    context && UNVETTED_IP_RATE_LIMIT_CONTEXTS.has(context)
+  );
+  if (
+    CF_RANGE_ALLOWLIST_ENABLED &&
+    !contextPermanentlyExcluded &&
+    isCloudflareEdgeIp(ip)
+  ) {
     return {
       matched: true,
       source: "cloudflare_edge",
@@ -505,23 +524,39 @@ export function classifyIp(
  * ("expected automation" — reported separately, excluded from the threat
  * level).
  */
-export function splitEventsByAllowlist<T extends { ip: string | null; context?: string | null }>(
+export function splitEventsByAllowlist<
+  T extends { ip: string | null; context?: string | null },
+>(
   events: T[],
   extraAllowlist?: AllowlistEntry[]
 ): {
   flagged: T[];
-  allowlisted: Array<T & { allowlistSource: "cloudflare_edge" | "known_automation"; allowlistLabel: string }>;
+  allowlisted: Array<
+    T & {
+      allowlistSource: "cloudflare_edge" | "known_automation";
+      allowlistLabel: string;
+    }
+  >;
 } {
   // Resolve the owner-configured allowlist ONCE (not per-event) — same
   // result either way, but avoids re-reading/re-parsing an env var up to
   // RAW_EVENT_FETCH_LIMIT times per digest run.
   const resolvedExtra = extraAllowlist ?? getOwnerConfiguredAllowlist();
   const flagged: T[] = [];
-  const allowlisted: Array<T & { allowlistSource: "cloudflare_edge" | "known_automation"; allowlistLabel: string }> = [];
+  const allowlisted: Array<
+    T & {
+      allowlistSource: "cloudflare_edge" | "known_automation";
+      allowlistLabel: string;
+    }
+  > = [];
   for (const e of events) {
     const match = classifyIp(e.ip, resolvedExtra, e.context ?? null);
     if (match.matched && match.source) {
-      allowlisted.push({ ...e, allowlistSource: match.source, allowlistLabel: match.label ?? "" });
+      allowlisted.push({
+        ...e,
+        allowlistSource: match.source,
+        allowlistLabel: match.label ?? "",
+      });
     } else {
       flagged.push(e);
     }
@@ -542,9 +577,13 @@ export function splitEventsByAllowlist<T extends { ip: string | null; context?: 
  * getSecurityEventCountsByBucket(), which already excludes marker rows at
  * the SQL layer.
  */
-export function filterDigestMarkers<T extends { eventType: string }>(events: T[]): T[] {
+export function filterDigestMarkers<T extends { eventType: string }>(
+  events: T[]
+): T[] {
   return events.filter(
-    e => e.eventType !== DIGEST_MARKER_DAILY_EVENT_TYPE && e.eventType !== DIGEST_MARKER_WEEKLY_EVENT_TYPE
+    e =>
+      e.eventType !== DIGEST_MARKER_DAILY_EVENT_TYPE &&
+      e.eventType !== DIGEST_MARKER_WEEKLY_EVENT_TYPE
   );
 }
 
@@ -563,7 +602,10 @@ function sumByEventType(buckets: BucketCount[], eventType: string): number {
 }
 
 /** Renders the per-context breakdown for one eventType, sorted by volume. */
-function formatBucketBreakdown(buckets: BucketCount[], eventType: string): string {
+function formatBucketBreakdown(
+  buckets: BucketCount[],
+  eventType: string
+): string {
   const rows = buckets
     .filter(b => b.eventType === eventType)
     .sort((a, b) => b.count - a.count);
@@ -579,11 +621,19 @@ export interface DigestComputation {
   bucketCounts: BucketCount[];
   /** Accurate (unlimited, SQL-aggregated) total across all buckets. */
   totalAll: number;
-  eventTypeTotals: { CSRF_BLOCK: number; RATE_LIMIT: number; AUTH_FAIL: number };
+  eventTypeTotals: {
+    CSRF_BLOCK: number;
+    RATE_LIMIT: number;
+    AUTH_FAIL: number;
+  };
   /** Non-allowlisted events from the raw sample — ranked for "Top IPs". */
   flagged: Array<{ ip: string | null }>;
   /** Allowlisted events from the raw sample — "expected automation". */
-  allowlisted: Array<{ ip: string | null; allowlistSource: "cloudflare_edge" | "known_automation"; allowlistLabel: string }>;
+  allowlisted: Array<{
+    ip: string | null;
+    allowlistSource: "cloudflare_edge" | "known_automation";
+    allowlistLabel: string;
+  }>;
   /** totalAll minus the allowlisted count observed in the raw sample, floored at 0. */
   threatTotal: number;
   threatLevel: ThreatLevel;
@@ -626,7 +676,10 @@ export function computeDigestData(
     AUTH_FAIL: sumByEventType(bucketCounts, "AUTH_FAIL"),
   };
 
-  const { flagged, allowlisted } = splitEventsByAllowlist(rawEvents, opts?.extraAllowlist);
+  const { flagged, allowlisted } = splitEventsByAllowlist(
+    rawEvents,
+    opts?.extraAllowlist
+  );
   const threatTotal = Math.max(0, totalAll - allowlisted.length);
   const threatLevel = computeThreatLevel(threatTotal);
   const topIps = topIpsByCount(flagged, TOP_IP_LIMIT);
@@ -651,7 +704,10 @@ function summarizeAllowlistedBySource(
 ): Array<{ source: string; count: number }> {
   const map = new Map<string, number>();
   for (const e of allowlisted) {
-    const key = e.allowlistSource === "cloudflare_edge" ? "Cloudflare edge" : "Known automation (CI/owner)";
+    const key =
+      e.allowlistSource === "cloudflare_edge"
+        ? "Cloudflare edge"
+        : "Known automation (CI/owner)";
     map.set(key, (map.get(key) ?? 0) + 1);
   }
   return Array.from(map.entries())
@@ -679,7 +735,10 @@ const DIGEST_MARKER_FAILURE_SEP = "|discord_failed:";
 
 // Exported so weeklySecurityDigest.ts's own marker (separate eventType, same
 // encoding scheme) can reuse this instead of re-implementing it.
-export function encodeDigestMarkerContext(dateStr: string, failureReason: string | null): string {
+export function encodeDigestMarkerContext(
+  dateStr: string,
+  failureReason: string | null
+): string {
   if (!failureReason) return dateStr;
   // Keep it short and single-line — this still rides the same text column
   // as everything else, and needs to render cleanly inside a Discord embed
@@ -694,7 +753,10 @@ export function decodeDigestMarkerContext(
   if (!context) return null;
   const idx = context.indexOf(DIGEST_MARKER_FAILURE_SEP);
   if (idx === -1) return { date: context, failureReason: null };
-  return { date: context.slice(0, idx), failureReason: context.slice(idx + DIGEST_MARKER_FAILURE_SEP.length) };
+  return {
+    date: context.slice(0, idx),
+    failureReason: context.slice(idx + DIGEST_MARKER_FAILURE_SEP.length),
+  };
 }
 
 /**
@@ -726,7 +788,10 @@ export function decodeDigestMarkerContext(
  * which assert this call happens after notifyOwner/channel.send and fail
  * if that ordering regresses.
  */
-async function persistDigestMarker(dateStr: string, failureReason: string | null = null): Promise<void> {
+async function persistDigestMarker(
+  dateStr: string,
+  failureReason: string | null = null
+): Promise<void> {
   await insertSecurityEvent({
     eventType: DIGEST_MARKER_DAILY_EVENT_TYPE,
     ip: "system",
@@ -765,7 +830,10 @@ export async function loadLastDigestDate(): Promise<string | null> {
  * null on no marker / no recorded failure / a failed read (best-effort,
  * same philosophy as loadLastDigestDate()).
  */
-export async function loadLastDigestDeliveryFailure(): Promise<{ date: string; reason: string } | null> {
+export async function loadLastDigestDeliveryFailure(): Promise<{
+  date: string;
+  reason: string;
+} | null> {
   const rows = await getSecurityEvents({
     eventType: DIGEST_MARKER_DAILY_EVENT_TYPE,
     limit: 1,
@@ -814,7 +882,10 @@ function buildDigestEmbed(
       ? "0 — No cross-site request attempts detected."
       : `${data.eventTypeTotals.CSRF_BLOCK} — Someone tried to make requests to the site from an unauthorized external website. Each block means the attack was stopped before it could do anything.`;
 
-  const rateLimitBreakdown = formatBucketBreakdown(data.bucketCounts, "RATE_LIMIT");
+  const rateLimitBreakdown = formatBucketBreakdown(
+    data.bucketCounts,
+    "RATE_LIMIT"
+  );
   const rateLimitDesc =
     data.eventTypeTotals.RATE_LIMIT === 0
       ? "0 — No rate limit triggers."
@@ -840,8 +911,9 @@ function buildDigestEmbed(
   const allowlistSummary = summarizeAllowlistedBySource(data.allowlisted);
   const allowlistValue =
     allowlistSummary.length > 0
-      ? allowlistSummary.map(({ source, count }) => `• **${source}**: ${count}`).join("\n") +
-        `\n_Excluded from the threat level above._`
+      ? allowlistSummary
+          .map(({ source, count }) => `• **${source}**: ${count}`)
+          .join("\n") + `\n_Excluded from the threat level above._`
       : "_None detected in the sampled window._";
 
   const windowValue =
@@ -851,7 +923,7 @@ function buildDigestEmbed(
     `${RATE_LIMIT_DEDUP_WINDOW_SEC}s, so this is a lower bound, not a request volume.` +
     (data.sampleCapped
       ? ` The allowlist split hit its ${RAW_EVENT_FETCH_LIMIT}-event sample cap — see the digest's own report for what that means for the threat total._`
-      : "_") ;
+      : "_");
 
   // Critical 2 (2026-08-07 review): a one-time-per-occurrence note carried
   // forward from a previous run whose Discord post failed (see
@@ -984,7 +1056,9 @@ async function postDigestToDiscord(
 ): Promise<DigestDeliveryResult> {
   const client = getDiscordClient();
   if (!client) {
-    console.log(`${TAG} [Discord] Bot client not available — skipping Discord digest embed`);
+    console.log(
+      `${TAG} [Discord] Bot client not available — skipping Discord digest embed`
+    );
     return { status: "skipped_not_configured" };
   }
   if (!client.isReady()) {
@@ -995,7 +1069,9 @@ async function postDigestToDiscord(
     return { status: "failed", reason: "Discord bot not ready" };
   }
 
-  console.log(`${TAG} [Discord] Fetching security channel ${SECURITY_CHANNEL_ID}...`);
+  console.log(
+    `${TAG} [Discord] Fetching security channel ${SECURITY_CHANNEL_ID}...`
+  );
   let channel: TextChannel;
   try {
     const raw = await client.channels.fetch(SECURITY_CHANNEL_ID);
@@ -1003,17 +1079,29 @@ async function postDigestToDiscord(
       console.error(
         `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`
       );
-      return { status: "failed", reason: `Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched` };
+      return {
+        status: "failed",
+        reason: `Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`,
+      };
     }
     channel = raw;
-    console.log(`${TAG} [Discord] Channel resolved: #${logSafe(channel.name)} in ${logSafe(channel.guild?.name ?? "unknown")}`);
+    console.log(
+      `${TAG} [Discord] Channel resolved: #${logSafe(channel.name)} in ${logSafe(channel.guild?.name ?? "unknown")}`
+    );
   } catch (err: unknown) {
     const msg = logSafe(err);
-    console.error(`${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Failed to fetch channel: ${msg}`);
+    console.error(
+      `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Failed to fetch channel: ${msg}`
+    );
     return { status: "failed", reason: `Channel fetch threw: ${msg}` };
   }
 
-  const embed = buildDigestEmbed(data, windowStartMs, windowEndMs, previousDeliveryFailure);
+  const embed = buildDigestEmbed(
+    data,
+    windowStartMs,
+    windowEndMs,
+    previousDeliveryFailure
+  );
 
   let lastErrMsg = "";
   const MAX_SEND_ATTEMPTS = 2;
@@ -1022,7 +1110,9 @@ async function postDigestToDiscord(
       await channel.send({ embeds: [embed] });
       console.log(
         `${TAG} [Discord] [OUTPUT] Daily digest embed posted successfully` +
-          (attempt > 1 ? ` (attempt ${attempt}/${MAX_SEND_ATTEMPTS}, after retry)` : "") +
+          (attempt > 1
+            ? ` (attempt ${attempt}/${MAX_SEND_ATTEMPTS}, after retry)`
+            : "") +
           ` | channel=#${logSafe(channel.name)}` +
           ` | threatLevel=${data.threatLevel}` +
           ` | threatTotal=${data.threatTotal}` +
@@ -1031,14 +1121,19 @@ async function postDigestToDiscord(
       return { status: "sent" };
     } catch (err: unknown) {
       lastErrMsg = logSafe(err);
-      console.error(`${TAG} [Discord] Attempt ${attempt}/${MAX_SEND_ATTEMPTS} failed to send digest embed: ${lastErrMsg}`);
+      console.error(
+        `${TAG} [Discord] Attempt ${attempt}/${MAX_SEND_ATTEMPTS} failed to send digest embed: ${lastErrMsg}`
+      );
     }
   }
   console.error(
     `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord post failed after ${MAX_SEND_ATTEMPTS} attempts — reason="${lastErrMsg}". ` +
       `This is a total zero-notification day; carried forward as a note on the next successfully-delivered digest.`
   );
-  return { status: "failed", reason: `channel.send() failed ${MAX_SEND_ATTEMPTS}x: ${lastErrMsg}` };
+  return {
+    status: "failed",
+    reason: `channel.send() failed ${MAX_SEND_ATTEMPTS}x: ${lastErrMsg}`,
+  };
 }
 
 // ─── notifyOwner content builder ──────────────────────────────────────────────
@@ -1062,10 +1157,15 @@ function buildNotifyOwnerContent(
   const allowlistSummary = summarizeAllowlistedBySource(data.allowlisted);
   const allowlistLines =
     allowlistSummary.length > 0
-      ? allowlistSummary.map(({ source, count }) => `  ${source}: ${count}`).join("\n")
+      ? allowlistSummary
+          .map(({ source, count }) => `  ${source}: ${count}`)
+          .join("\n")
       : "  None detected in the sampled window.";
 
-  const rateLimitBreakdown = formatBucketBreakdown(data.bucketCounts, "RATE_LIMIT");
+  const rateLimitBreakdown = formatBucketBreakdown(
+    data.bucketCounts,
+    "RATE_LIMIT"
+  );
 
   return [
     `Daily Security Digest — ${dateLabel}`,
@@ -1097,7 +1197,9 @@ function buildNotifyOwnerContent(
 
 async function runSecurityDigest(): Promise<void> {
   if (digestRunning) {
-    console.warn(`${TAG} [SKIP] Previous digest still running — skipping this tick`);
+    console.warn(
+      `${TAG} [SKIP] Previous digest still running — skipping this tick`
+    );
     return;
   }
   digestRunning = true;
@@ -1110,14 +1212,23 @@ async function runSecurityDigest(): Promise<void> {
 
   try {
     // ── Step 1: Accurate (eventType, context) bucket counts ────────────────
-    console.log(`${TAG} [STEP] Querying (eventType, context) bucket counts for the last 24 hours...`);
+    console.log(
+      `${TAG} [STEP] Querying (eventType, context) bucket counts for the last 24 hours...`
+    );
     const bucketCounts = await getSecurityEventCountsByBucket(windowStart);
-    console.log(`${TAG} [STATE] Buckets | ${bucketCounts.map(b => `${logSafe(b.eventType)}/${logSafe(b.context ?? "-")}(${b.count})`).join(", ") || "none"}`);
+    console.log(
+      `${TAG} [STATE] Buckets | ${bucketCounts.map(b => `${logSafe(b.eventType)}/${logSafe(b.context ?? "-")}(${b.count})`).join(", ") || "none"}`
+    );
 
     // ── Step 2: Raw event sample for IP classification + top IPs ───────────
-    console.log(`${TAG} [STEP] Fetching raw events for allowlist classification + top-IP analysis (limit=${RAW_EVENT_FETCH_LIMIT})...`);
+    console.log(
+      `${TAG} [STEP] Fetching raw events for allowlist classification + top-IP analysis (limit=${RAW_EVENT_FETCH_LIMIT})...`
+    );
     const rawEvents = filterDigestMarkers(
-      await getSecurityEvents({ sinceMs: windowStart, limit: RAW_EVENT_FETCH_LIMIT })
+      await getSecurityEvents({
+        sinceMs: windowStart,
+        limit: RAW_EVENT_FETCH_LIMIT,
+      })
     );
 
     // ── Step 3: Compute the digest (bucketing, allowlist split, threat level) ─
@@ -1128,9 +1239,13 @@ async function runSecurityDigest(): Promise<void> {
     );
     console.log(
       `${TAG} [STATE] Top unclassified IPs by event count | ` +
-        (data.topIps.length > 0 ? data.topIps.map(({ ip, count }) => `${ip}(${count})`).join(", ") : "none")
+        (data.topIps.length > 0
+          ? data.topIps.map(({ ip, count }) => `${ip}(${count})`).join(", ")
+          : "none")
     );
-    console.log(`${TAG} [STATE] Threat level: ${data.threatLevel} | threatTotal=${data.threatTotal} in last 24h (deduped sample)`);
+    console.log(
+      `${TAG} [STATE] Threat level: ${data.threatLevel} | threatTotal=${data.threatTotal} in last 24h (deduped sample)`
+    );
 
     // ── Step 4: Build + fire notifyOwner ────────────────────────────────────
     const dateLabel = new Date().toLocaleDateString("en-US", {
@@ -1140,7 +1255,12 @@ async function runSecurityDigest(): Promise<void> {
       month: "long",
       day: "numeric",
     });
-    const content = buildNotifyOwnerContent(data, dateLabel, windowStartISO, windowEndISO);
+    const content = buildNotifyOwnerContent(
+      data,
+      dateLabel,
+      windowStartISO,
+      windowEndISO
+    );
 
     console.log(`${TAG} [STEP] Firing notifyOwner (in-app notification)...`);
     const notified = await notifyOwner({
@@ -1151,7 +1271,9 @@ async function runSecurityDigest(): Promise<void> {
       return false;
     });
     if (notified) {
-      console.log(`${TAG} [OUTPUT] In-app notification sent | threat=${data.threatLevel} threatTotal=${data.threatTotal}`);
+      console.log(
+        `${TAG} [OUTPUT] In-app notification sent | threat=${data.threatLevel} threatTotal=${data.threatTotal}`
+      );
     } else {
       // notifyOwner() is a PERMANENT no-op (server/_core/notification.ts's
       // own docblock) — it always returns false. Escalating a guaranteed
@@ -1162,39 +1284,58 @@ async function runSecurityDigest(): Promise<void> {
       // escalatable. The one thing worth telling a human is static and
       // already true on every run — it lives as one line in the embed's
       // footer (buildDigestEmbed) instead of a repeating alert.
-      console.log(`${TAG} [INFO] notifyOwner did not deliver (in-app channel is a documented permanent no-op) — not escalating, see Critical 2 note above persistDigestMarker()`);
+      console.log(
+        `${TAG} [INFO] notifyOwner did not deliver (in-app channel is a documented permanent no-op) — not escalating, see Critical 2 note above persistDigestMarker()`
+      );
     }
 
     // ── Step 5: Post Discord digest embed ───────────────────────────────────
     // Load any undelivered PREVIOUS run's failure before building/posting
     // this run's embed, so it can carry the notice forward (see
     // postDigestToDiscord()'s own comment for the full Critical 2 design).
-    const previousFailure = await loadLastDigestDeliveryFailure().catch((err: unknown) => {
-      console.error(
-        `${TAG} [WARN] Failed to read previous delivery-failure marker (best-effort, proceeding without a carry-forward note): ${logSafe(err)}`
-      );
-      return null;
-    });
+    const previousFailure = await loadLastDigestDeliveryFailure().catch(
+      (err: unknown) => {
+        console.error(
+          `${TAG} [WARN] Failed to read previous delivery-failure marker (best-effort, proceeding without a carry-forward note): ${logSafe(err)}`
+        );
+        return null;
+      }
+    );
     if (previousFailure) {
       console.warn(
         `${TAG} [STATE] Previous digest (${previousFailure.date}) failed to deliver to Discord — carrying a notice into today's embed | reason="${previousFailure.reason}"`
       );
     }
 
-    console.log(`${TAG} [STEP] Posting daily digest embed to Discord security channel...`);
-    const deliveryResult: DigestDeliveryResult = await postDigestToDiscord(data, windowStart, runStart, previousFailure).catch(
-      (err: unknown) => {
-        const msg = logSafe(err);
-        console.error(`${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord digest post threw unexpectedly: ${msg}`);
-        return { status: "failed", reason: `threw unexpectedly: ${msg}` } as const;
-      }
+    console.log(
+      `${TAG} [STEP] Posting daily digest embed to Discord security channel...`
     );
-    const deliveryFailureReason = deliveryResult.status === "failed" ? deliveryResult.reason : null;
+    const deliveryResult: DigestDeliveryResult = await postDigestToDiscord(
+      data,
+      windowStart,
+      runStart,
+      previousFailure
+    ).catch((err: unknown) => {
+      const msg = logSafe(err);
+      console.error(
+        `${TAG} [CRITICAL] [DIGEST_DELIVERY_FAILED] Discord digest post threw unexpectedly: ${msg}`
+      );
+      return {
+        status: "failed",
+        reason: `threw unexpectedly: ${msg}`,
+      } as const;
+    });
+    const deliveryFailureReason =
+      deliveryResult.status === "failed" ? deliveryResult.reason : null;
 
     // ── Step 6: Prune old events ─────────────────────────────────────────────
-    console.log(`${TAG} [STEP] Pruning events older than ${PRUNE_RETENTION_DAYS} days...`);
+    console.log(
+      `${TAG} [STEP] Pruning events older than ${PRUNE_RETENTION_DAYS} days...`
+    );
     const pruned = await pruneSecurityEvents(PRUNE_RETENTION_DAYS);
-    console.log(`${TAG} [OUTPUT] Pruned ${pruned} old event${pruned !== 1 ? "s" : ""} from security_events table`);
+    console.log(
+      `${TAG} [OUTPUT] Pruned ${pruned} old event${pruned !== 1 ? "s" : ""} from security_events table`
+    );
 
     // ── Step 7: Mark digest complete (in-memory + persisted marker) ─────────
     // Deliberately LAST — see persistDigestMarker()'s own comment for the
@@ -1202,11 +1343,13 @@ async function runSecurityDigest(): Promise<void> {
     // review). This call must stay the final step of the try block.
     const todayStr = new Date().toISOString().slice(0, 10);
     lastDigestDateUTC = todayStr;
-    await persistDigestMarker(todayStr, deliveryFailureReason).catch((err: unknown) => {
-      console.error(
-        `${TAG} [ERROR] Failed to persist digest marker (in-memory guard still holds for this process): ${logSafe(err)}`
-      );
-    });
+    await persistDigestMarker(todayStr, deliveryFailureReason).catch(
+      (err: unknown) => {
+        console.error(
+          `${TAG} [ERROR] Failed to persist digest marker (in-memory guard still holds for this process): ${logSafe(err)}`
+        );
+      }
+    );
 
     const elapsed = Date.now() - runStart;
     console.log(
@@ -1259,7 +1402,9 @@ async function maybeFireDigest(): Promise<void> {
   });
   if (persistedDate === today) {
     lastDigestDateUTC = today; // resync in-memory cache to the persisted truth
-    console.log(`${TAG} [SKIP] Persisted marker shows today's digest already fired — restart-safe skip (no duplicate)`);
+    console.log(
+      `${TAG} [SKIP] Persisted marker shows today's digest already fired — restart-safe skip (no duplicate)`
+    );
     return;
   }
 
@@ -1327,7 +1472,10 @@ export async function triggerSecurityDigestNow(): Promise<{
 
   const bucketCounts = await getSecurityEventCountsByBucket(windowStart);
   const rawEvents = filterDigestMarkers(
-    await getSecurityEvents({ sinceMs: windowStart, limit: RAW_EVENT_FETCH_LIMIT })
+    await getSecurityEvents({
+      sinceMs: windowStart,
+      limit: RAW_EVENT_FETCH_LIMIT,
+    })
   );
   const data = computeDigestData(bucketCounts, rawEvents);
 
@@ -1337,9 +1485,11 @@ export async function triggerSecurityDigestNow(): Promise<{
       ` totalAll=${data.totalAll} threatTotal=${data.threatTotal}`
   );
 
-  await postDigestToDiscord(data, windowStart, runStart).catch((err: unknown) => {
-    console.error(`${TAG} [MANUAL] Discord post failed: ${logSafe(err)}`);
-  });
+  await postDigestToDiscord(data, windowStart, runStart).catch(
+    (err: unknown) => {
+      console.error(`${TAG} [MANUAL] Discord post failed: ${logSafe(err)}`);
+    }
+  );
 
   return {
     threatLevel: data.threatLevel,

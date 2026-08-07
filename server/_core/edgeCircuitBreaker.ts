@@ -264,7 +264,10 @@ export function observe(
     // One-shot latch per streak, and strictly lower priority than a trip so a
     // real outage always reports as the outage.
     let bypassAlerted = s.bypassAlerted;
-    if (!bypassAlerted && consecutiveBypassSuspect >= config.bypassAlertWindows) {
+    if (
+      !bypassAlerted &&
+      consecutiveBypassSuspect >= config.bypassAlertWindows
+    ) {
       bypassAlerted = true;
       if (!event) event = "partial_bypass_suspected";
     } else if (bypassAlerted && consecutiveBypassSuspect === 0) {

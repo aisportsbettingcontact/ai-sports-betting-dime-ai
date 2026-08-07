@@ -34,12 +34,26 @@ vi.mock("./discord/bot", () => ({
 vi.mock("discord.js", () => {
   class MockEmbedBuilder {
     data: { title?: string; description?: string } = {};
-    setColor() { return this; }
-    setTitle(v: string) { this.data.title = v; return this; }
-    setDescription(v: string) { this.data.description = v; return this; }
-    addFields() { return this; }
-    setFooter() { return this; }
-    setTimestamp() { return this; }
+    setColor() {
+      return this;
+    }
+    setTitle(v: string) {
+      this.data.title = v;
+      return this;
+    }
+    setDescription(v: string) {
+      this.data.description = v;
+      return this;
+    }
+    addFields() {
+      return this;
+    }
+    setFooter() {
+      return this;
+    }
+    setTimestamp() {
+      return this;
+    }
   }
   class MockTextChannel {
     name = "security-events";
@@ -55,12 +69,16 @@ import * as discordBot from "./discord/bot";
 import { TextChannel } from "discord.js";
 import { startWeeklySecurityDigestScheduler } from "./weeklySecurityDigest";
 
-const mockGetCountsByBucket = db.getSecurityEventCountsByBucket as ReturnType<typeof vi.fn>;
+const mockGetCountsByBucket = db.getSecurityEventCountsByBucket as ReturnType<
+  typeof vi.fn
+>;
 const mockGetEvents = db.getSecurityEvents as ReturnType<typeof vi.fn>;
 const mockPrune = db.pruneSecurityEvents as ReturnType<typeof vi.fn>;
 const mockInsertEvent = db.insertSecurityEvent as ReturnType<typeof vi.fn>;
 const mockNotify = notification.notifyOwner as ReturnType<typeof vi.fn>;
-const mockGetDiscordClient = discordBot.getDiscordClient as ReturnType<typeof vi.fn>;
+const mockGetDiscordClient = discordBot.getDiscordClient as ReturnType<
+  typeof vi.fn
+>;
 
 const DIGEST_MARKER_WEEKLY_EVENT_TYPE = "DIGEST_MARKER_WEEKLY";
 
@@ -108,25 +126,36 @@ function setRawEvents(events: RawEvent[], markerRows: RawEvent[] = []) {
   });
 }
 
-function setBucketCounts(buckets: Array<{ eventType: string; context: string | null; count: number }>) {
+function setBucketCounts(
+  buckets: Array<{ eventType: string; context: string | null; count: number }>
+) {
   mockGetCountsByBucket.mockResolvedValue(buckets);
 }
 
 /** Mocks Date to a fixed Sunday UTC datetime (day=0). */
-function mockDateAtSundayUTC(isoSundayDate: string, hour = 13, minute = 0): Date {
+function mockDateAtSundayUTC(
+  isoSundayDate: string,
+  hour = 13,
+  minute = 0
+): Date {
   const mockNow = new Date(
     `${isoSundayDate}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`
   );
   if (mockNow.getUTCDay() !== 0) {
-    throw new Error(`Test setup error: ${isoSundayDate} is not a Sunday (UTC day=${mockNow.getUTCDay()})`);
+    throw new Error(
+      `Test setup error: ${isoSundayDate} is not a Sunday (UTC day=${mockNow.getUTCDay()})`
+    );
   }
   const RealDate = globalThis.Date;
-  vi.spyOn(globalThis, "Date").mockImplementation(function (...args: unknown[]) {
+  vi.spyOn(globalThis, "Date").mockImplementation(function (
+    ...args: unknown[]
+  ) {
     if (args.length === 0) return mockNow;
     // @ts-expect-error — allow Date constructor with args
     return new RealDate(...args);
   });
-  (globalThis.Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+  (globalThis.Date as unknown as { now: () => number }).now = () =>
+    mockNow.getTime();
   return mockNow;
 }
 
@@ -154,16 +183,33 @@ describe("weeklySecurityDigest", () => {
 
   describe("A2 — allowlist reaches the weekly threat level and day-bucket trend", () => {
     it("weekly threat level reflects the attacker AND a Cloudflare-range IP — only CI (exact-IP) is excluded", async () => {
-      console.log("\n[INPUT] 7-day window: 25 attacker events + 60 seeded-CI events + 15 Cloudflare events");
+      console.log(
+        "\n[INPUT] 7-day window: 25 attacker events + 60 seeded-CI events + 15 Cloudflare events"
+      );
       const attackerIp = "203.0.113.60";
       const ciIp = "48.217.34.226"; // seeded known-automation IP
       const cfIp = "162.158.0.10"; // inside CF_IPV4_CIDRS 162.158.0.0/15 — NOT auto-excluded (Critical 1, 2026-08-07)
       const now = Date.parse("2025-09-07T13:00:00.000Z");
 
       const events = [
-        ...Array(25).fill(null).map(() => makeEvent(attackerIp, "RATE_LIMIT", "public_feed", now - 1000)),
-        ...Array(60).fill(null).map(() => makeEvent(ciIp, "RATE_LIMIT", "edge_origin_ingress_anomaly", now - 2000)),
-        ...Array(15).fill(null).map(() => makeEvent(cfIp, "RATE_LIMIT", "public_feed", now - 3000)),
+        ...Array(25)
+          .fill(null)
+          .map(() =>
+            makeEvent(attackerIp, "RATE_LIMIT", "public_feed", now - 1000)
+          ),
+        ...Array(60)
+          .fill(null)
+          .map(() =>
+            makeEvent(
+              ciIp,
+              "RATE_LIMIT",
+              "edge_origin_ingress_anomaly",
+              now - 2000
+            )
+          ),
+        ...Array(15)
+          .fill(null)
+          .map(() => makeEvent(cfIp, "RATE_LIMIT", "public_feed", now - 3000)),
       ];
       setBucketCounts([
         makeBucket("RATE_LIMIT", "public_feed", 40), // 25 attacker + 15 CF
@@ -178,7 +224,10 @@ describe("weeklySecurityDigest", () => {
       vi.restoreAllMocks();
 
       expect(notifyCalls).toHaveLength(1);
-      const { title, content } = notifyCalls[0][0] as { title: string; content: string };
+      const { title, content } = notifyCalls[0][0] as {
+        title: string;
+        content: string;
+      };
       console.log(`[STATE] title: "${title}"`);
 
       // 100 total - 60 allowlisted (CI only — CF_RANGE_ALLOWLIST_ENABLED=false,
@@ -188,7 +237,9 @@ describe("weeklySecurityDigest", () => {
       expect(content).toContain(attackerIp);
       expect(content).toContain(cfIp); // Cloudflare-range IP now counts — Critical 1 fix
       expect(content).not.toContain(ciIp);
-      console.log("[VERIFY] PASS — weekly threat level LOW(40) reflects the attacker AND the Cloudflare-range IP");
+      console.log(
+        "[VERIFY] PASS — weekly threat level LOW(40) reflects the attacker AND the Cloudflare-range IP"
+      );
     });
   });
 
@@ -197,7 +248,11 @@ describe("weeklySecurityDigest", () => {
       const attackerIp = "203.0.113.61";
       const now = Date.parse("2025-09-14T13:00:00.000Z");
       const events = [
-        ...Array(9).fill(null).map(() => makeEvent(attackerIp, "RATE_LIMIT", "trpc_auth", now - 1000)),
+        ...Array(9)
+          .fill(null)
+          .map(() =>
+            makeEvent(attackerIp, "RATE_LIMIT", "trpc_auth", now - 1000)
+          ),
       ];
       setBucketCounts([makeBucket("RATE_LIMIT", "trpc_auth", 9)]);
       setRawEvents(events);
@@ -211,7 +266,9 @@ describe("weeklySecurityDigest", () => {
       expect(notifyCalls).toHaveLength(1);
       const { content } = notifyCalls[0][0] as { content: string };
       expect(content).toContain("trpc_auth: 9");
-      console.log("[VERIFY] PASS — weekly digest breaks Rate Limit Triggers out by context");
+      console.log(
+        "[VERIFY] PASS — weekly digest breaks Rate Limit Triggers out by context"
+      );
     });
   });
 
@@ -230,7 +287,9 @@ describe("weeklySecurityDigest", () => {
       expect(notifyCalls).toHaveLength(1);
       const { content } = notifyCalls[0][0] as { content: string };
       expect(content).toMatch(/deduped sample/i);
-      console.log("[VERIFY] PASS — weekly digest content labels counts as a deduped sample");
+      console.log(
+        "[VERIFY] PASS — weekly digest content labels counts as a deduped sample"
+      );
     });
   });
 
@@ -241,7 +300,9 @@ describe("weeklySecurityDigest", () => {
   // untested, so it now asserts the opposite. Mirrors the daily digest's pair.
   describe("B1 — notifyOwner's false is never escalated (weekly)", () => {
     it("posts ONLY the digest embed when notifyOwner returns false", async () => {
-      const fakeChannel = new TextChannel() as unknown as { send: ReturnType<typeof vi.fn> };
+      const fakeChannel = new TextChannel() as unknown as {
+        send: ReturnType<typeof vi.fn>;
+      };
       const fakeClient = {
         isReady: () => true,
         channels: { fetch: vi.fn().mockResolvedValue(fakeChannel) },
@@ -259,16 +320,23 @@ describe("weeklySecurityDigest", () => {
 
       console.log(`[STATE] channel.send call count: ${sendCalls.length}`);
       const titles = sendCalls.map(c => {
-        const embed = (c[0] as { embeds: Array<{ data: { title?: string } }> }).embeds[0];
+        const embed = (c[0] as { embeds: Array<{ data: { title?: string } }> })
+          .embeds[0];
         return embed.data.title ?? "";
       });
       console.log(`[STATE] embed titles sent: ${JSON.stringify(titles)}`);
       // Exactly one embed: the report. A second would mean the escalation is
       // back, i.e. a CRITICAL alert every Sunday, forever.
       expect(sendCalls.length).toBe(1);
-      expect(titles.some(t => t.includes("Weekly Security Threat Report"))).toBe(true);
-      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(false);
-      console.log("[VERIFY] PASS — notifyOwner's false produced no escalation; only the weekly report embed was sent");
+      expect(
+        titles.some(t => t.includes("Weekly Security Threat Report"))
+      ).toBe(true);
+      expect(titles.some(t => t.includes("In-App Notification Failed"))).toBe(
+        false
+      );
+      console.log(
+        "[VERIFY] PASS — notifyOwner's false produced no escalation; only the weekly report embed was sent"
+      );
     });
   });
 
@@ -289,7 +357,17 @@ describe("weeklySecurityDigest", () => {
 
     it("a persisted marker for this Sunday prevents a duplicate fire", async () => {
       const today = "2025-10-12";
-      setRawEvents([], [makeEvent("system", DIGEST_MARKER_WEEKLY_EVENT_TYPE, today, Date.parse(`${today}T13:00:00.000Z`))]);
+      setRawEvents(
+        [],
+        [
+          makeEvent(
+            "system",
+            DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+            today,
+            Date.parse(`${today}T13:00:00.000Z`)
+          ),
+        ]
+      );
       setBucketCounts([]);
 
       mockDateAtSundayUTC(today, 13, 3);
@@ -299,7 +377,9 @@ describe("weeklySecurityDigest", () => {
       vi.restoreAllMocks();
 
       expect(notifyCalls).toHaveLength(0);
-      console.log("[VERIFY] PASS — persisted weekly marker blocked a duplicate fire");
+      console.log(
+        "[VERIFY] PASS — persisted weekly marker blocked a duplicate fire"
+      );
     });
 
     it("persists a DIGEST_MARKER_WEEKLY row via insertSecurityEvent after a successful fire", async () => {
@@ -313,11 +393,17 @@ describe("weeklySecurityDigest", () => {
       vi.restoreAllMocks();
 
       const markerCalls = insertCalls.filter(
-        c => (c[0] as { eventType: string }).eventType === DIGEST_MARKER_WEEKLY_EVENT_TYPE
+        c =>
+          (c[0] as { eventType: string }).eventType ===
+          DIGEST_MARKER_WEEKLY_EVENT_TYPE
       );
       expect(markerCalls).toHaveLength(1);
-      expect((markerCalls[0][0] as { context: string }).context).toBe("2025-11-02");
-      console.log("[VERIFY] PASS — weekly digest marker persisted with today's date");
+      expect((markerCalls[0][0] as { context: string }).context).toBe(
+        "2025-11-02"
+      );
+      console.log(
+        "[VERIFY] PASS — weekly digest marker persisted with today's date"
+      );
     });
   });
 
@@ -328,12 +414,15 @@ describe("weeklySecurityDigest", () => {
       // 2025-09-08 is a Monday.
       const mockNow = new Date("2025-09-08T13:00:00.000Z");
       const RealDate = globalThis.Date;
-      vi.spyOn(globalThis, "Date").mockImplementation(function (...args: unknown[]) {
+      vi.spyOn(globalThis, "Date").mockImplementation(function (
+        ...args: unknown[]
+      ) {
         if (args.length === 0) return mockNow;
         // @ts-expect-error allow constructor passthrough
         return new RealDate(...args);
       });
-      (globalThis.Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+      (globalThis.Date as unknown as { now: () => number }).now = () =>
+        mockNow.getTime();
 
       await fireWeeklyDigestAndWait();
 
