@@ -465,6 +465,42 @@ def _blank_row(gsis_id: str) -> dict[str, Any]:
     return row
 
 
+def add_feed_identities(dimension, identities):
+    """Extend the dimension with players only a fact feed knows about.
+
+    The depth-chart feed reaches players before players.csv does. Every
+    preseason it carries rookies and UDFAs under an ESPN-style id
+    (``LAW090280``, not ``00-0037451``) that nflverse has not yet minted a real
+    gsis for -- 14 of them, 1,577 rows, as of 2026-08-07. ``depth_chart.gsis_id``
+    REFERENCES ``player(gsis_id)`` with foreign keys ON, so leaving them out
+    aborts the whole build on an IntegrityError.
+
+    The alternative was to null those references. That is what the loader already
+    does when it genuinely cannot identify someone, but it is the wrong answer
+    here: these are identified players -- name, team, position and a stable
+    upstream id -- and they are exactly the incoming rookie class the database
+    exists to model. Nulling would silently drop them from every join the moment
+    they matter most.
+
+    ``identities`` is an iterable of dicts with at least ``gsis_id``; optional
+    ``display_name`` / ``position`` are recorded when present. Rows already in
+    the dimension are left untouched -- this only ever adds.
+    """
+    have = {r["gsis_id"] for r in dimension}
+    added = []
+    for ident in identities:
+        gid = _as_id(ident.get("gsis_id"))
+        if not gid or gid in have:
+            continue
+        row = _blank_row(gid)
+        row["display_name"] = ident.get("display_name")
+        row["position"] = ident.get("position")
+        row["status"] = "FEED_ONLY"
+        have.add(gid)
+        added.append(row)
+    return list(dimension) + added, added
+
+
 # --------------------------------------------------------------------------
 # source adapters
 # --------------------------------------------------------------------------

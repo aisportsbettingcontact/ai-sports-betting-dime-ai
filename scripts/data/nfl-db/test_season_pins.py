@@ -154,25 +154,70 @@ class TestDepthChartShapes(unittest.TestCase):
         self.assertFalse(ok, "live-season shape-B rows must be excluded first")
 
 
+class TestDepthChartUsesTheSnapshotAxis(unittest.TestCase):
+    """depth_chart must NEVER be partitioned by season. PR #433 did, and shipped
+    a fix that still fail-closed on a clean clone.
+
+    Shape-B rows carry no season column; it is derived from the snapshot `dt`
+    against GameCalendar's dead-zone rule, which assigns season S up to the
+    MIDPOINT between S's Super Bowl and S+1's opener -- boundary(2025) is
+    2026-05-26. Upstream files those same snapshots in depth_charts_2026.csv.
+    Measured against live nflverse on 2026-08-07, that disagreement puts
+    179,903 of the 410,431 new rows into derived season 2025 -- inside the
+    bucket the pins protect.
+    """
+
+    #: Measured 2026-08-07 by running the real classify_shape + normalize over
+    #: the live depth_charts_2026.csv with the calendar built from nfl.db.
+    LIVE_2026_FILE_BY_DERIVED_SEASON = {2025: 179_903, 2026: 230_528}
+
+    def test_season_axis_is_refused_outright(self):
+        with self.assertRaises(ValueError) as ctx:
+            sp.frozen_verdict("depth_chart", DEPTH_CHART_0727)
+        self.assertIn("snapshot", str(ctx.exception).lower())
+
+    def test_the_season_axis_would_have_overcounted_the_frozen_bucket(self):
+        # The bug, as arithmetic: season-keyed frozen = audited + 179,903.
+        leaked = self.LIVE_2026_FILE_BY_DERIVED_SEASON[2025]
+        season_keyed_frozen = sp.FROZEN_COUNTS["depth_chart"] + leaked
+        self.assertNotEqual(season_keyed_frozen, sp.FROZEN_COUNTS["depth_chart"])
+        self.assertEqual(season_keyed_frozen, 1_286_632)
+
+    def test_snapshot_axis_passes_with_the_same_live_data(self):
+        # Partitioned on the snapshot instant, the audited window is untouched
+        # and every new row is live -- which is the truth.
+        ok, detail = sp.frozen_counts_verdict(
+            "depth_chart", frozen_rows=1_106_729, live_rows=410_431,
+            basis=f"snapshot <= {sp.DEPTH_CHART_EXTRACT_CUTOFF}")
+        self.assertTrue(ok, detail)
+        self.assertIn("410,431 live rows excluded", detail)
+
+    def test_a_changed_audited_row_still_fails(self):
+        ok, _ = sp.frozen_counts_verdict("depth_chart", frozen_rows=1_106_730,
+                                         live_rows=410_431)
+        self.assertFalse(ok)
+
+    def test_cutoff_is_the_audited_extract_boundary(self):
+        # The last shape-B snapshot in the 2026-07-27 extract. Not a round
+        # number and not a guess -- MAX(snapshot_ts) from the shipped database.
+        self.assertEqual(sp.DEPTH_CHART_EXTRACT_CUTOFF, "2026-03-14T07:32:09Z")
+
+
 class TestAgainstRealUpstream(unittest.TestCase):
     """The numbers measured against live nflverse on 2026-08-07."""
 
-    LIVE_0807 = {
-        "roster_season": {**ROSTER_0727, 2026: 2930},                # 46,786
-        "depth_chart": {**DEPTH_CHART_0727, 2026: 410_431},          # 1,517,160
-    }
+    #: roster_season keeps the season axis: its `season` is a literal CSV column.
+    ROSTER_LIVE_0807 = {**ROSTER_0727, 2026: 2930}                   # 46,786
 
-    def test_todays_upstream_passes_the_frozen_pins(self):
-        for table, per_season in self.LIVE_0807.items():
-            ok, detail = sp.frozen_verdict(table, per_season)
-            self.assertTrue(ok, f"{table}: {detail}")
+    def test_todays_upstream_passes_the_season_axis_tables(self):
+        ok, detail = sp.frozen_verdict("roster_season", self.ROSTER_LIVE_0807)
+        self.assertTrue(ok, detail)
 
     def test_todays_upstream_would_have_failed_the_old_aggregate_pin(self):
-        # Documents the regression this change fixes.
-        for table, per_season in self.LIVE_0807.items():
-            total = sum(per_season.values())
-            self.assertNotEqual(total, sp.FROZEN_COUNTS[table],
-                                f"{table} aggregate should have moved")
+        # Documents the original regression (PR #433's motivation).
+        self.assertNotEqual(sum(self.ROSTER_LIVE_0807.values()),
+                            sp.FROZEN_COUNTS["roster_season"])
+        self.assertEqual(sum(self.ROSTER_LIVE_0807.values()), 46_786)
 
 
 if __name__ == "__main__":

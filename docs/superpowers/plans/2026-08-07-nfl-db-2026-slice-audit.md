@@ -26,24 +26,48 @@ structurally sound, not independently verified.**
 
 Live counts measured 2026-08-07 (they grow daily):
 
-| Table | 2026 rows | Notes |
+| Table | New rows | Notes |
 | --- | --- | --- |
-| `depth_chart` | 410,431 | shape B; publishing daily since ~2026-08 |
-| `roster_season` | 2,930 | the 07-27 R extract requested 2010-2025 only |
+| `depth_chart` | 410,431 | shape B, snapshots after `2026-03-14T07:32:09Z` |
+| `roster_season` | 2,930 | season 2026; the 07-27 R extract requested 2010-2025 only |
 | `player_game_stats` | 0 | upstream 404 until the season is played |
 | `snap_count` | 0 | upstream 404 until the season is played |
 
-Settled history needs no re-audit: every season `<= 2025` matched live nflverse
-exactly on 2026-08-07, across all four tables, with zero drift.
+**CORRECTION (2026-08-07, same day).** An earlier revision of this document said
+"every season `<= 2025` matched live nflverse exactly … across all four tables,
+with zero drift", and that the new depth-chart rows "all resolve to season=2026,
+week=1". Both were wrong, and the same sentence went into PR #433's commit
+message.
+
+The error: attributing rows to a season by the upstream FILENAME
+(`depth_charts_2026.csv` → "the 2026 season"). The loader does not do that.
+Shape-B rows carry no season column, so `derive_season_week()` recovers one from
+the snapshot `dt` against `GameCalendar`'s dead-zone rule — and
+`boundary(2025) = 2026-05-26`, roughly two months later than upstream's own
+filing. Measured through the repo's real code path, of those 410,431 rows only
+230,528 derive to season 2026; the other **179,903 derive to season 2025** and
+land inside the audited bucket.
+
+Zero drift therefore holds for the three tables whose `season` is a literal CSV
+column (`player_game_stats`, `snap_count`, `roster_season`) and does **not** hold
+for `depth_chart` under the season axis. On the snapshot axis — the one now used —
+the audited window is exactly 1,106,729 rows and unchanged.
+
+This is why `depth_chart` is pinned on `snapshot_ts` against
+`season_pins.DEPTH_CHART_EXTRACT_CUTOFF`, and why `frozen_verdict()` now raises
+if anyone passes `depth_chart` to the season-keyed path.
 
 ## What the audit has to establish
 
 1. **Depth-chart snapshot semantics.** Shape B is a timestamped snapshot feed,
-   not a per-week table: 410,431 rows across a handful of August days, all
-   resolving to `season=2026, week=1`. Confirm that is the intended reading and
-   that the natural key `(dt, team, scheme, slot, rank)` stays unique as the
-   season progresses — the 2025 slice was audited as a completed season, and a
-   live one may behave differently.
+   not a per-week table: 410,431 rows spanning `2026-03-22` to `2026-08-07`,
+   splitting 179,903 / 230,528 between derived seasons 2025 and 2026 because the
+   dead-zone rule and upstream's file naming disagree by ~2 months. Decide which
+   reading the analysis layer should use — the derived season is defensible for
+   football purposes, but anything joining on the upstream file year will be
+   wrong by 44% of the rows. Also confirm the natural key
+   `(dt, team, scheme, slot, rank)` stays unique as the season progresses; the
+   2025 slice was audited as a completed season and a live one may differ.
 2. **Roster churn.** 2,930 rows for a season whose games have not started. Verify
    against ESPN/PFR that this is a real camp roster and not a partial publish.
 3. **Cross-source agreement**, the #425 method: partition every 2026 row, compare
