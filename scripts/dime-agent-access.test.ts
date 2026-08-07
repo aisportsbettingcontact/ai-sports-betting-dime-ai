@@ -37,7 +37,7 @@ test("the committed access manifest validates the exact targets and denies write
   assert.equal(validateAccessManifest(manifest), manifest);
   assert.equal(
     manifest.providers.github.repository,
-    "aisportsbettingcontact/ai-sports-betting-dime-ai"
+    "tailered-ai/dime-ai"
   );
   assert.equal(
     manifest.providers.railway.projectId,

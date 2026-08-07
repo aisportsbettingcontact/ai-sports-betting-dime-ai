@@ -57,7 +57,7 @@ The reviewed source of truth is
 
 | System              | Pinned identity                                                           |
 | ------------------- | ------------------------------------------------------------------------- |
-| GitHub              | `aisportsbettingcontact/ai-sports-betting-dime-ai`, default branch `main` |
+| GitHub              | `tailered-ai/dime-ai`, default branch `main` |
 | Railway workspace   | `aisportsbettingcontact` / `fa75c735-e8e5-4d7c-a293-c8c056d95429`         |
 | Railway project     | `stunning-creativity` / `8dd7341d-702c-48c7-90df-5c19a4f04913`            |
 | Railway environment | `production` / `787f3113-17ab-47d9-9819-1268aeb09b3e`                     |

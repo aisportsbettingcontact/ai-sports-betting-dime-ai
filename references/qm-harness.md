@@ -25,7 +25,7 @@ for this repo:
 
 ```json
 {
-  "url": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai",
+  "url": "https://github.com/tailered-ai/dime-ai",
   "config": {
     "skillGlobs": [".agents/skills/**", ".claude/skills/**"],
     "exclude": [

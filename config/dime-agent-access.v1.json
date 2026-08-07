@@ -42,7 +42,7 @@
     "github": {
       "cli": "gh",
       "credentialSource": "operating-system-keychain",
-      "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+      "repository": "tailered-ai/dime-ai"
     },
     "railway": {
       "cli": "dime-railway-keychain",
