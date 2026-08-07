@@ -37,6 +37,19 @@
  * control flow fall through from one case into another at runtime (the
  * source text for each case still looks correct in isolation). Each case
  * below is therefore also asserted to contain its own `break;`.
+ *
+ * 2026-08-07 review follow-up: the `break;` assertions above were originally
+ * a RAW substring match against the sliced case body, with no awareness of
+ * comments or string literals. A case whose real terminating `break;` was
+ * missing but which carried a decoy comment containing the token — e.g.
+ * `// no break; needed here` — would have passed every assertion while
+ * genuinely falling through at runtime. `caseBody()` now strips `//`-to-
+ * end-of-line and `/* … *‍/` comment spans (via `stripComments()`, below)
+ * BEFORE both the next-case boundary search and the string it returns, so
+ * every assertion in this file matches against comment-free text. This also
+ * closes the sibling hole the reviewer flagged in the boundary regex itself:
+ * a case body's own comment containing a literal `case "` or `default:`
+ * could previously truncate the slice early.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -60,7 +73,38 @@ const ORIGIN_LOCK_BLOCK = (() => {
   return INDEX_SRC.slice(start, end);
 })();
 
-/** Slice a single `case "kind":` body up to the next `case`/`default`. */
+/**
+ * Strips `//`-to-end-of-line and `/* … *‍/` comment spans from `source`,
+ * leaving string and template literals untouched — a comment token inside a
+ * string (e.g. `"// not a comment"`) must not be stripped, and by the same
+ * token a `*‍/` or `case "` sitting inside a string must not be mistaken for
+ * a comment terminator or a case boundary. Uses the standard "match strings
+ * OR comments, blank out only the comment matches" technique so the two
+ * concerns can't be conflated.
+ *
+ * Exported implicitly via the tests below (not `export`ed from this file —
+ * it is test-only tooling, not app code) so its own behavior is verified
+ * directly, not just through `caseBody()`.
+ */
+function stripComments(source: string): string {
+  const STRING_OR_COMMENT_RE =
+    /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/[^\n]*|\/\*[\s\S]*?\*\//g;
+  return source.replace(STRING_OR_COMMENT_RE, matched =>
+    matched.startsWith("//") || matched.startsWith("/*") ? "" : matched
+  );
+}
+
+/**
+ * Slice a single `case "kind":` body up to the next `case`/`default`.
+ *
+ * Comments are stripped BEFORE both the next-case boundary search and the
+ * string this returns, and everything downstream runs against that SAME
+ * stripped string. Stripping first and working only in stripped-offset space
+ * (rather than stripping the raw text at the end) avoids an offset-mismatch
+ * bug a naive "search on stripped text, slice the raw text" approach would
+ * introduce: stripping shortens the string, so an index found in stripped
+ * text does not point at the same character in the original.
+ */
 function caseBody(kind: string): string {
   const marker = `case "${kind}":`;
   const start = ORIGIN_LOCK_BLOCK.indexOf(marker);
@@ -69,8 +113,11 @@ function caseBody(kind: string): string {
     `case "${kind}" not found in the origin-lock onEvent switch — has the routing been reverted or restructured?`
   ).toBeGreaterThan(-1);
   const rest = ORIGIN_LOCK_BLOCK.slice(start + marker.length);
-  const nextCaseOffset = rest.search(/\n\s*(case "|default:)/);
-  return nextCaseOffset === -1 ? rest : rest.slice(0, nextCaseOffset);
+  const restNoComments = stripComments(rest);
+  const nextCaseOffset = restNoComments.search(/\n\s*(case "|default:)/);
+  return nextCaseOffset === -1
+    ? restNoComments
+    : restNoComments.slice(0, nextCaseOffset);
 }
 
 describe("origin-lock onEvent handler routes by kind, not unconditionally (Task 4.3, 2026-08-07)", () => {
@@ -204,5 +251,81 @@ describe("edge_no_secret CRITICAL escalation is rate-limited to once per minute,
       "the timestamp must be reassigned only inside the guarded branch, or the throttle self-defeats under continuous traffic"
     ).toBeGreaterThan(ifIdx);
     expect(assignIdx).toBeLessThan(logIdx);
+  });
+
+  it("edge_no_secret ALSO fires an out-of-band Discord alert, not just console.error — the site being fully unprotected must be discoverable somewhere a human actually watches, not only Railway logs (2026-08-07 review fix)", () => {
+    const body = caseBody("edge_no_secret");
+    expect(
+      body,
+      "fireEdgeNoSecretAlert() must be called from the edge_no_secret case — console.error alone regresses the loudest condition in the system to a log line nobody watches"
+    ).toMatch(/fireEdgeNoSecretAlert\(\)/);
+
+    // It must NOT reuse fireRateLimitEvent()/postSecurityAlert()'s RATE_LIMIT
+    // vocabulary: that embed hardcodes a 429/temporary-block claim that is
+    // false for a condition where nothing was blocked at all.
+    expect(body).not.toMatch(/fireRateLimitEvent\(/);
+
+    // It must share the SAME once-per-minute guard as console.error — not a
+    // second, independent guard. Reuse the same ifIdx this describe block's
+    // previous test already validated actually gates the escalation.
+    const ifIdx = body.indexOf("if (");
+    const logIdx = body.indexOf("console.error(");
+    const alertIdx = body.indexOf("fireEdgeNoSecretAlert()");
+    expect(ifIdx).toBeGreaterThan(-1);
+    expect(
+      alertIdx,
+      "fireEdgeNoSecretAlert() must be textually after the if( guard, i.e. nested inside the same block as console.error — a second guard is not allowed"
+    ).toBeGreaterThan(ifIdx);
+    expect(
+      alertIdx,
+      "fireEdgeNoSecretAlert() should be called alongside the console.error it accompanies, inside the same guarded branch"
+    ).toBeGreaterThan(logIdx);
+  });
+});
+
+describe("caseBody()'s comment-stripping actually strips comments before matching (2026-08-07 review follow-up)", () => {
+  it("a decoy comment containing the literal token `break;` is NOT reported as a real break by stripComments() — the raw-substring-match hole this guards against", () => {
+    const decoy = [
+      'case "edge_decoy":',
+      '  console.error("CRITICAL something is wrong");',
+      "  // no break; needed here",
+      "  return;",
+    ].join("\n");
+
+    // Sanity check FIRST: prove this is a genuine decoy, not a vacuous
+    // fixture — the raw text really does contain the token a naive
+    // `.toMatch(/break;/)` would have accepted.
+    expect(decoy).toMatch(/break;/);
+
+    // The whole point of this test: after stripping, the decoy comment is
+    // gone and the token is no longer present — there is no real `break;`
+    // in this fixture, and stripComments() must say so.
+    const stripped = stripComments(decoy);
+    expect(stripped).not.toMatch(/break;/);
+  });
+
+  it("a decoy comment containing a literal `case \"` does not fool the next-case boundary search", () => {
+    const decoy = [
+      '  // see case "edge_deny" above for the blocking path',
+      '  console.warn("observe only");',
+      "  break;",
+    ].join("\n");
+
+    // Sanity check: the raw text really does contain a `case "` token that
+    // the OLD (unstripped) boundary regex would have matched as a false
+    // next-case boundary, truncating the slice mid-body.
+    expect(decoy).toMatch(/case "/);
+
+    const stripped = stripComments(decoy);
+    expect(stripped).not.toMatch(/case "/);
+    // The real code survives stripping untouched.
+    expect(stripped).toMatch(/console\.warn\(/);
+    expect(stripped).toMatch(/break;/);
+  });
+
+  it("string literals that happen to contain comment-like tokens are left untouched — stripComments() is comment-aware, not just token-aware", () => {
+    const src = 'console.log("this // is not a comment, and neither is /* this */ inside a string");';
+    const stripped = stripComments(src);
+    expect(stripped).toBe(src);
   });
 });

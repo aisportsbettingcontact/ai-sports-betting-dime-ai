@@ -46,6 +46,7 @@ import { insertSecurityEvent } from "../db";
 import { startSecurityDigestScheduler } from "../securityDigest";
 import { startWeeklySecurityDigestScheduler } from "../weeklySecurityDigest";
 import { postSecurityAlert } from "../discord/discordSecurityAlert";
+import { EmbedBuilder, TextChannel } from "discord.js";
 import { startMlbScheduleHistoryScheduler } from "../mlbScheduleHistoryScheduler";
 import { startNbaScheduleHistoryScheduler } from "../nbaScheduleHistoryScheduler";
 import { startNhlScheduleHistoryScheduler } from "../nhlScheduleHistoryScheduler";
@@ -76,7 +77,7 @@ import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { reportBillingAlertTransport } from "./billingAlerts";
-import { getDiscordBotHealth } from "../discord/bot";
+import { getDiscordBotHealth, getDiscordClient } from "../discord/bot";
 import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
@@ -171,6 +172,96 @@ const RATE_LIMIT_DEDUP_MS = 60_000; // 1 minute
 // per minute.
 const EDGE_NO_SECRET_ESCALATION_MS = 60_000; // 1 minute
 let edgeNoSecretLastEscalatedAt = 0;
+
+// ─── edge_no_secret out-of-band Discord alert (Task 4.3 fix, 2026-08-07) ─────
+// edge_no_secret means the origin lock is INERT: EDGE_MODE=on but no
+// EDGE_ORIGIN_SECRET is configured, so every request — attacker or not —
+// passes straight through unlocked. The section comment above calls this
+// "the loudest condition in the system"; a console.error into Railway logs
+// nobody watches is a net downgrade from that.
+//
+// Deliberately NOT routed through fireRateLimitEvent()/postSecurityAlert():
+// postSecurityAlert() is typed to SecurityEventType ("CSRF_BLOCK" |
+// "RATE_LIMIT" | "AUTH_FAIL") and its RATE_LIMIT embed
+// (buildRateLimitEmbed in discordSecurityAlert.ts) hardcodes "The IP
+// received a `429 Too Many Requests` response and was temporarily
+// blocked" — false here; nothing was blocked or rate-limited. Extending
+// SecurityEventType with a fourth member is task 4.4's job, not this one.
+//
+// Shape chosen: a direct getDiscordClient() + channel send, NOT a new
+// webhook module mirroring billingAlerts.ts. billingAlerts.ts's own header
+// explains its webhook choice as staying dependency-light so the raw-body
+// Stripe webhook handler doesn't have to import discord.js — that rationale
+// doesn't apply here: index.ts already imports discord.js transitively
+// (startDiscordBot, postSecurityAlert) and already has a live, connected
+// bot client. Reusing it needs no new env var / webhook to provision in
+// Railway, so it is the simpler and equally honest option for this case.
+//
+// Posts to the same 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel postSecurityAlert() uses
+// (server/discord/discordSecurityAlert.ts's SECURITY_CHANNEL_ID). That
+// constant isn't exported and discordSecurityAlert.ts is out of scope for
+// this task, so the ID is duplicated here with this note rather than
+// imported.
+const EDGE_NO_SECRET_ALERT_CHANNEL_ID = "1492280227567501403";
+
+/**
+ * Fire-and-forget: never awaited at the call site, never throws, and every
+ * async path ends in `.catch()` so it can never produce an unhandled
+ * rejection — same discipline as fireRateLimitEvent()/postSecurityAlert()
+ * below. Gated by the SAME edgeNoSecretLastEscalatedAt /
+ * EDGE_NO_SECRET_ESCALATION_MS once-per-minute guard as the console.error
+ * CRITICAL log at its one call site; this function adds no guard of its own
+ * and must only be invoked from inside that guard.
+ */
+function fireEdgeNoSecretAlert(): void {
+  const tag = "[edge][origin-lock][edge_no_secret]";
+  const client = getDiscordClient();
+  if (!client) {
+    console.warn(
+      `${tag} Discord bot not ready — CRITICAL alert not posted (console log only)`
+    );
+    return;
+  }
+
+  client.channels
+    .fetch(EDGE_NO_SECRET_ALERT_CHANNEL_ID)
+    .then(rawChannel => {
+      if (!rawChannel || !(rawChannel instanceof TextChannel)) {
+        console.error(
+          `${tag} security channel is not a TextChannel or could not be fetched — alert not posted`
+        );
+        return;
+      }
+      const embed = new EmbedBuilder()
+        .setColor(0xf8312f) // bright red — most severe tier (matches billingAlerts.ts / discordSecurityAlert.ts)
+        .setTitle("🚨 ORIGIN LOCK INERT — Site Is UNPROTECTED")
+        .setDescription(
+          "**EDGE_MODE=on but no `EDGE_ORIGIN_SECRET` is configured.** " +
+            "The origin-lock middleware is running in name only — this is an " +
+            "anti-lockout downgrade, not enforcement. Every request that " +
+            "reaches the origin is passed straight through.\n\n" +
+            "**Nothing has been blocked or rate-limited — this is not a " +
+            "429/attack alert.** It is a notice that a protection is " +
+            "currently absent.\n\n" +
+            "**Action required:** set `EDGE_ORIGIN_SECRET` in Railway to " +
+            "restore protection. This condition persists — and this alert " +
+            "repeats at most once per minute — until that variable is set " +
+            "correctly."
+        )
+        .setFooter({ text: "Dime AI · Origin Lock Monitor · edge_no_secret" })
+        .setTimestamp();
+      return rawChannel.send({ embeds: [embed] });
+    })
+    .then(sent => {
+      if (sent) {
+        console.log(`${tag} CRITICAL alert posted to security channel`);
+      }
+    })
+    .catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${tag} failed to post CRITICAL alert: ${msg}`);
+    });
+}
 
 function fireRateLimitEvent(
   ip: string,
@@ -515,7 +606,8 @@ async function startServer() {
           // Anti-lockout: EDGE_MODE=on but no secret configured — the site is
           // UNPROTECTED and this fires on every request while it persists.
           // Escalate at most once per minute so the CRITICAL itself can't
-          // flood.
+          // flood. Both the console.error AND the out-of-band Discord alert
+          // below share this ONE guard — no second guard.
           if (
             Date.now() - edgeNoSecretLastEscalatedAt >=
             EDGE_NO_SECRET_ESCALATION_MS
@@ -524,6 +616,7 @@ async function startServer() {
             console.error(
               "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
             );
+            fireEdgeNoSecretAlert();
           }
           break;
         case "edge_breaker_tripped":
