@@ -1,0 +1,81 @@
+# Engineering evidence record — the artifact that closes the loop (standard §21.3).
+#
+# WHERE IT GOES: paste the filled block into the PR body, under a heading
+#   "## Evidence record (engineering-federation §21.3)"
+# This is the existing convention — PR #364 (the federation's first production run)
+# and PR #371 both carry one — and DR-005 plans to make it machine-validated
+# (shared/loop/evidenceRecord.ts zod + scripts/check-evidence-record.mjs).
+#
+# DO NOT relocate this into a new per-PR file. Settled by owner ruling (Prez, 2026-08-07),
+# recorded in os/decisions/DR-014-consolidation-ruling.md, Ruling 2: the record stays in the
+# PR body; a per-PR record.yaml beside the design bundle was proposed and rejected, because
+# it is the "parallel evidence record" that record's artifact ruling forbids.
+#
+# Field names follow §21.3 verbatim so a future zod schema can validate against the
+# standard rather than a local dialect. (Records written before 2026-08-07 used
+# `artifact` for `artifact_digest` and carried only three `verification` subfields.)
+#
+# Rules that make this a record rather than a claim:
+#   - Verbatim command output backs every "recorded" field. Paraphrase is not evidence.
+#   - A gate that was skipped says so, and why. An absent field reads as "not run".
+#   - A failed gate appears as failed, with its output. Never silently dropped.
+#   - Per §23, every not-applicable carries a concrete reason — silence is not evidence.
+#   - `outcome` comes from the fixed enum in §21.4 and nothing else.
+
+outcome: # shipped | rejected | halted_attempts | halted_budget |
+         # halted_permission | halted_environment | failed_verification
+         #
+         # shipped        — all required checks passed AND the requested scope was
+         #                  completed at the authorized boundary. A partially
+         #                  implemented change is NEVER shipped (§21.4).
+         # halted_permission — a required production, data, or destructive authority
+         #                  was absent. Not a reason to find a workaround.
+         # failed_verification — the implementation exists, but required evidence is red.
+
+source_revision: "" # exact immutable revision (commit SHA)
+
+baseline: "" # Dime addition (loop step 3): revision + the measured before-state.
+             # No baseline, no before/after claim.
+
+classification: "" # Dime addition: trust boundary + failure impact class
+                   # (security / data / availability / release) — this picks the gates
+
+diff_scope: "" # complete changed-file inventory, not a summary
+
+contracts_changed: "" # API, policy, schema, config — or "none".
+                      # Here: tRPC routers/types, drizzle journal, config, policy.
+
+artifact_digest: "" # Dime: Railway deployment id + meta.commitHash (that pair IS the
+                    # deployed-revision proof) — or "none". Railway builds per deploy
+                    # rather than promoting one digest; see dime-mapping.md §14.3.
+
+migration_revision: "" # exact revision — drizzle journal tag (e.g. 0133_favorite_count)
+                       # — or "none"
+
+verification:
+  focused_checks: "" # the targeted checks for this change, recorded
+  integration_checks: "" # cross-component checks (DB Tests replaying the migration
+                         # chain, router-level tests) — or N/A + reason
+  full_suite: "" # tsc + gated vitest + build, recorded
+                 # (exact commands: dime-mapping.md, "Delivery and operations")
+  security_scans: "" # gitleaks / osv-scanner / CodeQL / semgrep / pinned-action check
+                     # — or N/A + reason
+  performance_checks: "" # recorded result, or an explicit not-applicable rationale.
+                         # §21.3 names this one as requiring a rationale, not silence.
+  live_proof: "" # Dime addition: smoke-deploy or verify-skill output — or explicit
+                 # N/A + reason. A green unit test alone never closes a production
+                 # boundary (§5 principle 12).
+
+production_mutation: # true | false — any merge to main is true (deploy law)
+
+approvals: "" # exact recorded approvals: owner directives, db-push.yml run URLs,
+              # PR approvals — or "none"
+
+known_limitations: "" # explicit list. Silence here is read as "none known".
+
+rollback_or_containment: "" # exact mechanism — env knob, revert target SHA,
+                            # forward-fix plan. Not "revert if needed".
+
+decision_notes: "" # Dime addition: ADR-style note for any new infrastructure
+                   # component or budget change (§5.11 earn-its-existence: measured
+                   # need, rejected alternatives, failure/outage policy) — or "none"

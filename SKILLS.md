@@ -17,10 +17,23 @@ collection contains; this file covers where they live and how they load and trig
 | `.claude/plugins-vendored/pm-skills/` (deanpeters)                                                       | 70    | plugins (55 enabled) | settings (all 70)                                                                                                                                                         |
 | `.claude/plugins-vendored/dime-vendored/` (superpowers 14, mcp-server-dev, figma)                        | 31    | plugins              | settings                                                                                                                                                                  |
 | `.claude/plugins-vendored/railway-skills/`                                                               | 1     | plugin               | settings                                                                                                                                                                  |
-| `.agents/skills/` (universal: frontend-design, stripe-best-practices, architect-\*, advertising)         | 16    | native               | auto-discovered                                                                                                                                                           |
+| `.agents/skills/` (universal: frontend-design, stripe-best-practices, architect-\*, advertising)         | 16    | **Read-path only**   | auto-discovered                                                                                                                                                           |
 | Package `git:github.com/badlogic/pi-skills` (web search, browser automation, Google APIs, transcription) | ~8    | —                    | `.pi/settings.json` `packages` → `.pi/git/`                                                                                                                               |
 | Package `git:github.com/anthropics/skills` (docx/pdf/pptx/xlsx, web artifacts)                           | ~15   | —                    | same                                                                                                                                                                      |
 | `.claude/plugins-vendored/taste-skill/`                                                                  | 13    | plugin               | _skipped — exact duplicates of the flat copies_                                                                                                                           |
+
+**`.agents/skills/` is NOT Skill-invocable in Claude Code (corrected 2026-08-07 — this row
+previously said "native").** Nothing is registered as a Claude Code skill by virtue of living
+there; the Skill tool cannot invoke a copy in that tree, so anything living only there must be
+loaded with `Read <path>/SKILL.md`. That covers `architect-backend-systems`,
+`architect-github-repos`, and the 12 advertising skills. Two names are still reachable from a
+_different_ source — `stripe-best-practices` via the stripe plugin (`stripe:stripe-best-practices`)
+and `frontend-design` via `.claude/skills/` — but note `frontend-design` is not in the roster
+either, for its own reason. **The converse also fails: `.claude/skills/` membership is required,
+not sufficient** (`review-animations` opts out with `disable-model-invocation: true`;
+`frontend-design` has ordinary frontmatter and is still absent). Confirm the live roster before
+marking anything invocable. Detail:
+`.claude/skills/engineering-federation/references/routing.md`, "Invocation reality".
 
 Known duplicate names: 5 phuryn/deanpeters collisions (`ansoff-matrix`,
 `customer-journey-map`, `opportunity-solution-tree`, `porters-five-forces`,
