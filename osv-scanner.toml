@@ -30,18 +30,6 @@ reason = "xlsx@0.18.5 Prototype Pollution — patched:<0.0.0, no fix exists upst
 id = "GHSA-5pgg-2g8v-p4x9"
 reason = "xlsx@0.18.5 ReDoS — patched:<0.0.0, no fix exists upstream. Server-side only."
 
-[[IgnoredVulns]]
-id = "GHSA-37ch-88jc-xwx2"
-reason = "path-to-regexp@0.1.12 ReDoS — patched:>=0.1.13 does not exist on npm; requires an express v5 migration."
-
-[[IgnoredVulns]]
-id = "GHSA-r5fr-rjxr-66jc"
-reason = "lodash@4.17.21 code injection via _.template — patched:>=4.18.0 does not exist on npm; _.template is unused in this codebase."
-
-[[IgnoredVulns]]
-id = "GHSA-fx2h-pf6j-xcff"
-reason = "vite server.fs.deny bypass — dev-server-only attack surface, not shipped to production. Affects both the top-level vite@^7.1.7 devDependency and a vite@5.x pulled in transitively by vitest; no non-breaking fix available for either."
-
 # RESOLVED 2026-08-03 — GHSA-5xrq-8626-4rwp (vitest UI dev-server file read/execute)
 # entry removed: the tracked "future vitest 4.x migration" landed (vitest 2.1.9 ->
 # 4.1.10), which is outside the advisory's affected range. Real fix installed beats
@@ -54,3 +42,25 @@ reason = "vite server.fs.deny bypass — dev-server-only attack surface, not shi
 # The lockfile now pins brace-expansion@1.1.18 (same 1.x line, bare-callable API —
 # the minimatch@3 -> glob@7 -> rimraf@3 chain is unaffected, unlike the 5.x jump the
 # old entry documented). The package.json override floor moved >=1.1.16 -> >=1.1.18.
+
+# RESOLVED 2026-08-07 — three entries removed, each fixed by a real version upgrade
+# rather than an allowlist. Verified against the advisories' authoritative affected
+# ranges and the versions pinned in pnpm-lock.yaml:
+#
+#   GHSA-37ch-88jc-xwx2  path-to-regexp ReDoS      vulnerable <0.1.13, patched 0.1.13
+#                        lockfile pins 0.1.13 (+8.4.2) via the package.json override
+#                        "express>path-to-regexp": ">=0.1.13 <0.2.0". The old reason
+#                        ("patched >=0.1.13 does not exist on npm; requires an express
+#                        v5 migration") is obsolete — 0.1.13 shipped and is installed.
+#
+#   GHSA-r5fr-rjxr-66jc  lodash _.template injection  vulnerable <=4.17.23, patched 4.18.0
+#                        lockfile pins lodash@4.18.1. The old reason ("patched >=4.18.0
+#                        does not exist on npm") is obsolete.
+#
+#   GHSA-fx2h-pf6j-xcff  vite server.fs.deny bypass   vulnerable 7.0.0-7.3.4, patched 7.3.5
+#                        lockfile pins vite@7.3.6, and the transitive vite@5.x the old
+#                        reason named is gone (7.3.6 is the only vite in the tree).
+#
+# osv-scanner reported all three as "unused ignores" before removal. Removing them
+# restores fail-closed behaviour: if any regresses, the gate blocks instead of
+# silently allowing it.
