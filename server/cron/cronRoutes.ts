@@ -67,12 +67,8 @@ import { billingAlert } from "../_core/billingAlerts";
 import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
 import { captureClosingLines } from "../mlbScheduleHistoryService";
 import { runMultiMarketBacktestForDate } from "../mlbMultiMarketBacktest";
-import {
-  lastNDates,
-  parseCronDateParam,
-  runBacktestJob,
-  runOutcomesJob,
-} from "./mlbLoopJobs";
+import { makeBacktestWork, makeOutcomesWork } from "./mlbLoopJobs";
+import { mountDateJob } from "./mountDateJob";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -127,17 +123,10 @@ let mlbBacktestDate: string | null = null;
 // Default window is the last 2 PT dates so a late-night final is still picked up
 // on the next morning's run. gameDate is a PT calendar date (schema), so the
 // zone here must be PT, not UTC.
-const mlbOutcomesRunner = new CronJobRunner("mlb-outcomes", async () => {
-  const dates = mlbOutcomesDate
-    ? [mlbOutcomesDate]
-    : lastNDates(2, "America/Los_Angeles");
-  const r = await runOutcomesJob(dates, d => ingestMlbOutcomes(d));
-  console.log(
-    `[Cron:mlb-outcomes] [OUTPUT] dates=[${r.dates.join(",")}] written=${r.written} ` +
-      `skipped=${r.skipped} rowErrors=${r.rowErrors} dateFailures=${r.errors.length}`
-  );
-  return r;
-});
+const mlbOutcomesRunner = new CronJobRunner(
+  "mlb-outcomes",
+  makeOutcomesWork(() => mlbOutcomesDate, d => ingestMlbOutcomes(d))
+);
 
 // Closing-line capture — locks the closing odds snapshot for today's slate.
 // Takes no date argument: it only ever scrapes the current slate.
@@ -161,19 +150,13 @@ const mlbClosingCaptureRunner = new CronJobRunner("mlb-closing-capture", async (
 //
 // The default is a 3-day ET rolling window: self-heal, not backfill. A `?date=`
 // bulk backfill should wait until after the K re-fit for the same reason.
-const mlbBacktestRunner = new CronJobRunner("mlb-backtest", async () => {
-  const dates = mlbBacktestDate
-    ? [mlbBacktestDate]
-    : lastNDates(3, "America/New_York");
-  const r = await runBacktestJob(dates, d =>
-    runMultiMarketBacktestForDate(d, { onlyUnenrolled: true, runKProps: false })
-  );
-  console.log(
-    `[Cron:mlb-backtest] [OUTPUT] dates=[${r.dates.join(",")}] processed=${r.processed} ` +
-      `enrollErrors=${r.enrollErrors} dateFailures=${r.errors.length}`
-  );
-  return r;
-});
+const mlbBacktestRunner = new CronJobRunner(
+  "mlb-backtest",
+  makeBacktestWork(
+    () => mlbBacktestDate,
+    d => runMultiMarketBacktestForDate(d, { onlyUnenrolled: true, runKProps: false })
+  )
+);
 
 function sanitizeForLog(value: string): string {
   return value.replace(/[\r\n]/g, "");
@@ -202,62 +185,6 @@ function mountJob(app: Express, path: string, label: string, runner: CronJobRunn
     res.status(200).json({
       ok: true,
       job: label,
-      startedAt: reqAt,
-      started: outcome.started,
-      skipped: outcome.skipped,
-      lastResult: outcome.lastResult,
-    });
-  });
-  console.log(`[Cron] [OUTPUT] Registered POST ${path} (job=${label})`);
-}
-
-/**
- * Same as mountJob, plus an optional `?date=YYYY-MM-DD` (or body.date) that is
- * stashed via `setDate` BEFORE trigger() so the runner picks it up. Rejects a
- * malformed date with 400 rather than silently running the default window —
- * a typo'd date that quietly backfills "today" is the kind of thing you only
- * notice in the data.
- */
-function mountDateJob(
-  app: Express,
-  path: string,
-  label: string,
-  runner: CronJobRunner,
-  setDate: (d: string | null) => void
-): void {
-  app.post(path, (req: Request, res: Response) => {
-    if (!requireCronSecret(req, res, label)) return;
-
-    const raw = (req.query?.date ?? req.body?.date) as string | undefined;
-    const parsed = parseCronDateParam(raw);
-    if (!parsed.ok) {
-      console.log(
-        `[Cron:${label}] [INPUT] REJECTED invalid date=${sanitizeForLog(String(raw))}`
-      );
-      res
-        .status(400)
-        .json({ ok: false, error: "invalid-date", expected: "YYYY-MM-DD" });
-      return;
-    }
-    setDate(parsed.date);
-
-    const reqAt = new Date().toISOString();
-    const clientIpForLog = sanitizeForLog(resolveClientIdentity(req) || "?");
-    console.log(
-      `[Cron:${label}] [INPUT] POST ${path} date=${raw ?? "default-window"} at ${reqAt} ip=${clientIpForLog}`
-    );
-
-    const outcome = runner.trigger();
-
-    console.log(
-      `[Cron:${label}] [OUTPUT] started=${outcome.started} skipped=${outcome.skipped} ` +
-        `lastRunAt=${outcome.lastRunAt ?? "never"}`
-    );
-
-    res.status(200).json({
-      ok: true,
-      job: label,
-      date: raw ?? null,
       startedAt: reqAt,
       started: outcome.started,
       skipped: outcome.skipped,

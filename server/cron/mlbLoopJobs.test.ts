@@ -13,6 +13,9 @@ import {
   parseCronDateParam,
   runBacktestJob,
   runOutcomesJob,
+  makeOutcomesWork,
+  makeBacktestWork,
+  resolveDateJobRequest,
   type OutcomeSummaryLike,
 } from "./mlbLoopJobs";
 
@@ -207,5 +210,94 @@ describe("runBacktestJob", () => {
     await expect(runBacktestJob(["a", "b"], run)).rejects.toThrow(
       /all 2 backtest dates threw/
     );
+  });
+});
+
+describe("runner work factories", () => {
+  const AT = Date.parse("2026-08-07T06:30:00Z");
+  const silent = () => {};
+
+  it("outcomes: uses the 2-date PT window when no ?date= was stashed", async () => {
+    const ingest = vi.fn().mockResolvedValue(summary({ written: 1 }));
+    const work = makeOutcomesWork(() => null, ingest, silent, () => AT);
+    const r = await work();
+    expect(r.dates).toEqual(["2026-08-05", "2026-08-06"]);
+    expect(ingest).toHaveBeenCalledTimes(2);
+    expect(r.written).toBe(2);
+  });
+
+  it("outcomes: a stashed ?date= REPLACES the window, it does not extend it", async () => {
+    const ingest = vi.fn().mockResolvedValue(summary());
+    const work = makeOutcomesWork(() => "2026-07-04", ingest, silent, () => AT);
+    const r = await work();
+    expect(r.dates).toEqual(["2026-07-04"]);
+    expect(ingest).toHaveBeenCalledExactlyOnceWith("2026-07-04");
+  });
+
+  it("outcomes: reads the stash at RUN time, not at construction time", async () => {
+    // The route stashes the date just before trigger(); binding it at
+    // construction would pin whatever was there when the module loaded.
+    let stash: string | null = null;
+    const ingest = vi.fn().mockResolvedValue(summary());
+    const work = makeOutcomesWork(() => stash, ingest, silent, () => AT);
+    stash = "2026-01-01";
+    expect((await work()).dates).toEqual(["2026-01-01"]);
+    stash = null;
+    expect((await work()).dates).toHaveLength(2);
+  });
+
+  it("backtest: uses the 3-date ET window and forwards the self-heal options", async () => {
+    const runForDate = vi.fn().mockResolvedValue({ processed: 1, errors: 0 });
+    const work = makeBacktestWork(() => null, runForDate, silent, () => AT);
+    const r = await work();
+    expect(r.dates).toEqual(["2026-08-05", "2026-08-06", "2026-08-07"]);
+    expect(r.processed).toBe(3);
+  });
+
+  it("backtest: propagates the fail-loud throw out of the work fn", async () => {
+    const work = makeBacktestWork(
+      () => null,
+      vi.fn().mockResolvedValue({ processed: 0, errors: 2 }),
+      silent,
+      () => AT
+    );
+    await expect(work()).rejects.toThrow(/all 6 backtest enrollments failed/);
+  });
+
+  it("logs one OUTPUT line per run", async () => {
+    const lines: string[] = [];
+    const work = makeOutcomesWork(
+      () => null,
+      vi.fn().mockResolvedValue(summary()),
+      m => lines.push(m),
+      () => AT
+    );
+    await work();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("[Cron:mlb-outcomes] [OUTPUT]");
+  });
+});
+
+describe("resolveDateJobRequest — the route's decision, without Express", () => {
+  it("rejects a malformed date with a 400 body", () => {
+    expect(resolveDateJobRequest("07-04-2026")).toEqual({
+      action: "reject",
+      status: 400,
+      body: { ok: false, error: "invalid-date", expected: "YYYY-MM-DD" },
+    });
+  });
+
+  it("runs the default window when no date is supplied", () => {
+    expect(resolveDateJobRequest(undefined)).toEqual({
+      action: "run",
+      date: null,
+    });
+  });
+
+  it("runs the supplied date when it is well-formed", () => {
+    expect(resolveDateJobRequest("2026-08-07")).toEqual({
+      action: "run",
+      date: "2026-08-07",
+    });
   });
 });

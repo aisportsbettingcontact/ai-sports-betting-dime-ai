@@ -149,3 +149,73 @@ export async function runBacktestJob(
   }
   return { dates, processed, enrollErrors, errors };
 }
+
+// ─── Runner work factories ────────────────────────────────────────────────────
+//
+// The CronJobRunner bodies live here rather than inline in cronRoutes.ts for the
+// same reason as everything above: inline they can only be asserted as text.
+// Each returns the async work function the runner will invoke, with its
+// collaborators already bound.
+
+/** Work fn for the mlb-outcomes runner. `getDate` reads the ?date= stash. */
+export function makeOutcomesWork(
+  getDate: () => string | null,
+  ingest: (date: string) => Promise<OutcomeSummaryLike>,
+  log: (msg: string) => void = console.log,
+  now: () => number = Date.now
+): () => Promise<OutcomesJobResult> {
+  return async () => {
+    const stashed = getDate();
+    const dates = stashed
+      ? [stashed]
+      : lastNDates(2, "America/Los_Angeles", now());
+    const r = await runOutcomesJob(dates, ingest);
+    log(
+      `[Cron:mlb-outcomes] [OUTPUT] dates=[${r.dates.join(",")}] written=${r.written} ` +
+        `skipped=${r.skipped} rowErrors=${r.rowErrors} dateFailures=${r.errors.length}`
+    );
+    return r;
+  };
+}
+
+/** Work fn for the mlb-backtest runner. */
+export function makeBacktestWork(
+  getDate: () => string | null,
+  runForDate: (
+    date: string
+  ) => Promise<{ processed: number; errors: number }>,
+  log: (msg: string) => void = console.log,
+  now: () => number = Date.now
+): () => Promise<BacktestJobResult> {
+  return async () => {
+    const stashed = getDate();
+    const dates = stashed ? [stashed] : lastNDates(3, "America/New_York", now());
+    const r = await runBacktestJob(dates, runForDate);
+    log(
+      `[Cron:mlb-backtest] [OUTPUT] dates=[${r.dates.join(",")}] processed=${r.processed} ` +
+        `enrollErrors=${r.enrollErrors} dateFailures=${r.errors.length}`
+    );
+    return r;
+  };
+}
+
+/**
+ * The `?date=`-aware half of mountDateJob, extracted so the REJECTION path is
+ * executable in a test. Returns what the route should do; the caller performs
+ * the Express side effects.
+ */
+export function resolveDateJobRequest(
+  raw: unknown
+):
+  | { action: "reject"; status: 400; body: { ok: false; error: string; expected: string } }
+  | { action: "run"; date: string | null } {
+  const parsed = parseCronDateParam(raw);
+  if (!parsed.ok) {
+    return {
+      action: "reject",
+      status: 400,
+      body: { ok: false, error: "invalid-date", expected: "YYYY-MM-DD" },
+    };
+  }
+  return { action: "run", date: parsed.date };
+}

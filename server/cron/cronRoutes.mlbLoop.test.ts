@@ -36,12 +36,21 @@ describe("MLB learning-loop endpoints are mounted and auth-guarded", () => {
     expect(routes).toContain('"/api/cron/mlb-backtest"');
   });
 
-  it("routes every mount through a secret-guarded helper", () => {
-    // Both helpers call requireCronSecret as their first statement; nothing may
-    // be mounted with a bare app.post that skips it.
-    for (const helper of ["function mountJob(", "function mountDateJob("]) {
-      const body = routes.slice(routes.indexOf(helper));
-      expect(body.slice(0, 400)).toContain("requireCronSecret");
+  it("mountJob still guards with requireCronSecret", () => {
+    // mountDateJob's guard is asserted by EXECUTION in mountDateJob.test.ts
+    // ("refuses an unauthenticated request"); this covers the sibling helper,
+    // which stays inline here and is not otherwise importable.
+    const body = routes.slice(routes.indexOf("function mountJob("));
+    expect(body.slice(0, 400)).toContain("requireCronSecret");
+  });
+
+  it("mounts nothing with a bare app.post that bypasses a helper", () => {
+    for (const p of [
+      "/api/cron/mlb-outcomes",
+      "/api/cron/mlb-closing-capture",
+      "/api/cron/mlb-backtest",
+    ]) {
+      expect(routes).not.toContain('app.post("' + p + '"');
     }
   });
 
@@ -64,22 +73,21 @@ describe("MLB learning-loop endpoints are mounted and auth-guarded", () => {
 });
 
 describe("mlb-backtest stays decoupled from the un-refit K constants", () => {
-  // If runKProps ever flips to true here, this endpoint starts grading kProj
-  // against K_CALIBRATION_FACTOR_OVER/UNDER — still the pre-M-204 literals —
-  // and pollutes the evaluation set the walk-forward re-fit is judged on.
-  it("passes runKProps: false", () => {
-    const runner = routes.slice(
-      routes.indexOf('new CronJobRunner("mlb-backtest"')
-    );
-    expect(runner.slice(0, 900)).toContain("runKProps: false");
-    expect(runner.slice(0, 900)).not.toContain("runKProps: true");
+  // Asserted on the WHOLE file, not a slice offset: the previous version keyed
+  // off a substring position and broke the moment the runner construction went
+  // multi-line, which is exactly how brittle text assertions earn their
+  // reputation. The behavioural suite mocks runForDate, so it cannot see which
+  // options the real wiring passes — this is the only guard on that, and it
+  // matters: flipping runKProps to true would grade kProj against
+  // K_CALIBRATION_FACTOR_OVER/UNDER (still the pre-M-204 literals) and pollute
+  // the evaluation set the walk-forward re-fit is judged on.
+  it("wires runKProps: false and never true", () => {
+    expect(routes).toContain("runKProps: false");
+    expect(routes).not.toContain("runKProps: true");
   });
 
-  it("enrolls only unenrolled games — self-heal, not re-grade", () => {
-    const runner = routes.slice(
-      routes.indexOf('new CronJobRunner("mlb-backtest"')
-    );
-    expect(runner.slice(0, 900)).toContain("onlyUnenrolled: true");
+  it("wires onlyUnenrolled: true — self-heal, not re-grade", () => {
+    expect(routes).toContain("onlyUnenrolled: true");
   });
 
   it("documents the backfill hold in the README", () => {
