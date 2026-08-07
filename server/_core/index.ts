@@ -163,6 +163,15 @@ function isBackgroundJobsDisabled(): boolean {
 const rateLimitLastPersisted = new Map<string, number>();
 const RATE_LIMIT_DEDUP_MS = 60_000; // 1 minute
 
+// ─── Origin-lock "no secret configured" escalation guard ────────────────────
+// edge_no_secret is a single site-wide CRITICAL condition (EDGE_MODE=on but
+// unprotected), not a per-IP event, and it fires on EVERY request while the
+// misconfiguration persists — so it gets its own single module-level
+// timestamp rather than the per-key dedup map above. At most one escalation
+// per minute.
+const EDGE_NO_SECRET_ESCALATION_MS = 60_000; // 1 minute
+let edgeNoSecretLastEscalatedAt = 0;
+
 function fireRateLimitEvent(
   ip: string,
   path: string,
@@ -470,29 +479,73 @@ async function startServer() {
   // discovers its URL. "/health" stays reachable for Railway's probe. With
   // EDGE_MODE unset/"off" this is a pure pass-through (byte-identical to today,
   // inert on merge). Mounted BEFORE helmet/body-parsers/limiters so a denied
-  // request touches nothing. onEvent routes denials to the same loud, deduped
-  // alerting the rate limiters use. See server/_core/originLock.ts.
+  // request touches nothing. onEvent routes ONLY the actual 403 ("edge_deny")
+  // to the same loud, deduped alerting the rate limiters use — the other four
+  // OriginLockEvent kinds never block a request, so alerting on them was a
+  // false-positive generator (2026-08-07 audit: a log-mode "would-deny" and a
+  // breaker "recovered" both posted the identical "IP Blocked ... 429" Discord
+  // embed as a real 403, and in the breaker-open state that fired on EVERY
+  // request). See server/_core/originLock.ts.
   app.use(
     originLock((kind, req) => {
-      fireRateLimitEvent(
-        immediateUpstreamIp(req) || resolveClientIp(req),
-        req.path,
-        req.method,
-        "edge_origin_ingress_anomaly",
-        (req.headers["user-agent"] as string | undefined) ?? null
-      );
-      if (kind === "edge_no_secret") {
-        console.error(
-          "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
-        );
-      } else if (kind === "edge_breaker_tripped") {
-        console.error(
-          "[edge][origin-lock] CRITICAL circuit breaker TRIPPED — EDGE_MODE=on but ~no verified Cloudflare ingress over the sample window; enforcement auto-downgraded to observe-only to prevent a 403 outage. Cloudflare is likely NOT fronting the origin (DNS/secret). Site falls back to Phase 3 gating + rate limits. Investigate the edge path."
-        );
-      } else if (kind === "edge_breaker_recovered") {
-        console.warn(
-          "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
-        );
+      const ip = immediateUpstreamIp(req) || resolveClientIp(req);
+      const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+
+      switch (kind) {
+        case "edge_deny":
+          // The ONLY kind that actually 403'd the request. Alert.
+          fireRateLimitEvent(
+            ip,
+            req.path,
+            req.method,
+            "edge_origin_ingress_anomaly",
+            ua
+          );
+          break;
+        case "edge_would_deny":
+          // Log-mode observation, or breaker-open self-heal — the request was
+          // SERVED (200), not blocked. Log only: alerting here would claim a
+          // 429-and-blocked outcome for a request that went through, and in
+          // the breaker-open state it would fire on EVERY request.
+          console.warn(
+            `[edge][origin-lock] would-deny (observe-only, request served) ip=${logSafe(ip)} path=${logSafe(req.path)}`
+          );
+          break;
+        case "edge_no_secret":
+          // Anti-lockout: EDGE_MODE=on but no secret configured — the site is
+          // UNPROTECTED and this fires on every request while it persists.
+          // Escalate at most once per minute so the CRITICAL itself can't
+          // flood.
+          if (
+            Date.now() - edgeNoSecretLastEscalatedAt >=
+            EDGE_NO_SECRET_ESCALATION_MS
+          ) {
+            edgeNoSecretLastEscalatedAt = Date.now();
+            console.error(
+              "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
+            );
+          }
+          break;
+        case "edge_breaker_tripped":
+          // Enforcement auto-suspended (breaker judged Cloudflare absent).
+          // Not an attack signal, but loud because the site is unprotected.
+          console.error(
+            "[edge][origin-lock] CRITICAL circuit breaker TRIPPED — EDGE_MODE=on but ~no verified Cloudflare ingress over the sample window; enforcement auto-downgraded to observe-only to prevent a 403 outage. Cloudflare is likely NOT fronting the origin (DNS/secret). Site falls back to Phase 3 gating + rate limits. Investigate the edge path."
+          );
+          break;
+        case "edge_breaker_recovered":
+          // GOOD NEWS: verified Cloudflare ingress returned, enforcement
+          // resumed. Must not read like an attack — console.log, not warn/error.
+          console.log(
+            "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
+          );
+          break;
+        default:
+          // An OriginLockEvent kind this handler doesn't know about yet.
+          // Log loudly rather than silently dropping it.
+          console.error(
+            `[edge][origin-lock] UNRECOGNISED origin-lock event kind: ${String(kind)} — onEvent handler needs updating`
+          );
       }
     })
   );
