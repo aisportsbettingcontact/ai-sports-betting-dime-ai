@@ -37,7 +37,7 @@ import {
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const WORKFLOWS = join(ROOT, ".github/workflows");
-const REPO = "aisportsbettingcontact/ai-sports-betting-dime-ai";
+const REPO = "tailered-ai/dime-ai";
 /** gh run list page size. Binding on high-frequency workflows — see the coverage guard. */
 const RUN_LIMIT = 300;
 

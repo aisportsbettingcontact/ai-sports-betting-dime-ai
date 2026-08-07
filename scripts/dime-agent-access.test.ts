@@ -35,10 +35,7 @@ async function fixture() {
 test("the committed access manifest validates the exact targets and denies writes", async () => {
   const manifest = await fixture();
   assert.equal(validateAccessManifest(manifest), manifest);
-  assert.equal(
-    manifest.providers.github.repository,
-    "aisportsbettingcontact/ai-sports-betting-dime-ai"
-  );
+  assert.equal(manifest.providers.github.repository, "tailered-ai/dime-ai");
   assert.equal(
     manifest.providers.railway.projectId,
     "8dd7341d-702c-48c7-90df-5c19a4f04913"

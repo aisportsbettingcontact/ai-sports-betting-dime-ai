@@ -105,7 +105,7 @@ export function verifyQmPack(repoRoot: string = root): QmPackReport {
     };
   }
 
-  if (!pack.url?.includes("ai-sports-betting-dime-ai")) {
+  if (!pack.url?.includes("tailered-ai/dime-ai")) {
     failures.push("qm.pack.json url does not point at this repository");
   }
   const globs = pack.config?.skillGlobs ?? [];
