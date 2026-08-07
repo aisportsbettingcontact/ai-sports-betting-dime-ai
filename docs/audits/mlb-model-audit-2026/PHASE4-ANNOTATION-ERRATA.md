@@ -1,0 +1,150 @@
+# Phase 4 annotation errata — what the `[FIXED in Phase 4]` tags actually mean
+
+**Status: all 55 `[FIXED in Phase 4]` annotations in `phase0/*.md` are superseded by this
+document.** Verified 2026-08-07 against `main` at commit `222748bab`, one annotation at a
+time, with an adversarial refutation pass whose sole job was to find fixes the verifiers had
+missed. It overturned **zero** verdicts.
+
+| Verdict | Count | Meaning |
+|---|---|---|
+| `NOT_ON_MAIN` | 47 | The named code change is genuinely absent from `main`. The annotation is false. |
+| `PARTIAL` | 8 | Mixed — see below. Seven are "right conclusion, wrong mechanism"; one is a true negative annotation. |
+| `FIXED_ON_MAIN` | **0** | No annotation was found to describe code that is actually on `main`. |
+
+## Root cause — a deliberate deferral, not an accident
+
+This is the important correction, and it revises an earlier erratum of my own (see the note at
+the end).
+
+The Phase 4 code fixes are real and exist in two commits on the abandoned `#421` branch:
+
+- `e25c1a9db` — "phase 4 root-cause fixes — K opp_adj units, F5 RL ties, env mult + home-edge
+  params, hr9 basis, brier scales, model-pick grading, cron triggers, missing-game creation"
+  (8 server files, +1415/−91)
+- `2f06b430f` — "revive publication gate — per-market evidence-driven switches (M-201)"
+
+Both are *ancestors* of `main` by history, but their **content is not in `main`'s tree**. The
+reason is `2af950d67`, "Merge main into audit branch — resolve 14 conflicts to main", which
+states its own reasoning explicitly and correctly:
+
+> The July Phase 4 fixes … are genuinely absent from main, but re-applying them through a
+> conflict resolution is not safe: (1) main has moved far past them — `mlbModelRunner.ts`
+> alone gained 2,994 lines since the merge base, against the branch's 42. That is a
+> re-implementation, not a merge. (2) The branch's own code forbids shipping it as-is: "both
+> defaults were fitted while the M-204 opp_adj unit bug shrank lambda ~17% — they MUST be
+> re-fitted by walk-forward before the fixed model ships". (3) Resolving only the conflicted
+> files would have shipped an incoherent half set.
+
+That judgment was sound and the top-level `FINDINGS.md` table did the right thing — M-201,
+M-202, M-204 and M-207 all remain marked **OPEN**. What was never done is reverting the
+`[FIXED in Phase 4]` annotations in the `phase0/` dossiers, which had been written while the
+fixes still existed on the branch. So the corpus contradicts itself: the findings table says
+OPEN, the dossiers say FIXED.
+
+Its standing recommendation is still the correct next step, and is still outstanding:
+
+> close #421 and re-implement the Phase 4 fixes deliberately against current code,
+> **re-fitting the K calibration constants first**.
+
+## The seven `PARTIAL` rows in `ingestion.md` — right conclusion, wrong mechanism
+
+`ingestion.md:222, 232, 250, 450, 461, 493, 494` all attribute a fix to
+`reconcileUnmatchedApiGame` in `mlbScoreRefresh.ts`. **That function does not exist anywhere
+in the code** — every grep hit is inside `ingestion.md` itself.
+
+But the defects they describe *are* closed on `main`, by different work that did land:
+`server/mlbScheduleSync.ts` (the doubleheader root-cause repair) and commit `20332c71e`
+(`matchMlbLiveGamesToDbRows`). In one case (`:493`, finding F5) `main` goes further than the
+annotation claims.
+
+So these need **re-pointing, not retraction** — the conclusion holds, the citation is fiction.
+
+## Live consequences still on `main`
+
+Because the fixes never landed, the defects they addressed are still in the running model:
+
+- `MLBAIModel.py:1617` — `FG_ML_HOME_EDGE = 0.03` hard-coded, with a comment sourcing it to
+  `mlb_calibration_constants.fg_ml_home_edge`. The DB row holds **0.01781473**. The hard-coded
+  value is ~68% higher than the calibrated one, and the DB value does not win (M-207).
+- `mlbKPropsModelService.ts:88-89` — `K_CALIBRATION_FACTOR_OVER/UNDER` hard-coded 0.87/0.81,
+  no DB read (M-207).
+- `mlbHrPropsModelService.ts:97` — `HR_CALIBRATION_FACTOR = 0.5317` hard-coded; lambda basis
+  still PA, not AB (M-207, M-212).
+- `MLBAIModel.py:1310` — `p_f5_away_rl = (f5_margins < -abs(F5_RL))`, i.e. F5 run-line ties
+  still excluded (M-205).
+- `mlbOutcomeIngestor.ts` — no `computeModelPickGrades`; the games grading columns still have
+  no writer (M-101).
+- `cron/cronRoutes.ts` — no `/api/cron/mlb-outcomes`, `-closing-capture`, or `-backtest`
+  mounts; outcome ingestion still depends on the in-process scheduler (M-208).
+
+None of this is new breakage — it is the pre-existing state the audit documented, and all nine
+markets remain BACKTEST-ONLY, so nothing here is being published as a validated edge.
+
+## Correction to a prior erratum
+
+The erratum added in PR #435 to `BACKTESTING-EXECUTION-REPORT.md`, `MASTER-REPORT.md` and
+`action-log.md` said the gate commit was "resolved away when the audit branch merged … because
+PR #423 had already carried the documentation half." **The causal clause was wrong.** #423
+explains the *docs* resolution only. The code was dropped by the deliberate, reasoned decision
+recorded in `2af950d67`, quoted above. Those three errata are corrected in the same PR as this
+document.
+
+## Full verified table
+
+| Annotation | Finding | Verdict | Evidence on `main` |
+|---|---|---|---|
+| `exposure.md:157` | none | **PARTIAL** | The "no Phase 4 exposure fix" half is TRUE on main, and 3 of the 4 named defects are still live on main; the 4th (public tRPC) is now stale. (1) AUTO-PUBLISH — still unconditional: server/mlbModelRunner.ts:4337-4338 `publishedToFeed: true,` / `publishedModel: true,` sit inside the plain column-write map with no conditional; the file header at :12 still reads "Sets publishedToFeed=true and publishe |
+| `f5.md:18` | M-205 | **NOT_ON_MAIN** | server/MLBAIModel.py:1310 — `p_f5_away_rl = float((f5_margins < -abs(F5_RL)).mean())  # away covers -0.5`. Still the tie-EXCLUDING condition (`< -abs(F5_RL)` = margin < -0.5). Line 1309 is `p_f5_home_rl = float((f5_margins > abs(F5_RL)).mean())`, so home+away sum to 1 - P(tie), not 1.0. `grep -n "partition" server/MLBAIModel.py` returns zero hits — no partition-sum assert exists. The log line at 1 |
+| `f5.md:107` | M-205 | **NOT_ON_MAIN** | server/MLBAIModel.py:1310 still has `p_f5_away_rl = float((f5_margins < -abs(F5_RL)).mean())` — the pre-fix `margin < −0.5`. No assert: `grep -n "partition" server/MLBAIModel.py` → 0 hits; the only logger.verify in that block (1319-1320) is the pre-existing three-way-sum check on `_f5_3way_sum`. The `remove_vig` sub-clause is a no-op, not a Phase 4 change: main's `def remove_vig` at server/MLBAIMo |
+| `f5.md:191` | M-101 | **NOT_ON_MAIN** | `grep -n "f5MlResult\|f5MlCorrect\|f5RlResult\|f5RlCorrect\|f5TotalResult\|f5TotalCorrect\|f5BacktestRunAt" server/mlbOutcomeIngestor.ts` returns ZERO matches across the whole 956-line file on main. Repo-wide, the only occurrences are readers and metadata: server/routers/mlbSchedule.ts:846-847 / 928-929 / 954-955 / 970-976 / 1243-1245 / 1298-1300 (selects and win-rate filters), server/feedGating.t |
+| `f5.md:230` | M-208 | **NOT_ON_MAIN** | server/cron/cronRoutes.ts on main is 192 lines and mounts exactly: `/api/cron/vsin-odds` (103), `/api/cron/scores` (104), `/api/cron/mlb-cycle` (105), `/api/cron/bet-grade` (106), `/api/cron/bet-grade-sweep` (107), `/api/cron/mlb-asg` (113), `/api/cron/stripe-reconcile` (142), and GET `/api/cron/status` (178). Grep for `mlb-outcomes`, `mlb-closing-capture`, `mlb-backtest` in that file returns zero |
+| `f5.md:286` | M-101 | **NOT_ON_MAIN** | The code half is absent. mlbOutcomeIngestor.ts:301 on main is `const detailedState = g.status?.detailedState ?? "";` — inside the MLB Stats API game-status parsing loop, not a grading comment; the string "away won F5" and the token "M-101" appear nowhere in the file. No f5*Result/f5*Correct writer exists on main (zero grep hits in the file, see line-191 entry). So "mlbOutcomeIngestor now grades th |
+| `f5.md:309` | F-1 | **NOT_ON_MAIN** | server/MLBAIModel.py:1310 — `p_f5_away_rl = float((f5_margins < -abs(F5_RL)).mean())  # away covers -0.5`. The ~15 pp of tie mass is still dropped from the away side and then re-inflated by `remove_vig(p_f5_hrl, p_f5_arl)` at MLBAIModel.py:1940. No partition assert (`grep -n partition server/MLBAIModel.py` → 0 hits). The consumer side is also unchanged: server/mlbMultiMarketBacktest.ts still grade |
+| `f5.md:311` | F-3 | **NOT_ON_MAIN** | `grep -rn "probFromUnit\|probFromPct" server client shared` returns ZERO matches anywhere in main's tree. main still has one undifferentiated helper: server/mlbOutcomeIngestor.ts:162-173 `function brierScore(modelProbPct...) { ... const p = parseFloat(String(modelProbPct)) / 100; ... }`, and it is called with the 0–1-scaled columns unchanged — line 228 `brierF5Total = brierScore(game.modelF5OverRa |
+| `f5.md:315` | F-7 | **NOT_ON_MAIN** | The two cited anchors do not contain writers on main. server/mlbOutcomeIngestor.ts:488-496 is an early-return summary object (`return { date: dateStr, totalGames: dbGames.length, written: 0, skippedAlreadyIngested: 0, ... }`), and 895-905 is the docblock plus signature of `async function ingestMlbOutcomesRange(startDate, endDate, force = false)`. Neither mentions any f5 result column. Repo-wide th |
+| `gradecal.md:13` | M-208 | **NOT_ON_MAIN** | server/cron/cronRoutes.ts:103-107 is the complete mountJob list on main: `mountJob(app, "/api/cron/vsin-odds", ...)`, `"/api/cron/scores"`, `"/api/cron/mlb-cycle"`, `"/api/cron/bet-grade"`, `"/api/cron/bet-grade-sweep"` — plus the hand-rolled `app.post("/api/cron/mlb-asg"` at :113, `app.post("/api/cron/stripe-reconcile"` at :142 and `app.get("/api/cron/status"` at :178. The file's own header (:18- |
+| `gradecal.md:19` | M-101 | **NOT_ON_MAIN** | `grep -rn computeModelPickGrades server/` → zero matches on main. `grep -n "fgMlResult\|fgTotalResult\|f5MlResult\|nrfiCorrect\|BacktestRunAt\|gradeNrfiPick" server/mlbOutcomeIngestor.ts` → zero matches. The ingestor's only DB write, server/mlbOutcomeIngestor.ts:658-682, sets exactly: `actualFgTotal`, `actualF5Total`, `actualNrfiBinary`, `brierFgTotal`, `brierF5Total`, `brierNrfi`, `brierFgMl`, `b |
+| `gradecal.md:20` | M-207 | **NOT_ON_MAIN** | `grep -rn "loadCalibrationConstant\|getKCalibrationFactors\|DIME_FG_ML_HOME_EDGE\|DIME_LEAGUE_ENV_MULT\|HR_CALIBRATION_FACTOR_FALLBACK" server/` → zero matches on main. server/mlbModelRunner.ts contains no reference to mlb_calibration_constants at all, and its child-process env builder (server/mlbModelRunner.ts:71-95, `buildMlbModelSubprocessEnvironment`) emits only PYTHONDONTWRITEBYTECODE/PYTHONU |
+| `gradecal.md:96` | none (M-207 in substance) | **NOT_ON_MAIN** | server/MLBAIModel.py:1617 reads `FG_ML_HOME_EDGE = 0.03  # +3pp home win probability correction`, applied at :1620 `p_home = float(np.clip(p_home + FG_ML_HOME_EDGE, 0.001, 0.999))`, with the comment at :1616 still `# Source: mlb_calibration_constants.fg_ml_home_edge = 0.03 (LIVE_2026_N554_BACKTEST)`. `grep -rn "_env_float" server/*.py` → zero matches; `grep -n "DIME_FG_ML_HOME_EDGE" server/MLBAIMo |
+| `gradecal.md:97` | none (M-207 in substance) | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:88-89 on main: `const K_CALIBRATION_FACTOR_OVER = 0.87;` / `const K_CALIBRATION_FACTOR_UNDER = 0.81;` — plain module-level literals, no DB read, applied at :519-520 (`const lambdaOver = lambdaRaw * K_CALIBRATION_FACTOR_OVER;`). server/kPropsDbHelpers.ts contains no 'calibration'/'Calibration' string at all and exports no getKCalibrationFactors. Note the numeric OUTP |
+| `gradecal.md:98` | M-207 + M-212 | **NOT_ON_MAIN** | Both sub-claims are false on main. (a) server/mlbHrPropsModelService.ts:97 is `const HR_CALIBRATION_FACTOR = 0.5317;` — no _FALLBACK suffix anywhere in the file, and no query against mlbCalibrationConstants (`grep -rn hr_calibration_factor server/` → zero). (b) The lambda basis is still PA, not AB: :66 `const PLAYER_PA_PER_GAME = 4.22;` and :183-184 `const lambdaRaw = base_rate * statcast_adj * PL |
+| `gradecal.md:103` | M-207 | **NOT_ON_MAIN** | None of the four params is read at runtime on main. Full grep of mlbCalibrationConstants usage in server/: server/mlbDriftDetector.ts:283-291 (the INSERT-if-missing seed) and server/mlbMarketGates.ts:179-188 — and mlbMarketGates reads only `publish_*` rows (`const PARAM_PREFIX = "publish_";` at :74, `const ALL_PARAM_NAMES = MLB_MARKET_KEYS.map(paramNameFor);` at :80), gated behind MLB_MARKET_GATE_ |
+| `gradecal.md:198` | M-208 | **NOT_ON_MAIN** | Same evidence as line 13: server/cron/cronRoutes.ts:102-191 registers vsin-odds (:103), scores (:104), mlb-cycle (:105), bet-grade (:106), bet-grade-sweep (:107), mlb-asg (:113), stripe-reconcile (:142), status (:178). No mlb-outcomes / mlb-closing-capture / mlb-backtest route exists (`grep -rn` across server/ and .github/ → zero hits), and there is no `?date=` mountDateJob helper in the file. The |
+| `gradecal.md:225` | M-101 | **NOT_ON_MAIN** | server/mlbOutcomeIngestor.ts writes nothing of the sort: its update set at :662-681 covers only actualFgTotal/actualF5Total/actualNrfiBinary/brierFgTotal/brierF5Total/brierNrfi/brierFgMl/brierF5Ml/outcomeIngestedAt, and its post-write verification block at :686-696 re-selects the same five actual*/brier* fields. `grep -n "fgMlResult\|nrfiCorrect\|BacktestRunAt" server/mlbOutcomeIngestor.ts` → zero |
+| `gradecal.md:236` | F2 (M-207) | **NOT_ON_MAIN** | F2 is unmitigated on main. The three code sites F2 cites are byte-for-byte pre-fix: server/MLBAIModel.py:1617 `FG_ML_HOME_EDGE = 0.03`; server/MLBAIModel.py:387 `"nrfi_rate": 0.5093,  # NRFI rate (2026 live: 0.5093, 3yr: 0.5150)`; server/mlbKPropsModelService.ts:88-89 `K_CALIBRATION_FACTOR_OVER = 0.87` / `K_CALIBRATION_FACTOR_UNDER = 0.81`. No runtime SELECT of any of those four params exists (onl |
+| `gradecal.md:237` | F3 (M-208) | **NOT_ON_MAIN** | No such endpoints on main — server/cron/cronRoutes.ts's registration block (:102-191) contains only vsin-odds/scores/mlb-cycle/bet-grade/bet-grade-sweep/mlb-asg/stripe-reconcile/status, and grep for the three job names across server/ and .github/ returns nothing. The two conditions F3 depends on are also unchanged: the kill-switch guard still wraps the in-process schedulers, and the flag-is-set as |
+| `gradecal.md:239` | F5 (M-203) | **NOT_ON_MAIN** | The exact F5 bug is still present. server/mlbOutcomeIngestor.ts:162-167 still declares `function brierScore(modelProbPct: string \| number \| null \| undefined, outcome: 0 \| 1 \| null)` and divides internally at :168 `const p = parseFloat(String(modelProbPct)) / 100;` (its docstring at :158 still says 'Model probability in [0, 100]'). The two 0–1 columns are still passed raw into it: :228 `brierF |
+| `gradecal.md:246` | F12 (M-101) | **NOT_ON_MAIN** | F12 is unmitigated. server/mlbOutcomeIngestor.ts:662-681 is the complete write set and contains no grading column and no null-overwrite of one; no *BacktestRunAt stamp is written (`grep -n BacktestRunAt server/mlbOutcomeIngestor.ts` → zero). Repo-wide the columns remain read-only: strip list server/routers.ts:154/:166, admin SELECTs server/routers/mlbSchedule.ts:1047/:1120/:1145/:1242/:1297, clien |
+| `ingestion.md:38` | M-208 | **NOT_ON_MAIN** | server/cron/cronRoutes.ts is 192 lines total and `grep -n 'mlb-outcomes\|mlb-closing-capture\|mlb-backtest' server/cron/cronRoutes.ts` returns ZERO matches. The only job registrations are cronRoutes.ts:103-107 — `mountJob(app, "/api/cron/vsin-odds", "vsin-odds", vsinRunner);`, `/api/cron/scores`, `/api/cron/mlb-cycle`, `/api/cron/bet-grade`, `/api/cron/bet-grade-sweep` — plus `app.post("/api/cron/ |
+| `ingestion.md:77` | M-208 | **NOT_ON_MAIN** | `grep -rn captureClosingLines server/` on main returns exactly 5 hits and NONE is in cronRoutes.ts: server/mlbScheduleHistoryService.ts:1196 (doc comment), :1214 `export async function captureClosingLines(): Promise<{`, and server/mlbScheduleHistoryScheduler.ts:30 (import), :326 (log), :329 `const result = await captureClosingLines();`, :347 (catch log). The 5-min in-process scheduler is still the |
+| `ingestion.md:166` | M-203 (+ M-101 forward path) | **NOT_ON_MAIN** | server/mlbOutcomeIngestor.ts:162-173 is still the blanket-divide version: :168 `const p = parseFloat(String(modelProbPct)) / 100;` inside `function brierScore(modelProbPct, outcome)`, with the stale JSDoc at :159 `@param modelProbPct  Model probability in [0, 100]`. All five call sites pass the raw column with no normalization: :213 `brierFgTotal = brierScore(game.modelOverRate, outcomeOver);`, :2 |
+| `ingestion.md:222` | M-209/D-001 | **PARTIAL** | The named function does NOT exist in code: `grep -rn reconcileUnmatchedApiGame .` returns 5 hits, ALL inside docs/audits/mlb-model-audit-2026/phase0/ingestion.md (:222, :250, :451, :494, :610). server/mlbScoreRefresh.ts:881 is `const clockChanged = dbGame.gameClock !== apiGame.gameClock;` — unrelated. BUT the underlying behavior landed independently via commit 20332c71e ('fix(mlb): canonical event |
+| `ingestion.md:232` | M-209/D-001 | **PARTIAL** | The cited code is absent. server/mlbScoreRefresh.ts:637 on main is a comment line ` * most ONE API game, and vice versa):`, not a match guard; there is no `dbByTeams` map and no reconcileUnmatchedApiGame. What main has instead is a different, stronger fix from commit 20332c71e: server/mlbScoreRefresh.ts:643 `export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(` with the documented |
+| `ingestion.md:250` | M-209/D-001 | **PARTIAL** | No reconcileUnmatchedApiGame anywhere in code (grep hits are all in this markdown file); mlbScoreRefresh.ts:881 is `const clockChanged = dbGame.gameClock !== apiGame.gameClock;`. However the claimed EFFECT is live on main via a different module: server/mlbScheduleSync.ts:328-336 `await db.insert(games).values({ fileId: 0, gameDate: ins.gameDate, ... mlbGamePk: ins.gamePk,` , driven by the StatsAPI |
+| `ingestion.md:287` | M-203 | **NOT_ON_MAIN** | server/mlbOutcomeIngestor.ts:168 still reads `const p = parseFloat(String(modelProbPct)) / 100;` — one unconditional divide for every column — and :236 still calls `brierNrfi = brierScore(game.modelPNrfi, outcome.nrfiBinary as 0 \| 1);` and :228 `brierF5Total = brierScore(game.modelF5OverRate, outcomeF5Over);` with the raw 0-1 values. Because a 0-1 probability divided by 100 lands in [0,0.01], the |
+| `ingestion.md:416` | M-208 | **NOT_ON_MAIN** | Zero grep matches for any of the three paths in server/cron/cronRoutes.ts (file ends at line 192, final statement :191 `console.log(\`[Cron] [OUTPUT] Registered GET /api/cron/status\`);`). The scheduling asymmetry the paragraph describes is therefore intact on main: schedule-history refresh, closing-line capture, outcome ingestion + Brier + drift, nightly TRENDS, player sync and the seeders remain |
+| `ingestion.md:450` | M-209 (schema-drift note) | **PARTIAL** | Both halves of the sentence are wrong about main in opposite directions. (a) The named writer does not exist — reconcileUnmatchedApiGame is nowhere in code. (b) rescheduledFrom nonetheless HAS TS writers on main, and they are typed Drizzle rather than raw SQL: server/mlbScheduleSync.ts:174 `rescheduledFrom: g.rescheduledFrom?.slice(0, 10),` (normalize) and :340 `rescheduledFrom: ins.rescheduledFro |
+| `ingestion.md:461` | M-209 (Q1) | **PARTIAL** | The M-209 mechanism is absent (no reconcileUnmatchedApiGame). The stated effect is nonetheless live on main through server/mlbScheduleSync.ts — its header (:2-8) says 'ROOT-CAUSE REPAIR for the 2026-07-17 TB@BOS doubleheader incident: before this module existed, NOTHING inserted an MLB game into the games table after the season pre-seed' — inserting with `fileId: 0` and `mlbGamePk: ins.gamePk` at  |
+| `ingestion.md:489` | F1 (via M-208) | **NOT_ON_MAIN** | server/cron/cronRoutes.ts has no such registrations — the mount calls are only :103-107 (`/api/cron/vsin-odds`, `/scores`, `/mlb-cycle`, `/bet-grade`, `/bet-grade-sweep`) plus :113 `/api/cron/mlb-asg`, :142 `/api/cron/stripe-reconcile`, :178 `GET /api/cron/status`; the file is 192 lines so the cited 236-242 range does not exist. F1 stands at its ORIGINAL P0 severity on main: outcome ingestion, clo |
+| `ingestion.md:491` | F3 (via M-208) | **NOT_ON_MAIN** | The fixed half is absent: cronRoutes.ts has no mlb-closing-capture route and never imports captureClosingLines; the only caller on main is server/mlbScheduleHistoryScheduler.ts:329 `const result = await captureClosingLines();` inside the 5-min tick (:326 log '5-min tick — EST hour=... — running captureClosingLines'). The three 'unchanged' halves are confirmed true on main: inprogress-only filter a |
+| `ingestion.md:493` | F5 (via M-209/D-001) | **PARTIAL** | Neither cited mechanism exists — mlbScoreRefresh.ts:637 is the comment ` * most ONE API game, and vice versa):` and there is no reconcileUnmatchedApiGame. But F5 is nonetheless substantially closed on main by commit 20332c71e, and further than the annotation claims: (1) server/mlbScoreRefresh.ts:643 `export function matchMlbLiveGamesToDbRows(...)` does one-to-one claiming with gamePk → teams+gameN |
+| `ingestion.md:494` | F6 (via M-209/D-001) | **PARTIAL** | mlbScoreRefresh.ts has no such block — the file is 1102 lines and :881 is `const clockChanged = dbGame.gameClock !== apiGame.gameClock;`. The F6 defect is nevertheless resolved on main by mlbScheduleSync: server/mlbScheduleSync.ts:447-455 comment 'A provider event's row may live OUTSIDE the window when the provider moved the game to a new officialDate while KEEPING its gamePk. Proven live on 2026- |
+| `ingestion.md:499` | F11 (via M-208) | **NOT_ON_MAIN** | The self-heal endpoint does not exist — zero matches for 'mlb-outcomes' in server/cron/cronRoutes.ts (192 lines). The unchanged half is confirmed: server/mlbOutcomeAndDriftScheduler.ts:265-266 still gates on `pst.hour === 0 &&` / `pst.minute === 30 &&` inside a `}, 60_000).unref();` tick (:319), so a restart or event-loop stall spanning 00:30 PST still skips the whole night with no recovery path.  |
+| `kprops.md:113` | K-2 (M-204) | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:65 `const LEAGUE_OPP_K9 = 8.2; // League-average team K/9 vs RHP (baseline)` and :464 `const oppAdj = clamp(oppK9 / LEAGUE_OPP_K9, MIN_OPP_ADJ, MAX_OPP_ADJ);`. `grep -rn getLeagueMeanTeamK9ByHand server/` returns zero hits; server/kPropsDbHelpers.ts is 496 lines and exports only UpdateKPropsResult, UpsertKPropsResult, upsertKPropsFromAN (:110), updateKPropsFromAN (: |
+| `kprops.md:157` | K-2 (M-204) | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:463 `const oppK9 = battingSplitsByTeamHand.get(oppK9Key) ?? LEAGUE_OPP_K9;` — the missing-split default is still the 8.2 constant — and :464 `const oppAdj = clamp(oppK9 / LEAGUE_OPP_K9, MIN_OPP_ADJ, MAX_OPP_ADJ);`. The constant survives at :65. `grep -rn "6\.78\|LEAGUE_MEAN_TEAM_K9" server/` returns no matches, so neither the 6.78 fallback nor the per-cycle helper e |
+| `kprops.md:190` | K-2 (M-204) | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:65 `const LEAGUE_OPP_K9 = 8.2; // League-average team K/9 vs RHP (baseline)` — still declared at exactly the line the table cites (:65), and still read at :463 and :464. No DB-mean replacement exists anywhere in server/. |
+| `kprops.md:199` | K-5 / M-207 | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:88 `const K_CALIBRATION_FACTOR_OVER = 0.87; // P5: 0.800 → 0.870 (+0.070) to correct -0.52 under-projection` — the original name, no `_DEFAULT` suffix, used directly at :519 `const lambdaOver = lambdaRaw * K_CALIBRATION_FACTOR_OVER;`. `grep -rn "getKCalibrationFactors\|k_calibration_factor_over" server/ client/ drizzle/` returns no matches, so nothing reads a DB row |
+| `kprops.md:200` | K-5 / M-207 | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:89 `const K_CALIBRATION_FACTOR_UNDER = 0.81; // P5: 0.739 → 0.810 (+0.071) to correct -0.52 under-projection` — original name, consumed unconditionally at :520 `const lambdaUnder = lambdaRaw * K_CALIBRATION_FACTOR_UNDER;`. No `k_calibration_factor_under` string exists anywhere under server/, client/, or drizzle/. |
+| `kprops.md:201` | K-5 / M-207 | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:90-91 `// Legacy alias (used in kProj display)` / `const K_CALIBRATION_FACTOR = K_CALIBRATION_FACTOR_UNDER;` — still present at exactly the cited line :91, and still live: it is interpolated into the per-pitcher log at :614 `` `(calib=${K_CALIBRATION_FACTOR}) \| pOver=${pOver.toFixed(4)} …` ``. |
+| `kprops.md:224` | K-5 (M-207, partial) | **NOT_ON_MAIN** | `grep -rn "getKCalibrationFactors\|k_calibration_factor" server/` yields exactly one hit in the whole tree: server/mlbDriftDetector.ts:247 `paramName: "k_calibration_factor",` (seeded currentValue/baselineValue "1.00000000", :248-249). modelKPropsForDate performs no calibration read — the factors are the module-level constants at mlbKPropsModelService.ts:88-89 applied directly at :519-520. The sec |
+| `kprops.md:475` | K-2 | **NOT_ON_MAIN** | server/mlbKPropsModelService.ts:463-464 `const oppK9 = battingSplitsByTeamHand.get(oppK9Key) ?? LEAGUE_OPP_K9;` / `const oppAdj = clamp(oppK9 / LEAGUE_OPP_K9, MIN_OPP_ADJ, MAX_OPP_ADJ);` against :65 `const LEAGUE_OPP_K9 = 8.2;`, while server/seedTeamBattingSplits.ts:102 still writes `const k9 = (k / ab) * 27;`. The unit mismatch the finding describes is live on main exactly as the 'pre-fix' cite s |
+| `kprops.md:478` | K-5 | **NOT_ON_MAIN** | The dual-source condition the finding describes is unchanged on main: server/mlbKPropsModelService.ts:88-89 hardcode 0.87/0.81 and are the only values ever applied (:519-520); no `k_calibration_factor_over`/`_under` string exists under server/, client/, or drizzle/; the sole DB-side toucher is still server/mlbDriftDetector.ts:247 seeding `k_calibration_factor` at 1.00000000 (:248). The row's own p |
+| `kprops.md:479` | K-6 | **NOT_ON_MAIN** | `grep -rn poissonPUnder server/` returns zero hits. main computes pUnder as the exact complement of pOver: server/mlbKPropsModelService.ts:530-534 `const pUnder = clamp(1 - poissonPOver(bookLine, lambdaUnder), MIN_P_OVER, MAX_P_OVER);`, and poissonPOver at :140-143 is still `const threshold = Math.floor(bookLine); // e.g. 4.5 → 4, 5.0 → 5` / `return 1 - poissonCdf(threshold, lambda);`. On an integ |
+| `kprops.md:486` | K-13 | **NOT_ON_MAIN** | The asserted rewrite is absent. Header step 3 on main is still the pre-fix text — mlbKPropsModelService.ts:18-19 ` *     opp_k9 = team_batting_splits.k9 (vs pitcher hand)` / ` *     opp_adj = opp_k9 / LEAGUE_OPP_K9` (no K/AB×27 basis note) — and step 6 is still the single line :30 ` *     p_over = 1 - Poisson_CDF(floor(bookLine), lambda)` with no p_under/push clause. The 'remains stale' half of th |
+| `kprops.md:572` | none (summary: K-2, K-5, K-6, K-13) | **NOT_ON_MAIN** | Every listed change is absent from main's tree: mlbKPropsModelService.ts:65 still declares `const LEAGUE_OPP_K9 = 8.2;`, :88-91 still declare `K_CALIBRATION_FACTOR_OVER = 0.87` / `K_CALIBRATION_FACTOR_UNDER = 0.81` / the `K_CALIBRATION_FACTOR` alias (no `_DEFAULT` names), `grep -rn "poissonPUnder\|getLeagueMeanTeamK9ByHand\|getKCalibrationFactors" server/` returns zero hits, server/kPropsDbHelpers |
+| `nrfi.md:130` | none | **NOT_ON_MAIN** | `gradeNrfiPick` does not exist anywhere in main's tree: `grep -rn "gradeNrfiPick" .` (excl. node_modules/.git) returns ONLY three hits, all inside this same doc (docs/audits/mlb-model-audit-2026/phase0/nrfi.md:130, :204, :240) — zero code hits. A repo-wide search for the three columns across *.ts/*.tsx/*.mjs/*.js/*.py finds only READERS and schema, no writer: server/routers.ts:154 (field-set list) |
+| `nrfi.md:182` | none | **NOT_ON_MAIN** | The nightly ingestor on main writes none of the three. server/mlbOutcomeIngestor.ts has zero occurrences of `nrfiBacktestResult`, `nrfiCorrect`, or `nrfiBacktestRunAt` (repo-wide grep for those names returns only server/routers.ts:154, server/feedGating.ts:106-110/:323-325 + its test, server/routers/mlbSchedule.ts:1246/:1301, client/src/pages/TheModelResults.tsx:1826, drizzle/schema.ts:980-984). T |
+| `nrfi.md:184` | F-1 | **NOT_ON_MAIN** | There is no cutover — the wrong-scale path is still the only path on main. server/mlbOutcomeIngestor.ts:168 `const p = parseFloat(String(modelProbPct)) / 100;` inside `brierScore` (declared at :162), and the NRFI call site at :236 `brierNrfi = brierScore(game.modelPNrfi, outcome.nrfiBinary as 0 \| 1);` passes the raw stored value with no normalization. The stored value is 0–1: server/mlbModelRunne |
+| `nrfi.md:196` | M-203 | **NOT_ON_MAIN** | Both halves of the claim are false on main. (a) `brierScore` still takes a percentage and divides: server/mlbOutcomeIngestor.ts:158 doc `@param modelProbPct  Model probability in [0, 100] (e.g. 54.3 = 54.3%)`, :162-163 `function brierScore(modelProbPct: string \| number \| null \| undefined,`, :168 `const p = parseFloat(String(modelProbPct)) / 100;`. It is also still module-private (`function`, no |
+| `nrfi.md:204` | none | **NOT_ON_MAIN** | Finding 9 is still fully true on main — the columns are exposed and rendered but have no writer. Readers exist: server/routers.ts:154 `'nrfiActualResult', 'nrfiBacktestResult', 'nrfiCorrect',` (MLB field set), server/routers/mlbSchedule.ts:1246 `nrfiCorrect: gamesTable.nrfiCorrect,` → :1301 `nrfiCorrect: r.nrfiCorrect,`, and the results UI at client/src/pages/TheModelResults.tsx:1826 `? g.nrfiCorr |
+| `nrfi.md:237` | none | **NOT_ON_MAIN** | The header is a meta-statement, but both fixes it introduces are absent from main, so the block as a whole misrepresents main's tree. Bullet 239 (brier scale): server/mlbOutcomeIngestor.ts:168 still `const p = parseFloat(String(modelProbPct)) / 100;` and :236 still `brierNrfi = brierScore(game.modelPNrfi, outcome.nrfiBinary as 0 \| 1);`; `probFromUnit` has zero occurrences repo-wide. Bullet 240 (p |
