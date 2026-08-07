@@ -104,7 +104,7 @@ export function requireCronSecret(req: Request, res: Response, jobLabel: string)
     // consistency with the single client-identity surface (2026-08-06 audit).
     console.warn(
       `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${logSafe(result.error)} ` +
-      `ip=${resolveClientIdentity(req) || "?"} ua="${logSafe((req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?")}"`
+      `ip=${logSafe(resolveClientIdentity(req) || "?")} ua="${logSafe((req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?")}"`
     );
     res.status(result.status).json({ ok: false, error: result.error });
     return false;
