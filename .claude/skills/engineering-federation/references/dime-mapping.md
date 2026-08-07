@@ -51,54 +51,59 @@ as candidate work, never as silently satisfied. Per §23, every N/A carries its 
 | Public feed reads, HTML pages | fail open + alert | the feed is the product; a limiter fault must not become an outage |
 | Expensive AI (Dime Chat) | conservative local limits (`dimeChatRateLimit.ts` pattern) | third-party cost class |
 
-- Identity for limiter keys (**corrected 2026-08-05, re-corrected 2026-08-07 for the Cloudflare hop**). **The rule is: never derive identity at a call site.** Call `clientIpKey` for limiter keys (it wraps `ipKeyGenerator`, mandatory for IPv6 /56 normalization — express-rate-limit v8 throws `ERR_ERL_KEY_GEN_IPV6` on a raw address) or `resolveClientIp` for the raw IP — both in `server/_core/trpcRateLimitPolicy.ts` on `main`. Which header is authoritative is **not** a constant — the resolver picks it in this order:
+- Identity for limiter keys (**corrected 2026-08-05, re-corrected 2026-08-07 for the Cloudflare hop, consolidated 2026-08-07**). **The rule is: never derive identity at a call site.** Call `clientIdentityKey` for limiter keys (it wraps `ipKeyGenerator`, mandatory for IPv6 /56 normalization — express-rate-limit v8 throws `ERR_ERL_KEY_GEN_IPV6` on a raw address), `resolveClientIdentity` for the raw IP, or `identitySource` when you need to record *which* tier answered — all three in `server/_core/clientIdentity.ts`. (`clientIpKey` / `resolveClientIp` in `trpcRateLimitPolicy.ts` remain as deprecated thin aliases so older call sites keep compiling; do not add new ones.) Which header is authoritative is **not** a constant — the resolver picks it in this order:
 
 | # | Condition | Source | Why |
 | --- | --- | --- | --- |
-| 1 | `edgeMode() !== "off"` **and** the request cryptographically proves it came through our Cloudflare edge (valid origin secret + CF-range upstream) | `cf-connecting-ip` | Behind Cloudflare the leftmost sanitized XFF token is the **CF PoP egress IP**, not the visitor — keying on it collapses every user behind a PoP onto one budget and blinds the private-range canary with a public-but-wrong IP |
+| 1 | the request carries `cf-connecting-ip` **and** cryptographically proves it came through our Cloudflare edge (valid origin secret + CF-range upstream). **Deliberately NOT gated on `edgeMode()`** | `cf-connecting-ip` | Behind Cloudflare the leftmost sanitized XFF token is the **CF PoP egress IP**, not the visitor — keying on it collapses every user behind a PoP onto one budget and blinds the private-range canary with a public-but-wrong IP |
 | 2 | otherwise | leftmost `X-Forwarded-For` entry | **Direct-to-origin shape only.** Railway's edge **sanitizes inbound XFF** (an injected header is discarded) and writes `[trueClient, railwayEdgeInternal]`. This tier is correct only when the request did NOT come through Cloudflare — through it, XFF is `[cloudflarePoP, railwayEdge]` and the visitor appears nowhere in it, which is exactly why tier 1 exists |
 | 3 | otherwise | `req.ip` | Last-resort fallback only — never the rule |
 
-The CF proof runs **inline** in both `log` and `on`, deliberately *not* behind the `originLock` middleware, so IP-keying is decoupled from 403 enforcement. That is what makes `EDGE_MODE=on → log` a healthy rollback target: enforcement stops, keys stay correct. With `EDGE_MODE` unset/`off` the resolver is byte-identical to the legacy leftmost-XFF behavior, so the edge merge is inert.
+The CF proof runs **inline**, deliberately *not* behind the `originLock` middleware and *not* behind an `edgeMode()` check, so IP-keying is decoupled from both 403 enforcement and the env knob. That makes **every** rollback target healthy: `on → log` stops enforcement, and `on → off` disarms the edge entirely, and in both cases keys stay correct as long as Cloudflare is still in front. The earlier `edgeMode() !== "off"` gate was removed on 2026-08-07 precisely because it made `on → off` — the tempting one-step rollback — instantly collapse every limiter onto per-PoP buckets while DNS was still orange-clouded. The proof is cryptographic (origin secret + CF-range upstream), so an attacker cannot reach tier 1 by simply sending the header.
 
 Why not `req.ip` as the rule: under `trust proxy = 1` Express resolves it to the **rotating** Railway edge node (`152.233.x.x`), which simultaneously multiplied per-client budgets and shared budgets across unrelated clients. **Rejected alternative:** raising `trust proxy` to 2 — rejected because `trust proxy` also governs `x-forwarded-proto`/`req.secure` and would risk the secure-cookie path; keying is scoped to limiters instead. Forensic logs may still show the leftmost XFF.
 
-**Named assumption — still OPEN, and the control that was supposed to close it no longer
-closes it.** Tier 2 rests on Railway continuing to sanitize inbound XFF; if that platform
-behavior changes, every request on that path becomes spoofable. The re-verifiable control
-this row asked for was built — `scripts/smoke-deploy.mjs`, check *"rate-limit keying
-resists X-Forwarded-For spoofing (Railway sanitizes)"* — but it was written **before** the
-Cloudflare edge and is now **vacuous on the only target it runs against**: `deploy-smoke.yml`
-points at `https://aisportsbettingmodels.com` (and its header forbids pointing at the raw
-origin), so with `EDGE_MODE=on` tier 1 answers both the plain and the spoofed request from
-`cf-connecting-ip` and the injected header is never consulted. The check passes whether or
-not Railway still sanitizes. Its only bail-out is a localhost guard, which never fires in
-production. **Closing this properly needs the assertion run on a non-CF-proven path**
-(raw origin with the origin secret withheld, or a request the edge proof deliberately
-fails) — until then treat tier 2 as unverified since 2026-08-06. The live control that
-does still work is the private/reserved-range canary in `trpcRateLimitPolicy.ts`, which
-alerts when a resolved "client" IP is RFC1918/CGNAT/link-local/ULA (loopback deliberately
-excluded — the app's own keep-alive calls originate there).
+**Named assumption — the per-deploy control was vacuous, and was repaired 2026-08-07.**
+The control this row asked for was built, but written **before** the Cloudflare edge, and it
+injected only `x-forwarded-for`. Once the edge was armed that made it vacuous on the only
+target it runs against: `deploy-smoke.yml` points at `https://aisportsbettingmodels.com`
+(and its header forbids pointing at the raw origin), so tier 1 answered both the plain and
+the spoofed request from `cf-connecting-ip` and the injected header was never consulted. A
+live production run on 2026-08-07 showed it passing green (59 → 58) while proving nothing.
 
-**OPEN — the "never derive identity at a call site" rule is the target, not the current
-state of `main`.** Verified 2026-08-07 on `origin/main`, exactly 11 sites still hand-roll
-`x-forwarded-for.split(",")[0]` instead of calling the resolver. They are not equally bad
-and a change in this area should know which it is touching:
+It now spoofs **both** identity headers — check *"rate-limit keying resists client-supplied
+identity headers"* — so the assertion covers whichever tier is live: Cloudflare must
+overwrite an inbound `cf-connecting-ip`, **and** Railway must sanitize `x-forwarded-for`. A
+regression in either upstream mints a fresh budget and fails the check.
 
-| Site | What it feeds | Impact under the armed edge |
-| --- | --- | --- |
-| `server/routers/appUsers.ts` (`login`) | `checkLoginRateLimit(clientIp)` | **Decision-driving.** The brute-force lockout keys on the CF PoP egress IP, so users behind one PoP share a lockout budget — the collapse tier 1 exists to prevent |
-| `server/routers/appUsers.ts` (`getLoginStatus`) | reads that lockout state | Same key, same collapse |
-| `server/routers/waitlist.ts` | stored `ipAddress` column | **Stored value** is the PoP, not the visitor |
-| `server/_core/index.ts` ×6 (`:257`, `:282`, `:316`, `:855`, `:893`, `:939`) | limiter over-limit `handler:` bodies (logs, `security_events`, alerts) | Keying is already correct above them — each has a `keyGenerator` using `clientIpKey` — so only the **forensic record** names the wrong client, and only on over-limit events |
-| `server/_core/index.ts` ×2 (`:405`, `:598`) | **not limiters.** `:405` is the top-level request logger (`app.use`, mounted before helmet, originLock, and every limiter); `:598` is inside the `GET /health` handler | **No `keyGenerator` above either** — nothing corrects them. `:405` stamps the wrong client on every sampled request, every 5xx, and every slow request; `/health` is never limited at all. Both fall back to `req.socket?.remoteAddress`, not `req.ip` |
+**Residual, stated rather than papered over:** this exercises the path through the public
+edge only. The tier-2 (direct-to-origin) path still cannot be asserted from CI, because the
+origin lock 403s a secret-less request to the raw origin — the `SMOKE_EDGE=cloudflare`
+origin-lock check covers that boundary instead. The other live control is the
+private/reserved-range canary, which alerts when a resolved "client" IP is
+RFC1918/CGNAT/link-local/ULA (loopback deliberately excluded — the app's own keep-alive
+calls originate there).
 
-Branch `security/edge-identity-remediation` (unmerged as of 2026-08-07) consolidates these
-behind `server/_core/clientIdentity.ts` (`resolveClientIdentity` / `clientIdentityKey`) and
-deliberately drops the `edgeMode()` gate in tier 1 — its docblock argues the gate makes
-`EDGE_MODE=on → off` collapse every limiter onto per-PoP buckets while DNS is still
-orange-clouded. **When that branch merges, tier 1 above and this row both change.** Until
-then this section describes `main`, per this file's own rule that the files on disk win.
+**CLOSED 2026-08-07 — the rule is now the state, and a test enforces it.** A 2026-08-06
+forensic audit found the rule was aspirational: 12 sites hand-rolled
+`x-forwarded-for.split(",")[0]`, six of them driving a decision, a limit, or a stored
+value. The worst was `server/routers/appUsers.ts`, which fed a hand-rolled token straight
+into `checkLoginRateLimit` — so under the armed edge the **brute-force lockout keyed on the
+CF PoP egress IP**, meaning every user behind one PoP shared a lockout budget in both
+directions (an attacker's budget diluted across innocents; innocents locked out by an
+attacker sharing their PoP). `waitlist.ts` persisted the PoP as the visitor's `ipAddress`.
+
+Every derivation now routes through `server/_core/clientIdentity.ts`. Two guards keep it
+that way, and both are cheap to re-run:
+
+- `server/_core/clientIdentityCallSites.test.ts` — a call-site guard that fails if a new
+  hand-rolled derivation appears.
+- `grep -rn "x-forwarded-for" server/ --include="*.ts"` should return only `logSafe(...)`
+  forensic log lines and the warning comment in `appUsers.ts`. Anything doing
+  `.split(",")[0]` into a decision is a regression.
+
+`clientIpKey` / `resolveClientIp` survive in `trpcRateLimitPolicy.ts` as deprecated thin
+aliases so older call sites keep compiling — do not add new ones.
 
 - Secrets: gitleaks in CI; production `DATABASE_URL` only in Actions secrets + Railway; child processes get explicit allowlists (§14.2); AGENTS.md credential-scope rules outrank all of this.
 
