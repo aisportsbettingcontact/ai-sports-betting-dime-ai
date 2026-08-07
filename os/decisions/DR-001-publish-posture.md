@@ -179,3 +179,87 @@ suppressing the two broken prop markets today, which is a much smaller change th
 - `mlbOutcomeIngestor.ts:162` still applies `/100` to probabilities the audit says are stored 0–1.
   If true in production, Brier scores in the `games` table are near-meaningless *today*, independent
   of this decision. Unchanged since 2026-07-23.
+
+---
+
+## Evidence added after drafting — 2026-08-07
+
+This record was written 2026-08-05. Three things have changed since, and one of them changes what a
+"yes" would mean. **No option, recommendation or requested ruling above has been edited** — this
+section only adds verified facts.
+
+### 1. The gate is now built and running in `log` mode
+
+PR #435 (`fix(mlb): make the BACKTEST-ONLY verdict enforceable — flag-gated, default off`, merged
+2026-08-07T11:50:59Z) landed `server/mlbMarketGates.ts`. `publish_*` went from **0 non-test readers
+to 13**. `MLB_MARKET_GATE_MODE` is set on the production service, and the live deploy logs show:
+
+```
+[MlbMarketGates] mode=log source=fresh
+  gated=[fg_ml,fg_rl,fg_total,f5_ml,f5_rl,f5_total,nrfi_yrfi,k_props,hr_props] missing=[]
+```
+
+**This resolves the open unknown above that this record calls "the single highest-value unknown in
+the mission".** All nine `publish_*` rows exist, all nine gate their market, the loader reads them
+successfully from production (`source=fresh`, `missing=[]`), and — because `log` changes no output —
+production is confirmed to be serving all nine markets **ungated** to real customers right now. The
+fail-open posture is no longer inferred from code analysis; it is observed.
+
+### 2. What is built implements Option 2 — the option this record rejects
+
+The field policy in `server/feedGating.ts` preserves exactly one field when a market is gated:
+
+```
+export const MLB_MARKET_GATE_NEVER_NULL = ["modelRunAt"] as const;
+```
+
+Everything else in a gated market is nulled. For `fg_ml` that is `modelAwayML`, `modelHomeML`,
+`modelAwayWinPct`, `modelHomeWinPct`, **`brierFgMl` and `fgMlCorrect`** — and
+`MLB_CROSS_MARKET_GAME_FIELDS` additionally nulls `modelAwayScore`/`modelHomeScore` when any
+full-game market is gated, the F5 scores, and the per-inning arrays.
+
+So arming `on` today would remove **the projections and the graded record** across **all nine
+markets**, leaving a timestamp.
+
+Option 1 — the recommendation above — says the opposite: *"continue showing the projection, the
+implied-vs-projected comparison, and the graded record — but suppress the Edge Detected
+classification."* Option 2 — *"Hide gated markets from the feed"* — is the one this record rejects,
+for reasons that still hold: it "guts the paid tiers", "discards full-game moneyline, which the audit
+says has genuine skill", and shows "a paying customer an empty product with no explanation".
+
+**Nothing is wrong with #435.** It is flag-gated, default off, fail-open, and its own header states
+that the field policy lives in `feedGating.ts` and the wiring in `routers.ts`. The mismatch is
+between the field policy as built and the posture this record recommends, and it becomes
+load-bearing only at the moment someone sets `on`.
+
+### 3. Arming `on` would freeze a static verdict — the ratchet
+
+`git grep` for a **writer** of `publish_*` outside tests returns **zero hits**. The nine rows are a
+snapshot written once by the 2026-07-25 audit. The module that computes verdicts —
+`server/mlbPublicationGate.ts`, 467 lines implementing all eight gate criteria and exporting
+`runMarketGate`, `buildPublicationGateReport`, `extractUnresolvedBlockers` — is still dead code
+(importers: itself and one test), exactly as described above.
+
+```
+mlbPublicationGate.ts   COMPUTES the verdict   →  DEAD, nothing calls it
+mlbMarketGates.ts       ENFORCES the verdict   →  LIVE, flag-gated
+```
+
+They are two halves of a loop and only one half runs. A market that later earns publication could
+never un-gate, because nothing recomputes its verdict. That is the same D5 evaluation→adjustment gap
+this record was raised about, relocated: enforcement now exists, evaluation still does not.
+
+### What this suggests for the ruling — three separable questions, not one
+
+1. **`log` is already live and costs nothing.** It is producing the evidence in §1 with no customer
+   impact. No ruling is needed to keep it there.
+2. **Before `on`: reconcile the field policy with the posture.** If Option 1 is still the intent,
+   `MLB_MARKET_GATE_NEVER_NULL` must grow to preserve projections and grades, with only the Edge
+   classification suppressed. If Option 2 is now the intent, that is a reversal of this record's
+   recommendation and should be recorded as one rather than inherited.
+3. **Before `on`: decide the ratchet.** Either wire `runMarketGate` to recompute, or consciously
+   accept the 2026-07-25 snapshot as permanent policy. Both are defensible; inheriting it by
+   accident is not.
+
+*Recorded by the executor. Evidence only — the question, options, recommendation and requested
+ruling above are untouched.*
