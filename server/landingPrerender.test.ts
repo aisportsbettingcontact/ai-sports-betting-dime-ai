@@ -65,9 +65,15 @@ describe("landing prerender — Dime landing v2 parity", () => {
     expect(html).toContain("$49.99");
     expect(html).toContain("$99.99");
     expect(html).toContain("$199.99");
-    expect(html).toContain("/checkout?plan=dime-pro");
-    expect(html).toContain("/checkout?plan=dime-sharp");
-    expect(html).toContain("/checkout?plan=dime-max");
+
+    // The prerender must NOT mint checkout URLs. The live pricing card builds
+    // `/checkout?plan=<slug>&price=<monthly row id>` (Pricing.tsx), pinning the
+    // MONTHLY price. A bare `?plan=` drops that pin and checkout falls back to
+    // the plan's DEFAULT row — which for dime-max is $19.99/day, not
+    // $199.99/month. A static snapshot cannot know row ids, so it links to the
+    // live card instead and lets that build the correct URL.
+    expect(html).not.toContain("/checkout?plan=");
+    expect(html).toContain('href="/#pricing"');
 
     // The legacy ladder must not reappear. Asserted on the FULL card strings,
     // never on the bare numbers: `"$99.99".includes("$99")` is true, so a
@@ -105,6 +111,17 @@ describe("landing prerender — Dime landing v2 parity", () => {
     );
     expect(paid.length).toBeGreaterThanOrEqual(3);
 
+    // The site's per-day convention, copied from the one place that defines it:
+    // Pricing.tsx `DAYS_PER_MONTH = 30` and
+    // `perDay = money(Math.round(shownCents / DAYS_PER_MONTH))`.
+    // Asserting this caught a real defect: hand-computed figures using 30.44
+    // days (≈$1.64/$3.29/$6.58) disagreed with the live page's $1.67/$3.33/$6.67.
+    const perDay = (price: string) => {
+      const cents = Math.round(parseFloat(price.replace("$", "")) * 100);
+      const d = Math.round(cents / 30);
+      return `$${(d / 100).toFixed(2)}`;
+    };
+
     for (const tier of paid) {
       expect(
         html,
@@ -112,8 +129,8 @@ describe("landing prerender — Dime landing v2 parity", () => {
       ).toContain(tier.price);
       expect(
         html,
-        `prerender is missing the checkout slug for "${tier.name}"`
-      ).toContain(`/checkout?plan=${tier.action.plan}`);
+        `prerender's per-day figure for "${tier.name}" does not match the site rule round(cents/30) = ${perDay(tier.price)}`
+      ).toContain(perDay(tier.price));
     }
   });
 

@@ -354,13 +354,13 @@ td b{color:var(--text);font-weight:700}
 <body>
 <nav class="nav">
   <span class="nav-logo">d&#305;me</span>
-  <a href="/checkout?plan=dime-pro" class="nav-cta">Get Access</a>
+  <a href="/#pricing" class="nav-cta">Get Access</a>
 </nav>
 <section class="hero">
   <div class="mono">Sports betting intelligence software</div>
   <h1>See where price and probability <em>disagree</em>.</h1>
   <p class="sub">Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.</p>
-  <a href="/checkout?plan=dime-pro" class="cta">Get Access</a>
+  <a href="/#pricing" class="cta">Get Access</a>
   <p class="micro">Analytical software for disciplined market evaluation. No guaranteed outcomes.</p>
 </section>
 <section class="section" id="console">
@@ -392,9 +392,9 @@ td b{color:var(--text);font-weight:700}
   <p class="lead">No picks packages. No units sold. Software pricing for disciplined market evaluation.</p>
   <div class="grid">
     <div class="card"><div class="mono">Free Preview</div><div class="price">$0</div><div class="per">On-page demos</div><p>Explore the Market Console and Dime Chat demos on this page.</p></div>
-    <div class="card"><div class="mono">Pro</div><div class="price">$49.99</div><div class="per">per month &mdash; &asymp;$1.64/day &middot; cancel anytime</div><p>Full projections board, Dime Chat on every game priced.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=dime-pro">Start Pro</a></p></div>
-    <div class="card"><div class="mono">Sharp</div><div class="price">$99.99</div><div class="per">per month &mdash; &asymp;$3.29/day &middot; cancel anytime</div><p>Everything in Pro, plus priority access to new model markets.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=dime-sharp">Start Sharp</a></p></div>
-    <div class="card"><div class="mono">Max</div><div class="price">$199.99</div><div class="per">per month &mdash; &asymp;$6.58/day &middot; cancel anytime</div><p>Every market the engine prices, first &mdash; plus early access to new model releases.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=dime-max">Start Max</a></p></div>
+    <div class="card"><div class="mono">Pro</div><div class="price">$49.99</div><div class="per">per month &mdash; &asymp;$1.67/day &middot; cancel anytime</div><p>Full projections board, Dime Chat on every game priced.</p><p><a class="cta" style="margin-top:12px" href="/#pricing">Start Pro</a></p></div>
+    <div class="card"><div class="mono">Sharp</div><div class="price">$99.99</div><div class="per">per month &mdash; &asymp;$3.33/day &middot; cancel anytime</div><p>Everything in Pro, plus priority access to new model markets.</p><p><a class="cta" style="margin-top:12px" href="/#pricing">Start Sharp</a></p></div>
+    <div class="card"><div class="mono">Max</div><div class="price">$199.99</div><div class="per">per month &mdash; &asymp;$6.67/day &middot; cancel anytime</div><p>Every market the engine prices, first &mdash; plus early access to new model releases.</p><p><a class="cta" style="margin-top:12px" href="/#pricing">Start Max</a></p></div>
   </div>
   <div class="grid" style="margin-top:20px">
     <div class="card"><div class="mono">Founder</div><div class="price">By application</div><div class="per">Limited</div><p>Controlled access for serious operators. Application reviewed manually.</p></div>
