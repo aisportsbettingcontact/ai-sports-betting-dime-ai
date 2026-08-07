@@ -160,6 +160,91 @@ function isBackgroundJobsDisabled(): boolean {
   return v === "1" || v === "true";
 }
 
+// ─── www → apex redirect allowlist ───────────────────────────────────────────
+// The `www.` → apex 308 redirect (mounted in startServer, below) used to derive
+// its target as `host.slice(4)` with NO allowlist, so ANY Host beginning with
+// "www." was echoed back as a redirect target: `Host: www.evil.com` produced
+// `308 → https://evil.com/<path>`. Because that middleware is registered ahead
+// of originLock, the origin answered those unallowlisted Hosts even under
+// EDGE_MODE=on, and every Host-keyed cache entry or log line downstream
+// inherited an attacker-controlled value.
+//
+// These two helpers replace the blind strip with a set derived from what the
+// app already declares as its own origins — PUBLIC_ORIGIN (`ENV.publicOrigin`,
+// the canonical production origin, also the basis of the tRPC CSRF origin set)
+// plus ADDITIONAL_ALLOWED_ORIGINS (the operator-declared extra origins that
+// same CSRF set already trusts). No new env var. Read from `process.env` at
+// call time rather than closing over `ENV` so the behavior is a pure function
+// of the environment.
+//
+// Deliberately NOT changed here: middleware ORDER. The `www` measurement gap
+// recorded in docs/runbooks/edge-defense-cloudflare.md §7 stands on its own —
+// allowlisted `www.<apex>` traffic still redirects ahead of the lock, so it is
+// still uncounted. Non-allowlisted `www.*` Hosts now fall through to the lock.
+
+/**
+ * Apex hostnames this app will 308 a `www.` request to.
+ *
+ * Accepts either a full origin ("https://example.com") or a bare host
+ * ("example.com"); an entry already carrying a `www.` prefix contributes its
+ * apex. Unparseable entries are skipped rather than trusted.
+ */
+function canonicalApexHosts(): Set<string> {
+  const hosts = new Set<string>();
+  const add = (raw: string): void => {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    try {
+      const url = new URL(
+        trimmed.includes("://") ? trimmed : `https://${trimmed}`
+      );
+      const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+      if (hostname) hosts.add(hostname);
+    } catch {
+      // A malformed origin must not widen the allowlist.
+    }
+  };
+  add(process.env.PUBLIC_ORIGIN ?? "");
+  for (const raw of (process.env.ADDITIONAL_ALLOWED_ORIGINS ?? "").split(",")) {
+    add(raw);
+  }
+  return hosts;
+}
+
+/**
+ * Given a request `Host` header, return the host to 308 to, or `null` when the
+ * request must NOT be redirected (not a `www.` Host, or a `www.` Host whose
+ * apex this app does not own).
+ *
+ * Any `:port` suffix rides along to the target unchanged (the allowlist is
+ * compared on the hostname alone), preserving the previous behavior for
+ * non-443 local/preview access.
+ */
+function wwwRedirectTarget(host: string): string | null {
+  const raw = host.trim().toLowerCase();
+  if (!raw.startsWith("www.")) return null;
+  const stripped = raw.slice(4); // "example.com" or "example.com:8080"
+
+  // Validate the ENTIRE value, never a prefix of it. Checking
+  // `stripped.split(":")[0]` against the allowlist and then returning the
+  // unvalidated `stripped` is an open redirect: `Host: www.apex.com:@evil.com`
+  // strips to `apex.com:@evil.com`, whose split(":")[0] is the allowlisted
+  // apex — but the string itself parses as userinfo `apex.com:` against host
+  // `evil.com`, so the 308 sends the client to evil.com. Same class for `/`,
+  // `\`, `?` and `#`, which all terminate the authority in a URL.
+  //
+  // This regex admits ONLY hostname[:port] with a numeric port, so every
+  // authority-delimiting character is rejected outright rather than enumerated.
+  const m = /^([a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*)(?::(\d{1,5}))?$/.exec(
+    stripped
+  );
+  if (!m) return null;
+  const hostname = m[1];
+  const port = m[5];
+  if (port !== undefined && Number(port) > 65535) return null;
+  return canonicalApexHosts().has(hostname) ? stripped : null;
+}
+
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
 // Never awaited — the 429 response is always sent synchronously first.
@@ -575,10 +660,17 @@ async function startServer() {
   // at the Express level first and issues a 308 Permanent Redirect, which
   // preserves the HTTP method and body. This fixes login and all API mutations
   // when users access www.aisportsbettingmodels.com.
+  //
+  // The target is ALLOWLISTED (see canonicalApexHosts / wwwRedirectTarget
+  // above): only a `www.` Host whose apex this app declares as its own is
+  // redirected. Any other `www.*` Host falls through to next() so the origin
+  // lock and normal routing handle it — it is NOT echoed back as a redirect
+  // target. Still a 308 (never 301): preserving the POST body is the entire
+  // reason this middleware exists.
   app.use((req, res, next) => {
     const host = req.headers.host ?? "";
-    if (host.startsWith("www.")) {
-      const canonical = host.slice(4); // strip "www."
+    const canonical = wwwRedirectTarget(host);
+    if (canonical) {
       const redirectUrl = `${req.protocol}://${canonical}${req.originalUrl}`;
       console.log(
         `[www→canonical] 308 redirect: ${logSafe(host)}${logSafe(req.originalUrl)} → ${logSafe(redirectUrl)}`
