@@ -1,5 +1,14 @@
 # Phase 0 — API & Frontend Exposure of MLB Numbers
 
+> ⚠️ **NOTE (2026-08-07) — this file's single Phase 4 annotation is a NEGATIVE one, and it is TRUE.**
+> Line 157 asserts that *no* dossier claim here earned a `[FIXED in Phase 4]` tag, i.e. Phase 4
+> made no exposure fix. Verified against `main`: correct. Three of its four named defects are
+> still live (auto-publish at `mlbModelRunner.ts:4337-4338` chief among them); the fourth, about
+> public tRPC exposure, is now stale — PR #435 added the per-market gate (default off).
+> Note this contradicts `MODEL-RETENTION.md:21`, which claims these sections carry such tags.
+> Read [`../PHASE4-ANNOTATION-ERRATA.md`](../PHASE4-ANNOTATION-ERRATA.md) for the per-annotation
+> verdicts, the surviving live defects, and the outstanding re-implementation recommendation.
+
 Evidence classes: **VERIFIED** = code read at cited location this session. **INFERRED** = reasoned from verified facts (reasoning stated). **UNKNOWN** = could not be established from code alone.
 
 ## Overview

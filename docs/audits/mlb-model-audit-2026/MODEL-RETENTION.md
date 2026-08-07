@@ -18,7 +18,7 @@ spot-verified the load-bearing claims of the affected sections, marked SV in FIN
 | gradecal | agent-verified re-run (120: 114/6/0) |
 | exposure | agent-verified re-run (79: 76/3/0) |
 
-All eight sections are now adversarially verified; sections also carry `[FIXED in Phase 4]` annotations distinguishing pre-fix findings from the repaired code. |
+All eight sections are now adversarially verified; sections also carry `[FIXED in Phase 4]` annotations distinguishing pre-fix findings from the repaired code. ⚠️ **ERRATUM (2026-08-07): those annotations do not distinguish anything — the repaired code was never merged.** All 55 were verified against `main` one at a time; none describes code on `main`. Two further corrections to this sentence: only six of the eight sections carry any such annotation, and `phase0/exposure.md:157` explicitly states that *no* claim there earned one, directly contradicting this line. See [`PHASE4-ANNOTATION-ERRATA.md`](PHASE4-ANNOTATION-ERRATA.md). |
 
 ## Section index (phase0/)
 | Section | File | Scope |
