@@ -1,4 +1,10 @@
 import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
+import { applyMlbMarketGatesToGame } from "../feedGating";
+import {
+  anyMarketGated,
+  getMlbMarketGateSnapshot,
+  mlbMarketGateMode,
+} from "../mlbMarketGates";
 import {
   collectDimeNumericValues,
   type DimeAnswerEvidence,
@@ -591,6 +597,23 @@ export async function getDimeChatContext(
       LIMIT ${MAX_CONTEXT_CANDIDATES}`,
     [start, end, ...leagueParameters, ...queryRankParameters]
   );
+
+  // MLB per-market publication gate. Without this, a market ruled BACKTEST-ONLY
+  // would render as "—" on the feed while the assistant still quoted its edge
+  // in chat — the same number, gated on one surface and not the other.
+  // Inert unless MLB_MARKET_GATE_MODE=on (see server/mlbMarketGates.ts).
+  if (mlbMarketGateMode() === "on") {
+    const marketGates = await getMlbMarketGateSnapshot();
+    if (anyMarketGated(marketGates)) {
+      for (let i = 0; i < rows.length; i += 1) {
+        if (rows[i]?.sport !== "MLB") continue;
+        rows[i] = applyMlbMarketGatesToGame(
+          rows[i] as unknown as Record<string, unknown>,
+          marketGates
+        ) as unknown as (typeof rows)[number];
+      }
+    }
+  }
 
   if (rows.length === 0) {
     const { resolution } = resolveDimeEvent(rows, route);

@@ -5,7 +5,11 @@ import {
   stripHrPropModelFields,
   stripStrikeoutPropModelFields,
   stripWcMatchupModelFields,
+  applyMlbMarketGatesToGame,
+  applyMlbMarketGatesToHrProp,
+  applyMlbMarketGatesToStrikeoutProp,
 } from "./feedGating";
+import type { MlbMarketGates } from "./mlbMarketGates";
 
 describe("stripGameModelFields", () => {
   const row = {
@@ -256,5 +260,266 @@ describe("setGatedCacheHeaders — cache-leak fix (Phase 4)", () => {
     expect(() =>
       setGatedCacheHeaders({} as { setHeader?: never }, false)
     ).not.toThrow();
+  });
+});
+
+// ─── MLB per-market publication gate (pure policy) ────────────────────────────
+
+describe("applyMlbMarketGatesToGame", () => {
+  const ALL: MlbMarketGates = {
+    fg_ml: true,
+    fg_rl: true,
+    fg_total: true,
+    f5_ml: true,
+    f5_rl: true,
+    f5_total: true,
+    nrfi_yrfi: true,
+    k_props: true,
+    hr_props: true,
+  };
+  const gate = (...keys: (keyof MlbMarketGates)[]): MlbMarketGates => {
+    const g = { ...ALL };
+    for (const k of keys) g[k] = false;
+    return g;
+  };
+
+  const row = {
+    id: 1,
+    sport: "MLB",
+    awayTeam: "NYY",
+    homeTeam: "BOS",
+    modelRunAt: 1_700_000_000_000,
+    // fg_ml
+    modelAwayML: -120,
+    modelHomeML: 105,
+    modelAwayWinPct: "0.55",
+    modelHomeWinPct: "0.45",
+    brierFgMl: "0.21",
+    fgMlCorrect: 1,
+    // fg_rl
+    awayModelSpread: "-1.5",
+    homeModelSpread: "1.5",
+    spreadEdge: "0.03",
+    spreadDiff: "0.4",
+    fgRlCorrect: 0,
+    // fg_total
+    modelTotal: "8.5",
+    totalEdge: "0.02",
+    totalDiff: "0.3",
+    modelProjTotal: "8.6",
+    brierFgTotal: "0.24",
+    fgTotalCorrect: 1,
+    // nrfi
+    modelPNrfi: "0.53",
+    brierNrfi: "0.25",
+    nrfiCorrect: 1,
+    modelInningPNeitherScores: "[]",
+    // cross-market
+    modelAwayScore: "4.2",
+    modelHomeScore: "4.4",
+    modelF5AwayScore: "2.1",
+    modelF5HomeScore: "2.2",
+    modelInningHomeExp: "[]",
+    modelInningAwayExp: "[]",
+    modelInningTotalExp: "[]",
+    modelInningPHomeScores: "[]",
+    modelInningPAwayScores: "[]",
+    modelWeatherAdj: "1.02",
+    // commodity — must always survive
+    bookTotal: "8.5",
+    awayML: -115,
+    gameStatus: "upcoming",
+  };
+
+  it("returns the SAME object when nothing is gated (byte-identical response)", () => {
+    expect(applyMlbMarketGatesToGame(row, ALL)).toBe(row);
+  });
+
+  it("nulls only the gated market's own fields", () => {
+    const out = applyMlbMarketGatesToGame(row, gate("fg_ml"));
+    expect(out.modelAwayML).toBeNull();
+    expect(out.modelHomeWinPct).toBeNull();
+    expect(out.brierFgMl).toBeNull();
+    expect(out.fgMlCorrect).toBeNull();
+    // other markets untouched
+    expect(out.modelTotal).toBe("8.5");
+    expect(out.awayModelSpread).toBe("-1.5");
+    expect(out.modelPNrfi).toBe("0.53");
+  });
+
+  it("never nulls commodity fields", () => {
+    const out = applyMlbMarketGatesToGame(
+      row,
+      gate("fg_ml", "fg_rl", "fg_total")
+    );
+    expect(out.bookTotal).toBe("8.5");
+    expect(out.awayML).toBe(-115);
+    expect(out.gameStatus).toBe("upcoming");
+    expect(out.awayTeam).toBe("NYY");
+  });
+
+  it("NEVER nulls modelRunAt — it drives the all-market '—' state", () => {
+    const everything = gate(...(Object.keys(ALL) as (keyof MlbMarketGates)[]));
+    const out = applyMlbMarketGatesToGame(row, everything);
+    expect(out.modelRunAt).toBe(1_700_000_000_000);
+  });
+
+  // REGRESSION: the projected score pair leaks the moneyline lean through the
+  // SIGN of its difference, not just the run line (difference) and total (sum).
+  // Omitting fg_ml here would publish the model's ML pick for a gated market.
+  it("nulls the projected score pair when fg_ml alone is gated", () => {
+    const out = applyMlbMarketGatesToGame(row, gate("fg_ml"));
+    expect(out.modelAwayScore).toBeNull();
+    expect(out.modelHomeScore).toBeNull();
+  });
+
+  it("nulls the projected score pair when fg_rl or fg_total is gated", () => {
+    expect(
+      applyMlbMarketGatesToGame(row, gate("fg_rl")).modelAwayScore
+    ).toBeNull();
+    expect(
+      applyMlbMarketGatesToGame(row, gate("fg_total")).modelHomeScore
+    ).toBeNull();
+  });
+
+  it("nulls the F5 score pair when any F5 market is gated", () => {
+    for (const k of ["f5_ml", "f5_rl", "f5_total"] as const) {
+      const out = applyMlbMarketGatesToGame(row, gate(k));
+      expect(out.modelF5AwayScore).toBeNull();
+      expect(out.modelF5HomeScore).toBeNull();
+    }
+  });
+
+  // REGRESSION: the inning arrays sum to the full-game scores and total, so a
+  // full-game gate must null them too.
+  it("nulls the per-inning arrays when fg_ml is gated", () => {
+    const out = applyMlbMarketGatesToGame(row, gate("fg_ml"));
+    expect(out.modelInningHomeExp).toBeNull();
+    expect(out.modelInningAwayExp).toBeNull();
+    expect(out.modelInningTotalExp).toBeNull();
+    expect(out.modelInningPHomeScores).toBeNull();
+    expect(out.modelInningPAwayScores).toBeNull();
+  });
+
+  it("nulls the per-inning arrays when NRFI is gated (index 0 restores it)", () => {
+    const out = applyMlbMarketGatesToGame(row, gate("nrfi_yrfi"));
+    expect(out.modelInningPHomeScores).toBeNull();
+    expect(out.modelInningPNeitherScores).toBeNull();
+  });
+
+  it("leaves the inning arrays alone when only a prop market is gated", () => {
+    const out = applyMlbMarketGatesToGame(row, gate("k_props"));
+    expect(out.modelInningHomeExp).toBe("[]");
+    expect(out.modelAwayScore).toBe("4.2");
+  });
+
+  it("nulls the team HR block when hr_props is gated", () => {
+    const withHr = { ...row, modelAwayHrPct: "0.4", modelHomeExpHr: "1.1" };
+    const out = applyMlbMarketGatesToGame(withHr, gate("hr_props"));
+    expect(out.modelAwayHrPct).toBeNull();
+    expect(out.modelHomeExpHr).toBeNull();
+    expect(out.modelWeatherAdj).toBeNull();
+  });
+
+  it("tolerates rows missing the gated columns entirely", () => {
+    expect(() =>
+      applyMlbMarketGatesToGame({ id: 9 }, gate("fg_ml"))
+    ).not.toThrow();
+  });
+});
+
+describe("applyMlbMarketGatesToStrikeoutProp", () => {
+  const ALL: MlbMarketGates = {
+    fg_ml: true,
+    fg_rl: true,
+    fg_total: true,
+    f5_ml: true,
+    f5_rl: true,
+    f5_total: true,
+    nrfi_yrfi: true,
+    k_props: true,
+    hr_props: true,
+  };
+  const prop = {
+    id: 1,
+    playerName: "Imanaga",
+    bookLine: "5.5",
+    consensusOverOdds: -110,
+    backtestResult: "OVER",
+    kProj: "6.1",
+    kLine: "5.9",
+    pOver: "0.58",
+    edgeOver: "0.04",
+    verdict: "OVER",
+    modelRunAt: 1,
+    backtestRunAt: 2,
+  };
+
+  it("is a no-op when k_props publishes", () => {
+    expect(applyMlbMarketGatesToStrikeoutProp(prop, ALL)).toBe(prop);
+  });
+
+  it("nulls model output but keeps the book line and commodity grade", () => {
+    const out = applyMlbMarketGatesToStrikeoutProp(prop, {
+      ...ALL,
+      k_props: false,
+    });
+    expect(out.kProj).toBeNull();
+    expect(out.kLine).toBeNull();
+    expect(out.edgeOver).toBeNull();
+    expect(out.verdict).toBeNull();
+    expect(out.bookLine).toBe("5.5");
+    expect(out.consensusOverOdds).toBe(-110);
+    // K-prop backtestResult grades against the BOOK line — commodity, not IP.
+    expect(out.backtestResult).toBe("OVER");
+  });
+
+  it("is unaffected by other markets being gated", () => {
+    expect(
+      applyMlbMarketGatesToStrikeoutProp(prop, { ...ALL, hr_props: false })
+    ).toBe(prop);
+  });
+});
+
+describe("applyMlbMarketGatesToHrProp", () => {
+  const ALL: MlbMarketGates = {
+    fg_ml: true,
+    fg_rl: true,
+    fg_total: true,
+    f5_ml: true,
+    f5_rl: true,
+    f5_total: true,
+    nrfi_yrfi: true,
+    k_props: true,
+    hr_props: true,
+  };
+  const prop = {
+    id: 1,
+    playerName: "Judge",
+    bookOverOdds: 250,
+    actualHr: 1,
+    modelPHr: "0.31",
+    edgeOver: "0.05",
+    evOver: "0.12",
+    verdict: "OVER",
+    backtestResult: "WIN",
+    modelRunAt: 1,
+  };
+
+  it("is a no-op when hr_props publishes", () => {
+    expect(applyMlbMarketGatesToHrProp(prop, ALL)).toBe(prop);
+  });
+
+  it("nulls the model verdict chain including the model-relative backtestResult", () => {
+    const out = applyMlbMarketGatesToHrProp(prop, { ...ALL, hr_props: false });
+    expect(out.modelPHr).toBeNull();
+    expect(out.edgeOver).toBeNull();
+    expect(out.verdict).toBeNull();
+    // HR backtestResult is WIN/LOSS vs the MODEL's verdict — it re-identifies
+    // the pick list, unlike the K-prop one.
+    expect(out.backtestResult).toBeNull();
+    // commodity box-score fact survives
+    expect(out.actualHr).toBe(1);
+    expect(out.bookOverOdds).toBe(250);
   });
 });
