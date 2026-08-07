@@ -1,6 +1,6 @@
 # DR-013 — The eight-function-loop rollout order and cross-links
 
-**Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
+**Status:** RULED — cut upheld 2026-08-07 · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
 **observe_by:** 2026-08-12
 **Doctrine:** §13 Function loops (D13) — all eight, connected not isolated · §16 Peak state (D16) — criterion 4: all eight loops operating and interconnected · §17 Certification and cadence — PARTIAL and MISSING are failing grades that route back · §14 The fifteen-stage sequence (D14) — visibility before autonomy, stage 12 'connect the function to other functions' · §5 The closed loop (D5) — the seven components, goals with limits, the nine-question interrogation · §6 The queryable company (D6) — artifact law, semantic connections, traceability intention-to-result · §8 L1 Goals + ownership — the nine-field goal record · §8 L2 Artifact system — durable, linked, append-only · §8 L6 Evaluation — outcome-level judgment, activity is not progress · §8 L8 Human governance — named humans on every important outcome · §11 Token-maxing economics (D10) — the capital-allocation hire-test · §15 Failure modes (D15) — #2 open-loop automation, #3 unqueryable work, #9 generated output mistaken for completion, #15 prototype theater, #16 isolated agent departments · §19 Standing Dime rules — compliance gate, evidence taxonomy, deploy law
 
@@ -206,3 +206,21 @@ If you would rather trade honesty for a cleaner scorecard, the fastest alternati
 - Whether PR #362 merges before W1. The engineering loop's per-PR evidence artifact is #362's `proof-contract.json`. If #362 stays open, engineering's first artifact falls back to the PR body plus the existing `ci.yml` result set, which is weaker but sufficient. This is a degradation, not a blocker.
 - Whether the working-tree typecheck failure is fixed first. `server/_core/aiCostMeter.ts:20` imports `aiWorkflowCosts` from `drizzle/dime.schema`, which has no such export, so `tsc --noEmit` exits 1. Nothing in this rollout can be committed until that is resolved — it is DR-003's blocker and it gates W0 absolutely.
 
+---
+
+## Ruling — 2026-08-07
+
+**RULED: cut upheld.** the eight-function paired rollout is not built and will not be built under this record.
+
+DR-014 Ruling 1 cut this as an eight-loop program handed to a company that had just watched a one-loop program die in eight days. Verified 2026-08-07: LOOP-003…LOOP-008 are all DEFERRED with a written `blocked_on`, which is the cut's shape already implemented in the tree.
+
+**Recorded by:** the executor, on Prez's 2026-08-07 instruction to proceed with the four cuts
+(DR-007, DR-010, DR-011, DR-013). The decision is Prez's; the rationale above was drafted by the
+executor from DR-014 Ruling 1 and the 2026-08-07 freshness audit, and is recorded here rather than
+left implicit so a future cycle can tell whether the reasoning still applies. **Amend this paragraph
+before merge if it does not match your reasoning** — per `os/decisions/README.md`, a ruling is the
+durable answer to *"why is it like this?"*, and it should be in your words where they differ from
+mine.
+
+This ruling does not reverse anything, so nothing is superseded. Reopening requires a new record
+citing what changed.

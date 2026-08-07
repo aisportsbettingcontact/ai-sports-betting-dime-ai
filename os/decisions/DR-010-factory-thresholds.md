@@ -1,6 +1,6 @@
 # DR-010 — The two factories and their acceptance thresholds — where the bar lives, what the numbers are, and what makes them bind
 
-**Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
+**Status:** RULED — cut upheld 2026-08-07 · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
 **observe_by:** 2026-08-12
 **Doctrine:** §9 D8 — the software factory (all ten parts; part 7 the probabilistic satisfaction threshold; the two-factory table; the factory is itself queryable) · §8 D12-L6 — evaluation at the outcome level; code against specs/tests/scenarios/thresholds · §8 D12-L2 — artifact system; append-only enforcement · §6 D6 — artifact law: seven required properties, semantic connections, traceability intention→result, preserve reasoning not only conclusions · §5 D5 — the closed loop; an action is not an outcome; generation is the beginning of execution · §14 D14 — visibility before autonomy, evaluation before scale (stages 9, 11, 15) · §15 D15 #8 weak tests, #9 generated output mistaken for completion, #2 open-loop automation, #15 prototype theater · §17 — certification criterion 6 (both factories certified) and criterion 10 (queryability proven) · §19 — evidence taxonomy (VERIFIED/INFERRED/UNKNOWN), compliance gate, data provenance (live-pregame vs walkforward-replay), deploy law (merge to main is a production deploy) · §10 D9 — value visible as what you build and how you govern the intelligent system · §18 — the Dime Cycle: Test and Validate are the observed outcome and its evaluation; nothing pushes below the bar
 
@@ -221,3 +221,21 @@ The deciding property is that every mechanism in B is loud when neglected. A low
 - **The working tree does not typecheck.** `server/_core/aiCostMeter.ts:20` imports `aiWorkflowCosts` from `drizzle/dime.schema`, which has no such export. Nothing in this DR can land until that is fixed (DR-003 scope). *Resolves via:* removing the import or restoring the export in the dark-state rescue PR.
 - **Whether `docs/verification/RULESETS.md`'s end-state list is complete.** Its required-check target omits `DB Tests` and `Build & Preview Gate` entirely — the two checks the audit identifies as the highest-value advisory-to-required promotions (F6.1). Unclear whether this is a deliberate judgment (01-pr-proof-contract subsumes the build + bundle budget; DB suites stay in ci.yml) or an oversight. *Resolves via:* one question to the PR #362 author, or by reading `docs/verification/AUDIT.md` §division-of-labor in full.
 
+---
+
+## Ruling — 2026-08-07
+
+**RULED: cut upheld.** the two ACCEPTANCE files and the `factory-acceptance` check is not built and will not be built under this record.
+
+DR-014 Ruling 1 cut this as ~90% duplicative of PR #362. Verified 2026-08-07 and the basis is now STRONGER than when written: #362 is CLOSED and shipped as **#371, merged 2026-08-05T14:22:58Z**. The duplication DR-014 cited is no longer an open PR competing for the same ground — it is merged, running code.
+
+**Recorded by:** the executor, on Prez's 2026-08-07 instruction to proceed with the four cuts
+(DR-007, DR-010, DR-011, DR-013). The decision is Prez's; the rationale above was drafted by the
+executor from DR-014 Ruling 1 and the 2026-08-07 freshness audit, and is recorded here rather than
+left implicit so a future cycle can tell whether the reasoning still applies. **Amend this paragraph
+before merge if it does not match your reasoning** — per `os/decisions/README.md`, a ruling is the
+durable answer to *"why is it like this?"*, and it should be in your words where they differ from
+mine.
+
+This ruling does not reverse anything, so nothing is superseded. Reopening requires a new record
+citing what changed.
