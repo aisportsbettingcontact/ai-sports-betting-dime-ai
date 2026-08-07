@@ -270,21 +270,48 @@ await check("rate-limit keying resists client-supplied identity headers", async 
   const first = await sfetch(url);
   const r1 = remainingOf(first);
   expect(r1 !== null, "no RateLimit header on games.list — feed limiter not mounted");
-  const spoofed = await sfetch(url, {
-    headers: {
-      "x-forwarded-for": "203.0.113.250",
-      "cf-connecting-ip": "203.0.113.251",
-    },
+  // Tier 2 — spoofed X-Forwarded-For. Railway sanitizes it, so this MUST reach
+  // the origin (200) and continue the same budget rather than mint a fresh one.
+  const spoofedXff = await sfetch(url, {
+    headers: { "x-forwarded-for": "203.0.113.250" },
   });
-  const r2 = remainingOf(spoofed);
-  expect(r2 !== null, "no RateLimit header on the spoofed request");
+  const r2 = remainingOf(spoofedXff);
+  expect(r2 !== null, "no RateLimit header on the X-Forwarded-For-spoofed request");
   // Shared key → r2 continues the same budget (strictly below the fresh max).
   // If spoofing minted a new key, r2 would jump back to (max-1) = 59.
   expect(
     r2 <= r1 - 1 || r2 < 59,
-    `spoofed identity headers got a fresh budget (r1=${r1}, r2=${r2}) — either Cloudflare stopped overwriting cf-connecting-ip or Railway stopped sanitizing X-Forwarded-For; limiter keying is now client-controllable`
+    `spoofed X-Forwarded-For got a fresh budget (r1=${r1}, r2=${r2}) — Railway XFF sanitization may have changed; limiter keying is now client-controllable`
   );
-  return `plain remaining=${r1} → spoofed (xff + cf-connecting-ip) remaining=${r2} (shared key)`;
+
+  // Tier 1 — spoofed cf-connecting-ip, the header that actually decides identity
+  // when the edge proof passes. A client must not be able to choose it.
+  //
+  // Two acceptable outcomes, and the distinction matters: Cloudflare currently
+  // REFUSES a request carrying an inbound cf-connecting-ip outright (observed
+  // 2026-08-07: HTTP 403, `server: cloudflare`, no origin hit), which is the
+  // strongest possible result — the spoof never reaches us. If CF ever stops
+  // doing that, the request reaches the origin and the assertion falls back to
+  // the same shared-budget check as tier 2. Only a FRESH budget is a failure.
+  //
+  // This distinction is why the check previously failed on main: it treated
+  // "no RateLimit header" as a defect, when for this request it is the edge
+  // doing its job. A gate that red-flags its own success is worse than no gate.
+  const spoofedCf = await sfetch(url, {
+    headers: { "cf-connecting-ip": "203.0.113.251" },
+  });
+  const r3 = remainingOf(spoofedCf);
+  let cfVerdict;
+  if (spoofedCf.status === 403 || r3 === null) {
+    cfVerdict = `edge refused it (status ${spoofedCf.status}, no origin hit)`;
+  } else {
+    expect(
+      r3 <= r2 - 1 || r3 < 59,
+      `spoofed cf-connecting-ip got a fresh budget (r2=${r2}, r3=${r3}) — a client can now choose its own limiter identity, which collapses or multiplies every budget`
+    );
+    cfVerdict = `reached origin and shared the key (remaining=${r3})`;
+  }
+  return `plain ${r1} → spoofed-XFF ${r2} (shared key); spoofed cf-connecting-ip: ${cfVerdict}`;
 });
 
 // ─── Phase 4 edge-defense checks (opt-in via SMOKE_EDGE=cloudflare) ──────────
