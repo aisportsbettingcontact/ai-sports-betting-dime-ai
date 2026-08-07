@@ -8,7 +8,11 @@
  * ─────────────────────────────────────────────────────────────────────────────
  *   P2-B: Park factor now uses HR-specific hrFactor instead of overall run
  *         factor (parkFactor3yr). hrFactor is backfilled from Python PARK_FACTORS
- *         "hr" key. Falls back to parkFactor3yr if hrFactor is null.
+ *         "hr" key.
+ *   HR-3 (2026-08-07): a null hrFactor is NEUTRAL 1.0, never parkFactor3yr — a
+ *         run factor is not a home-run factor. Note hrFactor currently has NO
+ *         writer in the repo (backfillHrFactor.mjs deleted in d74938a7f), so a
+ *         null is a real possibility and is now logged as a WARN.
  *
  *   P2-C: wOBA double-count fixed.
  *     OLD: base_rate = (hr9/27) * woba_scale * pitcher_adj * park_adj
@@ -381,22 +385,39 @@ export async function resolveAndModelHrProps(
   const parkFactors = await db
     .select({
       teamAbbrev: mlbParkFactors.teamAbbrev,
-      parkFactor3yr: mlbParkFactors.parkFactor3yr, // fallback
       hrFactor: mlbParkFactors.hrFactor, // HR-specific (P2-B)
     })
     .from(mlbParkFactors);
   const parkMap = new Map<string, ParkContext>();
   for (const p of parkFactors as Array<{
     teamAbbrev: string;
-    parkFactor3yr: number | null;
     hrFactor: number | null;
   }>) {
-    // Priority: hrFactor (HR-specific) > parkFactor3yr (overall run) > 1.0 (neutral)
-    const hrAdj = p.hrFactor ?? p.parkFactor3yr ?? null;
-    if (hrAdj != null) {
-      parkMap.set(p.teamAbbrev, { hrFactor: Number(hrAdj) });
+    // HR-3 (audit finding, fixed 2026-08-07): a null hrFactor now means NEUTRAL
+    // (1.0), not "substitute the overall run factor".
+    //
+    // parkFactor3yr is a RUN-scoring park factor. Using it as a HOME-RUN
+    // multiplier silently prices a different quantity — Coors inflates runs far
+    // more than it inflates home runs, so the fallback biased exactly the parks
+    // where it mattered most.
+    //
+    // This matters more than it looks, because NOTHING IN THE REPO WRITES
+    // hrFactor ANY MORE: server/backfillHrFactor.mjs was its only writer and was
+    // deleted in d74938a7f ("remove inactive scripts and historical artifacts").
+    // So any park row added or reset from here on gets a permanent null, and the
+    // old code would have silently run-factored it forever. The WARN below makes
+    // that state audible instead: if it ever fires in production, the HR park
+    // adjustment is running neutral and the writer needs restoring.
+    const hrAdj = p.hrFactor != null ? Number(p.hrFactor) : 1.0;
+    parkMap.set(p.teamAbbrev, { hrFactor: hrAdj });
+    if (p.hrFactor == null) {
+      console.warn(
+        `${TAG} [HR-3][WARN] Park ${p.teamAbbrev}: hrFactor is NULL -> using neutral 1.0. ` +
+          `No writer for mlb_park_factors.hrFactor exists in the repo (backfillHrFactor.mjs was deleted).`
+      );
+    } else {
       console.log(
-        `${TAG} [P2-B] Park ${p.teamAbbrev}: hrFactor=${Number(hrAdj).toFixed(4)} (source=${p.hrFactor != null ? "hr_specific" : "run_factor_fallback"})`
+        `${TAG} [P2-B] Park ${p.teamAbbrev}: hrFactor=${hrAdj.toFixed(4)} (source=hr_specific)`
       );
     }
   }

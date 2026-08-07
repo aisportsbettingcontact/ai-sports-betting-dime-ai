@@ -687,6 +687,25 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
 
   // Array.from: tsconfig targets ES5 (no downlevelIteration) — direct Map iteration is TS2802
   for (const [key, group] of Array.from(byMatchup.entries())) {
+    /**
+     * P4-SCORE-4 (audit finding, added 2026-08-07): a DB row already stamped
+     * with a DIFFERENT canonical mlbGamePk must never absorb this API game's
+     * status, score or clock.
+     *
+     * Pass 1 claims a stamped row only when its OWN api game is in today's
+     * payload. When it is not — the classic case being a postponed
+     * doubleheader sibling, whose gamePk simply does not appear — the row stays
+     * unclaimed with its provenance intact, and the team-matching fallbacks
+     * below would happily hand it to the other game of the same matchup. That
+     * silently overwrites a known, canonically-identified game with another
+     * game's linescore.
+     *
+     * A null mlbGamePk carries no provenance and stays eligible: that is the
+     * legacy/unstamped row the fallbacks exist to serve.
+     */
+    const pkCompatible = (row: R, gamePk: number): boolean =>
+      row.mlbGamePk == null || Number(row.mlbGamePk) === gamePk;
+
     const candidates = () =>
       dbGames.filter(
         r => !claimed.has(r.id) && `${r.awayTeam}@${r.homeTeam}` === key
@@ -705,7 +724,7 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
     if (numbersAreSignal) {
       for (const g of group) {
         const rows = candidates().filter(
-          r => (r.gameNumber ?? 1) === g.gameNumber
+          r => (r.gameNumber ?? 1) === g.gameNumber && pkCompatible(r, g.gamePk)
         );
         if (rows.length === 1) {
           claimed.add(rows[0].id);
@@ -724,6 +743,7 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
     for (const g of stillUnmatched) {
       const gMin = utcToEstMinutes(g.startUtc);
       for (const row of candidates()) {
+        if (!pkCompatible(row, g.gamePk)) continue; // P4-SCORE-4
         const rMin = estTimeToMinutes(row.startTimeEst);
         const dist =
           gMin != null && rMin != null ? Math.abs(gMin - rMin) : 24 * 60;
