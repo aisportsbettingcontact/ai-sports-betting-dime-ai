@@ -54,6 +54,28 @@ function clientWithChannel(name: string, sendImpl: () => Promise<unknown>) {
   };
 }
 
+// FakeTextChannel.send() is a no-op that ignores its argument — it exists
+// only to satisfy the `instanceof TextChannel` check and the send()/name/
+// guild surface the earlier tests drive. To assert on the exact composed
+// `content`/`embeds` arguments passed to send(), this subclass records every
+// call. Module-scoped (not describe-local) so every describe block below can
+// use it, not just "composed-value clamp + brute-force escalation".
+class CapturingTextChannel extends FakeTextChannel {
+  sentArgs: unknown[] = [];
+  send(arg: unknown) {
+    this.sentArgs.push(arg);
+    return this.sendImpl();
+  }
+}
+
+function clientWithCapturingChannel(name: string, sendImpl: () => Promise<unknown>) {
+  const channel = new CapturingTextChannel(name, sendImpl);
+  return {
+    client: { isReady: () => true, channels: { fetch: async () => channel } },
+    channel,
+  };
+}
+
 const FORGERY = 'x\n[CRITICAL][FORGED] owned\r\nsecond="line"';
 
 function captureConsole() {
@@ -87,6 +109,18 @@ function payload(
     occurredAt: new Date(),
   };
 }
+
+// Module-level state (dedup map, global alert budget, brute-force tracking)
+// is intentionally process-lifetime in production, and this file never calls
+// vi.resetModules() — every `it()` below imports the SAME cached module
+// instance. Without a reset, an earlier test's dedup entry or an exhausted
+// alert budget (deliberately exercised by the Task 4.6 flood test) would
+// leak into a LATER test and silently suppress its alert. This file-scoped
+// beforeEach runs before every test in every describe block below.
+beforeEach(async () => {
+  const mod = await import("./discordSecurityAlert");
+  mod.resetSecurityAlertStateForTest();
+});
 
 describe("discord security alerts — hostile input cannot forge log lines", () => {
   let lines: string[];
@@ -266,26 +300,6 @@ describe("composed-value clamp + brute-force escalation (2026-08-06 review, Crit
   const DISCORD_DESCRIPTION_MAX = 4096;
   const DISCORD_CONTENT_MAX = 2000;
 
-  // FakeTextChannel.send() is a no-op that ignores its argument — it exists
-  // only to satisfy the `instanceof TextChannel` check and the send()/name/
-  // guild surface the earlier tests drive. To assert on the exact composed
-  // `content` string passed to send(), this subclass records every call.
-  class CapturingTextChannel extends FakeTextChannel {
-    sentArgs: unknown[] = [];
-    send(arg: unknown) {
-      this.sentArgs.push(arg);
-      return this.sendImpl();
-    }
-  }
-
-  function clientWithCapturingChannel(name: string, sendImpl: () => Promise<unknown>) {
-    const channel = new CapturingTextChannel(name, sendImpl);
-    return {
-      client: { isReady: () => true, channels: { fetch: async () => channel } },
-      channel,
-    };
-  }
-
   it("Critical 1: buildAuthFailEmbed does not throw on a 1500-char targetIdentifier; every field <= 1024", async () => {
     const { buildEmbedForTest } = await import("./discordSecurityAlert");
     let embed: ReturnType<typeof buildEmbedForTest> | undefined;
@@ -440,5 +454,399 @@ describe("postSecurityAlert try/catch placement (2026-08-06 audit)", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe("LIMITER_META covers every limitType slug (2026-08-07 review, Task 4.4)", () => {
+  // Verified against the union in server/_core/index.ts's fireRateLimitEvent().
+  const ALL_LIMIT_TYPES = [
+    "global",
+    "auth",
+    "trpc_auth",
+    "stripe_checkout",
+    "waitlist_submit",
+    "public_feed",
+    "xff_canary",
+    "edge_origin_ingress_anomaly",
+  ] as const;
+
+  it("has metadata for every limitType in the union", async () => {
+    const { LIMITER_META } = await import("./discordSecurityAlert");
+    for (const slug of ALL_LIMIT_TYPES) {
+      expect(LIMITER_META[slug], `missing LIMITER_META entry for "${slug}"`).toBeDefined();
+    }
+  });
+
+  it("never claims 429 for the origin lock", async () => {
+    const { LIMITER_META } = await import("./discordSecurityAlert");
+    expect(LIMITER_META.edge_origin_ingress_anomaly.action).not.toContain("429");
+  });
+
+  it("the xff canary is always observe-only — never a block, never a 429", async () => {
+    const { LIMITER_META } = await import("./discordSecurityAlert");
+    expect(LIMITER_META.xff_canary.action).toBe("observed only — request was served");
+  });
+
+  it("all six real limiters render the 429/blocked copy in the embed", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const realLimiters = [
+      "global",
+      "auth",
+      "trpc_auth",
+      "stripe_checkout",
+      "waitlist_submit",
+      "public_feed",
+    ] as const;
+    for (const context of realLimiters) {
+      const embed = buildEmbedForTest({
+        eventType: "RATE_LIMIT",
+        ip: "1.2.3.4",
+        path: "/api/test",
+        method: "GET",
+        userAgent: "ua",
+        context,
+        occurredAt: 1_754_500_000_000,
+      });
+      expect(
+        embed.data.description,
+        `context="${context}" should still assert a 429/blocked outcome`
+      ).toContain("429 Too Many Requests");
+    }
+  });
+
+  it("edge_origin_ingress_anomaly renders a 403 title/body — NOT the 429/blocked copy", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: "/api/trpc/games.list",
+      method: "GET",
+      userAgent: "ua",
+      context: "edge_origin_ingress_anomaly",
+      occurredAt: 1_754_500_000_000,
+    });
+    expect(embed.data.title).toContain("403");
+    expect(embed.data.description).toContain("403 Forbidden");
+    expect(embed.data.description).not.toContain("429 Too Many Requests");
+    expect(embed.data.description).not.toMatch(/temporarily blocked\./);
+  });
+
+  it("xff_canary renders an observe-only title/body — nothing was blocked, no 429", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "10.0.0.5",
+      path: "/api/trpc/games.list",
+      method: "GET",
+      userAgent: "ua",
+      context: "xff_canary",
+      occurredAt: 1_754_500_000_000,
+    });
+    expect(embed.data.title).not.toMatch(/Blocked/);
+    expect(embed.data.description).toMatch(/Nothing was blocked/);
+    expect(embed.data.description).not.toContain("429 Too Many Requests");
+  });
+
+  it("buildEmbed fails loudly (throws) on an unrecognised SecurityEventType instead of silently mis-rendering (A13)", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    expect(() =>
+      buildEmbedForTest({
+        // Cast past the type system to simulate a value that bypassed it (an
+        // un-typed caller, a stale build) — exactly the scenario the
+        // default: exhaustiveness guard exists to catch.
+        eventType: "SOMETHING_NEW" as unknown as "CSRF_BLOCK",
+        ip: "1.2.3.4",
+        path: "/x",
+        method: "GET",
+        occurredAt: 1_754_500_000_000,
+      })
+    ).toThrow(/unrecognised SecurityEventType/i);
+  });
+});
+
+describe("RATE_LIMIT / BRUTE_FORCE remediation is not a self-DoS instruction (2026-08-07 review, Task 4.4 item 2)", () => {
+  it("RATE_LIMIT guidance no longer tells the operator to permanently block the IP at the firewall", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: "/api/test",
+      method: "GET",
+      userAgent: "ua",
+      context: "global",
+      occurredAt: 1_754_500_000_000,
+    });
+    expect(embed.data.description).not.toMatch(/consider permanently blocking it at the firewall/i);
+    expect(embed.data.description).toMatch(/shared infrastructure/i);
+  });
+
+  it("BRUTE_FORCE description no longer instructs blocking the IP as 'the most effective action'", async () => {
+    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildBruteForceEmbedForTest("1.2.3.4", 4, 10 * 60 * 1000, "ua", 1_754_500_000_000);
+    expect(embed.data.description).not.toMatch(/most effective action/i);
+    expect(embed.data.description).toMatch(/shared infrastructure/i);
+    expect(embed.data.description).toMatch(/Cloudflare/i);
+  });
+
+  it("BRUTE_FORCE's 'Recommended Immediate Action' field prefers an account lock over an IP block", async () => {
+    const { buildBruteForceEmbedForTest } = await import("./discordSecurityAlert");
+    const embed = buildBruteForceEmbedForTest("1.2.3.4", 4, 10 * 60 * 1000, "ua", 1_754_500_000_000);
+    const actionField = (embed.data.fields ?? []).find(f => f.name.includes("Recommended Immediate Action"));
+    expect(actionField?.value).toMatch(/confirm it isn't.*shared infrastructure/i);
+    expect(actionField?.value).not.toMatch(
+      /^Block `1\.2\.3\.4` at the firewall\/CDN level — IP Access Rules\./
+    );
+  });
+});
+
+describe("dedup key includes path + context, not just (eventType, ip) (2026-08-07 review, Task 4.5)", () => {
+  it("two DIFFERENT limiters (context values) firing for the SAME IP within the cooldown BOTH post", async () => {
+    const { postSecurityAlert } = await import("./discordSecurityAlert");
+    const { client, channel } = clientWithCapturingChannel("sec-events-dedup", async () => ({ id: "1" }));
+    clientState.value = client;
+
+    const ip = "203.0.113.9";
+    const now = Date.now();
+
+    await postSecurityAlert({
+      eventType: "RATE_LIMIT",
+      ip,
+      path: "/api/trpc/appUsers.login",
+      method: "POST",
+      userAgent: "ua",
+      context: "trpc_auth",
+      occurredAt: now,
+    });
+    // Same IP, DIFFERENT limiter — the OLD `${eventType}:${ip}` key would
+    // have deduped this second alert away, silently dropping a real
+    // trpc_auth brute-force signal underneath an unrelated public_feed one.
+    await postSecurityAlert({
+      eventType: "RATE_LIMIT",
+      ip,
+      path: "/api/trpc/games.list",
+      method: "GET",
+      userAgent: "ua",
+      context: "public_feed",
+      occurredAt: now + 10,
+    });
+
+    const embedSends = channel.sentArgs.filter(
+      (a): a is { embeds: unknown[] } => typeof a === "object" && a !== null && "embeds" in a
+    );
+    expect(embedSends.length).toBe(2);
+  });
+
+  it("the SAME (eventType, ip, path, context) posted twice within the cooldown IS still deduped", async () => {
+    const { postSecurityAlert } = await import("./discordSecurityAlert");
+    const { client, channel } = clientWithCapturingChannel("sec-events-dedup-2", async () => ({ id: "1" }));
+    clientState.value = client;
+
+    const ip = "203.0.113.10";
+    const now = Date.now();
+    const one = {
+      eventType: "RATE_LIMIT" as const,
+      ip,
+      path: "/api/trpc/games.list",
+      method: "GET",
+      userAgent: "ua",
+      context: "public_feed",
+      occurredAt: now,
+    };
+    await postSecurityAlert(one);
+    await postSecurityAlert({ ...one, occurredAt: now + 10 });
+
+    const embedSends = channel.sentArgs.filter(
+      (a): a is { embeds: unknown[] } => typeof a === "object" && a !== null && "embeds" in a
+    );
+    expect(embedSends.length).toBe(1);
+  });
+});
+
+describe("global alert budget + time-based prune (2026-08-07 review, Task 4.6)", () => {
+  it("1000 events from 1000 distinct IPs in under a minute yields <= 21 embeds, and the dedup prune runs <= 1 time", async () => {
+    const mod = await import("./discordSecurityAlert");
+    const { postSecurityAlert, getAlertDedupPruneRunCountForTest } = mod;
+    const { client, channel } = clientWithCapturingChannel("sec-events-flood", async () => ({ id: "1" }));
+    clientState.value = client;
+
+    const now = Date.now();
+    for (let i = 0; i < 1000; i++) {
+      await postSecurityAlert({
+        eventType: "RATE_LIMIT",
+        ip: `198.51.100.${i}`, // 1000 distinct synthetic IPs (string-unique; format need not be a real IPv4)
+        path: "/api/trpc/games.list",
+        method: "GET",
+        userAgent: "ua",
+        context: "public_feed",
+        occurredAt: now + i, // all comfortably inside one minute
+      });
+    }
+
+    // The budget-exhausted summary is posted fire-and-forget (not awaited by
+    // postSecurityAlert); give it a turn to land before asserting.
+    await new Promise(r => setTimeout(r, 20));
+
+    // <=20 real alert embeds + <=1 budget-exhausted summary (content-only, no
+    // embeds key) = <=21 total sends.
+    expect(channel.sentArgs.length).toBeLessThanOrEqual(21);
+
+    const embedSends = channel.sentArgs.filter(
+      (a): a is { embeds: unknown[] } => typeof a === "object" && a !== null && "embeds" in a
+    );
+    expect(embedSends.length).toBeLessThanOrEqual(20);
+
+    // The time-based prune sweep runs at most once per DISCORD_ALERT_DEDUP_MS
+    // (30s) — 1000 events fired in a tight synchronous loop take nowhere
+    // near 30s of wall-clock time, so it must fire at most once, never once
+    // per event (the old size-triggered re-scan-on-every-call bug).
+    expect(getAlertDedupPruneRunCountForTest()).toBeLessThanOrEqual(1);
+  }, 20_000);
+
+  it("posts exactly ONE budget-exhausted summary line, not one per suppressed alert", async () => {
+    const { postSecurityAlert } = await import("./discordSecurityAlert");
+    const { client, channel } = clientWithCapturingChannel("sec-events-flood-summary", async () => ({ id: "1" }));
+    clientState.value = client;
+
+    const now = Date.now();
+    for (let i = 0; i < 30; i++) {
+      await postSecurityAlert({
+        eventType: "RATE_LIMIT",
+        ip: `198.51.100.${i}`,
+        path: "/api/trpc/games.list",
+        method: "GET",
+        userAgent: "ua",
+        context: "public_feed",
+        occurredAt: now + i,
+      });
+    }
+    // The budget-exhausted summary is posted fire-and-forget (not awaited by
+    // postSecurityAlert); give it a turn to land before asserting.
+    await new Promise(r => setTimeout(r, 20));
+
+    const contentOnlySends = channel.sentArgs.filter(
+      (a): a is { content: string } =>
+        typeof a === "object" && a !== null && "content" in a && !("embeds" in a)
+    );
+    expect(contentOnlySends.length).toBe(1);
+    expect(contentOnlySends[0]!.content).toMatch(/alert budget reached/i);
+  });
+});
+
+describe("formatTimestamp emits the real zone abbreviation + UTC instant, not a hardcoded EST (2026-08-07 review, Task 4.7)", () => {
+  it("an August instant (EDT) is labelled EDT, not EST — the exact bug repro from the finding", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    // 20:48:23Z is 16:48:23 EDT — verified live to previously render "EST".
+    const augustUtc = Date.UTC(2026, 7, 6, 20, 48, 23);
+    const embed = buildEmbedForTest({
+      eventType: "CSRF_BLOCK",
+      ip: "1.2.3.4",
+      blockedOrigin: "https://evil.example",
+      path: "appUsers.login",
+      method: "POST",
+      occurredAt: augustUtc,
+    });
+    const timeField = (embed.data.fields ?? []).find(f => f.name.includes("Time of Event"));
+    expect(timeField?.value).toContain("EDT");
+    expect(timeField?.value).not.toContain("EST");
+    expect(timeField?.value).toContain(new Date(augustUtc).toISOString());
+  });
+
+  it("a January instant (EST) is labelled EST", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    const januaryUtc = Date.UTC(2026, 0, 15, 12, 0, 0);
+    const embed = buildEmbedForTest({
+      eventType: "CSRF_BLOCK",
+      ip: "1.2.3.4",
+      blockedOrigin: "https://evil.example",
+      path: "appUsers.login",
+      method: "POST",
+      occurredAt: januaryUtc,
+    });
+    const timeField = (embed.data.fields ?? []).find(f => f.name.includes("Time of Event"));
+    expect(timeField?.value).toContain("EST");
+    expect(timeField?.value).not.toContain("EDT");
+    expect(timeField?.value).toContain(new Date(januaryUtc).toISOString());
+  });
+});
+
+describe("logSafe reaches embed values and content, and content additionally strips backtick/@ (2026-08-07 review, Task 4.8)", () => {
+  const HOSTILE_PATH = "/api/trpc/games.list`@everyone\nx=1";
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("a path containing a backtick, @everyone and a newline cannot forge a log line when it reaches an embed field", async () => {
+    const { buildEmbedForTest } = await import("./discordSecurityAlert");
+    // buildEmbedForTest doesn't itself log, but proves the embed build
+    // survives hostile input and that the raw newline never appears intact
+    // in the composed field value (logSafe converts it to the literal `\n`).
+    const embed = buildEmbedForTest({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.4",
+      path: HOSTILE_PATH,
+      method: "GET",
+      userAgent: "ua",
+      context: "public_feed",
+      occurredAt: 1_754_500_000_000,
+    });
+    const pathField = (embed.data.fields ?? []).find(f => f.name.includes("Route / Endpoint Hit"));
+    expect(pathField?.value).toBeDefined();
+    // logSafe escapes real newlines to the two-character sequence `\n` — a
+    // raw newline must never survive into the field value.
+    expect(pathField!.value).not.toMatch(/[\r\n]/);
+    expect(pathField!.value).toContain("\\n");
+  });
+
+  it("postSecurityAlert with a hostile path never forges a console log line (full pipeline)", async () => {
+    const { postSecurityAlert } = await import("./discordSecurityAlert");
+    const lines = captureConsole();
+    clientState.value = clientWithChannel("ok", async () => ({ id: "1" }));
+    await postSecurityAlert({
+      eventType: "RATE_LIMIT",
+      ip: "1.2.3.5",
+      path: HOSTILE_PATH,
+      method: "GET",
+      userAgent: "ua",
+      context: "public_feed",
+      occurredAt: Date.now(),
+    });
+    assertNoForgedLines(lines);
+  });
+
+  it("the BRUTE_FORCE @here content strips backticks and @ from the ip — no forged mention, no code-span breakout", async () => {
+    const { postSecurityAlert } = await import("./discordSecurityAlert");
+    const { client, channel } = clientWithCapturingChannel("sec-events-hostile-ip", async () => ({ id: "1" }));
+    clientState.value = client;
+
+    const hostileIp = "1.2.3.4`@everyone\nforged";
+    const now = Date.now();
+    for (let i = 0; i < 4; i++) {
+      await postSecurityAlert({
+        eventType: "AUTH_FAIL",
+        ip: hostileIp,
+        path: "appUsers.login",
+        method: "POST",
+        userAgent: "ua",
+        context: "invalid_password",
+        targetIdentifier: "abc***@example.com",
+        occurredAt: now + i * 100,
+      });
+    }
+    await new Promise(r => setTimeout(r, 20));
+
+    const bruteForceSend = channel.sentArgs.find(
+      (a): a is { content: string; embeds: unknown[] } =>
+        typeof a === "object" && a !== null && "content" in a
+    );
+    expect(bruteForceSend).toBeDefined();
+    expect(bruteForceSend!.content).not.toContain("`@everyone");
+    expect(bruteForceSend!.content).not.toMatch(/@everyone/);
+    expect(bruteForceSend!.content).not.toMatch(/[\r\n]/);
+  });
+
+  it("SECURITY_CHANNEL_ID is exported so server/_core/index.ts can import it instead of duplicating the literal", async () => {
+    const { SECURITY_CHANNEL_ID } = await import("./discordSecurityAlert");
+    expect(SECURITY_CHANNEL_ID).toBe("1492280227567501403");
   });
 });

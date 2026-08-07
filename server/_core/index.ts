@@ -45,7 +45,10 @@ import { startMlbPlayerSyncScheduler } from "../mlbPlayerSync";
 import { insertSecurityEvent } from "../db";
 import { startSecurityDigestScheduler } from "../securityDigest";
 import { startWeeklySecurityDigestScheduler } from "../weeklySecurityDigest";
-import { postSecurityAlert } from "../discord/discordSecurityAlert";
+import {
+  postSecurityAlert,
+  SECURITY_CHANNEL_ID,
+} from "../discord/discordSecurityAlert";
 import { EmbedBuilder, TextChannel } from "discord.js";
 import { startMlbScheduleHistoryScheduler } from "../mlbScheduleHistoryScheduler";
 import { startNbaScheduleHistoryScheduler } from "../nbaScheduleHistoryScheduler";
@@ -197,12 +200,10 @@ let edgeNoSecretLastEscalatedAt = 0;
 // bot client. Reusing it needs no new env var / webhook to provision in
 // Railway, so it is the simpler and equally honest option for this case.
 //
-// Posts to the same 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel postSecurityAlert() uses
-// (server/discord/discordSecurityAlert.ts's SECURITY_CHANNEL_ID). That
-// constant isn't exported and discordSecurityAlert.ts is out of scope for
-// this task, so the ID is duplicated here with this note rather than
-// imported.
-const EDGE_NO_SECRET_ALERT_CHANNEL_ID = "1492280227567501403";
+// Posts to the same 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel postSecurityAlert() uses.
+// server/discord/discordSecurityAlert.ts's SECURITY_CHANNEL_ID is now
+// exported (Task 4.8, once that file was back in scope) and imported above
+// instead of duplicating the literal channel ID here.
 
 /**
  * Fire-and-forget: never awaited at the call site, never throws, and every
@@ -224,7 +225,7 @@ function fireEdgeNoSecretAlert(): void {
   }
 
   client.channels
-    .fetch(EDGE_NO_SECRET_ALERT_CHANNEL_ID)
+    .fetch(SECURITY_CHANNEL_ID)
     .then(rawChannel => {
       if (!rawChannel || !(rawChannel instanceof TextChannel)) {
         console.error(

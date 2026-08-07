@@ -37,12 +37,113 @@ import { logSafe } from "../_core/logSafe";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Target channel: 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 */
-const SECURITY_CHANNEL_ID = "1492280227567501403";
+/**
+ * Target channel: 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦
+ * Exported (Task 4.8) so server/_core/index.ts's out-of-band edge_no_secret
+ * alert — which posts to this same channel outside the SecurityEventType /
+ * postSecurityAlert path — can import it instead of duplicating the literal
+ * channel ID.
+ */
+export const SECURITY_CHANNEL_ID = "1492280227567501403";
 
-/** In-memory cooldown: at most 1 Discord post per (eventType + IP) per window */
+/**
+ * In-memory cooldown: at most 1 Discord post per (eventType, ip, path,
+ * context) per window.
+ *
+ * Was keyed on `${eventType}:${ip}` alone — so two DIFFERENT limiters firing
+ * for the same IP inside the window silently dropped the second, even
+ * though the DB-side dedup in server/_core/index.ts's fireRateLimitEvent()
+ * keys on `${ip}:${path}:${limitType}` and posted it anyway. A real
+ * trpc_auth brute-force could be suppressed here by an unrelated
+ * public_feed alert for the same IP (2026-08-07 review, Task 4.5).
+ * isDeduplicated() below folds path/context (limitType) into the key so the
+ * two sinks agree on what happened; eventType stays in the key too since a
+ * CSRF_BLOCK, RATE_LIMIT and AUTH_FAIL sharing (ip, path) are still
+ * distinct events.
+ */
 const DISCORD_ALERT_DEDUP_MS = 30_000; // 30 seconds
 const alertLastPosted = new Map<string, number>(); // key → timestamp
+
+/** Hard cap on the dedup map's size; oldest keys are evicted first (FIFO). */
+const ALERT_DEDUP_MAP_MAX_SIZE = 2000;
+
+/**
+ * Time-based prune bookkeeping (Task 4.6). The old design re-ran
+ * `Array.from(alertLastPosted.entries()).forEach(...)` on EVERY call once
+ * the map exceeded its size threshold — under a flood every entry is fresh
+ * (nothing stale to prune), so it degraded to an O(n) full-map scan plus an
+ * array allocation on every single alert, on the hot alert path itself.
+ * Gating the sweep to at most once per dedup window turns the common case
+ * into an O(1) amortized check.
+ */
+let alertDedupLastPruneAt = 0;
+let alertDedupPruneRunCountForTest = 0; // test-only instrumentation
+
+function pruneAlertDedupMap(now: number): void {
+  if (now - alertDedupLastPruneAt < DISCORD_ALERT_DEDUP_MS) return;
+  alertDedupLastPruneAt = now;
+  alertDedupPruneRunCountForTest++;
+
+  const cutoff = now - DISCORD_ALERT_DEDUP_MS;
+  Array.from(alertLastPosted.entries()).forEach(([k, ts]) => {
+    if (ts < cutoff) alertLastPosted.delete(k);
+  });
+
+  // FIFO eviction: Map iteration order is insertion order, so the oldest
+  // keys are the first `overflow` entries of Array.from(...keys()) — deleted
+  // first if the cap is still exceeded after the time-based sweep above
+  // (e.g. a sustained flood of unique keys inside a single window, none of
+  // them stale yet).
+  if (alertLastPosted.size > ALERT_DEDUP_MAP_MAX_SIZE) {
+    const overflow = alertLastPosted.size - ALERT_DEDUP_MAP_MAX_SIZE;
+    Array.from(alertLastPosted.keys())
+      .slice(0, overflow)
+      .forEach(k => alertLastPosted.delete(k));
+  }
+}
+
+// ─── Global alert budget (Task 4.6) ──────────────────────────────────────────
+/**
+ * Per-key dedup above has no CEILING — a distributed source (many unique
+ * IPs), or the edge-canary paths (xff_canary / edge_origin_ingress_anomaly),
+ * can each mint their own dedup key and produce one embed per unique key
+ * per 30s, unbounded. This is a global token bucket shared by every embed
+ * this module sends — both the per-event path (postSecurityAlert) and the
+ * brute-force escalation (postBruteForceAlert) — because the Discord
+ * channel itself has no per-key concept to protect; only a global one does.
+ */
+const GLOBAL_ALERT_BUDGET_MAX = 20; // embeds per window, globally
+const GLOBAL_ALERT_BUDGET_WINDOW_MS = 60_000; // 1 minute
+
+let budgetWindowStart = 0;
+let budgetUsedInWindow = 0;
+let budgetSummaryPostedInWindow = false;
+
+/**
+ * Consumes one token from the global budget if available. Returns
+ * `justExhausted: true` exactly once per window — on the request that first
+ * hits the ceiling — so the caller can post ONE summary line instead of
+ * silently dropping every alert past the cap.
+ */
+function tryConsumeGlobalAlertBudget(now: number): {
+  allowed: boolean;
+  justExhausted: boolean;
+} {
+  if (now - budgetWindowStart >= GLOBAL_ALERT_BUDGET_WINDOW_MS) {
+    budgetWindowStart = now;
+    budgetUsedInWindow = 0;
+    budgetSummaryPostedInWindow = false;
+  }
+  if (budgetUsedInWindow < GLOBAL_ALERT_BUDGET_MAX) {
+    budgetUsedInWindow++;
+    return { allowed: true, justExhausted: false };
+  }
+  if (!budgetSummaryPostedInWindow) {
+    budgetSummaryPostedInWindow = true;
+    return { allowed: false, justExhausted: true };
+  }
+  return { allowed: false, justExhausted: false };
+}
 
 // ─── Brute-force detection constants ─────────────────────────────────────────
 /**
@@ -102,26 +203,22 @@ export interface SecurityAlertPayload {
 
 // ─── Dedup helper ─────────────────────────────────────────────────────────────
 /**
- * Returns true if an alert for this (eventType, ip) was already posted within
- * the cooldown window. Also prunes stale entries to prevent unbounded growth.
+ * Returns true if an alert for this (eventType, ip, path, context) was
+ * already posted within the cooldown window. Also prunes stale/overflowing
+ * entries — see pruneAlertDedupMap() above.
  */
-function isDeduplicated(eventType: SecurityEventType, ip: string): boolean {
+function isDeduplicated(payload: SecurityAlertPayload): boolean {
   const now = Date.now();
-  const key = `${eventType}:${ip}`;
+  const key = `${payload.eventType}:${payload.ip}:${payload.path}:${payload.context ?? "-"}`;
 
-  // Prune stale entries (max 2000 entries before forced prune)
-  if (alertLastPosted.size > 2000) {
-    const cutoff = now - DISCORD_ALERT_DEDUP_MS;
-    Array.from(alertLastPosted.entries()).forEach(([k, ts]) => {
-      if (ts < cutoff) alertLastPosted.delete(k);
-    });
-  }
+  pruneAlertDedupMap(now);
 
   const lastSent = alertLastPosted.get(key) ?? 0;
   if (now - lastSent < DISCORD_ALERT_DEDUP_MS) {
     const remaining = Math.ceil((DISCORD_ALERT_DEDUP_MS - (now - lastSent)) / 1000);
     console.log(
-      `[DiscordSecurity][DEDUP] Skipping ${logSafe(eventType)} alert for IP=${logSafe(ip)}` +
+      `[DiscordSecurity][DEDUP] Skipping ${logSafe(payload.eventType)} alert for IP=${logSafe(payload.ip)}` +
+      ` path=${logSafe(payload.path)} context=${logSafe(payload.context ?? "-")}` +
       ` — cooldown active (${remaining}s remaining)`
     );
     return true;
@@ -129,6 +226,32 @@ function isDeduplicated(eventType: SecurityEventType, ip: string): boolean {
 
   alertLastPosted.set(key, now);
   return false;
+}
+
+/**
+ * Test-only: resets ALL module-level mutable state (dedup map + prune
+ * bookkeeping, global alert budget, brute-force tracking maps). This
+ * module's state is intentionally process-lifetime in production; without
+ * an explicit reset, tests that share the same imported module instance
+ * across `it()` blocks (this file never calls vi.resetModules()) would leak
+ * state — an earlier test's dedup entry, or an exhausted alert budget,
+ * could silently suppress a LATER test's alert. Not used by production
+ * paths.
+ */
+export function resetSecurityAlertStateForTest(): void {
+  alertLastPosted.clear();
+  alertDedupLastPruneAt = 0;
+  alertDedupPruneRunCountForTest = 0;
+  budgetWindowStart = 0;
+  budgetUsedInWindow = 0;
+  budgetSummaryPostedInWindow = false;
+  authFailTimestamps.clear();
+  bruteForceLastAlerted.clear();
+}
+
+/** Test-only: number of times pruneAlertDedupMap() actually ran its sweep. */
+export function getAlertDedupPruneRunCountForTest(): number {
+  return alertDedupPruneRunCountForTest;
 }
 
 // ─── Brute-force tracker ──────────────────────────────────────────────────────
@@ -216,11 +339,23 @@ export function trackAuthFailForBruteForce(ip: string, occurredAt: number): {
 
 // ─── Timestamp formatter ──────────────────────────────────────────────────────
 /**
- * Formats an epoch-ms timestamp as a human-readable EST string.
- * Example: "Apr 10, 2026 · 14:32:07 EST"
+ * Formats an epoch-ms timestamp as a human-readable America/New_York string
+ * with the REAL zone abbreviation, plus the UTC ISO instant in parentheses.
+ *
+ * Was hardcoding " EST" regardless of actual DST — verified live:
+ * `20:48:23Z` rendered "Aug 6, 2026, 16:48:23 EST" when the value was
+ * actually EDT, mislabelling every alert by an hour for ~8 months a year
+ * and corrupting forensic timeline reconstruction (2026-08-07 review, Task
+ * 4.7). `Intl.DateTimeFormat`'s `timeZoneName: "short"` resolves the
+ * correct EST/EDT abbreviation for the actual instant. The UTC instant is
+ * appended because that's what every log line and the Railway API use — an
+ * operator should never have to convert by hand.
+ *
+ * Example: "Aug 6, 2026, 16:48:23 EDT (2026-08-06T20:48:23.000Z)"
  */
 function formatTimestamp(epochMs: number): string {
-  return new Date(epochMs).toLocaleString("en-US", {
+  const date = new Date(epochMs);
+  const local = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     month: "short",
     day: "numeric",
@@ -229,7 +364,9 @@ function formatTimestamp(epochMs: number): string {
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-  }) + " EST";
+    timeZoneName: "short",
+  }).format(date);
+  return `${local} (${date.toISOString()})`;
 }
 
 /**
@@ -299,6 +436,23 @@ const DISCORD_CONTENT_LIMIT = 2000;
 function clampContent(composed: string): string {
   if (composed.length <= DISCORD_CONTENT_LIMIT) return composed;
   return `${composed.substring(0, DISCORD_CONTENT_LIMIT - 12)}…[truncated]`;
+}
+
+/**
+ * Strips characters with special meaning in Discord message CONTENT
+ * specifically — backticks (breaks out of an inline-code span into raw
+ * Markdown) and `@` (role/user/@everyone/@here mention pings) — from an
+ * attacker-controlled value before it is interpolated into `content`.
+ *
+ * This is NOT a substitute for logSafe(): logSafe neutralizes control
+ * characters/log-injection and is applied everywhere (fields and content
+ * alike); this handles the two hazards specific to Discord's message
+ * `content` parser. Embed FIELD values do not need this — Discord does not
+ * resolve @mentions from embed field text, only from message `content`
+ * (2026-08-07 review, Task 4.8).
+ */
+function stripContentHazards(value: string): string {
+  return value.replace(/[`@]/g, "");
 }
 
 // ─── Embed builders ───────────────────────────────────────────────────────────
@@ -374,16 +528,16 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .addFields(
       {
         name: "🌐 Blocked Origin (Where the Request Came From)",
-        value: clampFieldValue(`\`${field(p.blockedOrigin, "none — Origin header was missing entirely")}\``),
+        value: clampFieldValue(`\`${field(logSafe(p.blockedOrigin), "none — Origin header was missing entirely")}\``),
         inline: false,
       },
-      { name: "🔗 tRPC Procedure Targeted", value: clampFieldValue(`\`${field(p.path, "unknown")}\``),   inline: true  },
-      { name: "📡 HTTP Method",             value: clampFieldValue(`\`${field(p.method, "unknown")}\``), inline: true  },
-      { name: "🖥️ Attacker IP Address",     value: clampFieldValue(`\`${field(p.ip, "unknown")}\``),     inline: true  },
-      { name: "🕐 Time of Event (EST)",     value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
+      { name: "🔗 tRPC Procedure Targeted", value: clampFieldValue(`\`${field(logSafe(p.path), "unknown")}\``),   inline: true  },
+      { name: "📡 HTTP Method",             value: clampFieldValue(`\`${field(logSafe(p.method), "unknown")}\``), inline: true  },
+      { name: "🖥️ Attacker IP Address",     value: clampFieldValue(`\`${field(logSafe(p.ip), "unknown")}\``),     inline: true  },
+      { name: "🕐 Time of Event",     value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(p.userAgent, "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${field(logSafe(p.userAgent), "none — no user-agent header provided")}\``),
         inline: false,
       },
       {
@@ -399,54 +553,203 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .setTimestamp(p.occurredAt);
 }
 
-function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
-  const limiterLabel: Record<string, string> = {
-    global:    "Global API Limiter — 200 requests per minute per IP",
-    auth:      "Auth Route Limiter — 5 attempts per 15 minutes per IP",
-    trpc_auth: "Login Procedure Limiter — 5 login attempts per 15 minutes per IP",
-  };
-  const limiterDisplay = limiterLabel[p.context ?? ""] ?? (p.context ?? "unknown limiter");
+// ─── Rate-limit / edge-defense metadata (Task 4.4) ───────────────────────────
+/**
+ * `limitType` (the RATE_LIMIT event's `context`) has EIGHT possible slugs —
+ * verify against the union in server/_core/index.ts's fireRateLimitEvent().
+ * The old label map covered 3 of them; the other five fell through to a raw
+ * slug plus hardcoded copy asserting a 429 and a temporary block. That copy
+ * is TRUE for six of the eight slugs and FALSE for two:
+ *
+ *   - edge_origin_ingress_anomaly is fired from TWO call sites that share
+ *     this one label: server/_core/index.ts's origin-lock onEvent (only its
+ *     "edge_deny" case fires it — that call is a genuine 403, the request
+ *     never reached application code) AND a second, independent /api/trpc
+ *     ingress-anomaly canary that NEVER blocks (it always calls next()
+ *     after firing). Under EDGE_MODE=on the canary "mostly" can't fire
+ *     because a real bypass is already 403'd upstream (see index.ts's own
+ *     comment on that canary) — so in practice this label means "403" far
+ *     more often than not — but the payload carries no field distinguishing
+ *     which call site fired it, so the copy below cannot claim a single
+ *     action with certainty and says so.
+ *   - xff_canary is observe-only by construction (see index.ts) — it is
+ *     never anything but "request was served".
+ *
+ * action is a closed enum so the RATE_LIMIT embed can render "what the
+ * server did" and its title FROM metadata instead of a hardcoded literal —
+ * that hardcoding is exactly what let the false 429/blocked claims ship.
+ */
+export type LimiterAction =
+  | "429 rate-limited"
+  | "403 blocked at the edge"
+  | "observed only — request was served";
 
-  const limiterExplanation: Record<string, string> = {
-    global:
-      "This IP sent more than 200 requests in a single minute. " +
+interface LimiterMeta {
+  label: string;
+  /** What the server ACTUALLY did. */
+  action: LimiterAction;
+  explanation: string;
+  guidance: string;
+}
+
+/**
+ * Shared remediation text for the six REAL rate limiters (Task 4.4 item 2 /
+ * self-DoS fix). The old copy — "consider permanently blocking it at the
+ * firewall" — is aimed at IPs that are frequently T-Mobile CGNAT, Meta's
+ * crawler, GitHub Actions runners, Cloudflare PoPs, or Railway's own edge.
+ * Blocking a Cloudflare PoP or Railway edge node at the firewall can take
+ * the site down for everyone behind it, not just the attacker.
+ */
+const SHARED_INFRA_GUIDANCE =
+  "A one-off is normal, no action needed. Before blocking anything for " +
+  "repeat triggers, confirm this is not shared infrastructure — Cloudflare " +
+  "PoPs, Railway edge nodes, carrier CGNAT ranges (e.g. T-Mobile " +
+  "172.32.0.0/11), GitHub Actions runners, and verified crawlers can all " +
+  "appear here as a single address representing many users. Blocking one " +
+  "can take the site down for everyone behind it. Prefer an account-level " +
+  "lock over an IP block.";
+
+export const LIMITER_META: Record<string, LimiterMeta> = {
+  global: {
+    label: "Global API Limiter — 200 requests per minute per IP",
+    action: "429 rate-limited",
+    explanation:
+      "This IP sent more than 200 requests in a single minute across /api. " +
       "This is almost always automated — a bot, scraper, or flooding tool. " +
       "Normal users never hit this limit.",
-    auth:
-      "This IP made more than 5 login or OAuth attempts in 15 minutes. " +
-      "This suggests someone is trying to brute-force access to an account. " +
-      "They have been temporarily blocked.",
-    trpc_auth:
+    guidance: SHARED_INFRA_GUIDANCE,
+  },
+  auth: {
+    label: "Auth Route Limiter — 5 attempts per 15 minutes per IP",
+    action: "429 rate-limited",
+    explanation:
+      "This IP made more than 5 Discord OAuth attempts in 15 minutes. " +
+      "This suggests someone is trying to brute-force access to an account.",
+    guidance: SHARED_INFRA_GUIDANCE,
+  },
+  trpc_auth: {
+    label: "Login Procedure Limiter — 5 login attempts per 15 minutes per IP",
+    action: "429 rate-limited",
+    explanation:
       "This IP attempted the login procedure more than 5 times in 15 minutes. " +
-      "This is a strong signal of a credential-stuffing or password-guessing attack. " +
-      "The IP is temporarily blocked from making further login attempts.",
+      "This is a strong signal of a credential-stuffing or password-guessing attack.",
+    guidance: SHARED_INFRA_GUIDANCE,
+  },
+  stripe_checkout: {
+    label: "Stripe Checkout Limiter — 10 attempts per 15 minutes per IP",
+    action: "429 rate-limited",
+    explanation:
+      "This IP attempted to create a Stripe checkout session more than 10 " +
+      "times in 15 minutes. A real user clicks once — this matches an " +
+      "automated probe (confirmed live: rotating *.run.app / Google Cloud " +
+      "Run probes targeting this exact endpoint).",
+    guidance: SHARED_INFRA_GUIDANCE,
+  },
+  waitlist_submit: {
+    label: "Waitlist Submit Limiter — 5 submissions per 15 minutes per IP",
+    action: "429 rate-limited",
+    explanation:
+      "This IP submitted the waitlist form more than 5 times in 15 minutes. " +
+      "Likely automated spam or enumeration against the public form.",
+    guidance: SHARED_INFRA_GUIDANCE,
+  },
+  public_feed: {
+    label: "Public Feed Limiter — ~60 requests per minute per IP (FEED_RATE_LIMIT_MAX)",
+    action: "429 rate-limited",
+    explanation:
+      "This IP exceeded the feed read budget. A real logged-in user sends " +
+      "roughly 1-3 requests per minute (httpBatchLink coalesces a whole " +
+      "page into one request); this pattern matches a scraper.",
+    guidance: SHARED_INFRA_GUIDANCE,
+  },
+  xff_canary: {
+    label: "XFF Sanitization Canary — NOT a rate limiter",
+    action: "observed only — request was served",
+    explanation:
+      "A /api/trpc request resolved to a private/reserved client address, " +
+      "meaning the X-Forwarded-For hop structure changed from what the " +
+      "limiter keying assumes. Nothing was blocked or rate-limited — this " +
+      "request went through normally.",
+    guidance:
+      "Do NOT block this IP — it is very likely internal/reserved, not a " +
+      "real attacker address. Re-verify the limiter-keying assumption in " +
+      "server/_core/clientIdentity.ts; this canary exists specifically so " +
+      "that assumption can never fail silently.",
+  },
+  edge_origin_ingress_anomaly: {
+    label: "Cloudflare Origin-Lock Anomaly — NOT a conventional rate limiter",
+    action: "403 blocked at the edge",
+    explanation:
+      "A request reached the Railway origin without a verified Cloudflare " +
+      "hop. Under EDGE_MODE=on with the circuit breaker enforcing, this " +
+      "label most often means the origin lock itself already refused the " +
+      "request with 403 before it touched any application code. The same " +
+      "label can also fire, always observe-only (request served, nothing " +
+      "blocked), from a second, independent /api/trpc ingress-anomaly " +
+      "check — expected during an EDGE_MODE=log soak. Check the Railway " +
+      "logs at this timestamp for \"[edge][origin-lock]\" to confirm which " +
+      "occurred for this specific alert.",
+    guidance:
+      "Do NOT block this IP at the firewall — these are frequently real " +
+      "users on carrier networks with a short-lived resolver cache, or " +
+      "verified crawlers. See docs/runbooks/edge-defense-cloudflare.md.",
+  },
+};
+
+/** Per-action embed title — retitles from the metadata instead of one hardcoded string. */
+const RATE_LIMIT_TITLE: Record<LimiterAction, string> = {
+  "429 rate-limited": "⚡ RATE LIMIT — IP Temporarily Blocked for Sending Too Many Requests",
+  "403 blocked at the edge": "🚫 ORIGIN LOCK — Request Blocked at the Cloudflare Edge (403)",
+  "observed only — request was served": "🔍 SECURITY OBSERVATION — Anomaly Detected, Request Was Served",
+};
+
+/** Per-action "what the server did" line — the only place a response code is asserted. */
+const RATE_LIMIT_SERVER_ACTION: Record<LimiterAction, string> = {
+  "429 rate-limited":
+    "The IP received a `429 Too Many Requests` response and was temporarily blocked from this endpoint. No data was accessed.",
+  "403 blocked at the edge":
+    "The request was refused with `403 Forbidden` at the Cloudflare edge / origin lock — it never reached application code. No data was accessed.",
+  "observed only — request was served":
+    "**Nothing was blocked.** The request was served normally; this is a detection-only signal, not an enforcement action.",
+};
+
+function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
+  const rawContext = p.context ?? "";
+  const meta: LimiterMeta = LIMITER_META[rawContext] ?? {
+    label: rawContext
+      ? `Unrecognised limiter/detector: ${logSafe(rawContext)}`
+      : "unknown limiter",
+    action: "429 rate-limited",
+    explanation:
+      "This event was recorded by the rate-limit / edge-defense pipeline " +
+      "under a context this file has no registered metadata for — treat " +
+      "the action below as UNVERIFIED.",
+    guidance:
+      "Check server/_core/index.ts's limitType union against this file's " +
+      "LIMITER_META for a slug that was added on one side and not the other.",
   };
-  const explanation = limiterExplanation[p.context ?? ""] ??
-    "An IP exceeded the allowed request rate and was temporarily blocked with a 429 response.";
 
   return new EmbedBuilder()
     .setColor(EMBED_COLORS.RATE_LIMIT)
-    .setTitle("⚡ RATE LIMIT — IP Blocked for Sending Too Many Requests")
+    .setTitle(RATE_LIMIT_TITLE[meta.action])
     .setDescription(
-      `**What happened:** ${explanation}\n\n` +
-      "**What the server did:** The IP received a `429 Too Many Requests` response and was " +
-      "temporarily blocked. No data was accessed.\n\n" +
-      "**What you should do:** If this is a one-off, no action needed. If the same IP keeps " +
-      "triggering this alert, consider permanently blocking it at the firewall."
+      `**What happened:** ${meta.explanation}\n\n` +
+      `**What the server did:** ${RATE_LIMIT_SERVER_ACTION[meta.action]}\n\n` +
+      `**What you should do:** ${meta.guidance}`
     )
     .addFields(
       {
-        name: "🛡️ Which Rate Limiter Was Triggered",
-        value: clampFieldValue(`\`${field(limiterDisplay, "unknown limiter")}\``),
+        name: "🛡️ Which Limiter / Detector Was Triggered",
+        value: clampFieldValue(`\`${field(logSafe(meta.label), "unknown limiter")}\``),
         inline: false,
       },
-      { name: "🔗 Route / Endpoint Hit",   value: clampFieldValue(`\`${field(p.path, "unknown")}\``),   inline: true  },
-      { name: "📡 HTTP Method",            value: clampFieldValue(`\`${field(p.method, "unknown")}\``), inline: true  },
-      { name: "🖥️ Blocked IP Address",     value: clampFieldValue(`\`${field(p.ip, "unknown")}\``),     inline: true  },
-      { name: "🕐 Time of Event (EST)",    value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
+      { name: "🔗 Route / Endpoint Hit",   value: clampFieldValue(`\`${field(logSafe(p.path), "unknown")}\``),   inline: true  },
+      { name: "📡 HTTP Method",            value: clampFieldValue(`\`${field(logSafe(p.method), "unknown")}\``), inline: true  },
+      { name: "🖥️ IP Address",             value: clampFieldValue(`\`${field(logSafe(p.ip), "unknown")}\``),     inline: true  },
+      { name: "🕐 Time of Event",    value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(p.userAgent, "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${field(logSafe(p.userAgent), "none — no user-agent header provided")}\``),
         inline: false,
       }
     )
@@ -461,7 +764,7 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
     account_expired:         "Account Expired — The account's access period has ended",
     invalid_password:        "Wrong Password — The email/username was correct but the password did not match",
   };
-  const reasonDisplay = reasonLabel[p.context ?? ""] ?? (p.context ?? "unknown reason");
+  const reasonDisplay = reasonLabel[p.context ?? ""] ?? logSafe(p.context ?? "unknown reason");
 
   const reasonExplanation: Record<string, string> = {
     user_not_found:
@@ -505,18 +808,18 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
         name: "🎯 Account Targeted (Sanitized — First 3 Chars Only)",
         value: clampFieldValue(
           p.targetIdentifier
-            ? `\`${field(p.targetIdentifier, "unknown — identifier not captured")}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
+            ? `\`${field(logSafe(p.targetIdentifier), "unknown — identifier not captured")}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
             : "`unknown — identifier not captured`"
         ),
         inline: false,
       },
-      { name: "🔗 Login Procedure",       value: clampFieldValue(`\`${field(p.path, "unknown")}\``),   inline: true  },
-      { name: "📡 HTTP Method",           value: clampFieldValue(`\`${field(p.method, "unknown")}\``), inline: true  },
-      { name: "🖥️ Attacker IP Address",   value: clampFieldValue(`\`${field(p.ip, "unknown")}\``),     inline: true  },
-      { name: "🕐 Time of Event (EST)",   value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
+      { name: "🔗 Login Procedure",       value: clampFieldValue(`\`${field(logSafe(p.path), "unknown")}\``),   inline: true  },
+      { name: "📡 HTTP Method",           value: clampFieldValue(`\`${field(logSafe(p.method), "unknown")}\``), inline: true  },
+      { name: "🖥️ Attacker IP Address",   value: clampFieldValue(`\`${field(logSafe(p.ip), "unknown")}\``),     inline: true  },
+      { name: "🕐 Time of Event",   value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(p.userAgent, "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${field(logSafe(p.userAgent), "none — no user-agent header provided")}\``),
         inline: false,
       }
     )
@@ -542,28 +845,39 @@ function buildBruteForceEmbed(
       // (2026-08-06 review, Critical 2).
       clampDescription(
         `**@here — Immediate attention recommended.**\n\n` +
-        `**What happened:** The IP address \`${ip}\` has failed to log in **${count} times** ` +
+        `**What happened:** The IP address \`${logSafe(ip)}\` has failed to log in **${count} times** ` +
         `within the last **${windowMins} minutes**. This is a strong signal that someone is ` +
         `running an automated password-guessing attack (also called a brute-force or credential-stuffing attack).\n\n` +
         "**What the server did:** Every login attempt was individually blocked. " +
         "No account was compromised. The IP is also subject to the auth rate limiter (5 attempts/15 min), " +
         "which means it will start receiving 429 errors if it hasn't already.\n\n" +
         "**What you should do:**\n" +
-        `1. **Block \`${ip}\` at the firewall/CDN level** — this is the most effective action.\n` +
-        "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one).\n" +
-        "3. If the attack is ongoing, consider temporarily enabling CAPTCHA on the login page.\n" +
+        // Was "Block `${ip}` at the firewall/CDN level — this is the most
+        // effective action" — a self-DoS instruction. The IPs appearing in
+        // these alerts are frequently T-Mobile CGNAT, Meta's crawler,
+        // GitHub Actions runners, Cloudflare PoPs, or Railway's own edge;
+        // blocking a Cloudflare PoP or the Railway edge at the firewall
+        // takes the site down for everyone behind it, not just the
+        // attacker (2026-08-07 review, Task 4.4 item 2).
+        "1. **Before blocking anything, confirm this is not shared infrastructure.** " +
+        "Cloudflare PoPs, Railway edge nodes, carrier CGNAT ranges (e.g. T-Mobile " +
+        "172.32.0.0/11), GitHub Actions runners and verified crawlers all appear " +
+        "here as single addresses representing many users. Blocking one can take " +
+        "the site down for everyone behind it. Prefer an account-level lock.\n" +
+        "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one) and lock those accounts.\n" +
+        "3. If the attack is ongoing and clearly NOT shared infrastructure, consider a scoped IP block or temporarily enabling CAPTCHA on the login page.\n" +
         "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
       )
     )
     .addFields(
-      { name: "🖥️ Attacker IP Address",        value: clampFieldValue(`\`${field(ip, "unknown")}\``),                   inline: true  },
+      { name: "🖥️ Attacker IP Address",        value: clampFieldValue(`\`${field(logSafe(ip), "unknown")}\``),         inline: true  },
       { name: "🔢 Failed Login Count",          value: clampFieldValue(`**${count}** failures in ${windowMins} min`),   inline: true  },
       { name: "⏱️ Detection Window",            value: clampFieldValue(`Last **${windowMins} minutes** (sliding)`),     inline: true  },
-      { name: "🕐 Escalation Time (EST)",       value: clampFieldValue(formatTimestamp(occurredAt)),                    inline: true  },
+      { name: "🕐 Escalation Time",       value: clampFieldValue(formatTimestamp(occurredAt)),                    inline: true  },
       { name: "🛡️ Threshold",                   value: clampFieldValue(`\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``), inline: true },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: clampFieldValue(`\`${field(userAgent, "none — no user-agent header provided")}\``),
+        value: clampFieldValue(`\`${field(logSafe(userAgent), "none — no user-agent header provided")}\``),
         inline: false,
       },
       {
@@ -573,8 +887,9 @@ function buildBruteForceEmbed(
         // cap once `ip` was long (2026-08-06 review, Critical 1).
         name: "🔒 Recommended Immediate Action",
         value: clampFieldValue(
-          `Block \`${field(ip, "unknown")}\` at the firewall/CDN level — IP Access Rules.\n` +
-          "Set rule: **Block** | **IP Address** | value: the IP above."
+          `Before blocking \`${field(logSafe(ip), "unknown")}\` at the firewall/CDN, confirm it isn't ` +
+          "shared infrastructure (Cloudflare PoP, Railway edge, carrier CGNAT, CI runner, " +
+          "verified crawler). Prefer locking the targeted account over blocking the IP."
         ),
         inline: false,
       }
@@ -589,6 +904,16 @@ function buildEmbed(p: SecurityAlertPayload): EmbedBuilder {
     case "CSRF_BLOCK":  return buildCsrfBlockEmbed(p);
     case "RATE_LIMIT":  return buildRateLimitEmbed(p);
     case "AUTH_FAIL":   return buildAuthFailEmbed(p);
+    default: {
+      // Exhaustiveness guard (Task 4.4, A13): if SecurityEventType is ever
+      // widened without a matching case above, this assignment fails to
+      // COMPILE (p.eventType would no longer be assignable to `never`). At
+      // runtime it protects against a value that bypassed the type system
+      // (an un-typed caller, a stale build) being silently forced into the
+      // wrong embed instead of failing loudly.
+      const exhaustive: never = p.eventType;
+      throw new Error(`buildEmbed: unrecognised SecurityEventType: ${String(exhaustive)}`);
+    }
   }
 }
 
@@ -645,6 +970,32 @@ async function fetchSecurityChannel(tag: string): Promise<TextChannel | null> {
   }
 }
 
+// ─── Global alert budget summary poster (Task 4.6) ───────────────────────────
+/**
+ * Posts ONE plain-text notice the moment the global alert budget is
+ * exhausted for the current window, instead of every alert past the ceiling
+ * silently vanishing. Fire-and-forget — never throws. Callers must only
+ * invoke this when tryConsumeGlobalAlertBudget() returned `justExhausted:
+ * true`, which already guarantees at most one call per window.
+ */
+async function postAlertBudgetExhaustedSummary(tag: string): Promise<void> {
+  const channel = await fetchSecurityChannel(tag);
+  if (!channel) return;
+  try {
+    await channel.send({
+      content: clampContent(
+        `⚠️ **Security alert budget reached** (${GLOBAL_ALERT_BUDGET_MAX} embeds in the last minute). ` +
+        "Further alerts in this window are being suppressed here to protect Discord from a flood — " +
+        "nothing is lost, every event is still recorded in `security_events`."
+      ),
+    });
+    console.log(`${tag} [OUTPUT] Global alert budget summary posted`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`${tag} Failed to post alert-budget summary: ${logSafe(msg)}`);
+  }
+}
+
 // ─── Brute-force escalation poster ───────────────────────────────────────────
 /**
  * Posts a bright-red @here brute-force escalation embed to the security channel.
@@ -665,6 +1016,20 @@ async function postBruteForceAlert(
     ` | IP=${logSafe(ip)} count=${count} window=${Math.round(windowMs / 1000 / 60)}min`
   );
 
+  // Global alert budget (Task 4.6) — this embed shares the SAME bucket as
+  // postSecurityAlert()'s per-event embeds; the Discord channel has no
+  // per-key concept to protect, only a global one.
+  const budget = tryConsumeGlobalAlertBudget(Date.now());
+  if (!budget.allowed) {
+    if (budget.justExhausted) {
+      postAlertBudgetExhaustedSummary(tag).catch((err: unknown) => {
+        console.error(`${tag} Budget-summary post failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+    }
+    console.log(`${tag} Global alert budget exhausted — suppressing brute-force embed | IP=${logSafe(ip)}`);
+    return;
+  }
+
   const channel = await fetchSecurityChannel(tag);
   if (!channel) return;
 
@@ -678,10 +1043,15 @@ async function postBruteForceAlert(
     const embed = buildBruteForceEmbed(ip, count, windowMs, userAgent, occurredAt);
     // @here mention in the message content + embed for maximum visibility.
     // content is clamped as a fully composed string — `ip` is
-    // attacker-controlled and unbounded.
+    // attacker-controlled and unbounded. Beyond logSafe (log-injection),
+    // stripContentHazards() removes backticks/`@` from `ip` specifically —
+    // content (unlike embed fields) resolves @mentions, so an unstripped ip
+    // could ping @everyone/@here/a role from attacker-controlled input
+    // (2026-08-07 review, Task 4.8).
+    const safeIp = stripContentHazards(logSafe(ip));
     await channel.send({
       content: clampContent(
-        `@here 🚨 **BRUTE FORCE ALERT** — IP \`${ip}\` has made **${count} failed login attempts** in the last ${Math.round(windowMs / 1000 / 60)} minutes. Immediate review recommended.`
+        `@here 🚨 **BRUTE FORCE ALERT** — IP \`${safeIp}\` has made **${count} failed login attempts** in the last ${Math.round(windowMs / 1000 / 60)} minutes. Immediate review recommended.`
       ),
       embeds: [embed],
     });
@@ -743,7 +1113,24 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
   }
 
   // ── Step 3: Deduplication check for the per-event embed ───────────────────
-  if (isDeduplicated(payload.eventType, payload.ip)) return;
+  // Keyed on (eventType, ip, path, context) — see isDeduplicated()'s own
+  // doc comment for why eventType/ip alone was wrong (Task 4.5).
+  if (isDeduplicated(payload)) return;
+
+  // ── Step 3.5: Global alert budget (Task 4.6) ───────────────────────────────
+  // Per-key dedup above has no CEILING — a distributed source (many unique
+  // IPs) can each mint a fresh key and post unbounded. Checked AFTER dedup
+  // so a true duplicate never consumes a token.
+  const budget = tryConsumeGlobalAlertBudget(Date.now());
+  if (!budget.allowed) {
+    if (budget.justExhausted) {
+      postAlertBudgetExhaustedSummary(tag).catch((err: unknown) => {
+        console.error(`${tag} Budget-summary post failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+    }
+    console.log(`${tag} Global alert budget exhausted — suppressing embed | IP=${logSafe(payload.ip)}`);
+    return;
+  }
 
   // ── Step 4: Log the alert attempt ─────────────────────────────────────────
   console.log(
