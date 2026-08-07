@@ -114,15 +114,15 @@ test("manifest validation rejects unreviewed extra keys", async () => {
 test("origin normalization accepts the reviewed HTTPS .git spelling only by identity", () => {
   assert.equal(
     normalizeOrigin(
-      "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai.git"
+      "https://github.com/tailered-ai/dime-ai.git"
     ),
-    "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai"
+    "https://github.com/tailered-ai/dime-ai"
   );
   assert.notEqual(
     normalizeOrigin(
-      "https://github.com/another-owner/ai-sports-betting-dime-ai.git"
+      "https://github.com/another-owner/dime-ai.git"
     ),
-    "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai"
+    "https://github.com/tailered-ai/dime-ai"
   );
 });
 
@@ -251,7 +251,7 @@ test("production summary requires both services on the exact GitHub main SHA", (
   const sha = "a".repeat(40);
   const local = { head: sha };
   const github = {
-    repository: "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    repository: "tailered-ai/dime-ai",
     defaultBranch: "main",
     defaultBranchSha: sha,
     pullRequest: null,

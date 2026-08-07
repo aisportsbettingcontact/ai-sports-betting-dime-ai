@@ -262,7 +262,7 @@ export function validateAccessManifest(manifest) {
   );
   invariant(
     manifest.providers.github.repository ===
-      "aisportsbettingcontact/ai-sports-betting-dime-ai",
+      "tailered-ai/dime-ai",
     "GitHub repository is invalid"
   );
   invariant(
