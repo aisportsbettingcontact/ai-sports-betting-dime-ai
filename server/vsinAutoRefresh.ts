@@ -2195,7 +2195,7 @@ export async function runVsinRefreshManual(
 // (DISABLE_BACKGROUND_JOBS). Overlap protection is enforced by the CronJobRunner at the
 // route layer — identical to the other /api/cron/* jobs. The in-process startup +
 // 10-minute interval callers in startVsinAutoRefresh() invoke this same function.
-export async function runMlbCycleOnce(): Promise<void> {
+async function runMlbCycleWork(): Promise<void> {
   // 24/7 — no active hours gate
   const todayStr = datePst();
   console.log(
@@ -2703,6 +2703,45 @@ export async function runMlbCycleOnce(): Promise<void> {
   } // end isAfter7amEst() gate for HR Props
 
   console.log(`[MLBCycle] ✅ DONE — ${new Date().toISOString()}`);
+}
+
+/**
+ * Single-flight guard for the MLB cycle.
+ *
+ * Why this lives on the FUNCTION and not at a call site (2026-08-06 audit):
+ * CronJobRunner.isRunning is a per-INSTANCE private field that only guards
+ * calls routed through that instance's .trigger(). The in-process setInterval
+ * called runMlbCycleOnce() directly, so the lock never saw it. With the cycle
+ * drifting to 4-9 minutes against a 300s interval, THREE cycles ran
+ * concurrently in production (12 STARTs vs 10 DONEs in 56 minutes), doubling
+ * load on Rotowire / Action Network / MLB Stats API.
+ *
+ * Guarding here covers every caller — interval, HTTP cron route, and any
+ * future one — without importing cronRoutes (which already imports us).
+ */
+let mlbCycleInFlight = false;
+
+/** Test seam: swap the cycle body. Production never calls this. */
+let mlbCycleWork: () => Promise<void> = runMlbCycleWork;
+export function __setMlbCycleWorkForTest(fn: () => Promise<void>): void {
+  mlbCycleWork = fn;
+}
+
+export async function runMlbCycleOnce(): Promise<void> {
+  if (mlbCycleInFlight) {
+    console.warn(
+      "[MLBCycle] [SKIP] previous cycle still in flight — overlap prevented"
+    );
+    return;
+  }
+  mlbCycleInFlight = true;
+  try {
+    await mlbCycleWork();
+  } finally {
+    // MUST be finally: a throwing upstream feed would otherwise wedge the
+    // guard closed and stop the cycle permanently.
+    mlbCycleInFlight = false;
+  }
 }
 
 export function startVsinAutoRefresh() {
