@@ -15,7 +15,7 @@ over the Notion MCP.
 
 | Information                                 | Authoritative system                                 |
 | ------------------------------------------- | ---------------------------------------------------- |
-| Source code and PR state                    | GitHub (`aisportsbettingcontact/ai-sports-betting-dime-ai`) |
+| Source code and PR state                    | GitHub (`tailered-ai/dime-ai`) |
 | CI and test evidence                        | GitHub Actions                                       |
 | Runtime and deployment state                | Railway (RunPod only if the ML lane reactivates)     |
 | Billing and subscriptions                   | Stripe                                               |

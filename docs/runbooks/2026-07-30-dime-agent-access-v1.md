@@ -203,7 +203,7 @@ The non-secret source of truth is
 
 | Boundary            | Pinned identity                                                |
 | ------------------- | -------------------------------------------------------------- |
-| GitHub              | `aisportsbettingcontact/ai-sports-betting-dime-ai`             |
+| GitHub              | `tailered-ai/dime-ai`             |
 | Railway project     | `stunning-creativity` / `8dd7341d-702c-48c7-90df-5c19a4f04913` |
 | Railway environment | `production` / `787f3113-17ab-47d9-9819-1268aeb09b3e`          |
 | Production platform | `https://aisportsbettingmodels.com`                            |

@@ -80,7 +80,7 @@ deployment, and health discovery.
 
 The exact non-secret authority is `config/dime-agent-access.v1.json`. GitHub and
 Railway remain pinned to
-`aisportsbettingcontact/ai-sports-betting-dime-ai`,
+`tailered-ai/dime-ai`,
 `stunning-creativity` (`8dd7341d-702c-48c7-90df-5c19a4f04913`), and production
 (`787f3113-17ab-47d9-9819-1268aeb09b3e`). Never use an implicit Railway link or
 print, persist, or place Railway variables in Claude's environment. Railway

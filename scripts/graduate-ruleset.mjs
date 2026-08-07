@@ -23,7 +23,7 @@
  */
 import { execFileSync } from "node:child_process";
 
-const REPO = "aisportsbettingcontact/ai-sports-betting-dime-ai";
+const REPO = "tailered-ai/dime-ai";
 const RULESET_ID = "18701573";
 // GitHub Actions app — pins check identity so a same-named check from another
 // app cannot satisfy a required context (RULESETS.md).
