@@ -1302,23 +1302,52 @@ class MonteCarloEngine:
         p_f5_away_win = p_f5_away_raw * f5_scale  # P(away wins F5) — push-adjusted
         # Verify three-way sum
         _f5_3way_sum = p_f5_home_win + p_f5_away_win + p_f5_push_adj
-        # F5 run line cover (default -0.5 for favorite)
-        # Positive rl_spread = home is dog, negative = home is fav
-        # For F5, standard RL is -0.5 / +0.5
+        # F5 run line cover. The standard F5 line is home -0.5 / away +0.5.
+        #
+        # M-205 (audit finding, fixed 2026-08-07): the away condition was
+        # `f5_margins < -abs(F5_RL)`, i.e. margin < -0.5, which on integer
+        # scores means the away team must WIN OUTRIGHT. But the away side of a
+        # home -0.5 line is +0.5, and +0.5 covers a TIE. The whole tie mass —
+        # ~19% of F5 outcomes at typical run environments — was therefore
+        # assigned to neither side.
+        #
+        # It did not merely vanish. The pair is passed through remove_vig()
+        # below, which is pure normalization (p_a/t, p_b/t), so the missing
+        # mass is redistributed PROPORTIONALLY TO BOTH SIDES — inflating the
+        # home price. At mu_home=2.35 / mu_away=2.20 the published home -0.5
+        # came out 0.5337 (-114) against a true 0.4309 (+132): overstated by
+        # 10.3pp and on the wrong side of even money.
+        #
+        # The grader was never wrong — mlbMultiMarketBacktest.ts:732 already
+        # reads `f5AwayCoversRl = f5Margin <= 0`. The model was priced against
+        # a correct grader all season, which is why F5 RL underperformed.
         F5_RL = -0.5
-        p_f5_home_rl = float((f5_margins > abs(F5_RL)).mean())  # home covers -0.5
-        p_f5_away_rl = float((f5_margins < -abs(F5_RL)).mean())  # away covers -0.5
+        # home -0.5 covers only on an outright win (margin >= 1).
+        p_f5_home_rl = float((f5_margins > abs(F5_RL)).mean())
+        # away +0.5 covers on a loss by 0 (tie) or an outright win: margin <= 0.
+        p_f5_away_rl = float((f5_margins < abs(F5_RL)).mean())
         if logger:
             logger.state(
                 f"F5: home_mu={home_mu_f5:.4f} away_mu={away_mu_f5:.4f} | "
                 f"exp_home={exp_f5_home:.3f} exp_away={exp_f5_away:.3f} exp_total={exp_f5_total:.3f} | "
                 f"P(home win)={p_f5_home_win:.4f} P(away win)={p_f5_away_win:.4f} P(push)={p_f5_push_adj:.4f} | "
                 f"[sim_push={p_f5_push_raw:.4f} empirical={EMPIRICAL_F5_PUSH:.4f} 3way_sum={_f5_3way_sum:.6f}] | "
-                f"P(home RL -0.5)={p_f5_home_rl:.4f} P(away RL -0.5)={p_f5_away_rl:.4f}"
+                f"P(home RL -0.5)={p_f5_home_rl:.4f} P(away RL +0.5)={p_f5_away_rl:.4f}"
             )
             logger.verify(
                 abs(_f5_3way_sum - 1.0) < 0.001,
                 f"F5 three-way sum={_f5_3way_sum:.6f} (must be 1.000±0.001)",
+            )
+            # M-205 regression guard. On a HALF-run line the two sides are a
+            # strict partition of the outcome space — margin >= 1 or margin
+            # <= 0, no push is possible — so they must sum to exactly 1. This
+            # assertion fails on the very first verbose game against the
+            # pre-fix code (sum ~0.807), which is precisely its value: the bug
+            # survived a full season because every label agreed with it.
+            _f5_rl_sum = p_f5_home_rl + p_f5_away_rl
+            logger.verify(
+                abs(_f5_rl_sum - 1.0) < 1e-9,
+                f"F5 RL partition sum={_f5_rl_sum:.9f} (half-line: must be exactly 1.0)",
             )
 
         # ── SPEC: Inning-by-Inning Simulation (I1-I9) ─────────────────────────
@@ -1536,7 +1565,7 @@ class MonteCarloEngine:
             "exp_f5_away_runs": round(exp_f5_away, 3),
             "exp_f5_total": round(exp_f5_total, 3),
             "p_f5_home_rl": round(p_f5_home_rl, 6),  # P(home covers -0.5 F5 RL)
-            "p_f5_away_rl": round(p_f5_away_rl, 6),  # P(away covers -0.5 F5 RL)
+            "p_f5_away_rl": round(p_f5_away_rl, 6),  # P(away covers +0.5 F5 RL, ties cover)
             # SPEC: Inning-by-Inning projections (I1-I9, backtest-calibrated 2026-04-13)
             "inning_home_exp": inning_home_exp,  # [I1..I9] expected home runs per inning
             "inning_away_exp": inning_away_exp,  # [I1..I9] expected away runs per inning
@@ -1937,6 +1966,11 @@ class MarketDerivation:
         # F5 Run Line pricing (-0.5 / +0.5)
         p_f5_hrl = sim["p_f5_home_rl"]
         p_f5_arl = sim["p_f5_away_rl"]
+        # Post-M-205 the pair already sums to 1.0 (a half line admits no push),
+        # so remove_vig is an exact identity here rather than a correction. It
+        # is kept so the call shape matches every other market, and so that any
+        # future non-half line still prices correctly. Before M-205 this same
+        # call silently laundered the dropped tie mass into both sides.
         p_f5_hrl_nv, p_f5_arl_nv = remove_vig(p_f5_hrl, p_f5_arl)
         f5_rl_home_odds = prob_to_ml(p_f5_hrl_nv)
         f5_rl_away_odds = prob_to_ml(p_f5_arl_nv)

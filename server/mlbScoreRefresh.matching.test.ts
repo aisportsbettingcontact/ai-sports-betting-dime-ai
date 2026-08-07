@@ -195,3 +195,49 @@ describe("matchMlbLiveGamesToDbRows — doubleheader safety", () => {
     expect(pick(forward, G2_GAMEPK)).toBe(pick(reverse, G2_GAMEPK));
   });
 });
+
+describe("matchMlbLiveGamesToDbRows — cross-pk absorption guard (P4-SCORE-4)", () => {
+  // Pass 1 claims a stamped row only when its OWN api game is in the payload.
+  // A postponed doubleheader sibling never appears, so its row survives to the
+  // team-matching fallbacks with its provenance intact — and before this guard
+  // the other game of the same matchup could claim it and overwrite a
+  // canonically-identified game with the wrong linescore.
+  it("refuses to let G2 absorb G1's row when G1 is absent from the payload", () => {
+    const rows = [
+      dbRow({
+        id: 11,
+        mlbGamePk: G1_GAMEPK, // stamped, and G1 is NOT in the payload
+        gameNumber: 1,
+        startTimeEst: "1:35 PM",
+      }),
+    ];
+    const { matches } = matchMlbLiveGamesToDbRows([apiG2()], rows);
+    expect(matches).toHaveLength(1);
+    expect(matches[0].apiGame.gamePk).toBe(G2_GAMEPK);
+    // The stamped row belongs to G1 and must NOT be handed to G2.
+    expect(matches[0].dbGame).toBeNull();
+  });
+
+  it("still matches a stamped row to its OWN game", () => {
+    const rows = [dbRow({ id: 11, mlbGamePk: G2_GAMEPK, gameNumber: 2 })];
+    const { matches } = matchMlbLiveGamesToDbRows([apiG2()], rows);
+    expect(matches[0].dbGame?.id).toBe(11);
+    expect(matches[0].matchMethod).toBe("gamePk");
+  });
+
+  it("leaves UNSTAMPED rows fully eligible — that is who the fallback serves", () => {
+    const rows = [dbRow({ id: 11, mlbGamePk: null, gameNumber: 2 })];
+    const { matches } = matchMlbLiveGamesToDbRows([apiG2()], rows);
+    expect(matches[0].dbGame?.id).toBe(11);
+  });
+
+  it("does not disturb the both-games-present canonical path", () => {
+    const rows = [
+      dbRow({ id: 11, mlbGamePk: G1_GAMEPK, gameNumber: 1 }),
+      dbRow({ id: 12, mlbGamePk: G2_GAMEPK, gameNumber: 2 }),
+    ];
+    const { matches } = matchMlbLiveGamesToDbRows([apiG1(), apiG2()], rows);
+    expect(matches[0].dbGame?.id).toBe(11);
+    expect(matches[1].dbGame?.id).toBe(12);
+  });
+});
