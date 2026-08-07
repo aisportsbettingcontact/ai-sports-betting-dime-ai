@@ -13,26 +13,36 @@ GitHub Actions (timer)  ──POST + Authorization: Bearer $CRON_SECRET──▶
 Each endpoint: shared-secret authed → responds `200` immediately → runs the work
 in the background under a single-flight run-lock (no overlapping runs).
 
-| Endpoint                             | Work                                                              | Workflow             | Cadence           |
-| ------------------------------------ | ----------------------------------------------------------------- | -------------------- | ----------------- |
-| `POST /api/cron/vsin-odds`           | `runVsinRefresh()` — NBA/NHL/MLB VSiN + AN odds                   | `cron-vsin-odds.yml` | every 15 min      |
-| `POST /api/cron/scores`              | `refreshAllScoresNow()` — live scores                             | `cron-scores.yml`    | every 10 min      |
-| `POST /api/cron/bet-grade`           | `runBetGradeCycle()` — settle PENDING bets, today + yesterday     | `cron-bet-grade.yml` | every 10 min      |
-| `POST /api/cron/bet-grade-sweep`     | `gradeAllPendingAllDates()` — settle every PENDING bet, all dates | `cron-bet-grade.yml` | nightly 08:15 UTC |
-| `POST /api/cron/mlb-cycle`           | `runMlbCycleOnce()` — lineups, K-props, backtest writes           | `cron-mlb-cycle.yml` | every 10 min      |
-| `POST /api/cron/mlb-outcomes`        | `ingestMlbOutcomes()` — actual scores + Brier columns; `?date=`   | none yet             | —                 |
-| `POST /api/cron/mlb-closing-capture` | `captureClosingLines()` — lock today's closing odds snapshot      | none yet             | —                 |
-| `POST /api/cron/mlb-backtest`        | backtest SELF-HEAL for unenrolled FINAL games; `?date=`           | none yet             | —                 |
-| `POST /api/cron/mlb-asg`             | All-Star Game seed/refresh (synchronous, returns audit)           | `mlb-asg.yml`        | —                 |
-| `POST /api/cron/stripe-reconcile`    | Stripe↔DB reconciliation                                          | —                    | —                 |
-| `GET  /api/cron/status`              | run-lock state for all jobs (observability)                       | —                    | —                 |
+| Endpoint                             | Work                                                              | Workflow                     | Cadence           |
+| ------------------------------------ | ----------------------------------------------------------------- | ---------------------------- | ----------------- |
+| `POST /api/cron/vsin-odds`           | `runVsinRefresh()` — NBA/NHL/MLB VSiN + AN odds                   | `cron-vsin-odds.yml`         | every 15 min      |
+| `POST /api/cron/scores`              | `refreshAllScoresNow()` — live scores                             | `cron-scores.yml`            | every 10 min      |
+| `POST /api/cron/bet-grade`           | `runBetGradeCycle()` — settle PENDING bets, today + yesterday     | `cron-bet-grade.yml`         | every 10 min      |
+| `POST /api/cron/bet-grade-sweep`     | `gradeAllPendingAllDates()` — settle every PENDING bet, all dates | `cron-bet-grade.yml`         | nightly 08:15 UTC |
+| `POST /api/cron/mlb-cycle`           | `runMlbCycleOnce()` — lineups, K-props, backtest writes           | `cron-mlb-cycle.yml`         | every 10 min      |
+| `POST /api/cron/mlb-outcomes`        | `ingestMlbOutcomes()` — actual scores + Brier columns; `?date=`   | `cron-mlb-learning-loop.yml` | **dispatch only** |
+| `POST /api/cron/mlb-closing-capture` | `captureClosingLines()` — lock today's closing odds snapshot      | `cron-mlb-learning-loop.yml` | **dispatch only** |
+| `POST /api/cron/mlb-backtest`        | backtest SELF-HEAL for unenrolled FINAL games; `?date=`           | `cron-mlb-learning-loop.yml` | **dispatch only** |
+| `POST /api/cron/mlb-asg`             | All-Star Game seed/refresh (synchronous, returns audit)           | `mlb-asg.yml`                | —                 |
+| `POST /api/cron/stripe-reconcile`    | Stripe↔DB reconciliation                                          | —                            | —                 |
+| `GET  /api/cron/status`              | run-lock state for all jobs (observability)                       | —                            | —                 |
 
 The table above was corrected 2026-08-07: it previously listed 5 of the 8 mounted
 endpoints, omitting `mlb-cycle`, `mlb-asg` and `stripe-reconcile`.
 
-**No workflow file exists yet for the three MLB learning-loop endpoints.** They are
-mounted and callable, but nothing calls them on a schedule — wiring the cadence is a
-separate change. Two operational constraints when you do:
+**`cron-mlb-learning-loop.yml` is DISPATCH-ONLY — it has no `schedule:` block.** The
+endpoints are mounted and manually triggerable, but nothing runs them automatically.
+Mounting and scheduling are two decisions, and a `schedule:` would start writing
+outcome, closing-line and backtest rows on the first merge — a production behaviour
+change that deserves its own go-ahead. It also removes an ordering hazard: a scheduled
+workflow merged before the endpoints reach main would fire against 404s (the PR #370
+deploy-order class).
+
+Suggested cadences are documented in the workflow header, with the reasoning. The one
+where cadence and correctness are actually coupled is **closing-capture**: it only ever
+scrapes the CURRENT slate, so a run after first pitch captures nothing useful.
+
+Two operational constraints when you do enable it:
 
 - `mlb-backtest` runs `runKProps=false` and `onlyUnenrolled=true` by design. Hold any
   `?date=` BULK BACKFILL until after the K walk-forward re-fit —
