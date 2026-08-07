@@ -105,8 +105,16 @@ export function verifyQmPack(repoRoot: string = root): QmPackReport {
     };
   }
 
+  // The repo was renamed to tailered-ai/dime-ai (2026-08-07). This check
+  // previously matched the OLD slug "ai-sports-betting-dime-ai", so correcting
+  // qm.pack.json to the new canonical URL made the verifier reject the right
+  // answer. Match the canonical repo only: accepting the old slug too would let
+  // a stale URL survive silently, and GitHub's rename redirect stops working the
+  // moment anything is created at the old path.
   if (!pack.url?.includes("tailered-ai/dime-ai")) {
-    failures.push("qm.pack.json url does not point at this repository");
+    failures.push(
+      `qm.pack.json url does not point at this repository (expected tailered-ai/dime-ai, got ${pack.url ?? "<missing>"})`
+    );
   }
   const globs = pack.config?.skillGlobs ?? [];
   if (globs.length === 0) failures.push("qm.pack.json has no skillGlobs");

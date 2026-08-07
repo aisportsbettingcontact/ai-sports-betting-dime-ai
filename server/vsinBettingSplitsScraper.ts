@@ -299,7 +299,10 @@ export async function scrapeVsinBettingSplits(
   console.log(`${logTag} Fetching ${url} ...`);
   const startTime = Date.now();
 
-  const resp = await fetch(url, { headers: HEADERS });
+  const resp = await fetch(url, {
+    headers: HEADERS,
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!resp.ok) {
     throw new Error(`${logTag} HTTP ${resp.status} fetching ${url}`);
   }

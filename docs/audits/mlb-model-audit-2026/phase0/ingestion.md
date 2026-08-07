@@ -1,5 +1,16 @@
 # Phase 0 — Ingestion & Scheduling: schedule, actuals, odds, lineups
 
+> ⚠️ **ERRATUM (2026-08-07) — the 15 `[FIXED in Phase 4]` annotation(s) in this file are superseded.**
+> The Phase 4 code fixes were deliberately NOT merged (see `2af950d67`, which resolved the
+> #421 conflicts to `main` and recorded why). Every annotation was verified one at a time
+> against `main`: 8 are simply false, and **7 are right about the outcome but wrong about the
+> mechanism** — they credit `reconcileUnmatchedApiGame` in `mlbScoreRefresh.ts`, which does not
+> exist anywhere in the code, while the defects they describe were in fact closed by
+> `server/mlbScheduleSync.ts` and commit `20332c71e`. Those seven need re-pointing, not
+> retraction; for `:493` (F5) `main` goes further than the annotation claims.
+> Read [`../PHASE4-ANNOTATION-ERRATA.md`](../PHASE4-ANNOTATION-ERRATA.md) for the per-annotation
+> verdicts, the surviving live defects, and the outstanding re-implementation recommendation.
+
 Audit session: 2026-07-25. Evidence classes: **VERIFIED** (code read this session, file:line cited),
 **INFERRED** (reasoned from verified facts, reasoning stated), **UNKNOWN** (cannot be established from repo code).
 DB column ground truth: `docs/audits/mlb-model-audit-2026/census/schema-columns.tsv` (read this session — referenced as "census TSV").

@@ -25,6 +25,7 @@
 import { timingSafeEqual } from "crypto";
 import type { Request, Response } from "express";
 import { logSafe } from "../_core/logSafe";
+import { resolveClientIdentity } from "../_core/clientIdentity";
 
 export type CronAuthResult =
   | { ok: true }
@@ -99,9 +100,11 @@ export function verifyCronSecret(req: HeadersBag): CronAuthResult {
 export function requireCronSecret(req: Request, res: Response, jobLabel: string): boolean {
   const result = verifyCronSecret(req as unknown as HeadersBag);
   if (!result.ok) {
+    // Cosmetic log line on an internal, secret-authed path — migrated for
+    // consistency with the single client-identity surface (2026-08-06 audit).
     console.warn(
       `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${logSafe(result.error)} ` +
-      `ip=${req.ip ?? "?"} ua="${logSafe((req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?")}"`
+      `ip=${logSafe(resolveClientIdentity(req) || "?")} ua="${logSafe((req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?")}"`
     );
     res.status(result.status).json({ ok: false, error: result.error });
     return false;

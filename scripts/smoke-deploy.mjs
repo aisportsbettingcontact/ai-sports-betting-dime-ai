@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 /**
- * Post-deploy smoke test — run against any deployed origin:
+ * Post-deploy smoke test — run against the public, Cloudflare-fronted origin:
  *
- *   node scripts/smoke-deploy.mjs https://ai-sports-betting-dime-ai-production.up.railway.app
- *   node scripts/smoke-deploy.mjs https://aisportsbettingmodels.com
+ *   EDGE_AGENT_BYPASS_KEY=<key> node scripts/smoke-deploy.mjs https://aisportsbettingmodels.com
  *
- * Checks (no credentials needed — auth gates are asserted, not bypassed):
- *   1. /health            → 200
- *   2. /                  → 200 HTML (SPA shell)
- *   3. hashed asset       → 200 + immutable cache header
- *   4. /api/trpc/<bogus>  → JSON error from tRPC (API layer mounted, not SPA fallback)
- *   5. POST /api/dime/chat (unauthenticated) → 401 JSON (SSE route mounted + auth gate)
+ * No credentials are needed for the assertions themselves — auth gates are
+ * asserted, not bypassed. The bypass key is for the EDGE, not the app: the
+ * Cloudflare WAF 403s automated clients on document routes, so without it the
+ * `/`, `/assets`, and `/checkout` checks fail as bot-blocks rather than defects.
+ * Do NOT point this at the raw *.up.railway.app origin — the Phase-4 origin lock
+ * 403s secret-less requests there, which is what produced four straight red
+ * deploys with misleading messages.
  *
- * Exit 0 = all pass. Non-zero = failures listed. Use it after every
- * Railway deploy and against the custom domain to validate the /api proxy.
+ * The check list is deliberately NOT enumerated here. It grows, and every stale
+ * count or ordinal in a doc has to be chased down separately (the 2026-08-07
+ * federation review found four such drifts). Read the `check("...")` calls below,
+ * and cite checks BY NAME. Three extra edge-defense checks are opt-in behind
+ * SMOKE_EDGE=cloudflare, so the total is conditional as well.
+ *
+ * Exit 0 = all pass. Non-zero = failures listed.
  */
 
 const base = (process.argv[2] ?? "").replace(/\/$/, "");
@@ -79,6 +84,43 @@ await check("GET /health → 200", async () => {
   const res = await sfetch(`${base}/health`, { redirect: "manual" });
   expect(res.status === 200, `status ${res.status}`);
   return (await res.text()).slice(0, 60);
+});
+
+await check("build identity — /health names the commit it is serving", async () => {
+  // Incident 64. This smoke test passed against an origin that was healthy and
+  // serving the PREVIOUS commit, because a deploy had silently never happened
+  // and nothing in /health identified the build. "The origin is healthy" and
+  // "what I built is what is answering" are different claims; this asserts the
+  // second one. See os/memory/lessons/a-healthy-origin-is-not-a-new-deploy.md.
+  const res = await sfetch(`${base}/health`, { redirect: "manual" });
+  let body = {};
+  try {
+    body = await res.json();
+  } catch {
+    throw new Error("/health did not return JSON — cannot read the build identity");
+  }
+  const serving = typeof body.commit === "string" ? body.commit.trim() : "";
+  expect(
+    /^[0-9a-f]{7,40}$/i.test(serving),
+    `commit=${JSON.stringify(body.commit ?? null)} — the running build does not identify itself, so this test cannot tell a fresh deploy from a stale one still serving (Incident 64). Check that RAILWAY_GIT_COMMIT_SHA reaches the runtime.`
+  );
+
+  // Only assert equality when the caller said what it expects. Comparing
+  // against an absent value would re-create the false green this check exists
+  // to remove, so "no expectation supplied" is reported, never silently passed.
+  const expected = (process.env.EXPECTED_COMMIT ?? "").trim();
+  if (!expected) return `commit=${serving.slice(0, 9)} (no EXPECTED_COMMIT supplied — identity reported, not compared)`;
+  expect(
+    /^[0-9a-f]{7,40}$/i.test(expected),
+    `EXPECTED_COMMIT=${JSON.stringify(expected)} is not a commit SHA`
+  );
+  // Git abbreviates: either side may be short. Compare on the shorter length.
+  const n = Math.min(expected.length, serving.length);
+  expect(
+    expected.toLowerCase().slice(0, n) === serving.toLowerCase().slice(0, n),
+    `origin is serving ${serving.slice(0, 9)} but ${expected.slice(0, 9)} was expected — the deploy did not land (Incident 64). Check Railway for a deployment of this commit.`
+  );
+  return `commit=${serving.slice(0, 9)} matches expected`;
 });
 
 await check("schema/code agreement — live app_users schema is not behind the code", async () => {
@@ -190,22 +232,34 @@ await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + fra
   return "CSP allows Stripe";
 });
 
-await check("rate-limit keying resists X-Forwarded-For spoofing (Railway sanitizes)", async () => {
-  // Security invariant: limiter keys are the TRUE client, so a spoofed leftmost
-  // X-Forwarded-For must NOT mint a fresh budget. We hit the feed limiter twice
-  // from this one machine — once plain, once with a spoofed XFF — and assert the
+await check("rate-limit keying resists client-supplied identity headers", async () => {
+  // Security invariant: limiter keys are the TRUE client, so NO header a client
+  // can set may mint a fresh budget. We hit the feed limiter twice from this one
+  // machine — once plain, once with spoofed identity headers — and assert the
   // RateLimit `remaining` counter keeps DECREASING (one shared key) instead of
-  // resetting to the max (which would mean Railway stopped sanitizing XFF and
-  // the client can pick its own limiter identity). This converts the one-time
-  // manual XFF check into a permanent per-deploy gate.
+  // resetting to the max (which would mean the client can pick its own identity).
   //
-  // The invariant only holds BEHIND the sanitizing edge. Against a direct
-  // localhost target there is no proxy to strip the injected header, so the app
-  // (correctly) trusts the leftmost XFF and the check would be meaningless — we
-  // mark it N/A there with a concrete reason rather than assert a false result.
+  // 2026-08-07: this check USED to inject only `x-forwarded-for`, which made it
+  // vacuous once the Cloudflare edge was armed. `resolveClientIdentity` resolves
+  // in tiers: with the edge armed and the request cryptographically proven to
+  // have come through it, tier 1 answers from `cf-connecting-ip` and the XFF is
+  // never consulted — so the assertion passed whether or not XFF sanitization
+  // still held, proving nothing about the header that actually decides identity.
+  // A live 2026-08-07 production run showed exactly that (59 → 58, green).
+  //
+  // Both headers are now spoofed together, so the assertion covers whichever
+  // tier is live: `cf-connecting-ip` (Cloudflare must overwrite an inbound one)
+  // AND `x-forwarded-for` (Railway must sanitize it). A regression in EITHER
+  // upstream mints a fresh budget and fails this check.
+  //
+  // Known limit, stated rather than papered over: this exercises the path
+  // through the public edge only. The tier-2 (direct-to-origin) path cannot be
+  // asserted from CI because the origin lock 403s a secret-less request to the
+  // raw origin — that is what the SMOKE_EDGE=cloudflare origin-lock check
+  // covers instead.
   const behindEdge = base.startsWith("https://") && !/(localhost|127\.0\.0\.1|\[::1\])/.test(base);
   if (!behindEdge) {
-    return "N/A — direct/localhost target has no sanitizing edge; invariant holds only behind Railway's proxy";
+    return "N/A — direct/localhost target has no sanitizing edge; invariant holds only behind the proxy chain";
   }
   const url = `${base}/api/trpc/games.list?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22sport%22%3A%22MLB%22%7D%7D%7D`;
   const remainingOf = (res) => {
@@ -216,16 +270,21 @@ await check("rate-limit keying resists X-Forwarded-For spoofing (Railway sanitiz
   const first = await sfetch(url);
   const r1 = remainingOf(first);
   expect(r1 !== null, "no RateLimit header on games.list — feed limiter not mounted");
-  const spoofed = await sfetch(url, { headers: { "x-forwarded-for": "203.0.113.250" } });
+  const spoofed = await sfetch(url, {
+    headers: {
+      "x-forwarded-for": "203.0.113.250",
+      "cf-connecting-ip": "203.0.113.251",
+    },
+  });
   const r2 = remainingOf(spoofed);
   expect(r2 !== null, "no RateLimit header on the spoofed request");
   // Shared key → r2 continues the same budget (strictly below the fresh max).
   // If spoofing minted a new key, r2 would jump back to (max-1) = 59.
   expect(
     r2 <= r1 - 1 || r2 < 59,
-    `spoofed XFF got a fresh budget (r1=${r1}, r2=${r2}) — Railway XFF sanitization may have changed; limiter keying is now spoofable`
+    `spoofed identity headers got a fresh budget (r1=${r1}, r2=${r2}) — either Cloudflare stopped overwriting cf-connecting-ip or Railway stopped sanitizing X-Forwarded-For; limiter keying is now client-controllable`
   );
-  return `plain remaining=${r1} → spoofed remaining=${r2} (shared key)`;
+  return `plain remaining=${r1} → spoofed (xff + cf-connecting-ip) remaining=${r2} (shared key)`;
 });
 
 // ─── Phase 4 edge-defense checks (opt-in via SMOKE_EDGE=cloudflare) ──────────

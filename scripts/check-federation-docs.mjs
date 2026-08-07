@@ -93,8 +93,10 @@ export const PLANNED_PATHS = {
     "DR-005 plans this zod schema; the docs frame it as planned, not current",
   "scripts/check-evidence-record.mjs":
     "DR-005 plans this validator; the docs frame it as planned, not current",
-  "server/_core/clientIdentity.ts":
-    "exists only on the unmerged security/edge-identity-remediation branch; dime-mapping.md says so explicitly",
+  // server/_core/clientIdentity.ts was here while it lived only on the
+  // security/edge-identity-remediation branch. The allowance did its job: this gate
+  // failed the moment the file became real, which is what forced the docs to stop
+  // describing it as pending. Removed 2026-08-07 when that branch landed.
 };
 
 /**

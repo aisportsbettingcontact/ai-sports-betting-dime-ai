@@ -2195,7 +2195,7 @@ export async function runVsinRefreshManual(
 // (DISABLE_BACKGROUND_JOBS). Overlap protection is enforced by the CronJobRunner at the
 // route layer — identical to the other /api/cron/* jobs. The in-process startup +
 // 10-minute interval callers in startVsinAutoRefresh() invoke this same function.
-export async function runMlbCycleOnce(): Promise<void> {
+async function runMlbCycleWork(): Promise<void> {
   // 24/7 — no active hours gate
   const todayStr = datePst();
   console.log(
@@ -2703,6 +2703,127 @@ export async function runMlbCycleOnce(): Promise<void> {
   } // end isAfter7amEst() gate for HR Props
 
   console.log(`[MLBCycle] ✅ DONE — ${new Date().toISOString()}`);
+}
+
+/**
+ * Single-flight guard for the MLB cycle.
+ *
+ * Why this lives on the FUNCTION and not at a call site (2026-08-06 audit):
+ * CronJobRunner.isRunning is a per-INSTANCE private field that only guards
+ * calls routed through that instance's .trigger(). The in-process setInterval
+ * called runMlbCycleOnce() directly, so the lock never saw it. With the cycle
+ * drifting to 4-9 minutes against a 300s interval, THREE cycles ran
+ * concurrently in production (12 STARTs vs 10 DONEs in 56 minutes), doubling
+ * load on Rotowire / Action Network / MLB Stats API.
+ *
+ * Guarding here covers every caller — interval, HTTP cron route, and any
+ * future one — without importing cronRoutes (which already imports us).
+ */
+let mlbCycleInFlight = false;
+
+/** Test seam: swap the cycle body. Production never calls this. */
+let mlbCycleWork: () => Promise<void> = runMlbCycleWork;
+export function __setMlbCycleWorkForTest(fn: () => Promise<void>): void {
+  mlbCycleWork = fn;
+}
+
+/**
+ * Watchdog deadline for a single MLB cycle body (2026-08-06 CRITICAL
+ * remediation, layer 1 — see runMlbCycleOnce below).
+ *
+ * The `finally` above only fires once mlbCycleWork() SETTLES. Six fetch()
+ * calls in the unconditional every-cycle path (mlbScoreRefresh,
+ * vsinBettingSplitsScraper, actionNetworkScraper, anKPropsService,
+ * kPropsBacktestService x2) carry no AbortSignal — if any hangs at the
+ * TCP/HTTP layer, the promise never settles, `finally` never runs, and
+ * mlbCycleInFlight stays true for the process lifetime: every later call
+ * (the 300s setInterval AND the HTTP /api/cron/mlb-cycle route) hits [SKIP]
+ * forever. A wedge is a silent, permanent MLB ingestion outage.
+ *
+ * MLB_INTERVAL_MS (above) is 5 minutes and observed real cycles run 3-9
+ * minutes. 4x the interval (20 minutes) is generous enough to never fire on
+ * ordinary slowness, while still bounding how long any future unbounded
+ * fetch — audited or not — can wedge the guard shut to one deadline's worth
+ * of time instead of forever. Letting a hung cycle overlap the next one
+ * degrades to the pre-fix overlapping-cycle behaviour (survivable — it was
+ * the actual production state for weeks); a wedge is a total outage. The
+ * watchdog strictly dominates.
+ */
+export const MLB_CYCLE_WATCHDOG_MS = MLB_INTERVAL_MS * 4; // 20 minutes
+
+/** Test seam: shrink the watchdog deadline so wedge tests don't take 20 minutes. */
+let mlbCycleWatchdogMsOverride: number | null = null;
+export function __setMlbCycleWatchdogMsForTest(ms: number | null): void {
+  mlbCycleWatchdogMsOverride = ms;
+}
+
+export async function runMlbCycleOnce(): Promise<void> {
+  if (mlbCycleInFlight) {
+    console.warn(
+      "[MLBCycle] [SKIP] previous cycle still in flight — overlap prevented"
+    );
+    return;
+  }
+  // These must be declared OUTSIDE the try — `finally` needs `watchdogTimer` in
+  // scope to clear it. They are computed BEFORE the flag is set so that nothing
+  // whatsoever sits between `mlbCycleInFlight = true` and `try {`: any statement
+  // in that gap that could ever throw would set the flag and skip the `finally`
+  // that releases it, wedging the guard closed and stopping MLB ingestion for
+  // the life of the process (2026-08-07 review, Minor 2).
+  const watchdogMs = mlbCycleWatchdogMsOverride ?? MLB_CYCLE_WATCHDOG_MS;
+  let deadlineFired = false;
+  let watchdogTimer: ReturnType<typeof setTimeout> | undefined;
+
+  mlbCycleInFlight = true;
+  try {
+    const work = mlbCycleWork();
+
+    // Attach a rejection handler to `work` NOW, before racing it — Promise.race
+    // does not cancel the loser, so if the watchdog wins, `work` keeps running
+    // in the background and could reject long after this function has already
+    // returned. Without a handler that would surface as an unhandled promise
+    // rejection; this attaches one up front so an orphaned rejection is only
+    // ever logged, never thrown into the void.
+    work.catch(err => {
+      if (deadlineFired) {
+        console.error(
+          "[MLBCycle] [WATCHDOG] orphaned cycle settled (rejected) after its " +
+            `deadline had already released the guard: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+      // else: this rejection is also being observed by the Promise.race below
+      // and will propagate from there — nothing further to do here.
+    });
+
+    const deadline = new Promise<"watchdog-timeout">(resolve => {
+      watchdogTimer = setTimeout(() => {
+        deadlineFired = true;
+        resolve("watchdog-timeout");
+      }, watchdogMs);
+    });
+
+    // The deadline promise RESOLVES (never rejects) on timeout: runMlbCycleOnce
+    // is called as `void runMlbCycleOnce()` from the setInterval, so a reject
+    // here would produce an unhandled rejection every time the watchdog fires.
+    // A genuine error from `work` still rejects this race (and this function)
+    // unchanged — an existing test depends on that.
+    const winner = await Promise.race([work, deadline]);
+    if (winner === "watchdog-timeout") {
+      console.error(
+        `[MLBCycle] [WATCHDOG] cycle exceeded ${watchdogMs}ms — releasing the ` +
+          "re-entrancy guard so future cycles are not skipped forever. This " +
+          "means an upstream fetch is hung (no AbortSignal); the abandoned " +
+          "cycle keeps running in the background and its result is discarded."
+      );
+    }
+  } finally {
+    // MUST be finally: a throwing upstream feed would otherwise wedge the
+    // guard closed and stop the cycle permanently. Also clears the watchdog
+    // timer on normal completion so the process doesn't hold a pending timer
+    // for up to watchdogMs after every cycle (vitest would hang waiting for it).
+    if (watchdogTimer) clearTimeout(watchdogTimer);
+    mlbCycleInFlight = false;
+  }
 }
 
 export function startVsinAutoRefresh() {

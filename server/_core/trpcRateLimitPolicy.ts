@@ -1,6 +1,6 @@
 import type { Request, RequestHandler, Response } from "express";
-import { ipKeyGenerator } from "express-rate-limit";
-import { cfConnectingIp, edgeMode, edgeProofPasses } from "./edgeProxy";
+import { resolveClientIdentity, clientIdentityKey } from "./clientIdentity";
+import { logSafe } from "./logSafe";
 
 /**
  * Procedure-aware tRPC rate-limit classification (AUTH-004 generalized).
@@ -97,9 +97,30 @@ export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
 /**
  * `/a.b,c.d` (path relative to the /api/trpc mount) → `["a.b", "c.d"]`.
  *
- * Percent-DECODES the whole path before splitting on comma, mirroring tRPC's
- * own `decodeURIComponent(path).split(",")` order. Without this, an attacker
- * could encode a single character of a rate-limited procedure name
+ * Mirrors tRPC's express adapter EXACTLY. It resolves the procedure list from
+ * everything after the LAST slash of the RAW path:
+ *   path = req.path.slice(req.path.lastIndexOf("/") + 1)
+ * (@trpc/server/dist/adapters/express.mjs). Stripping only a LEADING slash
+ * desynchronised the classifier from the router: `/x/appUsers.login` parsed
+ * as the single unknown procedure "x/appUsers.login" -> class null -> NO
+ * limiter, while tRPC sliced to "appUsers.login" and EXECUTED it. That is
+ * the AUTH-004 evasion class via path-segment prefixing (2026-08-06 audit).
+ *
+ * Slice BEFORE decoding: Express does not percent-decode req.path, and tRPC
+ * slices raw then decodes — mirroring that order keeps the classifier's split
+ * point textually identical to the adapter's, byte for byte. This is NOT
+ * guarding an independently exploitable decode-ordering hole: tRPC procedure
+ * keys are flat dot-strings that can never contain a literal "/" (traced
+ * through @trpc/server/dist/adapters/express.mjs), so any encoded %2F that
+ * could move OUR "last slash" if we decoded first always sits inside a
+ * suffix that tRPC itself also fails to resolve once decoded (a decoded "/"
+ * can never form a real procedure name) — a shared NOT_FOUND on both sides,
+ * not a live evasion. Slicing raw is correctness/parity with the adapter,
+ * not a distinct security control.
+ *
+ * Percent-DECODES the sliced remainder before splitting on comma, mirroring
+ * tRPC's own `decodeURIComponent(path).split(",")` order. Without this, an
+ * attacker could encode a single character of a rate-limited procedure name
  * (`appUsers.logi%6E`, or an encoded comma `login%2Cx`) so the classifier sees
  * no match and applies NO limiter, while tRPC decodes and EXECUTES
  * `appUsers.login` — the AUTH-004 evasion class via URL-encoding. A malformed
@@ -107,7 +128,7 @@ export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
  * no procedure executes and passing it through unclassified is safe.
  */
 export function parseTrpcProcedureList(path: string): string[] {
-  let raw = path.replace(/^\//, "");
+  let raw = path.slice(path.lastIndexOf("/") + 1);
   try {
     raw = decodeURIComponent(raw);
   } catch {
@@ -135,52 +156,24 @@ export function classifyTrpcProcedures(
 }
 
 /**
- * IPv6-normalized true-client key for rate limiters.
- *
- * Railway's edge sanitizes inbound `X-Forwarded-For` (verified in production
- * 2026-08-05: an injected XFF is discarded) and rewrites it as
- * `[trueClient, railwayEdgeInternal]`. Express `req.ip` under
- * `trust proxy = 1` resolves to the RIGHTMOST entry — the Railway edge node,
- * which rotates per connection (152.233.x.x) — so keying on `req.ip` both
- * multiplied the per-client budget (one client across N edge nodes) and let
- * unrelated clients behind one edge node share a budget. The true client is
- * the LEFTMOST sanitized entry. Global `trust proxy` is left at 1 on purpose:
- * raising it also shifts `x-forwarded-proto` resolution and would risk the
- * secure-cookie / `req.protocol` path — this fix is scoped to limiter keys.
- * `ipKeyGenerator` is mandatory for IPv6 /56 normalization (express-rate-limit
- * v8 throws ERR_ERL_KEY_GEN_IPV6 on a raw address).
+ * @deprecated Use `clientIdentityKey` from `./clientIdentity`. Kept as a thin
+ * alias so existing call sites keep compiling during the migration — see the
+ * 2026-08-06 forensic audit (TWELVE hand-rolled identity sites) tracked in
+ * `.superpowers/sdd/task-3.1-brief.md`.
  */
 export function clientIpKey(req: Pick<Request, "headers" | "ip">): string {
-  return ipKeyGenerator(resolveClientIp(req));
+  return clientIdentityKey(req);
 }
 
 /**
- * The raw resolved true-client IP.
- *
- * Behind Cloudflare (EDGE_MODE "log" or "on") the leftmost sanitized XFF token
- * is the CF PoP egress IP, not the visitor — keying on it would collapse every
- * user behind a PoP onto one limiter budget AND blind the private-range canary
- * (a public-but-wrong IP). So when the request cryptographically proves it came
- * through our Cloudflare edge (valid origin secret + CF-range upstream) we key
- * on `cf-connecting-ip` (Cloudflare's authoritative true-client header).
- *
- * This proof runs in BOTH "log" and "on" (edgeMode !== "off") and is INLINE —
- * it does not depend on the originLock middleware having run — so IP-keying is
- * decoupled from 403 enforcement. That makes "log" a fully healthy rollback
- * target: `EDGE_MODE=on → log` stops enforcement 403s while keeping keys
- * correct (no PoP collapse), the fast escape hatch from an edge fault.
- *
- * With EDGE_MODE unset/"off" this is byte-identical to the legacy behavior
- * (leftmost sanitized XFF, else req.ip) — the merge is inert.
+ * @deprecated Use `resolveClientIdentity` from `./clientIdentity`, which is
+ * the single source of truth and is DELIBERATELY NOT gated on `edgeMode()`
+ * (see that module's docblock for why the old `edgeMode() !== "off"` gate
+ * here was a live rollback footgun). Kept as a thin alias so existing call
+ * sites keep compiling during the migration.
  */
 export function resolveClientIp(req: Pick<Request, "headers" | "ip">): string {
-  if (edgeMode() !== "off") {
-    const cf = cfConnectingIp(req);
-    if (cf && edgeProofPasses(req)) return cf;
-  }
-  const xff = req.headers?.["x-forwarded-for"];
-  const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
-  return first || req.ip || "";
+  return resolveClientIdentity(req);
 }
 
 // Ranges a genuine internet client can NEVER legitimately have as its source
@@ -277,6 +270,19 @@ export function createTrpcRateLimitDispatch(
   limiters: Record<TrpcLimiterClass, RequestHandler>
 ): RequestHandler {
   return (req, res, next) => {
+    // No legitimate tRPC client sends a mount-relative path containing "/".
+    // The classifier now mirrors tRPC's own slicing, so this is no longer an
+    // evasion — but its appearance means someone is probing the shape that
+    // used to work. Observe-only; never blocks.
+    try {
+      if (req.path.replace(/^\//, "").includes("/")) {
+        console.warn(
+          `[RateLimit][TRPC_PATH_SEGMENT] anomalous mount-relative path=${logSafe(req.path)}`
+        );
+      }
+    } catch {
+      /* observability must never affect routing */
+    }
     const cls = classifyTrpcProcedures(parseTrpcProcedureList(req.path));
     if (!cls) return next();
     if (!FAIL_OPEN_CLASSES.has(cls)) {

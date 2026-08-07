@@ -4,6 +4,8 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
 import { publicProcedure, router, stripeProcedure, csrfOriginCheck } from "../_core/trpc";
+import { resolveClientIdentity } from "../_core/clientIdentity";
+import { logSafe } from "../_core/logSafe";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
@@ -363,6 +365,41 @@ async function loadBillingCatalogue(): Promise<{
   return { byPriceId, byPlanSlug };
 }
 
+/**
+ * Cap on the sanitized login identifier logged/alerted for AUTH_FAIL events.
+ *
+ * `sanitizeLoginIdentifier` below builds the identifier as
+ * `${local.substring(0, 3)}***${domain}`, where `domain` is the ENTIRE
+ * remainder of the raw input after "@" — unbounded, since the login schema
+ * enforces only `.min(1)` on `emailOrUsername`, not `.max()`. A hostile
+ * multi-thousand-char `emailOrUsername` therefore produced a
+ * "sanitized" identifier that was itself unbounded — wrong on its own terms,
+ * and (combined with the Discord embed wrapper text around it) what blew
+ * through Discord's 1024-char field cap (2026-08-06 review, Critical 1b).
+ * The sanitization FORMAT is unchanged here; only the finished string's
+ * length is bounded.
+ */
+export const SANITIZED_IDENTIFIER_MAX = 128;
+
+/**
+ * Sanitize a login identifier for logging/alerting: first 3 chars of the
+ * local email part + "***" + "@domain" for emails, or first 3 chars + "***"
+ * for usernames. Never returns the full credential. Result is capped at
+ * SANITIZED_IDENTIFIER_MAX chars — see that constant's doc comment.
+ */
+export function sanitizeLoginIdentifier(rawId: string): string {
+  const isEmailId = rawId.includes("@");
+  const sanitized = isEmailId
+    ? (() => {
+        const atIdx = rawId.indexOf("@");
+        const local = rawId.substring(0, atIdx);
+        const domain = rawId.substring(atIdx); // includes the @
+        return `${local.substring(0, 3)}***${domain}`;
+      })()
+    : `${rawId.replace(/^@/, "").substring(0, 3)}***`;
+  return sanitized.substring(0, SANITIZED_IDENTIFIER_MAX);
+}
+
 export const appUsersRouter = router({
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
@@ -373,15 +410,18 @@ export const appUsersRouter = router({
       stayLoggedIn: z.boolean().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
-      // [STEP] Extract client IP for rate limiting
-      const clientIp = (ctx.req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ?? ctx.req.socket?.remoteAddress ?? "unknown";
+      // [STEP] Extract the TRUE client identity for rate limiting.
+      // Never parse x-forwarded-for here: production XFF is
+      // [CF PoP, Railway edge] and the leftmost token is a Cloudflare PoP
+      // shared by an entire metro. Keying on it both aggregated unrelated
+      // users onto one login-failure budget AND diluted a real attacker's
+      // budget across rotating PoPs (2026-08-06 audit).
+      const clientIp = resolveClientIdentity(ctx.req) || "unknown";
 
       // [STEP] Check login rate limit BEFORE any DB query (prevents timing attacks)
       const rateCheck = checkLoginRateLimit(clientIp);
       if (!rateCheck.allowed) {
-        console.warn(`[LoginRateLimit] BLOCKED login attempt | IP=${clientIp}`);
+        console.warn(`[LoginRateLimit] BLOCKED login attempt | IP=${logSafe(clientIp)}`);
         // Log as security event
         const blockedAt = Date.now();
         insertSecurityEvent({
@@ -430,20 +470,13 @@ export const appUsersRouter = router({
         // logging full credentials in plaintext while still being useful for debugging.
         // For emails: show first 3 chars of the local part (before @) + *** + @domain
         // For usernames: show first 3 chars + ***
+        // Length-bounded by sanitizeLoginIdentifier — see SANITIZED_IDENTIFIER_MAX.
         const rawId = input.emailOrUsername;
-        const isEmailId = rawId.includes("@");
-        const sanitizedId = isEmailId
-          ? (() => {
-              const atIdx = rawId.indexOf("@");
-              const local = rawId.substring(0, atIdx);
-              const domain = rawId.substring(atIdx); // includes the @
-              return `${local.substring(0, 3)}***${domain}`;
-            })()
-          : `${rawId.replace(/^@/, "").substring(0, 3)}***`;
+        const sanitizedId = sanitizeLoginIdentifier(rawId);
 
         console.warn(
-          `${tag} BLOCKED | IP=${ip} reason="${reason}"` +
-          ` identifier="${sanitizedId}" ua="${ua?.substring(0, 60) ?? "none"}"`
+          `${tag} BLOCKED | IP=${logSafe(ip)} reason="${logSafe(reason)}"` +
+          ` identifier="${logSafe(sanitizedId)}" ua="${logSafe(ua?.substring(0, 60) ?? "none")}"`
         );
         const authFailAt = Date.now();
         insertSecurityEvent({
@@ -601,14 +634,12 @@ export const appUsersRouter = router({
    * [VERIFY] No side effects — does NOT record a failure attempt
    */
   getLoginStatus: publicProcedure.query(({ ctx }) => {
-    const ip =
-      (ctx.req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ??
-      (ctx.req.socket as any)?.remoteAddress ??
-      (ctx.req as any).ip ??
-      'unknown';
+    // Must use the SAME key as the login mutation, or this public endpoint
+    // reports another population's lockout state (2026-08-06 audit).
+    const ip = resolveClientIdentity(ctx.req) || "unknown";
     const result = checkLoginRateLimit(ip);
     console.log(
-      `[getLoginStatus] IP=${ip} remaining=${result.remainingAttempts} ` +
+      `[getLoginStatus] IP=${logSafe(ip)} remaining=${result.remainingAttempts} ` +
       `locked=${!result.allowed} lockoutUntil=${result.lockoutUntil}`
     );
     return {
@@ -2037,7 +2068,7 @@ export function checkLoginRateLimit(ip: string): { allowed: boolean; remainingAt
     const windowResetMs = LOGIN_RATE_WINDOW_MS - (now - oldestFailure);
     const windowResetMin = Math.ceil(windowResetMs / 60_000);
     console.warn(
-      `[LoginRateLimit] BLOCKED | IP=${ip} failures=${entry.failTimestamps.length} ` +
+      `[LoginRateLimit] BLOCKED | IP=${logSafe(ip)} failures=${entry.failTimestamps.length} ` +
       `windowResetIn=${windowResetMin}min`
     );
     const lockoutUntil = oldestFailure + LOGIN_RATE_WINDOW_MS;

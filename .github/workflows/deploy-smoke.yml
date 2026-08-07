@@ -70,6 +70,13 @@ jobs:
           # disarmed. When enabled, the lock is asserted against the raw origin.
           SMOKE_EDGE: ${{ github.event.inputs.edge }}
           SMOKE_ORIGIN_URL: ${{ github.event.inputs.edge == 'cloudflare' && 'https://ai-sports-betting-dime-ai-production.up.railway.app' || '' }}
+          # Incident 64: this workflow passed against a deploy that never
+          # happened. On a push we know exactly which commit should be serving,
+          # so say so and let the smoke test compare. On workflow_dispatch the
+          # target origin may legitimately be running something else, so no
+          # expectation is supplied and the check reports identity instead of
+          # asserting it.
+          EXPECTED_COMMIT: ${{ github.event_name == 'push' && github.sha || '' }}
         run: |
           if [ -z "${EDGE_AGENT_BYPASS_KEY}" ]; then
             echo "::warning::EDGE_AGENT_BYPASS_KEY is empty — document routes will 403 through the production edge. Set the repo secret."

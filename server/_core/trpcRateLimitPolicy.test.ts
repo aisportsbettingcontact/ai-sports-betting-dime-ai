@@ -361,7 +361,12 @@ describe("clientIpKey", () => {
 });
 
 describe("resolveClientIp", () => {
-  it("returns the leftmost XFF entry (true client) unnormalized", () => {
+  it("returns the leftmost XFF entry on a direct-to-origin hit", () => {
+    // Only true for a direct-to-origin request. Behind Cloudflare the leftmost
+    // XFF entry is the CF PoP, not the visitor — see the 2026-08-06 forensic
+    // audit (server/_core/clientIdentity.ts docblock) and the Cloudflare edge
+    // branch below, which resolves the same fixture's true client via
+    // cf-connecting-ip instead.
     expect(
       resolveClientIp(
         req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } })
@@ -401,11 +406,18 @@ describe("resolveClientIp — Cloudflare edge branch (Phase 4)", () => {
       },
     });
 
-  it("EDGE_MODE off: ignores cf-connecting-ip, byte-identical legacy behavior", () => {
+  it("EDGE_MODE off/unset: STILL keys on cf-connecting-ip when the origin proof passes (footgun fix)", () => {
+    // Superseded 2026-08-06: identity resolution used to gate the
+    // cf-connecting-ip branch on `edgeMode() !== "off"`, so the tempting
+    // one-step rollback `EDGE_MODE=off` instantly collapsed all six rate
+    // limiters onto per-CF-PoP buckets while DNS was still orange-clouded.
+    // resolveClientIp now delegates to resolveClientIdentity (see
+    // server/_core/clientIdentity.ts), which is DELIBERATELY NOT gated on
+    // edgeMode() — the cryptographic origin proof is self-sufficient. See
+    // .superpowers/sdd/task-3.1-brief.md.
     delete process.env.EDGE_MODE;
     process.env.EDGE_ORIGIN_SECRET = SECRET;
-    // Even with a full valid edge proof present, off-mode keys on leftmost XFF.
-    expect(resolveClientIp(edgeReq())).toBe(CF_UPSTREAM);
+    expect(resolveClientIp(edgeReq())).toBe("77.88.99.100");
   });
 
   it("EDGE_MODE on + valid proof: keys on cf-connecting-ip (true client)", () => {
@@ -582,5 +594,79 @@ describe("sendRateLimitResponse", () => {
     );
     expect(res.statusCode).toBe(429);
     expect(res.body).toEqual({ error: "Too many attempts." });
+  });
+});
+
+describe("parseTrpcProcedureList — path-segment evasion (2026-08-06 audit)", () => {
+  // tRPC's express adapter resolves the procedure from everything after the
+  // LAST slash: path.slice(path.lastIndexOf("/") + 1). Any classifier that
+  // reads the whole mount-relative path can be desynchronised from it by
+  // prefixing a segment, which previously yielded class=null (no limiter)
+  // while tRPC still executed the procedure.
+  it("classifies a single-segment-prefixed login as auth", () => {
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/x/appUsers.login"))
+    ).toBe("auth");
+  });
+
+  it("classifies a multi-segment-prefixed batched login as auth", () => {
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/a/b/appUsers.login,appUsers.me")
+      )
+    ).toBe("auth");
+  });
+
+  it("classifies a prefixed checkout as stripe_checkout", () => {
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/x/stripe.publicCreateCheckoutSession")
+      )
+    ).toBe("stripe_checkout");
+  });
+
+  it("classifies a prefixed waitlist submit as waitlist", () => {
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/x/waitlist.submit"))
+    ).toBe("waitlist");
+  });
+
+  it("classifies a prefixed feed read as public_feed", () => {
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/x/games.list"))
+    ).toBe("public_feed");
+  });
+
+  it("still classifies the ordinary unprefixed path", () => {
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.login"))
+    ).toBe("auth");
+  });
+
+  it("preserves the URL-encoding defence (AUTH-004)", () => {
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.logi%6E"))
+    ).toBe("auth");
+  });
+
+  it("preserves the comma-batch defence (AUTH-004)", () => {
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/appUsers.login,appUsers.me")
+      )
+    ).toBe("auth");
+  });
+
+  it("slicing on the RAW path keeps the classifier byte-identical to the adapter (slice-before-decode)", () => {
+    // A real slash BEFORE an encoded one is the case that actually forces
+    // slice-before-decode vs strip-leading-slash to diverge:
+    //   FIX  (slice at last RAW "/"):      "appUsers.login"        -> decode -> "appUsers.login"   -> auth
+    //   BUG  (strip only leading "/"):     "a%2Fb/appUsers.login"  -> decode -> "a/b/appUsers.login" -> null
+    // (`/appUsers.login%2Fx` alone can't show this: it has no second REAL
+    // slash, so "strip leading /" and "slice after last real /" are the same
+    // operation on it — that shape passed under both the fix and the bug.)
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/a%2Fb/appUsers.login"))
+    ).toBe("auth");
   });
 });

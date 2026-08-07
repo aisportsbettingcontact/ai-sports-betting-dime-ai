@@ -50,7 +50,10 @@
       "mcp__plugin_railway_railway__set-feature-flag",
       "mcp__plugin_railway_railway__set-variables",
       "mcp__plugin_railway_railway__update-service",
-      "mcp__plugin_railway_railway__list-variables"
+      "mcp__plugin_railway_railway__list-variables",
+      "Bash(rm:*)",
+      "Bash(git clean:*)",
+      "Bash(git reset --hard:*)"
     ]
   },
   "enabledPlugins": {

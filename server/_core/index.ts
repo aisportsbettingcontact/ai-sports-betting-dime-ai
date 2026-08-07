@@ -11,6 +11,7 @@ import {
   resolveClientIp,
   sendRateLimitResponse,
 } from "./trpcRateLimitPolicy";
+import { resolveClientIdentity, identitySource } from "./clientIdentity";
 import {
   cfConnectingIp,
   edgeMode,
@@ -44,7 +45,11 @@ import { startMlbPlayerSyncScheduler } from "../mlbPlayerSync";
 import { insertSecurityEvent } from "../db";
 import { startSecurityDigestScheduler } from "../securityDigest";
 import { startWeeklySecurityDigestScheduler } from "../weeklySecurityDigest";
-import { postSecurityAlert } from "../discord/discordSecurityAlert";
+import {
+  postSecurityAlert,
+  SECURITY_CHANNEL_ID,
+} from "../discord/discordSecurityAlert";
+import { EmbedBuilder, TextChannel } from "discord.js";
 import { startMlbScheduleHistoryScheduler } from "../mlbScheduleHistoryScheduler";
 import { startNbaScheduleHistoryScheduler } from "../nbaScheduleHistoryScheduler";
 import { startNhlScheduleHistoryScheduler } from "../nhlScheduleHistoryScheduler";
@@ -75,10 +80,11 @@ import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { reportBillingAlertTransport } from "./billingAlerts";
-import { getDiscordBotHealth } from "../discord/bot";
+import { getDiscordBotHealth, getDiscordClient } from "../discord/bot";
 import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
+import { readBuildCommit } from "./buildIdentity";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
 import { logSafe } from "./logSafe";
 import {
@@ -162,6 +168,108 @@ function isBackgroundJobsDisabled(): boolean {
 const rateLimitLastPersisted = new Map<string, number>();
 const RATE_LIMIT_DEDUP_MS = 60_000; // 1 minute
 
+// ─── Origin-lock "no secret configured" escalation guard ────────────────────
+// edge_no_secret is a single site-wide CRITICAL condition (EDGE_MODE=on but
+// unprotected), not a per-IP event, and it fires on EVERY request while the
+// misconfiguration persists — so it gets its own single module-level
+// timestamp rather than the per-key dedup map above. At most one escalation
+// per minute.
+const EDGE_NO_SECRET_ESCALATION_MS = 60_000; // 1 minute
+let edgeNoSecretLastEscalatedAt = 0;
+
+// ─── edge_no_secret out-of-band Discord alert (Task 4.3 fix, 2026-08-07) ─────
+// edge_no_secret means the origin lock is INERT: EDGE_MODE=on but no
+// EDGE_ORIGIN_SECRET is configured, so every request — attacker or not —
+// passes straight through unlocked. The section comment above calls this
+// "the loudest condition in the system"; a console.error into Railway logs
+// nobody watches is a net downgrade from that.
+//
+// Deliberately NOT routed through fireRateLimitEvent()/postSecurityAlert():
+// postSecurityAlert() is typed to SecurityEventType ("CSRF_BLOCK" |
+// "RATE_LIMIT" | "AUTH_FAIL"). As of the 2026-08-07 fix, the RATE_LIMIT
+// embed (buildRateLimitEmbed in discordSecurityAlert.ts) no longer
+// hardcodes a 429/blocked claim — it renders the TRUE per-alert
+// blocked/observed outcome threaded through fireRateLimitEvent()'s
+// `outcome` parameter. edge_no_secret still doesn't fit either value
+// though: it is a site-wide misconfiguration (every request just passes
+// through unlocked — not a per-request "blocked" OR "observed" rate-limit/
+// edge-lock outcome), so routing it through fireRateLimitEvent() would
+// still misrepresent it. Extending SecurityEventType with a fourth member
+// is task 4.4's job, not this one.
+//
+// Shape chosen: a direct getDiscordClient() + channel send, NOT a new
+// webhook module mirroring billingAlerts.ts. billingAlerts.ts's own header
+// explains its webhook choice as staying dependency-light so the raw-body
+// Stripe webhook handler doesn't have to import discord.js — that rationale
+// doesn't apply here: index.ts already imports discord.js transitively
+// (startDiscordBot, postSecurityAlert) and already has a live, connected
+// bot client. Reusing it needs no new env var / webhook to provision in
+// Railway, so it is the simpler and equally honest option for this case.
+//
+// Posts to the same 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel postSecurityAlert() uses.
+// server/discord/discordSecurityAlert.ts's SECURITY_CHANNEL_ID is now
+// exported (Task 4.8, once that file was back in scope) and imported above
+// instead of duplicating the literal channel ID here.
+
+/**
+ * Fire-and-forget: never awaited at the call site, never throws, and every
+ * async path ends in `.catch()` so it can never produce an unhandled
+ * rejection — same discipline as fireRateLimitEvent()/postSecurityAlert()
+ * below. Gated by the SAME edgeNoSecretLastEscalatedAt /
+ * EDGE_NO_SECRET_ESCALATION_MS once-per-minute guard as the console.error
+ * CRITICAL log at its one call site; this function adds no guard of its own
+ * and must only be invoked from inside that guard.
+ */
+function fireEdgeNoSecretAlert(): void {
+  const tag = "[edge][origin-lock][edge_no_secret]";
+  const client = getDiscordClient();
+  if (!client) {
+    console.warn(
+      `${tag} Discord bot not ready — CRITICAL alert not posted (console log only)`
+    );
+    return;
+  }
+
+  client.channels
+    .fetch(SECURITY_CHANNEL_ID)
+    .then(rawChannel => {
+      if (!rawChannel || !(rawChannel instanceof TextChannel)) {
+        console.error(
+          `${tag} security channel is not a TextChannel or could not be fetched — alert not posted`
+        );
+        return;
+      }
+      const embed = new EmbedBuilder()
+        .setColor(0xf8312f) // bright red — most severe tier (matches billingAlerts.ts / discordSecurityAlert.ts)
+        .setTitle("🚨 ORIGIN LOCK INERT — Site Is UNPROTECTED")
+        .setDescription(
+          "**EDGE_MODE=on but no `EDGE_ORIGIN_SECRET` is configured.** " +
+            "The origin-lock middleware is running in name only — this is an " +
+            "anti-lockout downgrade, not enforcement. Every request that " +
+            "reaches the origin is passed straight through.\n\n" +
+            "**Nothing has been blocked or rate-limited — this is not a " +
+            "429/attack alert.** It is a notice that a protection is " +
+            "currently absent.\n\n" +
+            "**Action required:** set `EDGE_ORIGIN_SECRET` in Railway to " +
+            "restore protection. This condition persists — and this alert " +
+            "repeats at most once per minute — until that variable is set " +
+            "correctly."
+        )
+        .setFooter({ text: "Dime AI · Origin Lock Monitor · edge_no_secret" })
+        .setTimestamp();
+      return rawChannel.send({ embeds: [embed] });
+    })
+    .then(sent => {
+      if (sent) {
+        console.log(`${tag} CRITICAL alert posted to security channel`);
+      }
+    })
+    .catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${tag} failed to post CRITICAL alert: ${msg}`);
+    });
+}
+
 function fireRateLimitEvent(
   ip: string,
   path: string,
@@ -175,7 +283,31 @@ function fireRateLimitEvent(
     | "public_feed"
     | "xff_canary"
     | "edge_origin_ingress_anomaly",
-  ua: string | null
+  ua: string | null,
+  // Explicit per-call-site indicator of whether THIS firing actually
+  // blocked the request, or merely observed it (2026-08-07 review, Critical
+  // 2 / Importants 1&2). Confirmed live 2026-08-07: this function logged
+  // "BLOCKED" unconditionally for every one of its eight call sites, even
+  // though only six of them are express-rate-limit `handler` callbacks that
+  // are exclusively invoked once a request has ALREADY been rejected with
+  // 429 — a request the HTTP log recorded as httpStatus:200 also logged
+  // "BLOCKED" here, and after the RATE_LIMIT embed fix the two disagreed
+  // with each other, which is worse for an investigator than the old
+  // uniformly-wrong state.
+  //
+  // Defaults to "blocked" so the six real limiter call sites below — each
+  // asserted VERBATIM by server/_core/clientIdentityCallSites.test.ts as
+  // `fireRateLimitEvent(ip, req.path, req.method, "<type>", ua);` with
+  // nothing after `ua` — stay textually unchanged and still get the
+  // correct value for free: they can only ever be invoked from a `handler`
+  // that express-rate-limit calls exclusively on an actual block, so
+  // "blocked" is unconditionally true there regardless of whether it's
+  // passed explicitly. The three call sites where "blocked" is NOT always
+  // true — edge_deny (multi-line call, "blocked" passed explicitly for
+  // clarity though it matches the default), xff_canary, and the /api/trpc
+  // edge_origin_ingress_anomaly canary (both "observed", overriding the
+  // default) — pass this argument explicitly.
+  outcome: "blocked" | "observed" = "blocked"
 ) {
   const now = Date.now();
   const dedupKey = `${ip}:${path}:${limitType}`;
@@ -191,7 +323,7 @@ function fireRateLimitEvent(
 
   const tag = `[RateLimit][${limitType.toUpperCase()}]`;
   console.warn(
-    `${tag} BLOCKED | IP=${logSafe(ip)} path=${logSafe(path)} method=${logSafe(method)}` +
+    `${tag} ${outcome === "blocked" ? "BLOCKED" : "OBSERVED (not blocked)"} | IP=${logSafe(ip)} path=${logSafe(path)} method=${logSafe(method)}` +
       ` ua="${logSafe(ua?.substring(0, 60) ?? "none")}"` +
       (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
   );
@@ -199,6 +331,12 @@ function fireRateLimitEvent(
   if (now - lastSent < RATE_LIMIT_DEDUP_MS) return; // deduplicated
   rateLimitLastPersisted.set(dedupKey, now);
 
+  // NOT persisted to security_events (no new column) — see this task's
+  // report for why: adding one needs a migration via db-push.yml before
+  // dependent code deploys, and the existing `context` (limitType) column
+  // already lets a reader correlate with Railway logs at this timestamp.
+  // The Discord embed is the surface that needed the true per-alert value,
+  // and it gets it via SecurityAlertPayload.limiterOutcome below.
   insertSecurityEvent({
     eventType: "RATE_LIMIT",
     ip,
@@ -219,6 +357,7 @@ function fireRateLimitEvent(
     method,
     userAgent: ua,
     context: limitType,
+    limiterOutcome: outcome,
     occurredAt: now,
   }).catch(err =>
     console.error(`${tag} Discord alert failed: ${(err as Error).message}`)
@@ -253,12 +392,10 @@ const globalApiLimiter = rateLimit({
   // across unrelated clients. See clientIpKey.
   keyGenerator: req => `global:${clientIpKey(req)}`,
   handler: (req, res, _next) => {
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.ip ??
-      "unknown";
+    // Reuse the SAME identity the keyGenerator used. Re-deriving from raw XFF
+    // wrote the Cloudflare PoP into security_events and every Discord alert
+    // while the limiter itself was correctly keyed (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "global", ua);
     sendRateLimitResponse(req, res, "Too many requests. Please slow down.");
@@ -278,12 +415,10 @@ const authLimiter = rateLimit({
   },
   keyGenerator: req => `auth:${clientIpKey(req)}`,
   handler: (req, res, _next) => {
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.ip ??
-      "unknown";
+    // Reuse the SAME identity the keyGenerator used. Re-deriving from raw XFF
+    // wrote the Cloudflare PoP into security_events and every Discord alert
+    // while the limiter itself was correctly keyed (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "auth", ua);
     sendRateLimitResponse(
@@ -312,12 +447,10 @@ const trpcAuthLimiter = rateLimit({
     return `${clientIpKey(req)}:trpc_auth`;
   },
   handler: (req, res, _next) => {
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.ip ??
-      "unknown";
+    // Reuse the SAME identity the keyGenerator used. Re-deriving from raw XFF
+    // wrote the Cloudflare PoP into security_events and every Discord alert
+    // while the limiter itself was correctly keyed (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "trpc_auth", ua);
     sendRateLimitResponse(
@@ -401,19 +534,20 @@ async function startServer() {
   app.use((req, res, next) => {
     const start = Date.now();
     const ts = new Date().toISOString();
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.socket?.remoteAddress ??
-      "unknown";
+    // The audit found cf-connecting-ip — the ONLY place the true visitor
+    // appears behind Cloudflare — was never logged anywhere. resolveClientIdentity
+    // resolves the true client; identitySource records which branch produced
+    // it (cf-connecting-ip / xff-leftmost / req.ip) so it's visible in Railway
+    // logs (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
+    const ipSrc = identitySource(req);
     // Decide at request-time whether this request falls in the 10% sample.
     // The same flag is reused on the response so both log lines are emitted
     // together or suppressed together for normal requests.
     const sampled = Math.random() < 0.1;
     if (sampled) {
       console.log(
-        `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)}` +
+        `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)} ipSrc=${ipSrc}` +
           ` host=${logSafe(req.headers["host"] ?? "-")}` +
           ` x-forwarded-for=${logSafe(req.headers["x-forwarded-for"] ?? "-")}` +
           ` x-forwarded-proto=${logSafe(req.headers["x-forwarded-proto"] ?? "-")}` +
@@ -474,29 +608,79 @@ async function startServer() {
   // discovers its URL. "/health" stays reachable for Railway's probe. With
   // EDGE_MODE unset/"off" this is a pure pass-through (byte-identical to today,
   // inert on merge). Mounted BEFORE helmet/body-parsers/limiters so a denied
-  // request touches nothing. onEvent routes denials to the same loud, deduped
-  // alerting the rate limiters use. See server/_core/originLock.ts.
+  // request touches nothing. onEvent routes ONLY the actual 403 ("edge_deny")
+  // to the same loud, deduped alerting the rate limiters use — the other four
+  // OriginLockEvent kinds never block a request, so alerting on them was a
+  // false-positive generator (2026-08-07 audit: a log-mode "would-deny" and a
+  // breaker "recovered" both posted the identical "IP Blocked ... 429" Discord
+  // embed as a real 403, and in the breaker-open state that fired on EVERY
+  // request). See server/_core/originLock.ts.
   app.use(
     originLock((kind, req) => {
-      fireRateLimitEvent(
-        immediateUpstreamIp(req) || resolveClientIp(req),
-        req.path,
-        req.method,
-        "edge_origin_ingress_anomaly",
-        (req.headers["user-agent"] as string | undefined) ?? null
-      );
-      if (kind === "edge_no_secret") {
-        console.error(
-          "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
-        );
-      } else if (kind === "edge_breaker_tripped") {
-        console.error(
-          "[edge][origin-lock] CRITICAL circuit breaker TRIPPED — EDGE_MODE=on but ~no verified Cloudflare ingress over the sample window; enforcement auto-downgraded to observe-only to prevent a 403 outage. Cloudflare is likely NOT fronting the origin (DNS/secret). Site falls back to Phase 3 gating + rate limits. Investigate the edge path."
-        );
-      } else if (kind === "edge_breaker_recovered") {
-        console.warn(
-          "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
-        );
+      const ip = immediateUpstreamIp(req) || resolveClientIp(req);
+      const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+
+      switch (kind) {
+        case "edge_deny":
+          // The ONLY kind that actually 403'd the request. Alert.
+          // outcome="blocked" passed explicitly (2026-08-07 review, Critical
+          // 2 / Importants 1&2) — matches the helper's own default, but
+          // stated here so this call site's truth is not implicit.
+          fireRateLimitEvent(
+            ip,
+            req.path,
+            req.method,
+            "edge_origin_ingress_anomaly",
+            ua,
+            "blocked"
+          );
+          break;
+        case "edge_would_deny":
+          // Log-mode observation, or breaker-open self-heal — the request was
+          // SERVED (200), not blocked. Log only: alerting here would claim a
+          // 429-and-blocked outcome for a request that went through, and in
+          // the breaker-open state it would fire on EVERY request.
+          console.warn(
+            `[edge][origin-lock] would-deny (observe-only, request served) ip=${logSafe(ip)} path=${logSafe(req.path)}`
+          );
+          break;
+        case "edge_no_secret":
+          // Anti-lockout: EDGE_MODE=on but no secret configured — the site is
+          // UNPROTECTED and this fires on every request while it persists.
+          // Escalate at most once per minute so the CRITICAL itself can't
+          // flood. Both the console.error AND the out-of-band Discord alert
+          // below share this ONE guard — no second guard.
+          if (
+            Date.now() - edgeNoSecretLastEscalatedAt >=
+            EDGE_NO_SECRET_ESCALATION_MS
+          ) {
+            edgeNoSecretLastEscalatedAt = Date.now();
+            console.error(
+              "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
+            );
+            fireEdgeNoSecretAlert();
+          }
+          break;
+        case "edge_breaker_tripped":
+          // Enforcement auto-suspended (breaker judged Cloudflare absent).
+          // Not an attack signal, but loud because the site is unprotected.
+          console.error(
+            "[edge][origin-lock] CRITICAL circuit breaker TRIPPED — EDGE_MODE=on but ~no verified Cloudflare ingress over the sample window; enforcement auto-downgraded to observe-only to prevent a 403 outage. Cloudflare is likely NOT fronting the origin (DNS/secret). Site falls back to Phase 3 gating + rate limits. Investigate the edge path."
+          );
+          break;
+        case "edge_breaker_recovered":
+          // GOOD NEWS: verified Cloudflare ingress returned, enforcement
+          // resumed. Must not read like an attack — console.log, not warn/error.
+          console.log(
+            "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
+          );
+          break;
+        default:
+          // An OriginLockEvent kind this handler doesn't know about yet.
+          // Log loudly rather than silently dropping it.
+          console.error(
+            `[edge][origin-lock] UNRECOGNISED origin-lock event kind: ${String(kind)} — onEvent handler needs updating`
+          );
       }
     })
   );
@@ -594,14 +778,13 @@ async function startServer() {
     // auth (#370). Only a CONFIRMED mismatch fails; "unknown" never does.
     const schemaMismatch = shouldFailHealthForSchema();
     const healthy = dbOk && !schemaMismatch;
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.socket?.remoteAddress ??
-      "unknown";
+    // See the top-level request logger above: resolveClientIdentity resolves
+    // the true client; identitySource records which branch produced it
+    // (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
+    const ipSrc = identitySource(req);
     console.log(
-      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} db.state=${circuit.state} dbOk=${dbOk} schema=${currentSchemaVerdict()}`
+      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} ipSrc=${ipSrc} db.state=${circuit.state} dbOk=${dbOk} schema=${currentSchemaVerdict()}`
     );
     // Integration state is REPORTED but deliberately does NOT drive the status
     // code. Railway probes this endpoint: returning 503 because Discord's
@@ -613,6 +796,12 @@ async function startServer() {
     res.status(healthy ? 200 : 503).json({
       status: healthy ? "ok" : schemaMismatch ? "schema_mismatch" : "degraded",
       ts: Date.now(),
+      // Which commit is answering. Incident 64: a deploy silently never
+      // happened, and `deploy-smoke` passed because a healthy origin serving
+      // the PREVIOUS build is indistinguishable from a successful deploy when
+      // nothing in the response names the build. `null` when unknown — never a
+      // placeholder, so a smoke test cannot assert equality against "no idea".
+      commit: readBuildCommit(),
       db: {
         state: circuit.state,
         consecutiveFailures: circuit.consecutiveFailures,
@@ -777,12 +966,17 @@ async function startServer() {
   app.use("/api/trpc", (req, _res, next) => {
     const ip = resolveClientIp(req);
     if (ip && isReservedOrInternalIp(ip)) {
+      // Observe-only by construction — see this block's own header comment
+      // ("Observe-only; never blocks"). outcome="observed" passed explicitly
+      // (2026-08-07 review, Importants 1&2): the default is "blocked", which
+      // would be WRONG here.
       fireRateLimitEvent(
         ip,
         req.path,
         req.method,
         "xff_canary",
-        (req.headers["user-agent"] as string | undefined) ?? null
+        (req.headers["user-agent"] as string | undefined) ?? null,
+        "observed"
       );
     }
     // Edge-aware anomaly (Phase 4): the private-range canary above is
@@ -796,12 +990,23 @@ async function startServer() {
     if (edgeMode() !== "off") {
       const upstream = immediateUpstreamIp(req);
       if (!cfConnectingIp(req) || !isCloudflareEdgeIp(upstream)) {
+        // This canary ALWAYS calls next() below — it never blocks the
+        // request, even though it shares the "edge_origin_ingress_anomaly"
+        // limitType slug with the genuinely-blocking edge_deny case above.
+        // outcome="observed" passed explicitly (2026-08-07 review, Critical
+        // 2 / Importants 1&2) so the two call sites for this one slug can
+        // no longer be conflated in the resulting alert — this is the fix
+        // for the live case: production runs EDGE_MODE=log, where 100% of
+        // currently-firing alerts for this slug come from THIS call site,
+        // and the old code asserted a 403 that never happened for every one
+        // of them.
         fireRateLimitEvent(
           upstream || ip,
           req.path,
           req.method,
           "edge_origin_ingress_anomaly",
-          (req.headers["user-agent"] as string | undefined) ?? null
+          (req.headers["user-agent"] as string | undefined) ?? null,
+          "observed"
         );
       }
     }
@@ -851,15 +1056,13 @@ async function startServer() {
       return `${clientIpKey(req)}:stripe_checkout`;
     },
     handler: (req, res, _next) => {
-      const ip =
-        (req.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          .trim() ??
-        req.ip ??
-        "unknown";
+      // Reuse the SAME identity the keyGenerator used. Re-deriving from raw
+      // XFF wrote the Cloudflare PoP into security_events and every Discord
+      // alert while the limiter itself was correctly keyed (2026-08-06 audit).
+      const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       console.warn(
-        `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+        `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${logSafe(ip)} path=${logSafe(req.path)} ua=${logSafe(ua ?? "none")}`
       );
       fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);
       sendRateLimitResponse(
@@ -889,15 +1092,13 @@ async function startServer() {
       return `waitlist:${clientIpKey(req)}`;
     },
     handler: (req, res, _next) => {
-      const ip =
-        (req.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          .trim() ??
-        req.ip ??
-        "unknown";
+      // Reuse the SAME identity the keyGenerator used. Re-deriving from raw
+      // XFF wrote the Cloudflare PoP into security_events and every Discord
+      // alert while the limiter itself was correctly keyed (2026-08-06 audit).
+      const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       console.warn(
-        `[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+        `[WAITLIST_RATE_LIMIT] IP=${logSafe(ip)} path=${logSafe(req.path)} ua=${logSafe(ua ?? "none")}`
       );
       fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);
       sendRateLimitResponse(
@@ -935,12 +1136,10 @@ async function startServer() {
     passOnStoreError: true,
     keyGenerator: req => `${clientIpKey(req)}:public_feed`,
     handler: (req, res, _next) => {
-      const ip =
-        (req.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          .trim() ??
-        req.ip ??
-        "unknown";
+      // Reuse the SAME identity the keyGenerator used. Re-deriving from raw
+      // XFF wrote the Cloudflare PoP into security_events and every Discord
+      // alert while the limiter itself was correctly keyed (2026-08-06 audit).
+      const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       fireRateLimitEvent(ip, req.path, req.method, "public_feed", ua);
       sendRateLimitResponse(
