@@ -363,6 +363,41 @@ async function loadBillingCatalogue(): Promise<{
   return { byPriceId, byPlanSlug };
 }
 
+/**
+ * Cap on the sanitized login identifier logged/alerted for AUTH_FAIL events.
+ *
+ * `sanitizeLoginIdentifier` below builds the identifier as
+ * `${local.substring(0, 3)}***${domain}`, where `domain` is the ENTIRE
+ * remainder of the raw input after "@" — unbounded, since the login schema
+ * enforces only `.min(1)` on `emailOrUsername`, not `.max()`. A hostile
+ * multi-thousand-char `emailOrUsername` therefore produced a
+ * "sanitized" identifier that was itself unbounded — wrong on its own terms,
+ * and (combined with the Discord embed wrapper text around it) what blew
+ * through Discord's 1024-char field cap (2026-08-06 review, Critical 1b).
+ * The sanitization FORMAT is unchanged here; only the finished string's
+ * length is bounded.
+ */
+export const SANITIZED_IDENTIFIER_MAX = 128;
+
+/**
+ * Sanitize a login identifier for logging/alerting: first 3 chars of the
+ * local email part + "***" + "@domain" for emails, or first 3 chars + "***"
+ * for usernames. Never returns the full credential. Result is capped at
+ * SANITIZED_IDENTIFIER_MAX chars — see that constant's doc comment.
+ */
+export function sanitizeLoginIdentifier(rawId: string): string {
+  const isEmailId = rawId.includes("@");
+  const sanitized = isEmailId
+    ? (() => {
+        const atIdx = rawId.indexOf("@");
+        const local = rawId.substring(0, atIdx);
+        const domain = rawId.substring(atIdx); // includes the @
+        return `${local.substring(0, 3)}***${domain}`;
+      })()
+    : `${rawId.replace(/^@/, "").substring(0, 3)}***`;
+  return sanitized.substring(0, SANITIZED_IDENTIFIER_MAX);
+}
+
 export const appUsersRouter = router({
   // ─── Auth ──────────────────────────────────────────────────────────────────
 
@@ -430,16 +465,9 @@ export const appUsersRouter = router({
         // logging full credentials in plaintext while still being useful for debugging.
         // For emails: show first 3 chars of the local part (before @) + *** + @domain
         // For usernames: show first 3 chars + ***
+        // Length-bounded by sanitizeLoginIdentifier — see SANITIZED_IDENTIFIER_MAX.
         const rawId = input.emailOrUsername;
-        const isEmailId = rawId.includes("@");
-        const sanitizedId = isEmailId
-          ? (() => {
-              const atIdx = rawId.indexOf("@");
-              const local = rawId.substring(0, atIdx);
-              const domain = rawId.substring(atIdx); // includes the @
-              return `${local.substring(0, 3)}***${domain}`;
-            })()
-          : `${rawId.replace(/^@/, "").substring(0, 3)}***`;
+        const sanitizedId = sanitizeLoginIdentifier(rawId);
 
         console.warn(
           `${tag} BLOCKED | IP=${ip} reason="${reason}"` +

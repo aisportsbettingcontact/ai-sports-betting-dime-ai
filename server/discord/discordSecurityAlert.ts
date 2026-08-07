@@ -237,15 +237,66 @@ function formatTimestamp(epochMs: number): string {
  * (CombinedPropertyError) above it. `path` and `blockedOrigin` are
  * attacker-controlled, so an over-long value used to throw inside
  * buildEmbed() — which is called OUTSIDE the try — killing the alert
- * entirely (2026-08-06 audit). Every field value goes through this.
+ * entirely (2026-08-06 audit).
  *
- * 1000 not 1024: leaves room for the backtick wrapping we add around values.
+ * 1000 not 1024: leaves room for the backtick wrapping most call sites add
+ * around the raw value. This is a readability pre-truncation only — the hard
+ * guarantee against Discord's 1024 cap is `clampFieldValue()` below, applied
+ * to the FULLY COMPOSED value (wrapper backticks/text included) at every
+ * call site. Two call sites budgeted their own wrapper margin here and got
+ * it wrong (buildAuthFailEmbed's "Account Targeted" field, buildBruteForceEmbed's
+ * "Recommended Immediate Action" field) — both threw in production-shaped
+ * input (2026-08-06 review, Critical 1).
  */
 const DISCORD_FIELD_MAX = 1000;
 
 function field(value: string | null | undefined, fallback: string): string {
   const v = value === null || value === undefined || value === "" ? fallback : value;
   return v.length > DISCORD_FIELD_MAX ? `${v.substring(0, DISCORD_FIELD_MAX)}…[truncated]` : v;
+}
+
+/** Discord's hard cap on an embed field value. */
+const DISCORD_FIELD_LIMIT = 1024;
+
+/**
+ * Clamp a FULLY COMPOSED field value — after any backticks, suffixes or
+ * explanatory text have been added around it. The previous design clamped the
+ * inner value to a fixed budget and trusted each call site to leave room for
+ * its own wrapper; two call sites did not, and the resulting embed threw
+ * (2026-08-06 review). Clamping the finished string cannot be got wrong by a
+ * caller.
+ */
+function clampFieldValue(composed: string): string {
+  if (composed.length <= DISCORD_FIELD_LIMIT) return composed;
+  return `${composed.substring(0, DISCORD_FIELD_LIMIT - 12)}…[truncated]`;
+}
+
+/** Discord's hard cap on an embed description. */
+const DISCORD_DESCRIPTION_LIMIT = 4096;
+
+/**
+ * Clamp a fully composed embed description to Discord's 4096-char cap.
+ * `buildBruteForceEmbed`'s description interpolates the attacker-controlled
+ * `ip` twice with no bound (2026-08-06 review, Critical 2) — same
+ * composed-string approach as `clampFieldValue`, sized for the description
+ * limit instead of the field limit.
+ */
+function clampDescription(composed: string): string {
+  if (composed.length <= DISCORD_DESCRIPTION_LIMIT) return composed;
+  return `${composed.substring(0, DISCORD_DESCRIPTION_LIMIT - 12)}…[truncated]`;
+}
+
+/** Discord's hard cap on a message `content` string. */
+const DISCORD_CONTENT_LIMIT = 2000;
+
+/**
+ * Clamp a fully composed message `content` string to Discord's 2000-char cap.
+ * The brute-force `@here` alert's `content` interpolates the
+ * attacker-controlled `ip` unbounded (2026-08-06 review, Critical 2).
+ */
+function clampContent(composed: string): string {
+  if (composed.length <= DISCORD_CONTENT_LIMIT) return composed;
+  return `${composed.substring(0, DISCORD_CONTENT_LIMIT - 12)}…[truncated]`;
 }
 
 // ─── Embed builders ───────────────────────────────────────────────────────────
@@ -321,23 +372,24 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .addFields(
       {
         name: "🌐 Blocked Origin (Where the Request Came From)",
-        value: `\`${field(p.blockedOrigin, "none — Origin header was missing entirely")}\``,
+        value: clampFieldValue(`\`${field(p.blockedOrigin, "none — Origin header was missing entirely")}\``),
         inline: false,
       },
-      { name: "🔗 tRPC Procedure Targeted", value: `\`${field(p.path, "unknown")}\``,   inline: true  },
-      { name: "📡 HTTP Method",             value: `\`${field(p.method, "unknown")}\``, inline: true  },
-      { name: "🖥️ Attacker IP Address",     value: `\`${field(p.ip, "unknown")}\``,     inline: true  },
-      { name: "🕐 Time of Event (EST)",     value: formatTimestamp(p.occurredAt), inline: true  },
+      { name: "🔗 tRPC Procedure Targeted", value: clampFieldValue(`\`${field(p.path, "unknown")}\``),   inline: true  },
+      { name: "📡 HTTP Method",             value: clampFieldValue(`\`${field(p.method, "unknown")}\``), inline: true  },
+      { name: "🖥️ Attacker IP Address",     value: clampFieldValue(`\`${field(p.ip, "unknown")}\``),     inline: true  },
+      { name: "🕐 Time of Event (EST)",     value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${field(p.userAgent, "none — no user-agent header provided")}\``,
+        value: clampFieldValue(`\`${field(p.userAgent, "none — no user-agent header provided")}\``),
         inline: false,
       },
       {
         name: "✅ Allowed Origins (for reference)",
-        value:
+        value: clampFieldValue(
           "Only requests from the official site domain are allowed. " +
-          "If a legitimate origin is being blocked, add it to `PUBLIC_ORIGIN` in the server config.",
+          "If a legitimate origin is being blocked, add it to `PUBLIC_ORIGIN` in the server config."
+        ),
         inline: false,
       }
     )
@@ -383,16 +435,16 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .addFields(
       {
         name: "🛡️ Which Rate Limiter Was Triggered",
-        value: `\`${field(limiterDisplay, "unknown limiter")}\``,
+        value: clampFieldValue(`\`${field(limiterDisplay, "unknown limiter")}\``),
         inline: false,
       },
-      { name: "🔗 Route / Endpoint Hit",   value: `\`${field(p.path, "unknown")}\``,   inline: true  },
-      { name: "📡 HTTP Method",            value: `\`${field(p.method, "unknown")}\``, inline: true  },
-      { name: "🖥️ Blocked IP Address",     value: `\`${field(p.ip, "unknown")}\``,     inline: true  },
-      { name: "🕐 Time of Event (EST)",    value: formatTimestamp(p.occurredAt), inline: true  },
+      { name: "🔗 Route / Endpoint Hit",   value: clampFieldValue(`\`${field(p.path, "unknown")}\``),   inline: true  },
+      { name: "📡 HTTP Method",            value: clampFieldValue(`\`${field(p.method, "unknown")}\``), inline: true  },
+      { name: "🖥️ Blocked IP Address",     value: clampFieldValue(`\`${field(p.ip, "unknown")}\``),     inline: true  },
+      { name: "🕐 Time of Event (EST)",    value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${field(p.userAgent, "none — no user-agent header provided")}\``,
+        value: clampFieldValue(`\`${field(p.userAgent, "none — no user-agent header provided")}\``),
         inline: false,
       }
     )
@@ -438,26 +490,31 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
     )
     .addFields(
       { name: "❌ Why the Login Failed",
-        value: `\`${field(reasonDisplay, "unknown reason")}\``,
+        value: clampFieldValue(`\`${field(reasonDisplay, "unknown reason")}\``),
         inline: false,
       },
       {
         // targetIdentifier: the sanitized login credential that was used in this attempt.
         // Shows WHAT account was targeted (e.g. "ais***@gmail.com" or "pre***") so @prez
         // can immediately see which account is under attack without exposing the full credential.
+        // The whole composed value (backticks + trailing explainer sentence) is clamped —
+        // budgeting the inner field() call alone left ~104 chars of wrapper unaccounted
+        // for and threw on a long targetIdentifier (2026-08-06 review, Critical 1).
         name: "🎯 Account Targeted (Sanitized — First 3 Chars Only)",
-        value: p.targetIdentifier
-          ? `\`${field(p.targetIdentifier, "unknown — identifier not captured")}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
-          : "`unknown — identifier not captured`",
+        value: clampFieldValue(
+          p.targetIdentifier
+            ? `\`${field(p.targetIdentifier, "unknown — identifier not captured")}\`\n*The first 3 characters of the login credential used in this attempt. Full credential is never logged.*`
+            : "`unknown — identifier not captured`"
+        ),
         inline: false,
       },
-      { name: "🔗 Login Procedure",       value: `\`${field(p.path, "unknown")}\``,   inline: true  },
-      { name: "📡 HTTP Method",           value: `\`${field(p.method, "unknown")}\``, inline: true  },
-      { name: "🖥️ Attacker IP Address",   value: `\`${field(p.ip, "unknown")}\``,     inline: true  },
-      { name: "🕐 Time of Event (EST)",   value: formatTimestamp(p.occurredAt), inline: true  },
+      { name: "🔗 Login Procedure",       value: clampFieldValue(`\`${field(p.path, "unknown")}\``),   inline: true  },
+      { name: "📡 HTTP Method",           value: clampFieldValue(`\`${field(p.method, "unknown")}\``), inline: true  },
+      { name: "🖥️ Attacker IP Address",   value: clampFieldValue(`\`${field(p.ip, "unknown")}\``),     inline: true  },
+      { name: "🕐 Time of Event (EST)",   value: clampFieldValue(formatTimestamp(p.occurredAt)), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${field(p.userAgent, "none — no user-agent header provided")}\``,
+        value: clampFieldValue(`\`${field(p.userAgent, "none — no user-agent header provided")}\``),
         inline: false,
       }
     )
@@ -478,35 +535,45 @@ function buildBruteForceEmbed(
     .setColor(EMBED_COLORS.BRUTE_FORCE)
     .setTitle(`🚨 BRUTE FORCE DETECTED — ${count} Failed Logins in ${windowMins} Minutes`)
     .setDescription(
-      `**@here — Immediate attention recommended.**\n\n` +
-      `**What happened:** The IP address \`${ip}\` has failed to log in **${count} times** ` +
-      `within the last **${windowMins} minutes**. This is a strong signal that someone is ` +
-      `running an automated password-guessing attack (also called a brute-force or credential-stuffing attack).\n\n` +
-      "**What the server did:** Every login attempt was individually blocked. " +
-      "No account was compromised. The IP is also subject to the auth rate limiter (5 attempts/15 min), " +
-      "which means it will start receiving 429 errors if it hasn't already.\n\n" +
-      "**What you should do:**\n" +
-      `1. **Block \`${ip}\` at the firewall/CDN level** — this is the most effective action.\n` +
-      "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one).\n" +
-      "3. If the attack is ongoing, consider temporarily enabling CAPTCHA on the login page.\n" +
-      "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
+      // The whole composed description is clamped — `ip` is attacker-controlled
+      // and unbounded, interpolated twice here with no per-value bound
+      // (2026-08-06 review, Critical 2).
+      clampDescription(
+        `**@here — Immediate attention recommended.**\n\n` +
+        `**What happened:** The IP address \`${ip}\` has failed to log in **${count} times** ` +
+        `within the last **${windowMins} minutes**. This is a strong signal that someone is ` +
+        `running an automated password-guessing attack (also called a brute-force or credential-stuffing attack).\n\n` +
+        "**What the server did:** Every login attempt was individually blocked. " +
+        "No account was compromised. The IP is also subject to the auth rate limiter (5 attempts/15 min), " +
+        "which means it will start receiving 429 errors if it hasn't already.\n\n" +
+        "**What you should do:**\n" +
+        `1. **Block \`${ip}\` at the firewall/CDN level** — this is the most effective action.\n` +
+        "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one).\n" +
+        "3. If the attack is ongoing, consider temporarily enabling CAPTCHA on the login page.\n" +
+        "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
+      )
     )
     .addFields(
-      { name: "🖥️ Attacker IP Address",        value: `\`${field(ip, "unknown")}\``,                   inline: true  },
-      { name: "🔢 Failed Login Count",          value: `**${count}** failures in ${windowMins} min`,   inline: true  },
-      { name: "⏱️ Detection Window",            value: `Last **${windowMins} minutes** (sliding)`,     inline: true  },
-      { name: "🕐 Escalation Time (EST)",       value: formatTimestamp(occurredAt),                    inline: true  },
-      { name: "🛡️ Threshold",                   value: `\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``, inline: true },
+      { name: "🖥️ Attacker IP Address",        value: clampFieldValue(`\`${field(ip, "unknown")}\``),                   inline: true  },
+      { name: "🔢 Failed Login Count",          value: clampFieldValue(`**${count}** failures in ${windowMins} min`),   inline: true  },
+      { name: "⏱️ Detection Window",            value: clampFieldValue(`Last **${windowMins} minutes** (sliding)`),     inline: true  },
+      { name: "🕐 Escalation Time (EST)",       value: clampFieldValue(formatTimestamp(occurredAt)),                    inline: true  },
+      { name: "🛡️ Threshold",                   value: clampFieldValue(`\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``), inline: true },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
-        value: `\`${field(userAgent, "none — no user-agent header provided")}\``,
+        value: clampFieldValue(`\`${field(userAgent, "none — no user-agent header provided")}\``),
         inline: false,
       },
       {
+        // "Recommended Immediate Action" — the composed value wraps field(ip)
+        // in backticks AND appends static explainer text after it; budgeting
+        // field()'s inner clamp alone left this ~104 chars over Discord's 1024
+        // cap once `ip` was long (2026-08-06 review, Critical 1).
         name: "🔒 Recommended Immediate Action",
-        value:
+        value: clampFieldValue(
           `Block \`${field(ip, "unknown")}\` at the firewall/CDN level — IP Access Rules.\n` +
-          "Set rule: **Block** | **IP Address** | value: the IP above.",
+          "Set rule: **Block** | **IP Address** | value: the IP above."
+        ),
         inline: false,
       }
     )
@@ -526,6 +593,23 @@ function buildEmbed(p: SecurityAlertPayload): EmbedBuilder {
 /** Test-only surface for the embed builder. Not used by production paths. */
 export function buildEmbedForTest(payload: SecurityAlertPayload) {
   return buildEmbed(payload);
+}
+
+/**
+ * Test-only surface for the brute-force embed builder, mirroring
+ * buildEmbedForTest. buildEmbed()'s dispatcher only reaches
+ * CSRF_BLOCK | RATE_LIMIT | AUTH_FAIL, so nothing else in this file exercises
+ * buildBruteForceEmbed directly — that gap is why Critical 2 (2026-08-06
+ * review) shipped with zero test coverage. Not used by production paths.
+ */
+export function buildBruteForceEmbedForTest(
+  ip: string,
+  count: number,
+  windowMs: number,
+  userAgent: string | null | undefined,
+  occurredAt: number,
+) {
+  return buildBruteForceEmbed(ip, count, windowMs, userAgent, occurredAt);
 }
 
 // ─── Channel fetch helper ─────────────────────────────────────────────────────
@@ -582,12 +666,21 @@ async function postBruteForceAlert(
   const channel = await fetchSecurityChannel(tag);
   if (!channel) return;
 
-  const embed = buildBruteForceEmbed(ip, count, windowMs, userAgent, occurredAt);
-
+  // buildBruteForceEmbed() MUST be inside the try, matching the fix already
+  // applied to buildEmbed() (commit 45c5457ab): discord.js throws on an
+  // over-long field value, and building the embed OUTSIDE the try let that
+  // throw escape and kill the @here alert silently — for BRUTE_FORCE
+  // specifically, that means the attacker's own request suppresses the alarm
+  // meant to catch them (2026-08-06 review, Critical 2).
   try {
-    // @here mention in the message content + embed for maximum visibility
+    const embed = buildBruteForceEmbed(ip, count, windowMs, userAgent, occurredAt);
+    // @here mention in the message content + embed for maximum visibility.
+    // content is clamped as a fully composed string — `ip` is
+    // attacker-controlled and unbounded.
     await channel.send({
-      content: `@here 🚨 **BRUTE FORCE ALERT** — IP \`${ip}\` has made **${count} failed login attempts** in the last ${Math.round(windowMs / 1000 / 60)} minutes. Immediate review recommended.`,
+      content: clampContent(
+        `@here 🚨 **BRUTE FORCE ALERT** — IP \`${ip}\` has made **${count} failed login attempts** in the last ${Math.round(windowMs / 1000 / 60)} minutes. Immediate review recommended.`
+      ),
       embeds: [embed],
     });
     console.log(
@@ -596,7 +689,7 @@ async function postBruteForceAlert(
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Failed to send brute-force embed: ${logSafe(msg)} | IP=${logSafe(ip)}`);
+    console.error(`${tag} Failed to build or send brute-force embed: ${logSafe(msg)} | IP=${logSafe(ip)}`);
   }
 }
 
