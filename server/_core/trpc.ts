@@ -51,6 +51,7 @@ import { notifyOwner } from "./notification";
 import { postSecurityAlert } from "../discord/discordSecurityAlert";
 import type { TrpcContext } from "./context";
 import { logSafe } from "./logSafe";
+import { resolveClientIdentity } from "./clientIdentity";
 
 // ─── CSRF-safe origin set ─────────────────────────────────────────────────────
 /**
@@ -371,7 +372,11 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
   const req = ctx.req;
   const method = req.method?.toUpperCase() ?? "UNKNOWN";
   const origin = req.get("origin");
-  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+  // req.ip under `trust proxy 1` is the RIGHTMOST XFF token = Railway's own
+  // edge node, shared by every visitor. It was persisted to security_events.ip
+  // AND used as the Discord dedup key, so unrelated CSRF blocks deduped
+  // against each other across ~31 shared hops (2026-08-06 audit).
+  const ip = resolveClientIdentity(req) || "unknown";
 
   // GET requests are tRPC queries — read-only, no CSRF risk.
   // Only POST (mutations) need the Origin check.
@@ -455,7 +460,11 @@ export const publicProcedure = t.procedure.use(csrfOriginCheck);
  */
 const logStripeRequest = t.middleware(async ({ ctx, next, path }) => {
   const req = ctx.req;
-  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+  // req.ip under `trust proxy 1` is the RIGHTMOST XFF token = Railway's own
+  // edge node, shared by every visitor. It was persisted to security_events.ip
+  // AND used as the Discord dedup key, so unrelated CSRF blocks deduped
+  // against each other across ~31 shared hops (2026-08-06 audit).
+  const ip = resolveClientIdentity(req) || "unknown";
   const origin = req.get("origin") ?? "NOT_SET";
   const method = req.method?.toUpperCase() ?? "UNKNOWN";
   console.log(

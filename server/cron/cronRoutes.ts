@@ -29,6 +29,7 @@
 
 import type { Express, Request, Response } from "express";
 import { requireCronSecret } from "./cronAuth";
+import { resolveClientIdentity } from "../_core/clientIdentity";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
@@ -78,7 +79,11 @@ function mountJob(app: Express, path: string, label: string, runner: CronJobRunn
     if (!requireCronSecret(req, res, label)) return;
 
     const reqAt = new Date().toISOString();
-    console.log(`[Cron:${label}] [INPUT] POST ${path} at ${reqAt} ip=${req.ip ?? "?"}`);
+    // Cosmetic log line on an internal, secret-authed path — migrated for
+    // consistency with the single client-identity surface (2026-08-06 audit).
+    console.log(
+      `[Cron:${label}] [INPUT] POST ${path} at ${reqAt} ip=${resolveClientIdentity(req) || "?"}`
+    );
 
     const outcome = runner.trigger();
 

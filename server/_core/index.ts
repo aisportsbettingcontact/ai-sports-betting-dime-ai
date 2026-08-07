@@ -11,6 +11,7 @@ import {
   resolveClientIp,
   sendRateLimitResponse,
 } from "./trpcRateLimitPolicy";
+import { resolveClientIdentity, identitySource } from "./clientIdentity";
 import {
   cfConnectingIp,
   edgeMode,
@@ -253,12 +254,10 @@ const globalApiLimiter = rateLimit({
   // across unrelated clients. See clientIpKey.
   keyGenerator: req => `global:${clientIpKey(req)}`,
   handler: (req, res, _next) => {
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.ip ??
-      "unknown";
+    // Reuse the SAME identity the keyGenerator used. Re-deriving from raw XFF
+    // wrote the Cloudflare PoP into security_events and every Discord alert
+    // while the limiter itself was correctly keyed (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "global", ua);
     sendRateLimitResponse(req, res, "Too many requests. Please slow down.");
@@ -278,12 +277,10 @@ const authLimiter = rateLimit({
   },
   keyGenerator: req => `auth:${clientIpKey(req)}`,
   handler: (req, res, _next) => {
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.ip ??
-      "unknown";
+    // Reuse the SAME identity the keyGenerator used. Re-deriving from raw XFF
+    // wrote the Cloudflare PoP into security_events and every Discord alert
+    // while the limiter itself was correctly keyed (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "auth", ua);
     sendRateLimitResponse(
@@ -312,12 +309,10 @@ const trpcAuthLimiter = rateLimit({
     return `${clientIpKey(req)}:trpc_auth`;
   },
   handler: (req, res, _next) => {
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.ip ??
-      "unknown";
+    // Reuse the SAME identity the keyGenerator used. Re-deriving from raw XFF
+    // wrote the Cloudflare PoP into security_events and every Discord alert
+    // while the limiter itself was correctly keyed (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "trpc_auth", ua);
     sendRateLimitResponse(
@@ -401,19 +396,20 @@ async function startServer() {
   app.use((req, res, next) => {
     const start = Date.now();
     const ts = new Date().toISOString();
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.socket?.remoteAddress ??
-      "unknown";
+    // The audit found cf-connecting-ip — the ONLY place the true visitor
+    // appears behind Cloudflare — was never logged anywhere. resolveClientIdentity
+    // resolves the true client; identitySource records which branch produced
+    // it (cf-connecting-ip / xff-leftmost / req.ip) so it's visible in Railway
+    // logs (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
+    const ipSrc = identitySource(req);
     // Decide at request-time whether this request falls in the 10% sample.
     // The same flag is reused on the response so both log lines are emitted
     // together or suppressed together for normal requests.
     const sampled = Math.random() < 0.1;
     if (sampled) {
       console.log(
-        `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)}` +
+        `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)} ipSrc=${ipSrc}` +
           ` host=${logSafe(req.headers["host"] ?? "-")}` +
           ` x-forwarded-for=${logSafe(req.headers["x-forwarded-for"] ?? "-")}` +
           ` x-forwarded-proto=${logSafe(req.headers["x-forwarded-proto"] ?? "-")}` +
@@ -594,14 +590,13 @@ async function startServer() {
     // auth (#370). Only a CONFIRMED mismatch fails; "unknown" never does.
     const schemaMismatch = shouldFailHealthForSchema();
     const healthy = dbOk && !schemaMismatch;
-    const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0]
-        .trim() ??
-      req.socket?.remoteAddress ??
-      "unknown";
+    // See the top-level request logger above: resolveClientIdentity resolves
+    // the true client; identitySource records which branch produced it
+    // (2026-08-06 audit).
+    const ip = resolveClientIdentity(req) || "unknown";
+    const ipSrc = identitySource(req);
     console.log(
-      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} db.state=${circuit.state} dbOk=${dbOk} schema=${currentSchemaVerdict()}`
+      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} ipSrc=${ipSrc} db.state=${circuit.state} dbOk=${dbOk} schema=${currentSchemaVerdict()}`
     );
     // Integration state is REPORTED but deliberately does NOT drive the status
     // code. Railway probes this endpoint: returning 503 because Discord's
@@ -851,12 +846,10 @@ async function startServer() {
       return `${clientIpKey(req)}:stripe_checkout`;
     },
     handler: (req, res, _next) => {
-      const ip =
-        (req.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          .trim() ??
-        req.ip ??
-        "unknown";
+      // Reuse the SAME identity the keyGenerator used. Re-deriving from raw
+      // XFF wrote the Cloudflare PoP into security_events and every Discord
+      // alert while the limiter itself was correctly keyed (2026-08-06 audit).
+      const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       console.warn(
         `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
@@ -889,12 +882,10 @@ async function startServer() {
       return `waitlist:${clientIpKey(req)}`;
     },
     handler: (req, res, _next) => {
-      const ip =
-        (req.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          .trim() ??
-        req.ip ??
-        "unknown";
+      // Reuse the SAME identity the keyGenerator used. Re-deriving from raw
+      // XFF wrote the Cloudflare PoP into security_events and every Discord
+      // alert while the limiter itself was correctly keyed (2026-08-06 audit).
+      const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       console.warn(
         `[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
@@ -935,12 +926,10 @@ async function startServer() {
     passOnStoreError: true,
     keyGenerator: req => `${clientIpKey(req)}:public_feed`,
     handler: (req, res, _next) => {
-      const ip =
-        (req.headers["x-forwarded-for"] as string | undefined)
-          ?.split(",")[0]
-          .trim() ??
-        req.ip ??
-        "unknown";
+      // Reuse the SAME identity the keyGenerator used. Re-deriving from raw
+      // XFF wrote the Cloudflare PoP into security_events and every Discord
+      // alert while the limiter itself was correctly keyed (2026-08-06 audit).
+      const ip = resolveClientIdentity(req) || "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
       fireRateLimitEvent(ip, req.path, req.method, "public_feed", ua);
       sendRateLimitResponse(
