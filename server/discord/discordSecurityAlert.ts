@@ -248,11 +248,13 @@ function formatTimestamp(epochMs: number): string {
  * "Recommended Immediate Action" field) — both threw in production-shaped
  * input (2026-08-06 review, Critical 1).
  */
-const DISCORD_FIELD_MAX = 1000;
-
+// NOTE (2026-08-06 review, Minor): field() no longer truncates. clampFieldValue()
+// below is the hard guarantee, and it clamps the FULLY COMPOSED value. Truncating
+// in both places produced a garbled double-cut — `…[tru…[truncated]` — plus a
+// dangling unclosed backtick, because clampFieldValue's cut landed part-way
+// through field()'s own marker. field() now only resolves the fallback.
 function field(value: string | null | undefined, fallback: string): string {
-  const v = value === null || value === undefined || value === "" ? fallback : value;
-  return v.length > DISCORD_FIELD_MAX ? `${v.substring(0, DISCORD_FIELD_MAX)}…[truncated]` : v;
+  return value === null || value === undefined || value === "" ? fallback : value;
 }
 
 /** Discord's hard cap on an embed field value. */
