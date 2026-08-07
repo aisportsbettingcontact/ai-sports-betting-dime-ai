@@ -2764,10 +2764,17 @@ export async function runMlbCycleOnce(): Promise<void> {
     );
     return;
   }
-  mlbCycleInFlight = true;
+  // These must be declared OUTSIDE the try — `finally` needs `watchdogTimer` in
+  // scope to clear it. They are computed BEFORE the flag is set so that nothing
+  // whatsoever sits between `mlbCycleInFlight = true` and `try {`: any statement
+  // in that gap that could ever throw would set the flag and skip the `finally`
+  // that releases it, wedging the guard closed and stopping MLB ingestion for
+  // the life of the process (2026-08-07 review, Minor 2).
   const watchdogMs = mlbCycleWatchdogMsOverride ?? MLB_CYCLE_WATCHDOG_MS;
   let deadlineFired = false;
   let watchdogTimer: ReturnType<typeof setTimeout> | undefined;
+
+  mlbCycleInFlight = true;
   try {
     const work = mlbCycleWork();
 
