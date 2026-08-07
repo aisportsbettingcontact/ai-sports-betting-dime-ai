@@ -50,6 +50,7 @@ All merged to `main`, each one deployed to both Railway services, each verified 
 | **#378** | 20 | Stage 3 — the plan and 17 independently shippable issues |
 | **#379** | 8 | **ISSUE-017 — my own RAILPACK finding REFUTED by me.** The Dockerfile is the builder |
 | **#380** | 5 | Completed that correction — 8 stale references #379 missed |
+| **#385** | 5 | Stage 4 — Wave 0 complete: **DR-015** (Stage 3 plan approved), the corpus manifest, dark-state preserved |
 | **#387** | 22 | **ISSUE-006** artifact gate + **ISSUE-007** `observe_by` clock — the checks that catch my own drift |
 | **#388** | 8 | **ISSUE-008** token ledger — $6,272.08 spent, 87.7% of the cost saved by caching |
 | **#391** | 5 | **ISSUE-009** ledger-append-on-merge — a merge stops being an unobserved event |
@@ -69,7 +70,7 @@ All merged to `main`, each one deployed to both Railway services, each verified 
 
 ## 4. What exists now — the artifact system
 
-**82 files under `os/`.** The map:
+**83 files under `os/`** — `git ls-files os | wc -l`. The map:
 
 | Path | What it holds |
 |---|---|
@@ -112,9 +113,11 @@ All merged to `main`, each one deployed to both Railway services, each verified 
 `os-ledger` orphan branch) and `.github/workflows/os-observe-crons.yml` (daily 10:40 UTC,
 `fetch-depth: 0`, read-only).
 
-**Test count on `main`: 244**, across 16 files. Everything rides the already-required `Vitest`
-check — **this mission added no new required status check**, deliberately, so nothing it built
-could block an unrelated merge.
+**Test count on `main`: 231**, across 15 files — 213 in the 14 files under `shared/os` +
+`scripts/os` (`npx vitest run shared/os scripts/os`), plus 18 in
+`server/mlbRecalibrationGate.test.ts`, which that command does not match. Everything rides the
+already-required `Vitest` check — **this mission added no new required status check**,
+deliberately, so nothing it built could block an unrelated merge.
 
 Note the repo moved underneath that reasoning: the required set grew from **3 contexts to 9** on
 2026-08-05T15:09 PDT, and `Secret Scan (gitleaks)` is now among them. An earlier draft of this
@@ -307,3 +310,43 @@ Kept here because they are the reason the record can be trusted:
   may be the mutation that is wrong, not the test.
 - **Corrections are dated and recorded, never silently edited.** OBS-0002 carries two.
 - **Never widen a measure to clear a finding.**
+
+## 14. Corrections to this record — 2026-08-07
+
+Three defects found by auditing this file against the repository it describes. Recorded here rather
+than silently edited, per §13.
+
+**1. §3 omitted #385 — a whole PR of the mission was missing from "every PR, in order."** The table
+as merged ran #380 → #387, so a fresh context resuming from this file would not have found DR-015
+or `WAVE-0-COMPLETE.md`. The row is restored above. The program's complete set is **24 PRs**: the 22
+originally tabled, plus #385, plus #428 (this record). Three independent discriminators return that
+same set and are worth keeping as the way to re-derive it —
+
+```bash
+# 1. title convention
+gh pr list --state all --limit 3000 --json number,title \
+  -q '.[] | select(.title|test("^(os\\(|fix\\(os\\)|os:|incident:)")) | .number'
+# 2. branch prefix — every mission PR shipped from os/*
+gh pr list --state all --limit 3000 --json number,headRefName \
+  -q '.[] | select(.headRefName|startswith("os/")) | .number'
+# 3. diff paths — finds 23 of 24; #395 touched only INCIDENTS.md, which is why the
+#    title and branch discriminators are not redundant with this one
+```
+
+**2. §4 said "82 files under `os/`" — it was 83 at this record's own merge commit.** The count was
+taken before the file counting itself had landed. `git ls-tree -r --name-only 203c12fdb | grep -c
+'^os/'` returns 83. Now stated with the command that reproduces it.
+
+**3. §5 said "244 tests, across 16 files" — REFUTED. The real figures are 231 across 15.** No method
+reproduces 244 or 16. The mission's test files have not changed since this record merged
+(`git log 203c12fdb..origin/main -- shared/os scripts/os server/mlbRecalibrationGate.test.ts` is
+empty); 15 mission test files existed at that merge commit; `server/mlbDriftDetector.test.ts` — the
+only candidate 16th file — has never existed on any ref
+(`git log --all --diff-filter=A -- server/mlbDriftDetector.test.ts` is empty); and the static
+`it(`/`test(` count is 216, also not 244. So the number was already wrong when written, not made
+wrong by later drift.
+
+This is `numbers-in-narratives-are-usually-generated`, fired against the record whose §9 lists it.
+The lesson holds in the first person: a file that names its own failure modes does not thereby
+become exempt from them. The two counts that mattered were both stated without the command that
+produces them — which is why both are now stated with it.
