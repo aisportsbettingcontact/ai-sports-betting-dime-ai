@@ -53,8 +53,10 @@ export function mountDateJob(
 
     const reqAt = new Date().toISOString();
     const clientIpForLog = sanitizeForLog(resolveClientIdentity(req) || "?");
+    const dateForLog =
+      raw == null ? "default-window" : sanitizeForLog(String(raw));
     console.log(
-      `[Cron:${label}] [INPUT] POST ${path} date=${raw ?? "default-window"} at ${reqAt} ip=${clientIpForLog}`
+      `[Cron:${label}] [INPUT] POST ${path} date=${dateForLog} at ${reqAt} ip=${clientIpForLog}`
     );
 
     const outcome = runner.trigger();
