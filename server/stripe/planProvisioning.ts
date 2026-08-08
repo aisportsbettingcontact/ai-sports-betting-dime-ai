@@ -841,6 +841,25 @@ export async function setIntervalHidden(
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
+  // Hiding the plan's DEFAULT leaves it with a flag nothing can honour:
+  // defaultPriceForMode filters `!hidden` BEFORE it looks for isDefault, so the
+  // plan silently falls back to whichever interval sorts first — a different
+  // cadence from the one every surface advertises, with no error anywhere.
+  // Observed on dime-max, whose default sat on a hidden daily row while the
+  // card read $199.99/month; a bare ?plan=dime-max resolved to the weekly.
+  // Refuse it in the same shape as the archived check in setIntervalDefault.
+  if (hidden) {
+    const rows = (await withCircuitBreaker(async () =>
+      db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1)
+    )) as Array<{ id: number; isDefault: boolean }>;
+    const target = rows[0];
+    if (!target) throw new Error(`price ${priceId} not found`);
+    if (target.isDefault) {
+      throw new Error(
+        `price ${priceId} is this plan's default — hiding it would leave the plan with no usable default, and checkout would silently charge whichever interval sorts first. Make a visible interval the default first, then hide this one.`
+      );
+    }
+  }
   await withCircuitBreaker(async () =>
     db.update(planPrices).set({ hidden }).where(eq(planPrices.id, priceId))
   );
@@ -858,12 +877,26 @@ export async function setIntervalDefault(priceId: number): Promise<void> {
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
     db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1)
-  )) as Array<{ id: number; planId: number; active: boolean }>;
+  )) as Array<{
+    id: number;
+    planId: number;
+    active: boolean;
+    hidden: boolean;
+  }>;
   const target = rows[0];
   if (!target) throw new Error(`price ${priceId} not found`);
   if (!target.active) {
     throw new Error(
       `price ${priceId} is archived — an inactive interval cannot be the default`
+    );
+  }
+  // Same reasoning as archived: a hidden interval is retained but never offered
+  // at checkout, so flagging it default produces a plan whose default cannot be
+  // honoured — defaultPriceForMode filters `!hidden` first and falls through to
+  // whatever sorts first. The flag would look set in admin and mean nothing.
+  if (target.hidden) {
+    throw new Error(
+      `price ${priceId} is hidden — a hidden interval is never offered at checkout, so it cannot be the default. Unhide it first, or make a visible interval the default.`
     );
   }
   // Clear first, then set: the target ends up as the only default even if it
