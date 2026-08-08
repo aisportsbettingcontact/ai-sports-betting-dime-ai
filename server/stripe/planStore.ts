@@ -289,7 +289,36 @@ export function defaultPriceForMode(
   const inMode = plan.prices.filter(
     pr => pr.active && !pr.hidden && pr.livemode === wantLivemode
   );
-  return inMode.find(pr => pr.isDefault) ?? inMode[0] ?? null;
+  const flagged = inMode.find(pr => pr.isDefault);
+  if (flagged) return flagged;
+
+  // No VISIBLE row carries isDefault, so the fallback below picks whichever row
+  // happens to sort first. That is a misconfiguration, not a preference, and it
+  // used to happen silently — which is how a plan can advertise one cadence on
+  // every surface and open a checkout for another. `publicListCheckoutPrices`
+  // exists to stop exactly that ("a plan whose default price is weekly would
+  // advertise 'billed monthly' while opening a weekly checkout"), but it only
+  // protects callers that pass an explicit `price=`; this path is what a bare
+  // `?plan=<slug>` gets.
+  //
+  // The most common cause is an isDefault row that is ALSO hidden: the filter
+  // above removes it, so the flag stops meaning anything. Say so by name rather
+  // than resolving quietly.
+  const hiddenDefault = plan.prices.find(
+    pr => pr.isDefault && pr.active && pr.livemode === wantLivemode && pr.hidden
+  );
+  const chosen = inMode[0] ?? null;
+  if (hiddenDefault) {
+    console.warn(
+      `${TAG} plan="${plan.slug}" has its default price (id=${hiddenDefault.id}, ${hiddenDefault.interval ?? "one-time"}) marked HIDDEN, so it is not offered at checkout. ` +
+        `Falling back to id=${chosen?.id ?? "none"} (${chosen?.interval ?? "none"}). A bare ?plan=${plan.slug} checkout will charge that, not the hidden default — set isDefault on a visible row.`
+    );
+  } else if (chosen) {
+    console.warn(
+      `${TAG} plan="${plan.slug}" has no visible price marked isDefault; falling back to the first by sortOrder (id=${chosen.id}, ${chosen.interval ?? "one-time"}).`
+    );
+  }
+  return chosen;
 }
 
 type RestockConfig = Pick<

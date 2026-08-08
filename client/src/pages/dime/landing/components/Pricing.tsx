@@ -45,18 +45,37 @@ function TierCard({ tier }: { tier: Tier }) {
   const monthly =
     data?.prices.find(p => p.interval === "month" && p.intervalCount === 1) ??
     null;
-  const monthlyCents = monthly?.amountCents ?? null;
+
+  // ONE row drives both the price shown and the price linked, so the card can
+  // never advertise one cadence and open a checkout for another. Monthly is
+  // preferred because that is what this section is designed around; if a plan
+  // has no monthly row, the first sellable one is used for BOTH — a card that
+  // says "billed weekly · $74.99" is honest, one that says "billed monthly"
+  // over a weekly checkout is not.
+  const chosen = monthly ?? data?.prices[0] ?? null;
   const fallbackCents = Math.round(
     parseFloat(tier.price.replace("$", "")) * 100
   );
-  const shownCents = monthlyCents ?? fallbackCents;
+  const shownCents = chosen?.amountCents ?? fallbackCents;
   const perDay = money(Math.round(shownCents / DAYS_PER_MONTH));
 
+  // The cadence actually being sold, so the footnote cannot claim "monthly"
+  // over a weekly or annual price.
+  const billedLabel = chosen
+    ? chosen.interval
+      ? `billed ${chosen.interval === "month" ? "monthly" : chosen.interval === "year" ? "yearly" : chosen.interval === "week" ? "weekly" : "daily"}`
+      : "one-time"
+    : "billed monthly";
+
+  // Never link to a checkout whose price row we cannot name: without `price=`
+  // the server resolves the plan DEFAULT, which may be a different cadence
+  // entirely (see defaultPriceForMode). While the query is in flight, or if a
+  // plan has no sellable price, the CTA stays on this section instead.
   const href =
     LANDING_MODE === "paid" && slug
-      ? monthly
-        ? `/checkout?plan=${slug}&price=${monthly.id}`
-        : `/checkout?plan=${slug}`
+      ? chosen
+        ? `/checkout?plan=${slug}&price=${chosen.id}`
+        : "/#pricing"
       : "/#waitlist";
 
   const label = LANDING_MODE === "paid" ? tier.cta.paid : tier.cta.waitlist;
@@ -87,7 +106,7 @@ function TierCard({ tier }: { tier: Tier }) {
           <span className="tier-cta-price num">{perDay} / day</span>
         </Link>
         <span className="tier-billed">
-          billed monthly · {money(shownCents)}
+          {billedLabel} · {money(shownCents)}
         </span>
       </div>
     </article>
