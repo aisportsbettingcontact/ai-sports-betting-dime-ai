@@ -26,13 +26,27 @@
  *   - POST /api/cron/stripe-reconcile → Stripe↔DB reconciliation (hand-rolled)
  *   - GET  /api/cron/status           → run-lock state for all jobs (observability)
  *
- * STILL NOT MOUNTED (audit M-208, CRON-2/3): outcome ingestion, closing-line
- * capture and the backtest driver have no cron entry point, so they remain
- * dependent on the in-process scheduler. captureClosingLines() exists at
- * server/mlbScheduleHistoryService.ts and is reachable only from
- * mlbScheduleHistoryScheduler.ts. Wiring them adds new authenticated public
- * HTTP surface and is deliberately left to its own reviewed change rather than
- * folded into a correctness PR.
+ * SCOPE (second pass — MLB learning-loop ingestion, audit M-208). These three
+ * closed the gap the line above used to describe: outcome ingestion, closing-line
+ * capture and backtest enrollment previously ran ONLY inside the in-process
+ * scheduler, so with DISABLE_BACKGROUND_JOBS set the model silently stopped
+ * being graded.
+ *   - POST /api/cron/mlb-outcomes?date=       → ingestMlbOutcomes()
+ *       default window: last 2 PT dates (gameDate is a PT calendar date, and a
+ *       late West Coast final must survive the UTC rollover)
+ *   - POST /api/cron/mlb-closing-capture      → captureClosingLines()
+ *       no date argument — it only ever scrapes the current slate
+ *   - POST /api/cron/mlb-backtest?date=       → runMultiMarketBacktestForDate()
+ *       SELF-HEAL only: onlyUnenrolled=true, runKProps=FALSE, default window the
+ *       last 3 ET dates. runKProps must stay false until the K walk-forward
+ *       re-fit lands — K_CALIBRATION_FACTOR_OVER/UNDER are still the pre-M-204
+ *       literals, and enrolling against constants that are about to change
+ *       pollutes the evaluation set the re-fit is judged on. For the same
+ *       reason, hold `?date=` BULK BACKFILL runs until after the re-fit; the
+ *       rolling default window is safe because it only fills genuine gaps.
+ *
+ * `?date=` is validated (YYYY-MM-DD) and rejected with 400 rather than silently
+ * falling back to the default window.
  *
  * DELIBERATELY NOT wired here: MLB model sync. runMlbModelForDate() spawns
  * /usr/bin/python3 (400k Monte-Carlo sims) which fails on Railway with
@@ -50,6 +64,15 @@ import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
 import { runBetGradeCycle, runBetGradeSweep } from "../betAutoGradeScheduler";
 import { reconcileStripeSubscriptions, formatReconcileReport } from "../stripe/reconcile";
 import { billingAlert } from "../_core/billingAlerts";
+import { ingestMlbOutcomes } from "../mlbOutcomeIngestor";
+import { captureClosingLines } from "../mlbScheduleHistoryService";
+import { runMultiMarketBacktestForDate } from "../mlbMultiMarketBacktest";
+import {
+  makeBacktestWork,
+  makeClosingCaptureWork,
+  makeOutcomesWork,
+} from "./mlbLoopJobs";
+import { mountDateJob } from "./mountDateJob";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -86,6 +109,54 @@ const betGradeRunner = new CronJobRunner("bet-grade", async () => {
 const betGradeSweepRunner = new CronJobRunner("bet-grade-sweep", async () => {
   await runBetGradeSweep("cron_bet_grade_sweep");
 });
+
+// ── MLB learning loop (audit M-208) ──────────────────────────────────────────
+//
+// Outcome ingestion, closing-line capture and backtest enrollment previously
+// existed ONLY inside the in-process scheduler, which sits behind
+// DISABLE_BACKGROUND_JOBS. With that flag set on Railway the learning loop
+// simply never runs — no error, the model just stops being graded. These three
+// endpoints give it the same cron-triggered path the other jobs already have,
+// under the same single-flight run-lock.
+
+/** Date stash for the date-aware jobs; set by mountDateJob before trigger(). */
+let mlbOutcomesDate: string | null = null;
+let mlbBacktestDate: string | null = null;
+
+// Outcome ingestion — writes actual scores + the five Brier columns.
+// Default window is the last 2 PT dates so a late-night final is still picked up
+// on the next morning's run. gameDate is a PT calendar date (schema), so the
+// zone here must be PT, not UTC.
+const mlbOutcomesRunner = new CronJobRunner(
+  "mlb-outcomes",
+  makeOutcomesWork(() => mlbOutcomesDate, d => ingestMlbOutcomes(d))
+);
+
+// Closing-line capture — locks the closing odds snapshot for today's slate.
+// Takes no date argument: it only ever scrapes the current slate.
+const mlbClosingCaptureRunner = new CronJobRunner(
+  "mlb-closing-capture",
+  makeClosingCaptureWork(() => captureClosingLines())
+);
+
+// Backtest SELF-HEAL — enrolls FINAL games that have no mlb_game_backtest rows.
+//
+// runKProps is deliberately FALSE. The K-props backtest is date-scoped, so
+// looping N unenrolled games with true would re-run the whole date N times; the
+// mlb-cycle cron already runs it once per cycle. It also decouples this endpoint
+// from K_CALIBRATION_FACTOR_OVER/UNDER, which are still the pre-M-204 literals
+// awaiting a walk-forward re-fit — enrolling against constants that are about to
+// change would pollute the very evaluation set the re-fit is judged on.
+//
+// The default is a 3-day ET rolling window: self-heal, not backfill. A `?date=`
+// bulk backfill should wait until after the K re-fit for the same reason.
+const mlbBacktestRunner = new CronJobRunner(
+  "mlb-backtest",
+  makeBacktestWork(
+    () => mlbBacktestDate,
+    d => runMultiMarketBacktestForDate(d, { onlyUnenrolled: true, runKProps: false })
+  )
+);
 
 function sanitizeForLog(value: string): string {
   return value.replace(/[\r\n]/g, "");
@@ -129,6 +200,15 @@ export function registerCronRoutes(app: Express): void {
   mountJob(app, "/api/cron/mlb-cycle", "mlb-cycle", mlbCycleRunner);
   mountJob(app, "/api/cron/bet-grade", "bet-grade", betGradeRunner);
   mountJob(app, "/api/cron/bet-grade-sweep", "bet-grade-sweep", betGradeSweepRunner);
+
+  // MLB learning loop (M-208).
+  mountDateJob(app, "/api/cron/mlb-outcomes", "mlb-outcomes", mlbOutcomesRunner, d => {
+    mlbOutcomesDate = d;
+  });
+  mountJob(app, "/api/cron/mlb-closing-capture", "mlb-closing-capture", mlbClosingCaptureRunner);
+  mountDateJob(app, "/api/cron/mlb-backtest", "mlb-backtest", mlbBacktestRunner, d => {
+    mlbBacktestDate = d;
+  });
 
   // MLB All-Star Game (AL vs NL) seed/refresh. Unlike the fire-and-forget jobs
   // above, this runs synchronously and returns the book-vs-model tail + audit so
@@ -209,6 +289,9 @@ export function registerCronRoutes(app: Express): void {
         "mlb-cycle": mlbCycleRunner.state,
         "bet-grade": betGradeRunner.state,
         "bet-grade-sweep": betGradeSweepRunner.state,
+        "mlb-outcomes": mlbOutcomesRunner.state,
+        "mlb-closing-capture": mlbClosingCaptureRunner.state,
+        "mlb-backtest": mlbBacktestRunner.state,
       },
     });
   });

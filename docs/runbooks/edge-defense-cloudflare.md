@@ -136,13 +136,17 @@ stay green during a Cloudflare-edge outage).
 12. **Soak in `log`:** set `EDGE_MODE=log`, restart. Watch 15–30 min of real traffic:
     - No `edge_would_deny` on legitimate traffic (⇒ CF is injecting the secret correctly).
     - `edge_origin_ingress_anomaly` events should be ~zero (⇒ all traffic is arriving through CF).
+      **This count is a lower bound, not a measurement** — ingress on the `www` hostname is
+      redirected before the origin lock and is never counted. Read **§7** before treating a low
+      number here as evidence that traffic is arriving through Cloudflare.
     - `cf-connecting-ip` resolves to real client IPs (spot-check limiter behavior).
     - **If legit traffic warns, STOP and fix CF injection before enforcing.**
 13. **Enforce:** set `EDGE_MODE=on`, restart. Run §4 verification.
 14. **Alerting:** page on the CRITICAL "EDGE_MODE=on with no secret" line and on any spike of
     `edge_origin_ingress_anomaly`. Add an **external synthetic monitor through the Cloudflare
     hostname** (Railway's `/health` probes the origin directly and stays green during a CF outage —
-    it will not catch an edge failure).
+    it will not catch an edge failure). Monitor the **`www` hostname explicitly** — no counter,
+    alert, or digest covers it today. See **§7**.
 
 ## 4. Verification (run after `EDGE_MODE=on`)
 
@@ -202,3 +206,178 @@ Manual spot-checks:
   the refresh PR through the normal reviewed flow.
 - **Turnstile:** app-embedded widget on `/login` and sensitive forms, verified server-side — never an
   edge HTML interstitial on the XHR path (accessibility).
+
+## 7. Measurement gap — the `www` hostname is not measured (recorded 2026-08-07)
+
+**Every `edge_origin_ingress_anomaly` count this project has ever produced is a lower bound on
+direct-origin ingress, not a measurement of it.** Ingress on the `www` hostname is redirected away
+before the origin lock runs, so it is neither blocked nor counted.
+
+**Calibrate the size of that undercount — it is bounded, not unknown.** The only requests the
+counter misses are those that *both* reach the Railway origin directly (bypassing Cloudflare) *and*
+carry a `Host` beginning with `www.`. Everything else — every apex request, and every `www` request
+that arrives through Cloudflare — is counted exactly as before. The counter is a floor, not a
+fiction: treat it as "true direct-origin ingress ≥ this number", and do not discard a signal it does
+report. What is unmeasured is the size of that one intersection, and §4's `www`-Host probe
+(recommendation 2 below) is what turns it from unmeasured into gated.
+
+### The mechanism (verified in code, not inferred)
+
+`server/_core/index.ts` registers the `www`→apex 308 redirect **before** the origin lock, and
+Express runs middleware in registration order:
+
+```ts
+654:  app.use((req, res, next) => {          // www → apex 308
+655:    const host = req.headers.host ?? "";
+656:    const canonical = wwwRedirectTarget(host);   // null ⇒ fall through to next()
+657:    if (canonical) {
+...
+662:      return res.redirect(308, redirectUrl);   // ← terminates. next() is never called.
+```
+
+```ts
+694:  app.use(
+695:    originLock((kind, req) => {          // ← 40 lines later. Unreachable for a redirected www Host.
+```
+
+Only two `app.use` calls precede line 654: the HTTP request logger at `index.ts:603` (which calls
+`next()`) and this redirect. The redirect is therefore the **first terminating handler** in the
+chain, and for any request it redirects the request ends at line 662.
+
+Since 2026-08-07 the redirect only fires for a `www.` Host whose apex is in the app's own origin
+allowlist (`canonicalApexHosts()`, derived from `PUBLIC_ORIGIN` + `ADDITIONAL_ALLOWED_ORIGINS`);
+every other `www.*` Host now falls through to `next()` and is locked and counted normally. That
+narrows the gap to the hostnames this app actually serves — which is the whole of the live traffic
+this section is about, so the gap itself is unchanged for `www.aisportsbettingmodels.com`.
+
+### What that makes invisible
+
+Both call sites that emit the anomaly counter are downstream of the redirect, so both are dead for a
+redirected `www` Host (i.e. `www.aisportsbettingmodels.com` — an unallowlisted `www.*` Host reaches
+all of them):
+
+| Signal | Source | Reached on a redirected `www` Host? |
+| --- | --- | --- |
+| `edge_origin_ingress_anomaly` (`edge_deny`, the real 403) | `index.ts:705`, inside `originLock` | **No** |
+| `edge_origin_ingress_anomaly` (`/api/trpc` canary, observe-only) | `index.ts:1099`, mounted at `:1058` | **No** |
+| Circuit-breaker window sample | the `observe(...)` call inside `originLock.ts` | **No** — absent from both the sample count and the verified count |
+| `edge_partial_bypass_suspected` | same `observe(...)` call | **No** |
+| `/health` lock exemption | the `req.path === "/health"` early-return in `originLock.ts` | **No** — also downstream |
+
+(`originLock.ts` is cited by symbol rather than line number: it is under active change, and these
+anchors moved while this section was being written. The `index.ts` line numbers above were
+re-verified against the working tree at the time of writing.)
+
+The partial-bypass detector is the sharpest loss. It exists to catch exactly this shape — a real
+client pinned to a hostname that reaches the origin directly — and its own CRITICAL log line tells
+the operator to *"check DNS orange-cloud coverage, the **www/apex split**, and any client pinned to
+the raw origin host."* It cannot see the `www` side of that split.
+
+**No verification harness closes the gap either.** `scripts/smoke-deploy.mjs` asserts the lock
+against `SMOKE_ORIGIN_URL` — the direct `*.up.railway.app` origin, whose `Host` does not begin with
+`www.`. §4's automated check passes whether or not this gap exists. (Confirmed across three
+different query shapes over `scripts/` and `.github/workflows/`: nothing probes a `www` Host.)
+
+**The one signal that does fire is not usable as-is.** `index.ts:660` logs a `[www→canonical]` line
+on every redirected `www` request, so the traffic is not absent from Railway logs. But that line
+records only host, path, and target URL — **no upstream IP and no edge-verification result** — so it
+cannot distinguish a Cloudflare-fronted `www` request from a direct-origin one. The raw material is
+there; the discriminator is not.
+
+### What this does *not* mean
+
+This is a detection gap, **not a content bypass**. For `www.aisportsbettingmodels.com` the origin
+serves exactly one thing — a 308 to the apex — and a client that follows it lands on the apex, which
+resolves to Cloudflare. No model data is served from the origin over that hostname. Do not restate
+this section as an open data leak.
+
+**What that reassurance rested on until 2026-08-07, and did not say.** The redirect target used to
+be computed as `host.slice(4)` with **no allowlist**, so "the origin serves exactly one thing" was
+true only of *our* `www` host. For any other `www.*` Host it served a 308 to whatever apex the
+client's own `Host` header named — `Host: www.evil.com` produced `Location:
+https://evil.com/<path>`. Two consequences, neither of which the paragraph above covered:
+
+- **The origin answered unallowlisted Hosts ahead of the lock.** Because this middleware is
+  registered before `originLock`, that 308 was served on the raw origin *even under `EDGE_MODE=on`*.
+  The lock's promise — "a direct hit on the origin without the Cloudflare secret gets a 403" — did
+  not hold for any `www.*` Host.
+- **Attacker-controlled values propagated downstream.** Any Host-keyed cache entry, log line, or
+  metric label inherited a hostname the attacker chose, including the `[www→canonical]` log line
+  above.
+
+**Calibration — this was not a practical phishing open redirect.** Trust laundering requires
+redirecting *from* a host the victim trusts; here the redirect target is derived from the attacker's
+**own** `Host` header, so a victim would already have to be on `www.evil.com` before the redirect
+fired. The real weight is the two bullets above: an unlocked response path and attacker-controlled
+values in Host-keyed state.
+
+**Fixed 2026-08-07** (`canonicalApexHosts()` / `wwwRedirectTarget()` in `server/_core/index.ts`).
+The redirect now fires only when the stripped host is in the app's own origin allowlist —
+`PUBLIC_ORIGIN` plus `ADDITIONAL_ALLOWED_ORIGINS`, the same origins the tRPC CSRF check already
+trusts; no new env var. Any other `www.*` Host falls through to `next()` and is handled by the
+origin lock and normal routing. It is still a **308**, never a 301: preserving the POST body is why
+this middleware exists at all. Regression gate:
+`server/_core/wwwCanonicalRedirect.test.ts` — it slices the real middleware text out of `index.ts`,
+runs it on real Express over raw `node:http` (WHATWG `fetch()` drops a caller-supplied `Host`), and
+carries a negative control that executes the pre-fix `host.slice(4)` text through the identical
+harness and asserts the open redirect is observable.
+
+**Operator note — the allowlist is only as wide as the config.** If `PUBLIC_ORIGIN` were ever unset
+or wrong, the `www` redirect stops firing (the request falls through to normal routing) rather than
+redirecting to an attacker-named host. Production is configured: the boot log for deployment
+`3a04e6ff` reads `[CSRF] Allowed origin (PUBLIC_ORIGIN): https://aisportsbettingmodels.com`, with
+`ADDITIONAL_ALLOWED_ORIGINS` carrying the apex and `www` forms as well. If you add a second custom
+domain, add it to one of those two variables or its `www` form will not redirect.
+
+**Middleware order was deliberately left alone.** Moving the redirect below `originLock` is
+recommendation 1 below; it is a separate change with its own blast radius (see its Transform-Rule
+precondition), and the measurement gap this section records stands on its own regardless.
+
+### Effect on decisions already made
+
+The arming decision recorded in the as-built (18 requests through Cloudflare + 5 direct) and §3
+step 12's stop condition (*"`edge_origin_ingress_anomaly` events should be ~zero"*) were both read
+off this counter. Both were therefore read off a **floor**: a number that is too low by exactly the
+volume of requests that reached the origin directly *and* carried a `www` Host, and correct for
+everything else. Nothing here says the decision was wrong; it says the evidence offered for it does
+not carry the weight it was given. Any future arming decision that cites this counter must cite it
+as a lower bound and pair it with a `www`-aware check.
+
+Live DNS at the time of this record (`dig`, 2026-08-07): apex and `www` both resolve to
+`104.26.9.86 / 104.26.8.86 / 172.67.74.49` — Cloudflare anycast, i.e. **both proxied**. This
+supersedes the grey-cloud state described in the header banner. Normal `www` traffic therefore
+arrives through Cloudflare today, which narrows the live exposure to (a) a client that reaches the
+Railway edge directly with a `www` Host, and (b) any future state where `www` is un-proxied,
+re-pointed, or added as a second custom domain. The gap is structural and survives both.
+
+### What would close it — ranked
+
+1. **Move the `www` redirect below the `originLock` mount** (register the lock first). This is the
+   fix: `www` ingress then flows through the same lock, counter, breaker, and partial-bypass
+   detector as the apex, and Cloudflare-fronted `www` traffic is verified and redirected exactly as
+   it is today. It beats every option below because it deletes the gap instead of observing it, and
+   it needs no new infrastructure.
+   **Precondition — verify before moving:** the `x-dime-edge-secret` Transform Rule (§3 step 7) must
+   be **zone-wide**, not scoped to the apex hostname. If it is apex-only, Cloudflare-fronted `www`
+   requests carry no secret, and putting the lock first would 403 them under `EDGE_MODE=on`. Confirm
+   the rule's scope, then soak the move in `EDGE_MODE=log` and watch for `edge_would_deny` on `www`
+   before enforcing.
+2. **Add a `www`-hosted probe to §4 and to `smoke-deploy.mjs`:** a direct-origin request with
+   `Host: www.aisportsbettingmodels.com` must produce the same outcome as the apex probe. This does
+   not close the gap, but it makes the gap fail a gate instead of passing one silently.
+3. **Enrich the `[www→canonical]` log line** with the immediate upstream IP and the edge-verification
+   result, then alert on `www` redirects arriving from a non-Cloudflare upstream. This measures the
+   gap without closing it — the correct move only if #1 is blocked on the Transform Rule scope.
+4. **External synthetic monitor through the `www` hostname** (owner action, per §3 step 14). Catches
+   a `www`-specific edge failure; it does not see direct-origin `www` ingress at all.
+
+Until #1 ships, treat the `www` hostname as **unmonitored** and every anomaly count as a floor.
+
+> **A note on how this was verified.** The claim arrived from an audit, and audits in this project
+> have been wrong before, so the ordering was confirmed two ways: a source-order assertion read off
+> the real `index.ts`, negative-tested against a mutated copy with the two mounts swapped (assertion
+> flips to FAIL, so it is not vacuous); and a behavioral run on real Express with both orderings —
+> `Host: www.…` yields `308` with the counter firing **0×** in the shipped order, versus `403` with
+> the counter firing **1×** when the lock is registered first, against a `403`/**1×** apex control.
+> The harness's own first run reported a false negative because WHATWG `fetch()` silently drops a
+> caller-supplied `Host` header; raw `node:http` is required to exercise this path.

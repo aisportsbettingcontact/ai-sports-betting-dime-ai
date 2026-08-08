@@ -274,3 +274,56 @@ invisible by construction. `security_events` counts are a lower bound of unknown
 | Cloudflare orange-cloud timestamp | Cloudflare zone DNS history; no CF API access in session |
 | Stripe webhook endpoint host | Owner dashboard check (Task 0.3) |
 | Duplicate-row census | `db-query.yml`; schema analysis says impossible, but that is a proof about the constraint, not a census of the data |
+
+---
+
+## CORRECTION — 2026-08-07: section B-4 is WRONG, and Task 4.1 is retracted
+
+**B-4 claimed:** `[Prerender][STEP] botDetected=true` occurrences across deployment `bf99766f`
+(13:19→21:54Z, 8.5 h) = **0**, and concluded SEO/social prerendering was dead.
+
+**That claim is false.** A read-only re-query of the *same* deployment ID and window returns six
+occurrences:
+
+```
+2026-08-06T13:24:08.736Z  [Prerender][STEP] botDetected=true
+2026-08-06T13:31:47.104Z  [Prerender][STEP] botDetected=true
+2026-08-06T14:08:04.864Z  [Prerender][STEP] botDetected=true
+2026-08-06T14:33:27.791Z  [Prerender][STEP] botDetected=true
+2026-08-06T16:43:20.988Z  [Prerender][STEP] botDetected=true
+2026-08-06T16:43:20.988Z  [Prerender][STEP] botDetected=true
+```
+
+Two of these are **genuine, externally-sourced crawlers** reaching `/` through the correctly
+Cloudflare-fronted host and being served the prerendered HTML with 200:
+
+- `MJ12bot/v2.0.5` from `51.68.236.71` (OVH) at 16:43:15Z → `botDetected=true`, `PASS — static
+  landing HTML sent to crawler`
+- `AhrefsBot/7.0` from `51.89.129.148` at 11:06:15Z on the following deployment → same
+
+`isBot()` was additionally tested against every crawler UA actually observed in production —
+genuine Meta's literal `facebookexternalhit/1.1 (+http://…)`, the Apple LinkPresentation compound
+UA, Googlebot, MJ12bot, AhrefsBot — and classifies all of them correctly, while correctly
+rejecting `node` and a vulnerability-scanner string.
+
+**The residual gap is real but far narrower than B-4 described.** Genuine Meta's two 403s
+(15:22:20Z on `/robots.txt`, 20:48:23Z on `/login`) were refused by the origin lock because they
+arrived at the **raw Railway origin** rather than the Cloudflare-fronted host — and neither path is
+gated by the prerender middleware at all, which only inspects `/`, `/privacy` and `/terms`
+(`server/landingPrerender.ts:435,450,466`). So those 403s could never have exercised `isBot()`
+regardless of outcome. That gap is already owned by Task 1.1 (remove the unprotected second
+service's public domain) and the F-1 origin-lock work — not by Task 4.1.
+
+**Disposition: Task 4.1 is RETRACTED.** Nothing in `landingPrerender.ts` needs changing; it is
+working as designed and demonstrably firing.
+
+**How the error happened, recorded so it is not repeated.** The "zero occurrences" figure came from
+a red-team subagent during the 2026-08-06 audit. It was accepted and propagated as PROVEN without
+an independent re-query. This is the second time in this program that a subagent's *negative*
+finding (an absence) was reported as proven without verification — the first was the Stripe-webhook
+false alarm, where "zero `[StripeWebhook]` lines in 8.5 h" turned out to be a query-window artifact
+and webhooks were arriving and returning 200 throughout. **An absence is the single least reliable
+class of finding and must always be independently reproduced before it is asserted.**
+
+The original B-4 text above is left intact rather than edited, so the error and its correction both
+remain on the record.

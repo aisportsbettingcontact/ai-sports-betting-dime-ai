@@ -1486,13 +1486,47 @@ export async function runMultiMarketBacktest(
 /**
  * Run multi-market backtest for all FINAL games on a given date.
  */
-export async function runMultiMarketBacktestForDate(dateStr: string): Promise<{
+export async function runMultiMarketBacktestForDate(
+  dateStr: string,
+  opts: {
+    /**
+     * Only enroll games that have NO mlb_game_backtest rows yet. This turns the
+     * batch into a SELF-HEAL rather than a re-run: the cron path (M-208) uses it
+     * so a game the live pipeline missed gets picked up without re-grading games
+     * that are already enrolled.
+     */
+    onlyUnenrolled?: boolean;
+    /**
+     * Forwarded to runMultiMarketBacktest. Defaults to true to preserve every
+     * existing caller. The cron self-heal passes FALSE deliberately: the K-props
+     * backtest is DATE-scoped (see the runKProps branch below), so looping N
+     * games with true re-runs the whole date's K-props N times — and it couples
+     * the caller to K_CALIBRATION_FACTOR_OVER/UNDER, which are still the
+     * pre-M-204 literals awaiting a walk-forward re-fit.
+     */
+    runKProps?: boolean;
+  } = {}
+): Promise<{
   processed: number;
   errors: number;
   summaries: MultiMarketBacktestSummary[];
 }> {
-  console.log(`\n${TAG} Batch backtest for ALL FINAL MLB games on ${dateStr}`);
+  const { onlyUnenrolled = false, runKProps = true } = opts;
+  console.log(
+    `\n${TAG} Batch backtest for ${onlyUnenrolled ? "UNENROLLED" : "ALL"} FINAL MLB games on ${dateStr} (runKProps=${runKProps})`
+  );
   const db = await getDb();
+
+  const conditions = [
+    eq(games.gameDate, dateStr),
+    eq(games.sport, "MLB"),
+    sql`LOWER(${games.gameStatus}) IN ('final', 'f', 'completed')`,
+  ];
+  if (onlyUnenrolled) {
+    conditions.push(
+      sql`NOT EXISTS (SELECT 1 FROM ${mlbGameBacktest} b WHERE b.gameId = ${games.id})`
+    );
+  }
 
   const finalGames = await db
     .select({
@@ -1501,13 +1535,7 @@ export async function runMultiMarketBacktestForDate(dateStr: string): Promise<{
       homeTeam: games.homeTeam,
     })
     .from(games)
-    .where(
-      and(
-        eq(games.gameDate, dateStr),
-        eq(games.sport, "MLB"),
-        sql`LOWER(${games.gameStatus}) IN ('final', 'f', 'completed')`
-      )
-    );
+    .where(and(...conditions));
 
   console.log(
     `${TAG} [INPUT] Found ${finalGames.length} FINAL MLB games on ${dateStr}`
@@ -1519,7 +1547,7 @@ export async function runMultiMarketBacktestForDate(dateStr: string): Promise<{
 
   for (const g of finalGames) {
     try {
-      const summary = await runMultiMarketBacktest(g.id, true);
+      const summary = await runMultiMarketBacktest(g.id, runKProps);
       summaries.push(summary);
       processed++;
     } catch (err) {
