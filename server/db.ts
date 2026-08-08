@@ -2764,12 +2764,31 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
 }
 
 /**
+ * Hard ceiling on one security-event read.
+ *
+ * Was 500, which silently truncated the WEEKLY digest: it asks for
+ * RAW_EVENT_FETCH_LIMIT = 2000 over a 7-day window, received at most the newest
+ * 500, and logged "limit=2000" while analysing a quarter of that. A security
+ * report that under-reports while claiming full scope is worse than no report.
+ * Raised to cover the largest legitimate caller; anything above it is now
+ * reported rather than silently clipped (see the two warnings below).
+ */
+export const MAX_SECURITY_EVENTS_FETCH = 2000;
+
+/**
  * Fetch the most recent security events, newest first.
  *
- * [INPUT]  limit      — max rows to return (default 200, max 500)
+ * [INPUT]  limit      — max rows to return (default 200, max MAX_SECURITY_EVENTS_FETCH)
  * [INPUT]  eventType  — optional filter: 'CSRF_BLOCK' | 'RATE_LIMIT' | 'AUTH_FAIL'
  * [INPUT]  sinceMs    — optional: only return events with occurredAt >= sinceMs
  * [OUTPUT] SecurityEventRow[]
+ *
+ * DIGEST MARKERS: rows of type DIGEST_MARKER_* are restart-safety sentinels
+ * this module writes itself, not security events. They are excluded UNLESS the
+ * caller explicitly asks for that eventType — which is exactly how the digests
+ * look their own markers up, so those lookups keep working. Without this, the
+ * sentinels surface in the owner-facing security console as if a marker were
+ * an attack.
  */
 export async function getSecurityEvents(opts: {
   limit?: number;
@@ -2782,10 +2801,18 @@ export async function getSecurityEvents(opts: {
     console.warn(`${tag} DB not available — returning empty list`);
     return [];
   }
-  const limit = Math.min(opts.limit ?? 200, 500);
+  const limit = Math.min(opts.limit ?? 200, MAX_SECURITY_EVENTS_FETCH);
+  if (opts.limit !== undefined && opts.limit > MAX_SECURITY_EVENTS_FETCH) {
+    // Never clip in silence — that is the defect this replaced.
+    console.warn(
+      `${tag} Requested limit=${opts.limit} exceeds MAX_SECURITY_EVENTS_FETCH=${MAX_SECURITY_EVENTS_FETCH} — CLIPPED. ` +
+        `The caller's result is incomplete and any total derived from it is a LOWER BOUND.`
+    );
+  }
   try {
     const conditions = [];
     if (opts.eventType) conditions.push(eq(securityEvents.eventType, opts.eventType));
+    else conditions.push(notInArray(securityEvents.eventType, DIGEST_MARKER_EVENT_TYPES));
     if (opts.sinceMs) conditions.push(gte(securityEvents.occurredAt, opts.sinceMs));
 
     const rows = await db
@@ -2796,6 +2823,14 @@ export async function getSecurityEvents(opts: {
       .limit(limit) as SecurityEventRow[];
 
     console.log(`${tag} Fetched ${rows.length} rows | limit=${limit} type=${opts.eventType ?? "ALL"}`);
+    if (rows.length === limit) {
+      // Hit the ceiling exactly: newest-first ordering means older events in the
+      // window were dropped. Callers summarising a time range must say so.
+      console.warn(
+        `${tag} Result hit the limit (${limit}) — older events in this window were TRUNCATED. ` +
+          `Counts derived from this read are a LOWER BOUND, not a total.`
+      );
+    }
     return rows;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
