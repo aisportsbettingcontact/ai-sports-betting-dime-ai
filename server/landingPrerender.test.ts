@@ -58,17 +58,80 @@ describe("landing prerender — Dime landing v2 parity", () => {
     expect(html).toContain("Edge Detected");
     expect(html).toContain("Monitor");
     expect(html).toContain("Pass");
-    // v2 money mapping — the blueprint §4.2 ladder, not the retired pricing
-    expect(html).toContain("$99");
-    expect(html).toContain("$249");
-    expect(html).toContain("$499");
-    expect(html).toContain("/checkout?plan=pro");
-    expect(html).toContain("/checkout?plan=sharp");
-    expect(html).toContain("/checkout?plan=operator");
-    expect(html).not.toContain("$99.99");
-    expect(html).not.toContain("$499.99");
+    // Money mapping — the CANONICAL catalog (the plans the landing page shows
+    // and admin manages: dime-pro / dime-sharp / dime-max), not the legacy
+    // $99/$249/$499 ladder that `PLANS` in server/stripe/products.ts still
+    // holds for existing subscribers.
+    expect(html).toContain("$49.99");
+    expect(html).toContain("$99.99");
+    expect(html).toContain("$199.99");
+
+    // The prerender must NOT mint checkout URLs. The live pricing card builds
+    // `/checkout?plan=<slug>&price=<monthly row id>` (Pricing.tsx), pinning the
+    // MONTHLY price. A bare `?plan=` drops that pin and checkout falls back to
+    // the plan's DEFAULT row — which for dime-max is $19.99/day, not
+    // $199.99/month. A static snapshot cannot know row ids, so it links to the
+    // live card instead and lets that build the correct URL.
+    expect(html).not.toContain("/checkout?plan=");
+    expect(html).toContain('href="/#pricing"');
+
+    // The legacy ladder must not reappear. Asserted on the FULL card strings,
+    // never on the bare numbers: `"$99.99".includes("$99")` is true, so a
+    // `not.toContain("$99")` here would fail against the CORRECT price — the
+    // exact trap the previous version of this block set for itself.
+    expect(html).not.toContain(">$99<");
+    expect(html).not.toContain(">$249<");
+    expect(html).not.toContain(">$499<");
+    expect(html).not.toContain("Operator");
+    expect(html).not.toContain("plan=operator");
     expect(html).not.toContain("Join the Waitlist");
     expect(html).not.toContain("Be First to Access");
+  });
+
+  // The drift this file previously cemented: the prerender hardcoded one price
+  // ladder while the app served another, and the assertions above pinned the
+  // WRONG one, so the contradiction was CI-green for as long as it existed.
+  // Hardcoding the corrected numbers here would only reset that trap, so the
+  // prices are asserted against TIERS — the single place the landing page
+  // declares them.
+  //
+  // TIERS is itself the *fallback* for the live catalog: components/Pricing.tsx
+  // reads real prices from the database and falls back to `tier.price`. So this
+  // test proves prerender == TIERS; keeping TIERS in step with the admin
+  // catalog is a separate obligation and cannot be asserted from a static
+  // snapshot that never queries the database.
+  it("prerender pricing matches TIERS — the landing page's own declaration", async () => {
+    const { TIERS } =
+      await import("../client/src/pages/dime/landing/landing-content");
+    const { sent } = runMiddleware("/", BOT_UA);
+    const html = sent.html ?? "";
+
+    const paid = TIERS.filter(
+      (t: { price: string }) => t.price !== "By application" && t.price !== "$0"
+    );
+    expect(paid.length).toBeGreaterThanOrEqual(3);
+
+    // The site's per-day convention, copied from the one place that defines it:
+    // Pricing.tsx `DAYS_PER_MONTH = 30` and
+    // `perDay = money(Math.round(shownCents / DAYS_PER_MONTH))`.
+    // Asserting this caught a real defect: hand-computed figures using 30.44
+    // days (≈$1.64/$3.29/$6.58) disagreed with the live page's $1.67/$3.33/$6.67.
+    const perDay = (price: string) => {
+      const cents = Math.round(parseFloat(price.replace("$", "")) * 100);
+      const d = Math.round(cents / 30);
+      return `$${(d / 100).toFixed(2)}`;
+    };
+
+    for (const tier of paid) {
+      expect(
+        html,
+        `prerender is missing TIERS price ${tier.price} for "${tier.name}" — the bot-facing page and the landing page disagree`
+      ).toContain(tier.price);
+      expect(
+        html,
+        `prerender's per-day figure for "${tier.name}" does not match the site rule round(cents/30) = ${perDay(tier.price)}`
+      ).toContain(perDay(tier.price));
+    }
   });
 
   it("obeys brand law: mint #45E0A8, no neon #39FF14, Familjen Grotesk stack", () => {

@@ -211,6 +211,42 @@ export function compareSchema(
   return drift;
 }
 
+/**
+ * Below this many required tables, "every table is missing" stops being
+ * implausible-as-drift and starts being an ordinary, real failure.
+ *
+ * The inconclusive rule reasons from coincidence: nine tables do not vanish at
+ * once from a skipped migration, so all-nine-missing must be a failed read. That
+ * reasoning gets weaker as the list shrinks and collapses entirely at one, where
+ * "all missing" and "the single guarded table is missing" are the same event —
+ * so a genuine, total drift would be waved through as merely unknown.
+ *
+ * Demonstrated 2026-08-08 against the shipped code: with REQUIRED_COLUMNS cut to
+ * a single table, an absent app_users returned `inconclusive: true` and did NOT
+ * exit, even with SCHEMA_GUARD_FATAL=1. Live-safe today at nine, and the list has
+ * only ever grown — but that is an accident of history, not a guarantee, and the
+ * guard should not silently depend on one.
+ */
+export const INCONCLUSIVE_MIN_TABLES = 3;
+
+/**
+ * Split out from assertSchemaCurrent so the decision can be tested at every list
+ * size, including the sizes REQUIRED_COLUMNS does not currently have.
+ *
+ * Deliberately takes the count as an argument rather than reading
+ * REQUIRED_COLUMNS: a predicate that closes over global state can only ever be
+ * tested in the one configuration that happens to ship.
+ */
+export function isInconclusiveRead(
+  drift: readonly SchemaDrift[],
+  requiredTableCount: number
+): boolean {
+  if (requiredTableCount < INCONCLUSIVE_MIN_TABLES) return false;
+  return (
+    drift.length === requiredTableCount && drift.every(d => d.tableMissing)
+  );
+}
+
 /** Human-readable, actionable — names the exact objects and the fix. */
 export function formatDrift(drift: readonly SchemaDrift[]): string {
   return drift
@@ -273,10 +309,7 @@ export async function assertSchemaCurrent(): Promise<SchemaGuardResult> {
     // reported at error level — the only thing established here is that we do not
     // know, and that is worth saying out loud rather than exiting on.
     const requiredTableCount = Object.keys(REQUIRED_COLUMNS).length;
-    if (
-      drift.length === requiredTableCount &&
-      drift.every(d => d.tableMissing)
-    ) {
+    if (isInconclusiveRead(drift, requiredTableCount)) {
       console.error(
         `${TAG} [VERIFY] INCONCLUSIVE — all ${requiredTableCount} required tables read as ` +
           `absent. That pattern means the schema READ failed (empty result set, wrong ` +

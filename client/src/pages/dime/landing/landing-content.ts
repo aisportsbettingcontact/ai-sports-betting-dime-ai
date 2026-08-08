@@ -10,8 +10,15 @@
  *  - Demo/console data uses abstract team names (Team A/C/E) and is labeled DEMO.
  *  - Whitelisted product claims only: 400,000 sims/game, 55+ outputs,
  *    124 enforcement tests, Brier-scored vs close, odds frozen at first pitch,
- *    MLB + World Cup 2026, Pro $99/mo, Sharp $249/mo, Operator $499/mo,
- *    ≈$3.30 / ≈$8.30 / ≈$16.63 per day (legacy checkout only: $99.99/mo, $499.99/yr).
+ *    MLB + World Cup 2026, and the CANONICAL catalog — the plans the landing
+ *    page shows and admin manages: Pro $49.99/mo (dime-pro), Sharp $99.99/mo
+ *    (dime-sharp), Max $199.99/mo (dime-max); ≈$1.64 / ≈$3.29 / ≈$6.58 per day.
+ *
+ *    The legacy ladder (Pro $99, Sharp $249, Operator $499, via the `PLANS`
+ *    const in server/stripe/products.ts) is STILL LIVE for the legacy slugs
+ *    ?plan=pro|sharp|operator, which resolve to static Stripe prices ahead of
+ *    the database catalog. It is retained for existing subscribers and must NOT
+ *    be quoted as a current claim on any public surface.
  */
 
 /** Switches CTA labels + destinations between waitlist capture and live checkout. */
