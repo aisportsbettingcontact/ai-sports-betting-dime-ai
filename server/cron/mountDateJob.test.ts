@@ -141,6 +141,46 @@ describe("mountDateJob", () => {
   });
 });
 
+describe("log injection (CodeQL finding on PR #453)", () => {
+  // The reject path is where caller-controlled text genuinely reaches a log
+  // line: a malformed date is echoed back so an operator can see what was sent.
+  //
+  // The security property is NOT "the payload never appears" — it is "one log
+  // call produces exactly one line". Stripping CRLF leaves the payload text
+  // inline and harmless; what it prevents is the payload starting its own line
+  // and masquerading as a separate, forged log entry.
+  const capture = () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) =>
+      lines.push(a.join(" "))
+    );
+    return lines;
+  };
+
+  it("a CRLF payload cannot become its own log entry", () => {
+    // Mount FIRST — mounting itself logs a registration line, which would
+    // otherwise be counted as a second entry and hide the real assertion.
+    const handler = mount(runner(), vi.fn());
+    const lines = capture();
+    const response = res();
+    handler(req("2026-08-07\r\n[Cron:forged] [OUTPUT] started=true"), response);
+
+    expect(response.statusCode).toBe(400);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).not.toMatch(/[\r\n]/);
+    // The text survives inline — that is fine and deliberate.
+    expect(lines[0]).toContain("[Cron:forged]");
+  });
+
+  it("a valid date still reaches the success log intact", () => {
+    const handler = mount(runner(), vi.fn());
+    const lines = capture();
+    handler(req("2026-08-07"), res());
+    expect(lines.join("\n")).toContain("date=2026-08-07");
+    for (const l of lines) expect(l).not.toMatch(/[\r\n]/);
+  });
+});
+
 describe("sanitizeForLog", () => {
   it("strips CR/LF so a caller cannot forge a log line", () => {
     expect(sanitizeForLog("ok\r\n[Cron] FAKE")).toBe("ok[Cron] FAKE");

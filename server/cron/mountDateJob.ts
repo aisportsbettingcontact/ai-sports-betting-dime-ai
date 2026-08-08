@@ -53,6 +53,13 @@ export function mountDateJob(
 
     const reqAt = new Date().toISOString();
     const clientIpForLog = sanitizeForLog(resolveClientIdentity(req) || "?");
+    // DEFENCE IN DEPTH — do not delete this as "redundant".
+    // At this point `raw` has already passed the YYYY-MM-DD validator (the
+    // reject branch above returns), so it cannot currently carry CRLF. The
+    // sanitize is here so that loosening the validator later cannot silently
+    // turn this line into a log-forging vector, which is exactly the finding
+    // CodeQL raised. `mountDateJob.test.ts` pins the reject-path equivalent,
+    // where injection IS reachable.
     const dateForLog =
       raw == null ? "default-window" : sanitizeForLog(String(raw));
     console.log(
