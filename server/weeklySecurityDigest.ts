@@ -2,16 +2,24 @@
  * weeklySecurityDigest.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Schedules a weekly security threat trend digest that fires every Sunday
- * at 08:00 EST (13:00 UTC).
+ * in a 10-minute window starting at 08:00 EST (13:00 UTC).
  *
  * On each tick it:
  *   1. Queries security_events for the prior 7-day window (Sunday → Sunday)
- *   2. Breaks the 7 days into per-day buckets (Mon → Sun) with event counts
+ *   2. Breaks the 7 days into per-day buckets (Mon → Sun) with event counts,
+ *      counting only NON-allowlisted events (Task 4.9 / A2 — see below)
  *   3. Renders an ASCII bar chart showing the daily threat trend
- *   4. Computes the weekly threat level (CLEAN / LOW / MODERATE / HIGH / CRITICAL)
+ *   4. Computes the weekly threat level from an accurate, unlimited
+ *      (eventType, context)-bucketed total minus allowlisted activity
+ *      (Task 4.9 / A1 + A2)
  *   5. Identifies the peak day and peak event type
  *   6. Posts a rich Discord embed to the 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 channel
- *   7. Fires notifyOwner() with a structured plain-text summary
+ *   7. Fires notifyOwner() with a structured plain-text summary; escalates
+ *      to the Discord security channel if that delivery fails (Task 4.10 / B1)
+ *   8. Persists a restart-safety marker, same mechanism and same reasoning
+ *      as the daily digest (Task 4.10 / B2 — the single-minute-window /
+ *      in-memory-only-state bug is identical here, just less frequently
+ *      observed since this scheduler only fires once a week)
  *
  * Design constraints:
  *   - Fire-and-forget: errors never crash the server
@@ -20,22 +28,50 @@
  *   - All log lines are structured and machine-readable
  *   - Plain-English copy throughout — written so @prez can read it without
  *     needing to decode technical jargon
+ *
+ * A1/A2/A3/B1 share their implementation with securityDigest.ts — see that
+ * file's header and inline comments for the full reasoning (allowlist
+ * reliability per source, dedup-window semantics, escalation design). This
+ * file imports the pure/reusable pieces (classifyIp, splitEventsByAllowlist,
+ * topIpsByCount, computeThreatLevel-style helpers, filterDigestMarkers)
+ * rather than re-implementing them. Note: escalateDeliveryFailure() was
+ * removed in the 2026-08-07 review (Critical 2) — notifyOwner() is a
+ * permanent no-op, so escalating its `false` fired a guaranteed false alarm
+ * on every run. See the Step 7 comment below.
  */
 
 import { EmbedBuilder, TextChannel } from "discord.js";
-import { getSecurityEvents } from "./db";
+import {
+  DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+  getSecurityEventCountsByBucket,
+  getSecurityEvents,
+  insertSecurityEvent,
+} from "./db";
 import { notifyOwner } from "./_core/notification";
+import { logSafe } from "./_core/logSafe";
 import { getDiscordClient } from "./discord/bot";
-import { topIpsByCount, computeThreatLevel } from "./securityDigest";
+import {
+  topIpsByCount,
+  splitEventsByAllowlist,
+  filterDigestMarkers,
+  encodeDigestMarkerContext,
+  decodeDigestMarkerContext,
+  type BucketCount,
+  type DigestDeliveryResult,
+} from "./securityDigest";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TAG = "[WeeklySecurityDigest]";
 const DIGEST_DAY_UTC = 0; // 0 = Sunday
 const DIGEST_HOUR_UTC = 13; // 08:00 EST = 13:00 UTC
-const DIGEST_MINUTE_UTC = 0;
+// B2: same widened-window + persisted-marker fix as securityDigest.ts —
+// see that file's DIGEST_WINDOW_MINUTES comment for the full reasoning.
+const DIGEST_WINDOW_START_MINUTE_UTC = 0;
+const DIGEST_WINDOW_MINUTES = 10;
 const WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7-day lookback window
 const TOP_IP_LIMIT = 5;
 const CHECK_INTERVAL_MS = 60 * 1000; // poll every 60 seconds
+const RAW_EVENT_FETCH_LIMIT = 2000;
 
 /** Target channel: 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 */
 const SECURITY_CHANNEL_ID = "1492280227567501403";
@@ -57,7 +93,7 @@ const THREAT_LEVELS: Array<{
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let lastWeeklyDigestDateUTC = ""; // "YYYY-MM-DD" of last successful weekly digest
+let lastWeeklyDigestDateUTC = ""; // "YYYY-MM-DD" of last successful weekly digest (in-memory fast path)
 let weeklyDigestRunning = false;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -95,8 +131,9 @@ function weeklyThreatMeta(level: ThreatLevel): {
 }
 
 /**
- * Computes weekly threat level based on total 7-day event count.
- * Uses a higher scale than the daily digest since 7x more events are expected.
+ * Computes weekly threat level based on the NON-allowlisted 7-day event
+ * count (Task 4.9 / A2). Uses a higher scale than the daily digest since
+ * 7x more events are expected.
  */
 function computeWeeklyThreatLevel(total: number): ThreatLevel {
   if (total === 0) return "CLEAN";
@@ -104,6 +141,43 @@ function computeWeeklyThreatLevel(total: number): ThreatLevel {
   if (total < 200) return "MODERATE";
   if (total < 1000) return "HIGH";
   return "CRITICAL";
+}
+
+function sumByEventType(buckets: BucketCount[], eventType: string): number {
+  return buckets
+    .filter(b => b.eventType === eventType)
+    .reduce((s, b) => s + b.count, 0);
+}
+
+function formatBucketBreakdown(
+  buckets: BucketCount[],
+  eventType: string
+): string {
+  const rows = buckets
+    .filter(b => b.eventType === eventType)
+    .sort((a, b) => b.count - a.count);
+  if (rows.length === 0) return "  (none)";
+  return rows
+    .map(b => `  ${b.context ?? "(no context)"}: ${b.count}`)
+    .join("\n");
+}
+
+function summarizeAllowlistedBySource(
+  allowlisted: Array<{
+    allowlistSource: "cloudflare_edge" | "known_automation";
+  }>
+): Array<{ source: string; count: number }> {
+  const map = new Map<string, number>();
+  for (const e of allowlisted) {
+    const key =
+      e.allowlistSource === "cloudflare_edge"
+        ? "Cloudflare edge"
+        : "Known automation (CI/owner)";
+    map.set(key, (map.get(key) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([source, count]) => ({ source, count }));
 }
 
 // ─── Per-day bucketing ────────────────────────────────────────────────────────
@@ -124,7 +198,12 @@ interface DayBucket {
 /**
  * Builds 7 per-day buckets for the window [windowStartMs, windowEndMs).
  * Each bucket covers one calendar day in EST (midnight → midnight).
- * Events are assigned to buckets by their occurredAt timestamp.
+ *
+ * Task 4.9 / A2: `events` here is expected to be the ALLOWLIST-FILTERED
+ * ("flagged") event list, not the raw window — a day dominated by CI/CF
+ * automation should not show as a tall bar in the trend chart any more
+ * than it should count toward the weekly threat level. See
+ * runWeeklySecurityDigest() where this is called.
  */
 function buildDayBuckets(
   events: Array<{ occurredAt: number; eventType: string }>,
@@ -133,11 +212,7 @@ function buildDayBuckets(
   const DAY_MS = 24 * 60 * 60 * 1000;
   const buckets: DayBucket[] = [];
 
-  // Build 7 buckets going back from windowEnd (exclusive) to windowEnd - 7 days
-  // Each bucket is one calendar day in EST
   for (let i = 6; i >= 0; i--) {
-    // Compute the start of this day in EST
-    // We work in UTC ms but display in EST — compute the EST midnight for each day
     const dayEndMs = windowEndMs - i * DAY_MS;
     const dayStartMs = dayEndMs - DAY_MS;
 
@@ -159,7 +234,6 @@ function buildDayBuckets(
     });
   }
 
-  // Assign each event to its bucket
   for (const event of events) {
     for (const bucket of buckets) {
       if (
@@ -211,18 +285,65 @@ function renderAsciiBarChart(buckets: DayBucket[]): string {
   return lines.join("\n");
 }
 
+// ─── Digest marker persistence (Task 4.10 / B2) ───────────────────────────────
+//
+// Same encoding scheme as securityDigest.ts's daily marker (shared
+// encode/decode helpers, separate DIGEST_MARKER_WEEKLY_EVENT_TYPE row) —
+// see that file's persistDigestMarker()/loadLastDigestDeliveryFailure() for
+// the full Critical 2 (delivery-failure carry-forward) and Important 1 (B2
+// duplicate-over-skip ordering) reasoning. Ordering here is identical and
+// equally deliberate: this call is the LAST step of runWeeklySecurityDigest
+// (Step 9), after notifyOwner and the Discord post have both already run.
+
+async function persistWeeklyDigestMarker(
+  dateStr: string,
+  failureReason: string | null = null
+): Promise<void> {
+  await insertSecurityEvent({
+    eventType: DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+    ip: "system",
+    blockedOrigin: null,
+    trpcPath: null,
+    httpMethod: null,
+    userAgent: "weekly-security-digest-scheduler",
+    context: encodeDigestMarkerContext(dateStr, failureReason),
+    occurredAt: Date.now(),
+  });
+}
+
+async function loadLastWeeklyDigestDate(): Promise<string | null> {
+  const rows = await getSecurityEvents({
+    eventType: DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+    limit: 1,
+  });
+  return decodeDigestMarkerContext(rows[0]?.context)?.date ?? null;
+}
+
+async function loadLastWeeklyDigestDeliveryFailure(): Promise<{
+  date: string;
+  reason: string;
+} | null> {
+  const rows = await getSecurityEvents({
+    eventType: DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+    limit: 1,
+  });
+  const decoded = decodeDigestMarkerContext(rows[0]?.context);
+  if (!decoded || !decoded.failureReason) return null;
+  return { date: decoded.date, reason: decoded.failureReason };
+}
+
 // ─── Discord weekly digest embed builder ──────────────────────────────────────
 
 function buildWeeklyDigestEmbed(
   buckets: DayBucket[],
   topIps: Array<{ ip: string; count: number }>,
   threatLevel: ThreatLevel,
-  weeklyTotals: {
-    CSRF_BLOCK: number;
-    RATE_LIMIT: number;
-    AUTH_FAIL: number;
-    total: number;
-  },
+  totalAll: number,
+  threatTotal: number,
+  bucketCounts: BucketCount[],
+  allowlisted: Array<{
+    allowlistSource: "cloudflare_edge" | "known_automation";
+  }>,
   windowStartMs: number,
   windowEndMs: number
 ): EmbedBuilder {
@@ -235,58 +356,56 @@ function buildWeeklyDigestEmbed(
     year: "numeric",
   });
 
-  // ── Threat level descriptions in plain English ─────────────────────────────
   const threatDescriptions: Record<ThreatLevel, string> = {
     CLEAN:
-      "No security events recorded in the past 7 days. The site was completely clean this week — " +
-      "no suspicious activity, no blocked requests, no failed logins.",
+      "No unclassified security events in the past 7 days (after excluding Cloudflare and known automation). The site was completely clean this week.",
     LOW:
-      "A small number of security events were recorded this week. This is within normal range " +
+      "A small number of unclassified security events were recorded this week. This is within normal range " +
       "and is likely just routine background noise from the internet. No action needed.",
     MODERATE:
-      "A moderate number of security events were recorded this week. Worth reviewing the daily " +
+      "A moderate number of unclassified security events were recorded this week. Worth reviewing the daily " +
       "trend and top IPs below to see if any day or source stands out. No immediate action required.",
     HIGH:
-      "A high number of security events were recorded this week. Someone may be actively probing " +
+      "A high number of unclassified security events were recorded this week. Someone may be actively probing " +
       "or targeting the site. Review the peak day and top IPs — consider blocking persistent sources " +
       "at the firewall if the pattern continues into next week.",
     CRITICAL:
-      "A critical number of security events were recorded this week. The site is likely under " +
+      "A critical number of unclassified security events were recorded this week. The site is likely under " +
       "sustained attack. Immediate review is strongly recommended — check the top IPs and the " +
       "daily trend to identify when the attack started and which endpoints are being targeted.",
   };
 
-  // ── Find peak day ──────────────────────────────────────────────────────────
   const peakBucket = buckets.reduce(
     (a, b) => (b.total > a.total ? b : a),
     buckets[0]
   );
   const peakDayValue =
     peakBucket.total === 0
-      ? "No events recorded on any day this week."
+      ? "No unclassified events recorded on any day this week."
       : `**${peakBucket.label}** — ${peakBucket.total} event${peakBucket.total !== 1 ? "s" : ""} ` +
         `(CSRF: ${peakBucket.CSRF_BLOCK} · Rate: ${peakBucket.RATE_LIMIT} · Auth: ${peakBucket.AUTH_FAIL})`;
 
-  // ── Find dominant event type ───────────────────────────────────────────────
+  const csrfTotal = sumByEventType(bucketCounts, "CSRF_BLOCK");
+  const rateLimitTotal = sumByEventType(bucketCounts, "RATE_LIMIT");
+  const authFailTotal = sumByEventType(bucketCounts, "AUTH_FAIL");
+
   const typeEntries: Array<[string, number]> = [
-    ["CSRF Blocks", weeklyTotals.CSRF_BLOCK],
-    ["Rate Limit Triggers", weeklyTotals.RATE_LIMIT],
-    ["Auth Failures", weeklyTotals.AUTH_FAIL],
+    ["CSRF Blocks", csrfTotal],
+    ["Rate Limit Triggers", rateLimitTotal],
+    ["Auth Failures", authFailTotal],
   ];
   const dominantType = typeEntries.reduce(
     (a, b) => (b[1] > a[1] ? b : a),
     typeEntries[0]
   );
   const dominantTypeValue =
-    weeklyTotals.total === 0
+    totalAll === 0
       ? "No events this week."
-      : `**${dominantType[0]}** — ${dominantType[1]} out of ${weeklyTotals.total} total events ` +
-        `(${Math.round((dominantType[1] / weeklyTotals.total) * 100)}% of all activity)`;
+      : `**${dominantType[0]}** — ${dominantType[1]} out of ${totalAll} total events ` +
+        `(${Math.round((dominantType[1] / totalAll) * 100)}% of all activity)`;
 
-  // ── ASCII bar chart ────────────────────────────────────────────────────────
   const barChart = renderAsciiBarChart(buckets);
 
-  // ── Top IPs ────────────────────────────────────────────────────────────────
   const topIpValue =
     topIps.length > 0
       ? topIps
@@ -295,19 +414,28 @@ function buildWeeklyDigestEmbed(
               `\`${i + 1}.\` \`${ip}\` — **${count}** event${count !== 1 ? "s" : ""}`
           )
           .join("\n")
-      : "_No events recorded — nothing to report._";
+      : "_No unclassified events recorded — nothing to report._";
 
-  // ── Window display ─────────────────────────────────────────────────────────
+  const allowlistSummary = summarizeAllowlistedBySource(allowlisted);
+  const allowlistValue =
+    allowlistSummary.length > 0
+      ? allowlistSummary
+          .map(({ source, count }) => `• **${source}**: ${count}`)
+          .join("\n") + `\n_Excluded from the threat level above._`
+      : "_None detected in the sampled window._";
+
   const windowValue =
     `From: \`${formatEst(windowStartMs)}\`\n` +
-    `To:   \`${formatEst(windowEndMs)}\``;
+    `To:   \`${formatEst(windowEndMs)}\`\n` +
+    `_Counts are a DEDUPED SAMPLE — at most 1 row per (IP, path, type) per 60s, so this is a lower bound, not a request volume._`;
 
-  // ── Event type breakdown ───────────────────────────────────────────────────
   const breakdownValue =
-    `🚫 CSRF Blocks:          **${weeklyTotals.CSRF_BLOCK}**\n` +
-    `⚡ Rate Limit Triggers:  **${weeklyTotals.RATE_LIMIT}**\n` +
-    `🔐 Auth Failures:        **${weeklyTotals.AUTH_FAIL}**\n` +
-    `📊 Total:                **${weeklyTotals.total}**`;
+    `🚫 CSRF Blocks:          **${csrfTotal}**\n` +
+    `⚡ Rate Limit Triggers:  **${rateLimitTotal}** (by type below)\n` +
+    `🔐 Auth Failures:        **${authFailTotal}**\n` +
+    `📊 Total (deduped sample): **${totalAll}** · Unclassified (threat level): **${threatTotal}**`;
+
+  const rateLimitBreakdown = formatBucketBreakdown(bucketCounts, "RATE_LIMIT");
 
   return new EmbedBuilder()
     .setColor(color)
@@ -319,10 +447,10 @@ function buildWeeklyDigestEmbed(
     )
     .addFields(
       {
-        name: "📈 7-Day Event Trend (Daily Breakdown)",
+        name: "📈 7-Day Event Trend (Daily Breakdown, unclassified only)",
         value:
-          "Each bar shows how many security events occurred on that day. " +
-          "A longer bar = more activity. Bars are scaled relative to the busiest day.\n" +
+          "Each bar shows how many UNCLASSIFIED security events occurred on that day (Cloudflare and " +
+          "known automation excluded). A longer bar = more activity. Bars are scaled relative to the busiest day.\n" +
           "```\n" +
           barChart +
           "\n```",
@@ -331,6 +459,11 @@ function buildWeeklyDigestEmbed(
       {
         name: "📋 Weekly Event Type Breakdown",
         value: breakdownValue,
+        inline: false,
+      },
+      {
+        name: "⚡ Rate Limit Triggers by type",
+        value: "```\n" + rateLimitBreakdown + "\n```",
         inline: false,
       },
       {
@@ -344,8 +477,13 @@ function buildWeeklyDigestEmbed(
         inline: false,
       },
       {
-        name: `🖥️ Top ${TOP_IP_LIMIT} Most Active IPs This Week`,
+        name: `🖥️ Top ${TOP_IP_LIMIT} Most Active Unclassified IPs This Week`,
         value: topIpValue,
+        inline: false,
+      },
+      {
+        name: "🤖 Expected Automation (excluded from threat level)",
+        value: allowlistValue,
         inline: false,
       },
       {
@@ -355,7 +493,11 @@ function buildWeeklyDigestEmbed(
       }
     )
     .setFooter({
-      text: "AI Sports Betting · Weekly Security Report · Fires every Sunday at 08:00 EST",
+      // Static line (Critical 2, 2026-08-07 review): notifyOwner() is a
+      // documented permanent no-op, so its failure is never escalated. That
+      // fact is true on every run, so it is stated once here rather than
+      // fired as a repeating CRITICAL alert.
+      text: "AI Sports Betting · Weekly Security Report · Fires every Sunday ~08:00 EST · In-app notifications (notifyOwner) are disabled — this Discord channel is the confirmed delivery path",
     })
     .setTimestamp(windowEndMs);
 }
@@ -366,12 +508,12 @@ async function postWeeklyDigestToDiscord(
   buckets: DayBucket[],
   topIps: Array<{ ip: string; count: number }>,
   threatLevel: ThreatLevel,
-  weeklyTotals: {
-    CSRF_BLOCK: number;
-    RATE_LIMIT: number;
-    AUTH_FAIL: number;
-    total: number;
-  },
+  totalAll: number,
+  threatTotal: number,
+  bucketCounts: BucketCount[],
+  allowlisted: Array<{
+    allowlistSource: "cloudflare_edge" | "known_automation";
+  }>,
   windowStartMs: number,
   windowEndMs: number
 ): Promise<void> {
@@ -403,10 +545,10 @@ async function postWeeklyDigestToDiscord(
     }
     channel = raw;
     console.log(
-      `${TAG} [Discord] Channel resolved: #${channel.name} in ${channel.guild?.name ?? "unknown"}`
+      `${TAG} [Discord] Channel resolved: #${logSafe(channel.name)} in ${logSafe(channel.guild?.name ?? "unknown")}`
     );
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [Discord] Failed to fetch channel: ${msg}`);
     return;
   }
@@ -415,7 +557,10 @@ async function postWeeklyDigestToDiscord(
     buckets,
     topIps,
     threatLevel,
-    weeklyTotals,
+    totalAll,
+    threatTotal,
+    bucketCounts,
+    allowlisted,
     windowStartMs,
     windowEndMs
   );
@@ -423,12 +568,12 @@ async function postWeeklyDigestToDiscord(
     await channel.send({ embeds: [embed] });
     console.log(
       `${TAG} [Discord] [OUTPUT] Weekly digest embed posted successfully` +
-        ` | channel=#${channel.name}` +
+        ` | channel=#${logSafe(channel.name)}` +
         ` | threatLevel=${threatLevel}` +
-        ` | total=${weeklyTotals.total}`
+        ` | threatTotal=${threatTotal}`
     );
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(
       `${TAG} [Discord] Failed to send weekly digest embed: ${msg}`
     );
@@ -455,64 +600,63 @@ async function runWeeklySecurityDigest(): Promise<void> {
   );
 
   try {
-    // ── Step 1: Fetch all events in the 7-day window ───────────────────────
+    // ── Step 1: Accurate (eventType, context) bucket counts (A1) ───────────
     console.log(
-      `${TAG} [STEP] Fetching all security events for the last 7 days (limit=2000)...`
+      `${TAG} [STEP] Querying (eventType, context) bucket counts for the last 7 days...`
     );
-    const rawEvents = await getSecurityEvents({
-      sinceMs: windowStart,
-      limit: 2000,
-    });
-    console.log(`${TAG} [STATE] Fetched ${rawEvents.length} raw events`);
-
-    // ── Step 2: Compute weekly totals ──────────────────────────────────────
-    const weeklyTotals = {
-      CSRF_BLOCK: 0,
-      RATE_LIMIT: 0,
-      AUTH_FAIL: 0,
-      total: 0,
-    };
-    for (const e of rawEvents) {
-      if (e.eventType === "CSRF_BLOCK") weeklyTotals.CSRF_BLOCK++;
-      else if (e.eventType === "RATE_LIMIT") weeklyTotals.RATE_LIMIT++;
-      else if (e.eventType === "AUTH_FAIL") weeklyTotals.AUTH_FAIL++;
-      weeklyTotals.total++;
-    }
+    const bucketCounts = await getSecurityEventCountsByBucket(windowStart);
+    const totalAll = bucketCounts.reduce((s, b) => s + b.count, 0);
     console.log(
-      `${TAG} [STATE] Weekly totals | CSRF_BLOCK=${weeklyTotals.CSRF_BLOCK}` +
-        ` RATE_LIMIT=${weeklyTotals.RATE_LIMIT} AUTH_FAIL=${weeklyTotals.AUTH_FAIL}` +
-        ` total=${weeklyTotals.total}`
+      `${TAG} [STATE] ${bucketCounts.length} buckets | totalAll=${totalAll}`
     );
 
-    // ── Step 3: Build per-day buckets for the bar chart ────────────────────
+    // ── Step 2: Raw events for day-bucketing + allowlist + top IPs ─────────
     console.log(
-      `${TAG} [STEP] Building 7-day per-day buckets for trend analysis...`
+      `${TAG} [STEP] Fetching all security events for the last 7 days (limit=${RAW_EVENT_FETCH_LIMIT})...`
     );
-    const buckets = buildDayBuckets(rawEvents, runStart);
+    const rawEvents = filterDigestMarkers(
+      await getSecurityEvents({
+        sinceMs: windowStart,
+        limit: RAW_EVENT_FETCH_LIMIT,
+      })
+    );
+    console.log(
+      `${TAG} [STATE] Fetched ${rawEvents.length} raw events (markers filtered)`
+    );
+
+    // ── Step 3: Allowlist split (A2) ────────────────────────────────────────
+    const { flagged, allowlisted } = splitEventsByAllowlist(rawEvents);
+    const threatTotal = Math.max(0, totalAll - allowlisted.length);
+    const threatLevel = computeWeeklyThreatLevel(threatTotal);
+    const sampleCapped = rawEvents.length >= RAW_EVENT_FETCH_LIMIT;
+    console.log(
+      `${TAG} [STATE] totalAll=${totalAll} threatTotal=${threatTotal} allowlisted=${allowlisted.length} sampleCapped=${sampleCapped}`
+    );
+
+    // ── Step 4: Build per-day buckets for the bar chart (unclassified only) ─
+    console.log(
+      `${TAG} [STEP] Building 7-day per-day buckets for trend analysis (unclassified only)...`
+    );
+    const buckets = buildDayBuckets(flagged, runStart);
     buckets.forEach((b, i) => {
       console.log(
-        `${TAG} [STATE] Day ${i + 1}: ${b.label} | total=${b.total}` +
-          ` (CSRF=${b.CSRF_BLOCK} RATE=${b.RATE_LIMIT} AUTH=${b.AUTH_FAIL})`
+        `${TAG} [STATE] Day ${i + 1}: ${b.label} | total=${b.total} (CSRF=${b.CSRF_BLOCK} RATE=${b.RATE_LIMIT} AUTH=${b.AUTH_FAIL})`
       );
     });
 
-    // ── Step 4: Compute top IPs ────────────────────────────────────────────
-    const topIps = topIpsByCount(rawEvents, TOP_IP_LIMIT);
+    // ── Step 5: Top IPs (unclassified only) ─────────────────────────────────
+    const topIps = topIpsByCount(flagged, TOP_IP_LIMIT);
     console.log(
-      `${TAG} [STATE] Top IPs | ` +
+      `${TAG} [STATE] Top unclassified IPs | ` +
         (topIps.length > 0
           ? topIps.map(({ ip, count }) => `${ip}(${count})`).join(", ")
           : "none")
     );
-
-    // ── Step 5: Compute weekly threat level ────────────────────────────────
-    const threatLevel = computeWeeklyThreatLevel(weeklyTotals.total);
     console.log(
-      `${TAG} [STATE] Weekly threat level: ${threatLevel}` +
-        ` | total=${weeklyTotals.total} events in last 7 days`
+      `${TAG} [STATE] Weekly threat level: ${threatLevel} | threatTotal=${threatTotal} in last 7 days (deduped sample)`
     );
 
-    // ── Step 6: Build notifyOwner content ─────────────────────────────────
+    // ── Step 6: Build notifyOwner content ───────────────────────────────────
     const weekEndLabel = new Date(runStart).toLocaleDateString("en-US", {
       timeZone: "America/New_York",
       weekday: "long",
@@ -529,48 +673,79 @@ async function runWeeklySecurityDigest(): Promise<void> {
                 `  ${i + 1}. ${ip} — ${count} event${count !== 1 ? "s" : ""}`
             )
             .join("\n")
-        : "  No events recorded.";
+        : "  No unclassified events recorded.";
+    const allowlistSummary = summarizeAllowlistedBySource(allowlisted);
+    const allowlistLines =
+      allowlistSummary.length > 0
+        ? allowlistSummary
+            .map(({ source, count }) => `  ${source}: ${count}`)
+            .join("\n")
+        : "  None detected in the sampled window.";
+    const csrfTotal = sumByEventType(bucketCounts, "CSRF_BLOCK");
+    const rateLimitTotal = sumByEventType(bucketCounts, "RATE_LIMIT");
+    const authFailTotal = sumByEventType(bucketCounts, "AUTH_FAIL");
+    const rateLimitBreakdown = formatBucketBreakdown(
+      bucketCounts,
+      "RATE_LIMIT"
+    );
+
     const content = [
       `Weekly Security Threat Report — Week Ending ${weekEndLabel}`,
       `Threat Level: ${threatLevel}`,
       "",
-      "7-Day Event Trend:",
+      "7-Day Event Trend (unclassified only):",
       barChart,
       "",
-      "Weekly Event Type Breakdown:",
-      `  CSRF Blocks:         ${weeklyTotals.CSRF_BLOCK}`,
-      `  Rate Limit Triggers: ${weeklyTotals.RATE_LIMIT}`,
-      `  Auth Failures:       ${weeklyTotals.AUTH_FAIL}`,
-      `  Total:               ${weeklyTotals.total}`,
+      "Weekly Event Type Breakdown (deduped sample):",
+      `  CSRF Blocks:         ${csrfTotal}`,
+      `  Rate Limit Triggers: ${rateLimitTotal}`,
+      `  Auth Failures:       ${authFailTotal}`,
+      `  Total:               ${totalAll}`,
+      `  Unclassified (used for threat level): ${threatTotal}`,
       "",
-      `Top ${TOP_IP_LIMIT} IPs by Event Count:`,
+      "Rate Limit Triggers by type:",
+      rateLimitBreakdown,
+      "",
+      `Top ${TOP_IP_LIMIT} Unclassified IPs by Event Count:`,
       topIpLines,
       "",
+      "Expected Automation (excluded from threat level):",
+      allowlistLines,
+      "",
       `Window: ${windowStartISO} → ${windowEndISO}`,
+      "Counts above are a deduped sample: at most 1 row per (IP, path, type) per 60s.",
     ].join("\n");
 
-    // ── Step 7: Fire notifyOwner ───────────────────────────────────────────
+    // ── Step 7: Fire notifyOwner (never escalated — see below) ──────────────
     console.log(`${TAG} [STEP] Firing notifyOwner (in-app notification)...`);
     const notified = await notifyOwner({
-      title: `[${threatLevel}] Weekly Security Report — ${weeklyTotals.total} event${weeklyTotals.total !== 1 ? "s" : ""} in 7 days`,
+      title: `[${threatLevel}] Weekly Security Report — ${threatTotal} unclassified event${threatTotal !== 1 ? "s" : ""} in 7 days`,
       content,
     }).catch((err: unknown) => {
-      console.error(
-        `${TAG} [ERROR] notifyOwner threw: ${err instanceof Error ? err.message : String(err)}`
-      );
+      console.error(`${TAG} [ERROR] notifyOwner threw: ${logSafe(err)}`);
       return false;
     });
     if (notified) {
       console.log(
-        `${TAG} [OUTPUT] In-app notification sent | threat=${threatLevel} total=${weeklyTotals.total}`
+        `${TAG} [OUTPUT] In-app notification sent | threat=${threatLevel} threatTotal=${threatTotal}`
       );
     } else {
-      console.warn(
-        `${TAG} [WARN] notifyOwner returned false — notification service may be unavailable`
+      // Mirrors the daily digest's Critical 2 fix (2026-08-07 review).
+      // notifyOwner() is a PERMANENT no-op (server/_core/notification.ts's
+      // own docblock) — it always returns false. Escalating a guaranteed
+      // false-return to a CRITICAL Discord alert fired on every single run,
+      // forever: a guaranteed false alarm, which is the exact defect class
+      // this digest work exists to remove. Still called (cheap, and
+      // forward-compatible if a real gateway is ever wired back to this
+      // signature), but `false` is no longer escalatable. The one durable
+      // fact worth telling a human is static and true on every run, so it
+      // lives as one line in the embed footer rather than a repeating alert.
+      console.log(
+        `${TAG} [INFO] notifyOwner did not deliver (in-app channel is a documented permanent no-op) — not escalating`
       );
     }
 
-    // ── Step 8: Post Discord weekly digest embed ───────────────────────────
+    // ── Step 8: Post Discord weekly digest embed ────────────────────────────
     console.log(
       `${TAG} [STEP] Posting weekly digest embed to Discord security channel...`
     );
@@ -578,17 +753,27 @@ async function runWeeklySecurityDigest(): Promise<void> {
       buckets,
       topIps,
       threatLevel,
-      weeklyTotals,
+      totalAll,
+      threatTotal,
+      bucketCounts,
+      allowlisted,
       windowStart,
       runStart
     ).catch((err: unknown) => {
       console.error(
-        `${TAG} [ERROR] Discord weekly digest post failed (non-critical): ${err instanceof Error ? err.message : String(err)}`
+        `${TAG} [ERROR] Discord weekly digest post failed (non-critical): ${logSafe(err)}`
       );
     });
 
-    // ── Step 9: Mark digest complete ───────────────────────────────────────
-    lastWeeklyDigestDateUTC = new Date().toISOString().slice(0, 10);
+    // ── Step 9: Mark digest complete (in-memory + persisted marker) ─────────
+    const todayStr = new Date().toISOString().slice(0, 10);
+    lastWeeklyDigestDateUTC = todayStr;
+    await persistWeeklyDigestMarker(todayStr).catch((err: unknown) => {
+      console.error(
+        `${TAG} [ERROR] Failed to persist weekly digest marker (in-memory guard still holds for this process): ${logSafe(err)}`
+      );
+    });
+
     const elapsed = Date.now() - runStart;
     console.log(
       `${TAG} ✓ COMPLETE | elapsed=${elapsed}ms` +
@@ -597,7 +782,7 @@ async function runWeeklySecurityDigest(): Promise<void> {
     );
     console.log(`${TAG} [VERIFY] PASS — weekly digest complete`);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = logSafe(err);
     console.error(`${TAG} [ERROR] Weekly digest failed: ${msg}`);
     console.error(`${TAG} [VERIFY] FAIL — weekly digest did not complete`);
   } finally {
@@ -608,50 +793,64 @@ async function runWeeklySecurityDigest(): Promise<void> {
 // ─── Scheduler ────────────────────────────────────────────────────────────────
 
 /**
+ * Checks whether the weekly digest should fire on this tick and, if so,
+ * fires it. Same restart-safety design as securityDigest.ts's
+ * maybeFireDigest() — see that file for the full B2 reasoning.
+ */
+async function maybeFireWeeklyDigest(): Promise<void> {
+  const { day, hour, minute } = nowUTC();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const inWindow =
+    day === DIGEST_DAY_UTC &&
+    hour === DIGEST_HOUR_UTC &&
+    minute >= DIGEST_WINDOW_START_MINUTE_UTC &&
+    minute < DIGEST_WINDOW_START_MINUTE_UTC + DIGEST_WINDOW_MINUTES;
+  if (!inWindow) return;
+
+  if (lastWeeklyDigestDateUTC === today) return;
+
+  const persistedDate = await loadLastWeeklyDigestDate().catch(
+    (err: unknown) => {
+      console.error(
+        `${TAG} [WARN] Failed to read persisted weekly digest marker — proceeding as not-yet-fired (best-effort): ${logSafe(err)}`
+      );
+      return null;
+    }
+  );
+  if (persistedDate === today) {
+    lastWeeklyDigestDateUTC = today;
+    console.log(
+      `${TAG} [SKIP] Persisted marker shows this week's digest already fired — restart-safe skip (no duplicate)`
+    );
+    return;
+  }
+
+  console.log(
+    `${TAG} [STEP] Weekly digest window detected | UTC day=${day} ${hour}:${String(minute).padStart(2, "0")}` +
+      ` | lastWeeklyDigestDate=${lastWeeklyDigestDateUTC || "(none)"} | persistedDate=${persistedDate ?? "(none)"} | today=${today}`
+  );
+  void runWeeklySecurityDigest();
+}
+
+/**
  * Starts the weekly security digest scheduler.
  *
- * Polls every 60 seconds. When the current UTC time is Sunday at
- * DIGEST_HOUR_UTC:DIGEST_MINUTE_UTC and this week's digest hasn't run yet,
- * fires runWeeklySecurityDigest() asynchronously.
+ * Polls every 60 seconds. Fires once inside the Sunday [13:00, 13:10) UTC
+ * window (08:00 EST) per week, restart-safe via the persisted marker in
+ * maybeFireWeeklyDigest().
  */
 export function startWeeklySecurityDigestScheduler(): void {
   console.log(
-    `${TAG} Scheduler started | fires every Sunday at ${DIGEST_HOUR_UTC}:${String(DIGEST_MINUTE_UTC).padStart(2, "0")} UTC` +
-      ` (08:00 EST) | poll interval=${CHECK_INTERVAL_MS / 1000}s`
+    `${TAG} Scheduler started | fires every Sunday in UTC ${DIGEST_HOUR_UTC}:${String(DIGEST_WINDOW_START_MINUTE_UTC).padStart(2, "0")}–` +
+      `${DIGEST_HOUR_UTC}:${String(DIGEST_WINDOW_START_MINUTE_UTC + DIGEST_WINDOW_MINUTES).padStart(2, "0")}` +
+      ` (08:00 EST window) | poll interval=${CHECK_INTERVAL_MS / 1000}s`
   );
 
-  // Run immediately on startup if it's Sunday at the right hour and digest hasn't run today
-  const { day, hour, minute } = nowUTC();
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (
-    day === DIGEST_DAY_UTC &&
-    hour === DIGEST_HOUR_UTC &&
-    minute === DIGEST_MINUTE_UTC &&
-    lastWeeklyDigestDateUTC !== todayStr
-  ) {
-    console.log(
-      `${TAG} [STEP] Startup: weekly digest hour detected on Sunday — firing immediately`
-    );
-    void runWeeklySecurityDigest();
-  }
+  void maybeFireWeeklyDigest();
 
-  // Recurring poll
   setInterval(() => {
-    const { day: d, hour: h, minute: m } = nowUTC();
-    const today = new Date().toISOString().slice(0, 10);
-
-    if (
-      d === DIGEST_DAY_UTC &&
-      h === DIGEST_HOUR_UTC &&
-      m === DIGEST_MINUTE_UTC &&
-      lastWeeklyDigestDateUTC !== today
-    ) {
-      console.log(
-        `${TAG} [STEP] Scheduled trigger | UTC day=${d} ${h}:${String(m).padStart(2, "0")}` +
-          ` | lastWeeklyDigestDate=${lastWeeklyDigestDateUTC} | today=${today}`
-      );
-      void runWeeklySecurityDigest();
-    }
+    void maybeFireWeeklyDigest();
   }, CHECK_INTERVAL_MS);
 }
 
@@ -682,49 +881,51 @@ export async function triggerWeeklySecurityDigestNow(): Promise<{
   const windowStart = runStart - WINDOW_MS;
 
   console.log(
-    `${TAG} [MANUAL] Manual weekly digest triggered` +
-      ` | window=${new Date(windowStart).toISOString()} → ${new Date(runStart).toISOString()}`
+    `${TAG} [MANUAL] Manual weekly digest triggered | window=${new Date(windowStart).toISOString()} → ${new Date(runStart).toISOString()}`
   );
 
-  const rawEvents = await getSecurityEvents({
-    sinceMs: windowStart,
-    limit: 2000,
-  });
+  const bucketCounts = await getSecurityEventCountsByBucket(windowStart);
+  const totalAll = bucketCounts.reduce((s, b) => s + b.count, 0);
+  const rawEvents = filterDigestMarkers(
+    await getSecurityEvents({
+      sinceMs: windowStart,
+      limit: RAW_EVENT_FETCH_LIMIT,
+    })
+  );
+  const { flagged, allowlisted } = splitEventsByAllowlist(rawEvents);
+  const threatTotal = Math.max(0, totalAll - allowlisted.length);
 
-  const weeklyTotals = { CSRF_BLOCK: 0, RATE_LIMIT: 0, AUTH_FAIL: 0, total: 0 };
-  for (const e of rawEvents) {
-    if (e.eventType === "CSRF_BLOCK") weeklyTotals.CSRF_BLOCK++;
-    else if (e.eventType === "RATE_LIMIT") weeklyTotals.RATE_LIMIT++;
-    else if (e.eventType === "AUTH_FAIL") weeklyTotals.AUTH_FAIL++;
-    weeklyTotals.total++;
-  }
-
-  const buckets = buildDayBuckets(rawEvents, runStart);
-  const topIps = topIpsByCount(rawEvents, TOP_IP_LIMIT);
-  const threatLevel = computeWeeklyThreatLevel(weeklyTotals.total);
+  const buckets = buildDayBuckets(flagged, runStart);
+  const topIps = topIpsByCount(flagged, TOP_IP_LIMIT);
+  const threatLevel = computeWeeklyThreatLevel(threatTotal);
 
   console.log(
     `${TAG} [MANUAL] Results | threatLevel=${threatLevel}` +
-      ` CSRF_BLOCK=${weeklyTotals.CSRF_BLOCK} RATE_LIMIT=${weeklyTotals.RATE_LIMIT}` +
-      ` AUTH_FAIL=${weeklyTotals.AUTH_FAIL} total=${weeklyTotals.total}`
+      ` totalAll=${totalAll} threatTotal=${threatTotal} allowlisted=${allowlisted.length}`
   );
 
   await postWeeklyDigestToDiscord(
     buckets,
     topIps,
     threatLevel,
-    weeklyTotals,
+    totalAll,
+    threatTotal,
+    bucketCounts,
+    allowlisted,
     windowStart,
     runStart
   ).catch((err: unknown) => {
-    console.error(
-      `${TAG} [MANUAL] Discord post failed: ${err instanceof Error ? err.message : String(err)}`
-    );
+    console.error(`${TAG} [MANUAL] Discord post failed: ${logSafe(err)}`);
   });
 
   return {
     threatLevel,
-    weeklyTotals,
+    weeklyTotals: {
+      CSRF_BLOCK: sumByEventType(bucketCounts, "CSRF_BLOCK"),
+      RATE_LIMIT: sumByEventType(bucketCounts, "RATE_LIMIT"),
+      AUTH_FAIL: sumByEventType(bucketCounts, "AUTH_FAIL"),
+      total: threatTotal,
+    },
     topIps,
     buckets: buckets.map(b => ({
       label: b.label,
