@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import {
   APP_USER_DEPENDENT_TABLES,
   AppUserHasDataError,
@@ -2681,6 +2681,29 @@ export async function getHrPropsByGames(gameIds: number[]): Promise<Map<number, 
 
 // ─── Security Events DB helpers ───────────────────────────────────────────────
 
+/**
+ * Reserved `eventType` values for the digest schedulers' restart-safety
+ * sentinel (Task 4.10 / B2). NOT a real security event — a housekeeping
+ * marker row (`ip: "system"`, `context: "YYYY-MM-DD"` of the day it fired)
+ * that lets securityDigest.ts / weeklySecurityDigest.ts recover "did today's
+ * digest already fire?" across a container restart with NO schema
+ * migration: repo law requires schema changes to ride db-push.yml before
+ * dependent code deploys, and this task must stay code-only, so a new
+ * settings/kv table or column was not an option (none already exists — see
+ * this task's report for the survey of `drizzle/schema.ts`).
+ *
+ * Both aggregation functions below EXCLUDE these event types so a marker
+ * row can never inflate a reported event count — without that exclusion a
+ * marker would quietly add up to 1 (daily) or 7 (weekly, one per day in a
+ * 7-day window) to `security.events.counts` and this file's own digest
+ * totals, exactly the kind of miscount this task exists to remove.
+ */
+export const DIGEST_MARKER_DAILY_EVENT_TYPE = "DIGEST_MARKER_DAILY";
+export const DIGEST_MARKER_WEEKLY_EVENT_TYPE = "DIGEST_MARKER_WEEKLY";
+const DIGEST_MARKER_EVENT_TYPES: string[] = [
+  DIGEST_MARKER_DAILY_EVENT_TYPE,
+  DIGEST_MARKER_WEEKLY_EVENT_TYPE,
+];
 
 /**
  * Insert one security event row.
@@ -2808,7 +2831,10 @@ export async function getSecurityEventCounts(sinceMs?: number): Promise<{
         count: sql<number>`COUNT(*)`,
       })
       .from(securityEvents)
-      .where(gte(securityEvents.occurredAt, since))
+      .where(and(
+        gte(securityEvents.occurredAt, since),
+        notInArray(securityEvents.eventType, DIGEST_MARKER_EVENT_TYPES),
+      ))
       .groupBy(securityEvents.eventType) as { eventType: string; count: number }[];
 
     const result = { ...defaultResult };
@@ -2827,6 +2853,73 @@ export async function getSecurityEventCounts(sinceMs?: number): Promise<{
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${tag} Query failed | error="${msg}"`);
     return defaultResult;
+  }
+}
+
+/**
+ * Count security events grouped by (eventType, context) for a rolling
+ * window — Task 4.9 / A1.
+ *
+ * getSecurityEventCounts() above collapses all eight RATE_LIMIT `context`
+ * (limitType) slugs — global, auth, trpc_auth, stripe_checkout,
+ * waitlist_submit, public_feed, xff_canary, edge_origin_ingress_anomaly —
+ * into one number, which is how a digest dominated by our own CI's
+ * edge_origin_ingress_anomaly canary got reported as "Rate Limit Triggers:
+ * 111 — often automated scraping or a brute-force attempt" with no way to
+ * tell CI noise from a real attacker. This is the accurate, UNLIMITED
+ * (unlike getSecurityEvents(), which is capped at 500 rows) aggregation the
+ * daily/weekly digests bucket on to break that number apart.
+ *
+ * DIGEST_MARKER_* rows are excluded for the same reason as above — a
+ * bookkeeping row must never show up as a "bucket" in the report.
+ *
+ * [INPUT]  sinceMs  — UTC ms lower bound (default: now - 24h)
+ * [OUTPUT] Array<{ eventType, context, count }> — one row per observed
+ *          (eventType, context) pair in the window; context is null for
+ *          event types/rows that don't set it (e.g. most CSRF_BLOCK rows).
+ */
+export async function getSecurityEventCountsByBucket(
+  sinceMs?: number
+): Promise<Array<{ eventType: string; context: string | null; count: number }>> {
+  const tag = "[DB][getSecurityEventCountsByBucket]";
+  const db = await getDb();
+  if (!db) {
+    console.warn(`${tag} DB not available — returning empty buckets`);
+    return [];
+  }
+  const since = sinceMs ?? (Date.now() - 24 * 60 * 60 * 1000);
+  try {
+    const rows = await db
+      .select({
+        eventType: securityEvents.eventType,
+        context: securityEvents.context,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(securityEvents)
+      .where(and(
+        gte(securityEvents.occurredAt, since),
+        notInArray(securityEvents.eventType, DIGEST_MARKER_EVENT_TYPES),
+      ))
+      .groupBy(securityEvents.eventType, securityEvents.context) as {
+        eventType: string;
+        context: string | null;
+        count: number;
+      }[];
+
+    const result = rows.map(r => ({
+      eventType: r.eventType,
+      context: r.context,
+      count: Number(r.count),
+    }));
+    const total = result.reduce((s, r) => s + r.count, 0);
+    console.log(
+      `${tag} ${result.length} (eventType,context) buckets since ${new Date(since).toISOString()} | total=${total}`
+    );
+    return result;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`${tag} Query failed | error="${msg}"`);
+    return [];
   }
 }
 
