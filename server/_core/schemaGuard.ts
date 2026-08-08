@@ -146,6 +146,12 @@ export interface SchemaGuardResult {
    * callers that report schema health must not conflate the two.
    */
   skipped?: "analytics-store";
+  /**
+   * Set when EVERY required table read as absent, which says the schema READ
+   * failed rather than that a migration was missed. Reported, never fatal —
+   * see the reasoning at the check site in assertSchemaCurrent.
+   */
+  inconclusive?: true;
 }
 
 /** Compare declared expectations against information_schema. Read-only. */
@@ -252,6 +258,34 @@ export async function assertSchemaCurrent(): Promise<SchemaGuardResult> {
         `${TAG} [VERIFY] PASS — live schema satisfies every required column`
       );
       return { ok: true, drift: [] };
+    }
+    // All-or-nothing is a failed READ, not a missed migration.
+    //
+    // A migration adds or alters; it does not drop the entire product schema.
+    // So when EVERY required table reads as absent, the thing that failed is the
+    // read: an empty result set, the wrong DATABASE() context, a driver row-shape
+    // change, or lost information_schema access. Verified 2026-08-07 — a stub
+    // returning [] produces exactly this shape, 9/9 tableMissing with ok:false.
+    //
+    // This is inert today and decisive the moment SCHEMA_GUARD_FATAL=1 is set:
+    // without it, one transient empty read turns a healthy service into a crash
+    // loop, which is a self-inflicted outage in the name of preventing one. Still
+    // reported at error level — the only thing established here is that we do not
+    // know, and that is worth saying out loud rather than exiting on.
+    const requiredTableCount = Object.keys(REQUIRED_COLUMNS).length;
+    if (
+      drift.length === requiredTableCount &&
+      drift.every(d => d.tableMissing)
+    ) {
+      console.error(
+        `${TAG} [VERIFY] INCONCLUSIVE — all ${requiredTableCount} required tables read as ` +
+          `absent. That pattern means the schema READ failed (empty result set, wrong ` +
+          `DATABASE(), driver shape change, or lost information_schema access), not that a ` +
+          `migration was missed. Not treated as drift, and NOT fatal even under ` +
+          `SCHEMA_GUARD_FATAL=1. If the database really is unmigrated, the first query will ` +
+          `say so far more precisely than this check can.`
+      );
+      return { ok: false, drift, inconclusive: true };
     }
     const detail = formatDrift(drift);
     console.error(
