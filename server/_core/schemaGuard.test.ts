@@ -4,7 +4,13 @@
  * failed and surfaced as "user not found".
  */
 import { describe, it, expect } from "vitest";
-import { formatDrift, REQUIRED_COLUMNS, type SchemaDrift } from "./schemaGuard";
+import {
+  formatDrift,
+  REQUIRED_COLUMNS,
+  isInconclusiveRead,
+  INCONCLUSIVE_MIN_TABLES,
+  type SchemaDrift,
+} from "./schemaGuard";
 import { isSchemaError } from "../db";
 
 describe("isSchemaError", () => {
@@ -126,5 +132,72 @@ describe("formatDrift", () => {
     ]);
     expect(out).toContain("app_users");
     expect(out).toContain("plan_features");
+  });
+});
+
+/**
+ * The inconclusive rule reasons from coincidence: nine tables do not vanish at
+ * once from a skipped migration, so all-nine-missing must be a failed read.
+ * That reasoning weakens as the guarded list shrinks and collapses at one, where
+ * "everything is missing" and "the one table I guard is missing" are the same
+ * event — a total, genuine drift waved through as merely unknown.
+ *
+ * Demonstrated 2026-08-08 against the then-shipped code: with REQUIRED_COLUMNS
+ * cut to a single table, an absent app_users returned inconclusive:true and did
+ * NOT exit, even with SCHEMA_GUARD_FATAL=1 — which is now armed in production.
+ */
+const missing = (...tables: string[]): SchemaDrift[] =>
+  tables.map(t => ({ table: t, missingColumns: ["id"], tableMissing: true }));
+
+describe("isInconclusiveRead — the floor under the coincidence argument", () => {
+  it("[IR-1] at the shipped list size, all-missing reads as inconclusive", () => {
+    const n = Object.keys(REQUIRED_COLUMNS).length;
+    expect(
+      isInconclusiveRead(missing(...Object.keys(REQUIRED_COLUMNS)), n)
+    ).toBe(true);
+  });
+
+  it("[IR-2] below the floor it is NEVER inconclusive — real drift stays fatal", () => {
+    // The bug this closes. One guarded table, that table absent: identical
+    // shape to "everything missing", but it is unambiguously real drift.
+    expect(isInconclusiveRead(missing("app_users"), 1)).toBe(false);
+    expect(isInconclusiveRead(missing("app_users", "plan_prices"), 2)).toBe(
+      false
+    );
+  });
+
+  it("[IR-3] the floor is inclusive — exactly INCONCLUSIVE_MIN_TABLES qualifies", () => {
+    const n = INCONCLUSIVE_MIN_TABLES;
+    const tables = Array.from({ length: n }, (_, i) => `t${i}`);
+    expect(isInconclusiveRead(missing(...tables), n)).toBe(true);
+    // One below must not.
+    expect(isInconclusiveRead(missing(...tables.slice(1)), n - 1)).toBe(false);
+  });
+
+  it("[IR-4] partial drift is never inconclusive, however long the list", () => {
+    // 8 of 9 missing is a migration problem, not a failed read.
+    expect(
+      isInconclusiveRead(missing("a", "b", "c", "d", "e", "f", "g", "h"), 9)
+    ).toBe(false);
+  });
+
+  it("[IR-5] missing COLUMNS never read as inconclusive, only missing TABLES", () => {
+    const columnDrift: SchemaDrift[] = Array.from({ length: 9 }, (_, i) => ({
+      table: `t${i}`,
+      missingColumns: ["planPriceId"],
+      tableMissing: false,
+    }));
+    expect(isInconclusiveRead(columnDrift, 9)).toBe(false);
+  });
+
+  it("[IR-6] INVARIANT: REQUIRED_COLUMNS must stay above the floor", () => {
+    // This is the assertion that actually protects production. The floor inside
+    // isInconclusiveRead is defence in depth; what keeps the guard honest is
+    // that the guarded list stays long enough for the coincidence argument to
+    // hold. If a future change shrinks it, this fails here rather than silently
+    // downgrading a real outage to "inconclusive" on a live, FATAL-armed box.
+    expect(Object.keys(REQUIRED_COLUMNS).length).toBeGreaterThanOrEqual(
+      INCONCLUSIVE_MIN_TABLES
+    );
   });
 });
