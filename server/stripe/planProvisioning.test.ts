@@ -26,6 +26,7 @@ const h = vi.hoisted(() => {
     promotionCodesCreate,
     inserts,
     insertError: null as null | Error,
+    selectRows: [] as Array<Record<string, unknown>>,
   };
 });
 
@@ -50,7 +51,9 @@ vi.mock("../db", () => ({
       },
     }),
     select: () => ({
-      from: () => ({ where: () => ({ limit: () => Promise.resolve([]) }) }),
+      from: () => ({
+        where: () => ({ limit: () => Promise.resolve(h.selectRows) }),
+      }),
     }),
     update: () => ({ set: () => ({ where: () => Promise.resolve([{}]) }) }),
   })),
@@ -72,6 +75,8 @@ import {
   slugify,
   isProvisioningTestMode,
   describeDbError,
+  setIntervalDefault,
+  setIntervalHidden,
 } from "./planProvisioning";
 
 beforeEach(() => {
@@ -339,5 +344,54 @@ describe("describeDbError", () => {
     });
     expect(d.schemaMismatch).toBe(false);
     expect(d.missingColumn).toBeUndefined();
+  });
+});
+
+describe("default/hidden invariant — a plan's default must be a price it can actually sell", () => {
+  // dime-max reached production with isDefault on a HIDDEN daily row. Because
+  // defaultPriceForMode filters `!hidden` BEFORE looking for isDefault, the flag
+  // was inert: the plan fell back to the first visible interval (weekly $74.99)
+  // while every surface advertised $199.99/month. Nothing errored, nothing
+  // logged. Both routes into that state are now refused.
+  beforeEach(() => {
+    h.selectRows = [];
+  });
+
+  it("refuses to make a HIDDEN interval the default", async () => {
+    h.selectRows = [{ id: 120016, planId: 3, active: true, hidden: true }];
+    await expect(setIntervalDefault(120016)).rejects.toThrow(/hidden/i);
+    await expect(setIntervalDefault(120016)).rejects.toThrow(
+      /cannot be the default/i
+    );
+  });
+
+  it("still refuses an ARCHIVED interval — the pre-existing guard is intact", async () => {
+    h.selectRows = [{ id: 1, planId: 3, active: false, hidden: false }];
+    await expect(setIntervalDefault(1)).rejects.toThrow(/archived/i);
+  });
+
+  it("allows a visible, active interval to become the default", async () => {
+    h.selectRows = [{ id: 120018, planId: 3, active: true, hidden: false }];
+    await expect(setIntervalDefault(120018)).resolves.toBeUndefined();
+  });
+
+  it("refuses to HIDE the plan's default, and says what to do instead", async () => {
+    h.selectRows = [{ id: 120018, isDefault: true }];
+    await expect(setIntervalHidden(120018, true)).rejects.toThrow(
+      /is this plan's default/i
+    );
+    await expect(setIntervalHidden(120018, true)).rejects.toThrow(
+      /Make a visible interval the default first/i
+    );
+  });
+
+  it("allows hiding a NON-default interval", async () => {
+    h.selectRows = [{ id: 120017, isDefault: false }];
+    await expect(setIntervalHidden(120017, true)).resolves.toBeUndefined();
+  });
+
+  it("never blocks UNHIDING — the escape route out of the bad state stays open", async () => {
+    h.selectRows = [{ id: 120016, isDefault: true }];
+    await expect(setIntervalHidden(120016, false)).resolves.toBeUndefined();
   });
 });

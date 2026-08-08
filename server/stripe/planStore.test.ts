@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   computeExpiryMsForPrice,
   defaultPriceOf,
@@ -164,6 +164,99 @@ describe("defaultPriceOf", () => {
     expect(
       defaultPriceOf(plan([price({ id: 5, active: false, isDefault: true })]))
     ).toBeNull();
+  });
+});
+
+describe("defaultPriceForMode — a hidden default is announced, not resolved quietly", () => {
+  // Observed in production 2026-08-07 on the dime-max plan: the isDefault flag
+  // sat on a HIDDEN daily row. `!pr.hidden` filters it out, no visible row
+  // carried the flag, and the fallback silently returned the first row by
+  // sortOrder — a different cadence from the one every surface advertises.
+  // Nothing said so. These tests pin the behaviour AND the warning.
+  const mkPlan = (prices: StoredPrice[]): StoredPlan => ({
+    id: 1,
+    slug: "dime-max",
+    name: "Max",
+    description: null,
+    planType: "recurring",
+    stripeProductId: null,
+    active: true,
+    accessUntil: null,
+    maxSubscribers: null,
+    autoRestock: false,
+    availableQuantity: null,
+    restockThreshold: null,
+    restockAmount: null,
+    discordRoleId: null,
+    telegramChatId: null,
+    livemode: true,
+    prices,
+  });
+  const day = price({
+    id: 10,
+    interval: "day",
+    amountCents: 1999,
+    isDefault: true,
+    hidden: true,
+    livemode: true,
+  });
+  const week = price({
+    id: 11,
+    interval: "week",
+    amountCents: 7499,
+    isDefault: false,
+    livemode: true,
+  });
+  const month = price({
+    id: 12,
+    interval: "month",
+    amountCents: 19999,
+    isDefault: false,
+    livemode: true,
+  });
+
+  it("skips the hidden default and falls back to the first visible row", () => {
+    const chosen = defaultPriceForMode(mkPlan([day, week, month]), true);
+    // NOT the $19.99 hidden daily default, and NOT the advertised $199.99 monthly
+    expect(chosen?.id).toBe(11);
+    expect(chosen?.amountCents).toBe(7499);
+  });
+
+  it("warns by name when the default is hidden, naming what will be charged instead", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    defaultPriceForMode(mkPlan([day, week, month]), true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const msg = warn.mock.calls[0][0] as string;
+    expect(msg).toContain("dime-max");
+    expect(msg).toContain("HIDDEN");
+    expect(msg).toContain("id=11");
+    warn.mockRestore();
+  });
+
+  it("warns when no visible row carries isDefault at all", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const chosen = defaultPriceForMode(mkPlan([week, month]), true);
+    expect(chosen?.id).toBe(11);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0] as string).toContain(
+      "no visible price marked isDefault"
+    );
+    warn.mockRestore();
+  });
+
+  it("stays silent when a visible row carries isDefault — no warning noise on the healthy path", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const visibleDefault = price({
+      id: 12,
+      interval: "month",
+      amountCents: 19999,
+      isDefault: true,
+      livemode: true,
+    });
+    const chosen = defaultPriceForMode(mkPlan([week, visibleDefault]), true);
+    expect(chosen?.id).toBe(12);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 

@@ -1,0 +1,130 @@
+# Cron — MLB learning loop (outcomes / closing capture / backtest self-heal).
+#
+# ⚠️  DISPATCH-ONLY ON PURPOSE — THERE IS NO `schedule:` BLOCK YET. ⚠️
+#
+# Mounting the endpoints (audit M-208) and putting them on a cadence are two
+# different decisions, and this file deliberately only does the first half. A
+# `schedule:` here would start writing outcome, closing-line and backtest rows on
+# the first merge, which is a production behaviour change that deserves its own
+# deliberate go-ahead rather than riding in on the PR that created the routes.
+#
+# It also removes an ordering hazard: a scheduled workflow merged before the
+# endpoints reach main would fire against 404s (the PR #370 deploy-order class).
+# Dispatch-only cannot fire on its own, so merge order stops mattering.
+#
+# TO ENABLE A CADENCE, add a `schedule:` block. Suggested starting points, and
+# why — do not copy these blindly:
+#   outcomes        every 30 min   the ingestor is idempotent (outcomeIngestedAt
+#                                  gates re-ingestion) and its own default window
+#                                  is the last 2 PT dates, so a missed run
+#                                  self-heals on the next one.
+#   closing-capture ~10 min before first pitch. It only ever scrapes the CURRENT
+#                                  slate, so a run after the games start captures
+#                                  nothing useful. This is the one job where
+#                                  cadence and correctness are coupled.
+#   backtest        hourly         self-heal over the last 3 ET dates. Cheap when
+#                                  there is nothing unenrolled (zero rows is a
+#                                  success, not a failure).
+#
+# ⚠️  DO NOT pass ?date= for a BULK BACKFILL until the K walk-forward re-fit has
+# landed. K_CALIBRATION_FACTOR_OVER/UNDER are still the pre-M-204 literals, and
+# enrolling history against constants that are about to change pollutes the very
+# evaluation set the re-fit is judged on. The rolling default window is safe
+# because it only fills genuine gaps. See server/cron/README.md.
+#
+# Required (same contract as the other cron workflows):
+#   RAILWAY_APP_URL — repo VARIABLE, e.g. https://your-app.up.railway.app (no trailing slash)
+#   CRON_SECRET     — repo SECRET, must match the value set in Railway -> Variables
+#
+# NB: those are written BARE above, deliberately. scripts/check-github-actions-security.mjs
+# scans the raw file text for the secrets-context prefix followed by an uppercase name, so
+# writing that form inside a COMMENT is counted as a real production-secret reference and
+# fails both contract rules (outside the Production environment, not scoped to a step).
+# cron-mlb-cycle.yml words its header the same way for the same reason.
+
+name: Cron — MLB learning loop
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which endpoint to fire"
+        required: true
+        type: choice
+        options:
+          - mlb-outcomes
+          - mlb-closing-capture
+          - mlb-backtest
+      date:
+        description: "Optional YYYY-MM-DD. Leave blank for the default rolling window. NOT for bulk backfill before the K re-fit."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-mlb-learning-loop-${{ inputs.job }}
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger /api/cron/${{ inputs.job }}
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: "[STEP] Preflight — verify required secrets and inputs"
+        env:
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          JOB: ${{ inputs.job }}
+          DATE: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET is not set"; exit 1
+          fi
+          # closing-capture takes no date; passing one would be silently ignored
+          # by the server, so reject it here rather than let the operator think
+          # it did something.
+          if [ "${JOB}" = "mlb-closing-capture" ] && [ -n "${DATE:-}" ]; then
+            echo "::error::mlb-closing-capture takes no date — it only scrapes the current slate"
+            exit 1
+          fi
+          if [ -n "${DATE:-}" ] && ! printf '%s' "${DATE}" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+            echo "::error::date must be YYYY-MM-DD (got a malformed value)"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present, inputs valid"
+
+      - name: "[STEP] POST /api/cron/${{ inputs.job }} (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          JOB: ${{ inputs.job }}
+          DATE: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/${JOB}"
+          if [ -n "${DATE:-}" ]; then
+            URL="${URL}?date=${DATE}"
+          fi
+          echo "[INPUT] POST ${URL} at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/${JOB}")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          # A 400 here means the server rejected the date — surface it as a
+          # failure rather than a green run that did nothing.
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::${JOB} trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — ${JOB} accepted (HTTP $CODE)"
